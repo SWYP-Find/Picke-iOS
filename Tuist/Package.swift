@@ -1,32 +1,67 @@
-// swift-tools-version: 6.0
-import PackageDescription
+// swift-tools-version: 6.1
+@preconcurrency import PackageDescription
 
 #if TUIST
-import struct ProjectDescription.PackageSettings
+@preconcurrency import ProjectDescription
 
 let packageSettings = PackageSettings(
   productTypes: [
+    // Firebase 관련 패키지들을 정적 프레임워크로 설정
+    "FirebaseCore": .staticFramework,
+    "FirebaseCoreExtension": .staticFramework,
+    "FirebaseAppCheck": .staticFramework,
+    "FirebaseAppCheckInterop": .staticFramework,
+    "AppCheckCore": .staticFramework,
+    "GoogleUtilities": .staticFramework,
+    "nanopb": .staticFramework,
+    "PromisesObjC": .staticFramework,
+    
+    // 기존 설정 유지
     "ComposableArchitecture": .staticFramework,
-    "TCACoordinators": .staticFramework,
+    "IdentifiedCollections": .staticFramework,
+    "TCAFlow": .staticFramework,
     "Moya": .staticFramework,
+    "LogMacro": .staticFramework,
     "AsyncMoya": .staticFramework,
+    "AppAuth": .staticFramework,
+    "AppAuthCore": .staticFramework,
+    "GTMAppAuth": .staticFramework,
+    "GTMSessionFetcherCore": .staticFramework,
     "IssueReporting": .staticFramework,
+    "IssueReportingPackageSupport": .staticFramework,
     "XCTestDynamicOverlay": .staticFramework,
     "Clocks": .staticFramework,
     "ConcurrencyExtras": .staticFramework,
+    "SDWebImageSwiftUI": .staticFramework,
+    "SDWebImage": .staticFramework,
     "WeaveDI": .staticFramework,
-    "Sharing": .staticFramework
-  ]
+    
+    // GoogleSignIn 관련
+    "GoogleSignIn": .staticFramework,
+    "GoogleSignInSwift": .staticFramework,
+    "GTMSessionFetcher": .staticFramework
+  ],
+  baseSettings: .settings(
+    configurations: [
+      .debug(name: "Debug"),
+      .debug(name: "Stage"),
+      .release(name: "Release"),
+      .release(name: "Prod")
+    ]
+  )
 )
 #endif
-
 let package = Package(
-  name: "MultiModuleTemplate",
+  name: "DDDAttendance",
   dependencies: [
-    .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.18.0"),
-    .package(url: "https://github.com/johnpatrickmorgan/TCACoordinators.git", exact: "0.11.1"),
-    .package(url: "https://github.com/Roy-wonji/WeaveDI.git", from: "3.4.0"),
-    .package(url: "https://github.com/Roy-wonji/AsyncMoya", from: "1.1.8"),
-    .package(url: "https://github.com/pointfreeco/swift-sharing", from: "1.0.0")
+    .package(url: "https://github.com/firebase/firebase-ios-sdk", exact: "12.12.0"),
+    .package(url: "https://github.com/google/GoogleSignIn-iOS", exact: "9.1.0"),
+    .package(url: "https://github.com/SDWebImage/SDWebImageSwiftUI.git", exact: "3.1.4"),
+    .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.25.5"),
+    .package(url: "https://github.com/pointfreeco/swift-identified-collections", from: "1.1.0"),
+    .package(url: "https://github.com/Roy-wonji/TCAFlow.git", exact: "1.1.2"),
+    .package(url: "https://github.com/Roy-wonji/AsyncMoya", exact: "1.1.8"),
+    .package(url: "https://github.com/openid/AppAuth-iOS.git", exact: "2.0.0"),
+    .package(url: "https://github.com/Roy-wonji/WeaveDI.git", exact: "3.4.1")
   ]
 )
