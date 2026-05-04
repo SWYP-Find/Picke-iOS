@@ -3,11 +3,11 @@
 ## 📱 프로젝트 개요
 
 - **프로젝트명**: Picke
-- **스택**: Swift 6, SwiftUI, TCA 1.18, Tuist 4
+- **스택**: Swift 6, SwiftUI, TCA 1.25, Tuist 4
 - **아키텍처**: TCA + Clean Architecture 멀티모듈
 - **배포 타겟**: iOS 17.0+, iPhone 전용
-- **네비게이션**: TCACoordinators
-- **의존성 주입**: WeaveDI 3.4.0
+- **네비게이션**: TCAFlow
+- **의존성 주입**: WeaveDI 3.4.1
 
 ## 🏗️ 아키텍처 및 모듈 구조
 
@@ -47,10 +47,10 @@ Projects/
 
 ```swift
 // Core Architecture
-ComposableArchitecture: 1.18.0       // TCA
-TCACoordinators:        0.11.1       // 좌표자 기반 네비게이션
-WeaveDI:                3.4.0        // 의존성 주입
-swift-sharing:          1.1.3        // TCA SharedState
+ComposableArchitecture: 1.25.5       // TCA
+TCAFlow:                1.1.2        // @FlowCoordinator 기반 네비게이션
+WeaveDI:                3.4.1        // 의존성 주입
+IdentifiedCollections:  1.1.0+
 
 // Networking
 AsyncMoya:              1.1.8        // 비동기 네트워크 (Moya 래퍼)
@@ -59,52 +59,60 @@ Alamofire:              5.11.1
 ReactiveSwift:          6.7.0
 RxSwift:                6.10.2
 
-// Utility
+// Authentication
+AppAuth-iOS:            2.0.0        // OAuth 2.0
+GoogleSignIn-iOS:       9.1.0        // Google 소셜 로그인
+
+// Firebase
+firebase-ios-sdk:       12.12.0      // Crashlytics / Messaging
+
+// UI / Utility
+SDWebImageSwiftUI:      3.1.4        // 이미지 비동기 로딩
 LogMacro:               1.1.1        // 로깅 매크로
 ```
 
 ## 📚 세부 가이드 문서
 
-프로젝트의 상세 가이드는 `docs/` 폴더에서 관리합니다 (작성 예정 항목 포함).
+프로젝트의 상세 가이드는 `docs/agent/` 폴더에서 관리합니다.
 
-### 🔄 TCA 패턴 가이드 (`docs/tca-patterns.md`)
+### 🔄 TCA 패턴 가이드 (`docs/agent/tca-patterns.md`)
 - TCA 기본 구조 및 규칙
 - Extension 패턴 활용법
 - Action 처리 메서드 분리
 - State Computed Properties
 - Coordinator Extension 패턴
 
-### 🎨 SwiftUI 스타일 가이드 (`docs/swiftui-patterns.md`)
+### 🎨 SwiftUI 스타일 가이드 (`docs/agent/swiftui-patterns.md`)
 - SwiftUI 코드 구조화
 - View Extension 패턴
 - Computed Properties + @ViewBuilder 조합
 - 조건부 렌더링 및 Skeleton 패턴
 
-### 📏 Swift 코딩 규칙 (`docs/swift-coding-rules.md`)
+### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드
 - 에러 처리 패턴
 - TCA 에러 처리 규칙
 - 테스트 패턴
 
-### 🚨 팝업 & 모달 시스템 (`docs/popup-modal-system.md`)
+### 🚨 팝업 & 모달 시스템 (`docs/agent/popup-modal-system.md`)
 - CustomAlert (TCA 기반 커스텀 알림)
 - Toast 시스템 (전역 메시지)
 - CustomModal (드래그 지원 모달)
 - TCA Presentation 패턴 규칙
 
-### 🔄 의존성 주입 (`docs/dependency-injection.md`)
-- WeaveDI 3.4.0 패턴
+### 🔄 의존성 주입 (`docs/agent/dependency-injection.md`)
+- WeaveDI 3.4.1 패턴
 - AppDIManager 구조
 - TCA Dependencies 통합
 - Interface 기반 등록 규칙
 
-### 🚀 iOS 성능 최적화 (`docs/ios-performance-optimization.md`)
+### 🚀 iOS 성능 최적화 (`docs/agent/ios-performance-optimization.md`)
 - 성능 최적화 통합 시스템
 - 서브에이전트 호출 규칙
 - TCA/SwiftUI 성능 문제 해결
 - 빌드 오류 해결 프로세스
 
-### 🎯 Git 워크플로우 (`docs/git-workflow.md`)
+### 🎯 Git 워크플로우 (`docs/agent/git-workflow.md`)
 - 브랜치 전략
 - 커밋 메시지 컨벤션
 - Pull Request 규칙
@@ -117,13 +125,13 @@ LogMacro:               1.1.1        // 로깅 매크로
 - 별도 요청이 없는 한 영어 커밋 메시지는 사용하지 않음
 - 커밋 메시지에 `Co-Authored-By: Claude ...` 등의 자동 서명 라인을 절대 추가하지 않음
 
-### 🧭 TCACoordinators 네비게이션 (`docs/tca-navigation.md`)
-- Coordinator 패턴 적용
+### 🧭 TCAFlow 네비게이션 (`docs/agent/tcaflow-navigation.md`)
+- @FlowCoordinator 패턴
 - 기본 네비게이션 동작 (Push, Present, Dismiss)
 - 화면 간 통신 패턴
 - 딥 링크 처리
 
-### 🔧 개발 환경 설정 (`docs/development-environment.md`)
+### 🔧 개발 환경 설정 (`docs/agent/development-environment.md`)
 - TuistTool / Make 명령어
 - Xcode 빌드 설정 (Dev, Stage, Prod, Release)
 - Tuist 사용 규칙
@@ -178,7 +186,7 @@ tuist graph --format pdf --path ./graph.pdf
 ### 자동 호출 키워드
 다음 키워드 언급 시 **자동으로 성능 최적화 스킬 호출**:
 - `ifCaseLet`, `TCA`, `Effect`, `메모리 누수`, `성능`, `최적화`
-- `SwiftUI`, `렌더링`, `빌드 시간`, `TCACoordinators`, `WeaveDI`
+- `SwiftUI`, `렌더링`, `빌드 시간`, `TCAFlow`, `WeaveDI`
 - `Cannot infer`, `Extensions must not`, `Type annotation missing`
 - `빌드 오류`, `컴파일 에러`, `SourceKit error`
 
