@@ -1,6 +1,6 @@
 # iOS 성능 최적화 통합 시스템
 
-DDDAttendance 프로젝트를 위한 **2개의 전문 성능 최적화 스킬** 통합 활용 가이드
+Picke 프로젝트를 위한 **2개의 전문 성능 최적화 스킬** 통합 활용 가이드
 
 ## ⚠️ 필수 서브에이전트 호출 규칙
 
@@ -82,7 +82,7 @@ DDDAttendance 프로젝트를 위한 **2개의 전문 성능 최적화 스킬** 
 ### 🔧 PFW 철학 기반 자동 최적화 (v4.0)
 ```bash
 # PFW 패턴 우선 전체 프로젝트 최적화
-@ios-performance-optimizer "PFW 단순성 원칙으로 DDDAttendance 최적화해줘 - 3개 핵심 CancelID만 사용"
+@ios-performance-optimizer "PFW 단순성 원칙으로 Picke 최적화해줘 - 3개 핵심 CancelID만 사용"
 
 # TCAFlow + PFW 패턴 마이그레이션 
 @ios-performance-optimizer "PFW 철학 기반 TCAFlow 마이그레이션 - 복잡한 Effect 취소 금지"
@@ -135,7 +135,7 @@ DDDAttendance 프로젝트를 위한 **2개의 전문 성능 최적화 스킬** 
 | **복잡성 제거** | ✅ **v3.0 과도한 취소 금지** | ✅ 단순 패턴 권장 |
 | **타입 안전성** | 🚀 **자동 튜플 매칭 구현** | ✅ 이론적 분석 |
 
-## 🎯 DDDAttendance 특화 사용법
+## 🎯 Picke 특화 사용법
 
 ### HomeView 스크롤 성능 이슈
 ```bash
@@ -264,4 +264,4 @@ DDDAttendance 프로젝트를 위한 **2개의 전문 성능 최적화 스킬** 
 - ✅ **PFW 우선**: performAtomicStateTransition 제거 → 단순 튜플 매칭
 - ✅ **타입 안전**: 수동 검증 → 자동 `switch (action, state)` 구현
 
-**DDDAttendance 프로젝트에서 PFW 철학이 통합된 이 두 스킬을 조합하면 iOS 성능 최적화의 완벽한 솔루션을 얻을 수 있습니다!** 🚀
+**Picke 프로젝트에서 PFW 철학이 통합된 이 두 스킬을 조합하면 iOS 성능 최적화의 완벽한 솔루션을 얻을 수 있습니다!** 🚀

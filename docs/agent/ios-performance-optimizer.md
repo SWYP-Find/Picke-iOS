@@ -118,7 +118,7 @@ npm start "분석만 해줘 - 수정 안해도 돼"
    → 조건부 애니메이션으로 최적화
 
 🔧 Medium Priority Issues (2주 내 수정 권장)
-1. AttendanceCard.swift:88 - 불필요한 뷰 재생성
+1. FeatureCard.swift:88 - 불필요한 뷰 재생성
    → 스타일 캐싱으로 렌더링 최적화
 ```
 
@@ -145,7 +145,7 @@ private let scanTimeoutQueue = DispatchQueue(label: "qr.scan.timeout")
 ```
 ✅ 자동 수정 완료: QRScannerRepresentable.swift
 ✅ 자동 수정 완료: LoadingView.swift  
-✅ 자동 수정 완료: AttendanceCard.swift
+✅ 자동 수정 완료: FeatureCard.swift
 ```
 
 ### 5단계: 완료 보고서
@@ -162,7 +162,7 @@ private let scanTimeoutQueue = DispatchQueue(label: "qr.scan.timeout")
 📋 수정 내역:
 1. QRScannerRepresentable.swift - 메모리 누수 해결 - 15% 메모리 절약
 2. LoadingView.swift - 애니메이션 최적화 - 10% CPU 절약
-3. AttendanceCard.swift - 렌더링 최적화 - 25% 뷰 업데이트 감소
+3. FeatureCard.swift - 렌더링 최적화 - 25% 뷰 업데이트 감소
 
 🎯 다음 권장사항:
 - Instruments로 성능 개선 효과 측정

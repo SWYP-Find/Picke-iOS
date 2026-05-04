@@ -39,7 +39,7 @@ public final class AppDIManager {
       // 📝 비즈니스 로직 계층 (PFW 단일 책임)
       .register { OnBoardingRepositoryImpl() as OnBoardingInterface }
       .register { SignUpRepositoryImpl() as SignUpInterface }
-      .register { AttendanceRepositoryImpl() as AttendanceInterface }
+      .register { FeatureRepositoryImpl() as FeatureInterface }
       .register { MyPageRepositoryImpl() as MyPageRepositoryInterface }
       .register { ScheduleRepositoryImpl() as ScheduleInterface }
       .register { QRCodeRepositoryImpl() as QRCodeInterface }
@@ -256,7 +256,7 @@ func testLogin() async {
 
 ```swift
 @main
-struct DDDAttendanceApp: App {
+struct PickeApp: App {
   init() {
     Task {
       await AppDIManager.shared.registerDefaultDependencies()
@@ -401,7 +401,7 @@ public final class AppDIManager {
 #### 1. **앱 시작 시 초기화**
 ```swift
 @main
-struct DDDAttendanceApp: App {
+struct PickeApp: App {
   init() {
     Task {
       await AppDIManager.shared.registerDefaultDependencies()

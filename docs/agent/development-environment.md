@@ -15,10 +15,10 @@
 
 ```bash
 # 빌드
-xcodebuild -workspace DDDAttendance.xcworkspace -scheme DDDAttendance build
+xcodebuild -workspace Picke.xcworkspace -scheme Picke build
 
 # 테스트 실행  
-xcodebuild -workspace DDDAttendance.xcworkspace -scheme DDDAttendance test
+xcodebuild -workspace Picke.xcworkspace -scheme Picke test
 ```
 
 ### ⚠️ 중요 규칙
