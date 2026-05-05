@@ -2,84 +2,62 @@
 //  CustomSize.swift
 //  DesignSystem
 //
-//  Created by Wonji Suh  on 11/2/24.
+//  Picke Figma typography tokens (name / size / weight).
 //
 
 import Foundation
 
 public enum CustomSizeFont {
-  case heading0
-  case heading1
-  case heading2
+  case headingXXLarge
+  case headingXLarge
+  case headingLarge
+  case headingMedium
+  case headingSmall
 
-  case titleBold
-  case titleRegular
-
-  case bodyBold
+  case bodyLarge
   case bodyMedium
-  case bodyRegular
+  case bodySmall
 
-  case body2Bold
-  case body2Medium
-  case body2Regular
-
-  case caption
+  case labelLarge
+  case labelMedium
+  case labelSmall
+  case labelXSmall
 
   public var size: CGFloat {
     switch self {
-      case .heading0:
-        return 28
-      case .heading1:
-        return 24
-      case .heading2:
-        return 22
-      case .titleBold:
-        return 18
-      case .titleRegular:
-        return 18
-      case .bodyBold:
-        return 16
-      case .bodyMedium:
-        return 16
-      case .bodyRegular:
-        return 16
-      case .body2Bold:
-        return 14
-      case .body2Medium:
-        return 14
-      case .body2Regular:
-        return 14
-      case .caption:
-        return 12
+    case .headingXXLarge: 30
+    case .headingXLarge: 30
+    case .headingLarge: 20
+    case .headingMedium: 16
+    case .headingSmall: 14
+    case .bodyLarge: 16
+    case .bodyMedium: 14
+    case .bodySmall: 12
+    case .labelLarge: 16
+    case .labelMedium: 14
+    case .labelSmall: 12
+    case .labelXSmall: 10
     }
   }
 
   public var fontFamily: PretendardFontFamily {
     switch self {
-      case .heading0:
-        return .SemiBold
-      case .heading1:
-        return .SemiBold
-      case .heading2:
-        return .SemiBold
-      case .titleBold:
-        return .Bold
-      case .titleRegular:
-        return .Regular
-      case .bodyBold:
-        return .SemiBold
-      case .bodyMedium:
-        return .Medium
-      case .bodyRegular:
-        return .Regular
-      case .body2Bold:
-        return .SemiBold
-      case .body2Medium:
-        return .Medium
-      case .body2Regular:
-        return .Regular
-      case .caption:
-        return .Regular
+    case .headingXXLarge,
+         .headingXLarge,
+         .headingLarge,
+         .headingMedium,
+         .headingSmall,
+         .labelXSmall:
+      .SemiBold
+    case .bodyLarge,
+         .bodyMedium,
+         .bodySmall:
+      .Regular
+    case .labelLarge:
+      .Bold
+    case .labelMedium,
+         .labelSmall:
+      .Medium
     }
   }
 }
