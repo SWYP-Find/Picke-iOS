@@ -5,14 +5,14 @@ import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
-  name: "Splash",
-  bundleId: .appBundleID(name: ".Splash"),
+  name: "ThirdParty",
+  bundleId: .appBundleID(name: ".ThirdParty"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,
-    .Domain(implements: .UseCase),
-    .Shared(implements: .DesignSystem)
+    .SPM.tcaFlow,
+    
   ],
   sources: ["Sources/**"]
 )

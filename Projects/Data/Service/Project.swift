@@ -10,7 +10,8 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings:  .settings(),
   dependencies: [
-
+    .Data(implements: .API),
+    .SPM.asyncMoya
   ],
   sources: ["Sources/**"],
   hasTests: false

@@ -4,6 +4,7 @@ import DependencyPlugin
 import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
+
 let project = Project.makeModule(
   name: "Repository",
   bundleId: .appBundleID(name: ".Repository"),
@@ -11,7 +12,9 @@ let project = Project.makeModule(
   settings:  .settings(),
   dependencies: [
     .Network(implements: .Networking),
-    .Domain(implements: .DataInterface)
+    .Domain(implements: .DomainInterface),
+    .SPM.mixpanel
+    
   ],
   sources: ["Sources/**"],
   hasTests: true
