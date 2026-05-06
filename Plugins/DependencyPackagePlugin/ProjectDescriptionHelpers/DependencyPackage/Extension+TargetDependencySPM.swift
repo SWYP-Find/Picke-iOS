@@ -24,5 +24,8 @@ public extension TargetDependency.SPM {
   static let firebaseCrashlytics = TargetDependency.external(name: "FirebaseCrashlytics", condition: .none)
   static let firebaseMessaging = TargetDependency.external(name: "FirebaseMessaging", condition: .none)
   static let googleUtilities = TargetDependency.external(name: "GoogleUtilities", condition: .none)
+  static let googleMobileAds = TargetDependency.external(name: "GoogleMobileAds", condition: .none)
+  static let mixpanel = TargetDependency.external(name: "Mixpanel", condition: .none)
+  static let mixpanelSessionReplay = TargetDependency.external(name: "MixpanelSessionReplay", condition: .none)
   
 }
