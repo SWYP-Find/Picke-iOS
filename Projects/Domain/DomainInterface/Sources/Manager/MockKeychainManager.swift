@@ -78,6 +78,10 @@ public final class MockKeychainManager: KeychainManaging, @unchecked Sendable {
         }
     }
 
+    public func clearAccessToken() {
+        storedAccessToken = nil
+    }
+
     public func saveRefreshToken(_ token: String) {
         saveCallCount += 1
         if case .success = configuration {

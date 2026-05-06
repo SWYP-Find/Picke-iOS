@@ -33,6 +33,10 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
     save(token, for: Key.accessToken)
   }
 
+  public func clearAccessToken() {
+    delete(for: Key.accessToken)
+  }
+
   public func saveRefreshToken(_ token: String) {
     save(token, for: Key.refreshToken)
   }

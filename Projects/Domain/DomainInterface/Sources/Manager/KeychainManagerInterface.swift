@@ -11,6 +11,7 @@ import WeaveDI
 public protocol KeychainManaging: Sendable {
   func save(accessToken: String, refreshToken: String)
   func saveAccessToken(_ token: String)
+  func clearAccessToken()
   func saveRefreshToken(_ token: String)
   func accessToken() -> String?
   func refreshToken() -> String?
@@ -35,4 +36,3 @@ public extension DependencyValues {
     set { self[KeychainManagerDependency.self] = newValue }
   }
 }
-

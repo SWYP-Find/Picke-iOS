@@ -24,4 +24,8 @@ struct KeychainTokenProvider: TokenProviding {
   func saveAccessToken(_ token: String) {
     keychainManager.saveAccessToken(token)
   }
+
+  func clearAccessToken() {
+    keychainManager.clearAccessToken()
+  }
 }

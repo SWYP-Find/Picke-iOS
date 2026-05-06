@@ -25,7 +25,10 @@ public struct APIHeader {
   }
 
   public static func updateAccessToken(_ token: String?) {
-    guard let newToken = token, !newToken.isEmpty else { return }
+    guard let newToken = token, !newToken.isEmpty else {
+      tokenProvider.clearAccessToken()
+      return
+    }
     tokenProvider.saveAccessToken(newToken)
   }
 

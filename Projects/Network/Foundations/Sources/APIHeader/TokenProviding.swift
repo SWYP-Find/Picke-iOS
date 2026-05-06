@@ -13,6 +13,7 @@ import WeaveDI
 public protocol TokenProviding: Sendable {
   func accessToken() -> String?
   func saveAccessToken(_ token: String)
+  func clearAccessToken()
 }
 
 private enum TokenProviderKey: DependencyKey {
@@ -43,6 +44,12 @@ public final class InMemoryTokenProvider: TokenProviding, @unchecked Sendable {
   public func saveAccessToken(_ token: String) {
     lock.lock()
     storage = token
+    lock.unlock()
+  }
+
+  public func clearAccessToken() {
+    lock.lock()
+    storage = nil
     lock.unlock()
   }
 }

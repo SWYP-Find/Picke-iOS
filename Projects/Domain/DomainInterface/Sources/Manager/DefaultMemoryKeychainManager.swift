@@ -22,6 +22,10 @@ public final class InMemoryKeychainManager: KeychainManaging, @unchecked Sendabl
     accessTokenStorage = token
   }
 
+  public func clearAccessToken() {
+    accessTokenStorage = nil
+  }
+
   public func saveRefreshToken(_ token: String) {
     refreshTokenStorage = token
   }
