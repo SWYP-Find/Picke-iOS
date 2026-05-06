@@ -1,0 +1,403 @@
+# Fastlane 기본 설정
+update_fastlane
+default_platform(:ios)
+
+ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "600"
+
+# 앱 관련 변수
+APP_NAME = "Picke"
+SCHEME = "Picke"
+STAGE_SCHEME = "Picke-Stage"
+BUNDLE_ID = "io.Picke.co"
+OUTPUT_DIR = "./fastlane/output"
+IPA_FILENAME = "#{APP_NAME}.ipa"
+TEAM_ID = ENV["TEAM_ID"] || "N94CS4N6VR"
+
+# 릴리스용 변수 (누락되어 있던 부분 보완)
+APP_RELEASE_NAME = APP_NAME
+APP_RELEASE_SCHEME = SCHEME
+
+APP_STAGE_NAME = STAGE_SCHEME
+APP_STAGE_SCHEME = STAGE_SCHEME
+
+platform :ios do
+
+
+
+  # 🚀 TestFlight 업로드 (Debug)
+  desc "Upload to TestFlight (Debug)"
+  lane :QA do
+
+    app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+      is_key_content_base64: true,
+      in_house: false
+    )
+
+
+    match(
+      type: "appstore",
+      readonly: true,
+      git_url: "git@github.com:Roy-wonji/FastlaneMatch.git",
+      storage_mode: "git",
+      app_identifier: ["io.Picke.co"]
+    )
+
+    ipa_path = nil
+    # Change to project root directory
+    Dir.chdir("..") do
+      puts "📁 Current directory: #{Dir.pwd}"
+      puts "📋 Available files: #{Dir.entries('.')}"
+
+      # Try to generate workspace if missing
+      workspace_files = Dir.glob("*.xcworkspace")
+      if workspace_files.empty?
+        puts "🔧 No workspace found, trying to generate..."
+
+        # Check if tuist is available
+        tuist_available = system("which tuist > /dev/null 2>&1")
+        puts "Tuist available: #{tuist_available}"
+
+        unless tuist_available
+          puts "🔧 Installing tuist with brew..."
+          sh("brew install tuist")
+        end
+
+        begin
+          if File.exist?("make")
+            puts "🔧 Trying ./make install..."
+            sh("./make install")
+            puts "🔧 Trying ./make generate..."
+            sh("./make generate")
+          else
+            puts "🔧 Trying tuist directly..."
+            sh("tuist install")
+            sh("tuist generate --no-open")
+          end
+        rescue => e
+          puts "❌ Generation failed: #{e.message}"
+        end
+
+        workspace_files = Dir.glob("*.xcworkspace")
+        puts "🔍 Workspace files found: #{workspace_files}"
+      end
+
+      if workspace_files.empty?
+        puts "❌ Still no workspace found!"
+        puts "🔍 All files in directory:"
+        Dir.entries('.').each { |f| puts "  #{f}" }
+        UI.user_error!("Cannot generate workspace file. Check tuist setup and plugins.")
+      end
+
+      workspace_name = workspace_files.first
+      workspace_path = File.expand_path(workspace_name)
+      puts "✅ Using workspace: #{workspace_name}"
+      puts "✅ Full workspace path: #{workspace_path}"
+
+      ipa_path = build_app(
+        workspace: workspace_path,
+        scheme: "Picke-Stage",
+        configuration: "Release",
+        export_method: "app-store",
+        output_directory: File.expand_path("../#{OUTPUT_DIR}"),
+        output_name: IPA_FILENAME,
+        clean: false,
+        silent: true,
+        xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
+                "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
+                "SWIFT_COMPILATION_MODE=wholemodule -parallelizeTargets " +
+                "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
+                "FRAMEWORK_SEARCH_PATHS='$(inherited)' LIBRARY_SEARCH_PATHS='$(inherited)' " +
+                "-allowProvisioningUpdates -quiet",
+        export_options: {
+          signingStyle: "manual",
+          uploadBitcode: false,
+          teamID: TEAM_ID,
+          provisioningProfiles: {
+            "#{BUNDLE_ID}" => "match AppStore #{BUNDLE_ID}"
+          }
+        }
+      )
+    end
+
+    upload_to_testflight(
+      ipa: ipa_path,
+      changelog: "변경사항",
+      groups: ["Picke", "picke"],
+      beta_app_description: "Picke 앱입니다.",
+      notify_external_testers: true,
+      skip_waiting_for_build_processing: true,
+      demo_account_required: false,
+      uses_non_exempt_encryption: false
+    )
+  end
+
+  # 🚀 App Store 배포
+  desc "Submit to App Store"
+  lane :release do |options|
+    if options[:version]
+      app_store_connect_api_key(
+        key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+        issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+        key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+        is_key_content_base64: true,
+        in_house: false
+      )
+
+      # QA와 동일한 빌드 번호 자동 증가 로직
+      begin
+        current_build_number = latest_testflight_build_number(
+          app_identifier: BUNDLE_ID,
+          platform: "ios"
+        )
+        puts "📱 TestFlight 최신 빌드 번호: #{current_build_number}"
+      rescue => e
+        puts "⚠️ TestFlight 빌드 번호 조회 실패, 기본값 1 사용: #{e.message}"
+        current_build_number = 1
+      end
+
+      # App Store 라이브 버전 빌드 번호도 확인
+      begin
+        live_build_number = app_store_build_number(
+          app_identifier: BUNDLE_ID,
+          platform: "ios"
+        )
+        puts "🏪 App Store 라이브 빌드 번호: #{live_build_number}"
+
+        # 더 높은 빌드 번호 사용
+        current_build_number = [current_build_number, live_build_number].max
+      rescue => e
+        puts "⚠️ App Store 빌드 번호 조회 실패: #{e.message}"
+      end
+
+      new_build_number = current_build_number + 1
+      puts "🔢 현재 최고 빌드 번호: #{current_build_number}"
+      puts "🔢 새로운 빌드 번호: #{new_build_number}"
+
+      # Extension+String.swift 파일에서 빌드 번호 업데이트
+      extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
+      content = File.read(extension_file_path)
+
+      # 빌드 번호 라인 수정
+      updated_content = content.gsub(/public static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
+                                   "public static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {")
+
+      File.write(extension_file_path, updated_content)
+      puts "✅ 빌드 번호를 #{new_build_number}로 업데이트 완료"
+
+      # Tuist 프로젝트 재생성
+      Dir.chdir("..") do
+        puts "🔧 Tuist workspace 재생성 중..."
+        sh("tuist generate --no-open")
+        puts "✅ Tuist workspace 재생성 완료"
+      end
+
+      match(
+        type: "appstore",
+        readonly: true,
+        git_url: "git@github.com:Roy-wonji/FastlaneMatch.git",
+        storage_mode: "git",
+        app_identifier: ["io.Picke.co"]
+      )
+
+      ipa_path = nil
+      # QA와 동일한 workspace 처리 로직
+      Dir.chdir("..") do
+        puts "📁 현재 디렉토리: #{Dir.pwd}"
+        puts "📋 사용 가능한 파일들: #{Dir.entries('.')}"
+
+        # Try to generate workspace if missing
+        workspace_files = Dir.glob("*.xcworkspace")
+        if workspace_files.empty?
+          puts "🔧 workspace가 없습니다, 생성 중..."
+
+          # Check if tuist is available
+          tuist_available = system("which tuist > /dev/null 2>&1")
+          puts "Tuist 사용 가능: #{tuist_available}"
+
+          unless tuist_available
+            puts "🔧 brew로 tuist 설치 중..."
+            sh("brew install tuist")
+          end
+
+          begin
+            if File.exist?("make")
+              puts "🔧 ./make install 실행 중..."
+              sh("./make install")
+              puts "🔧 ./make generate 실행 중..."
+              sh("./make generate")
+            else
+              puts "🔧 tuist 직접 실행 중..."
+              sh("tuist install")
+              sh("tuist generate --no-open")
+            end
+          rescue => e
+            puts "❌ 생성 실패: #{e.message}"
+          end
+
+          workspace_files = Dir.glob("*.xcworkspace")
+          puts "🔍 발견된 workspace 파일들: #{workspace_files}"
+        end
+
+        if workspace_files.empty?
+          puts "❌ workspace를 찾을 수 없습니다!"
+          puts "🔍 디렉토리 내 모든 파일:"
+          Dir.entries('.').each { |f| puts "  #{f}" }
+          UI.user_error!("workspace 파일을 생성할 수 없습니다. tuist 설정과 플러그인을 확인해주세요.")
+        end
+
+        workspace_name = workspace_files.first
+        workspace_path = File.expand_path(workspace_name)
+        puts "✅ 사용할 workspace: #{workspace_name}"
+        puts "✅ 전체 workspace 경로: #{workspace_path}"
+
+        ipa_path = build_app(
+          workspace: workspace_path,
+          scheme: "Picke-Prod",
+          configuration: "Release",
+          export_method: "app-store",
+          output_directory: File.expand_path("../#{OUTPUT_DIR}"),
+          output_name: IPA_FILENAME,
+          clean: false,
+          silent: true,
+          xcargs: "CODE_SIGN_IDENTITY='Apple Distribution: Wonji Suh (N94CS4N6VR)' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
+                  "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
+                  "SWIFT_COMPILATION_MODE=wholemodule -parallelizeTargets " +
+                  "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
+                  "FRAMEWORK_SEARCH_PATHS='$(inherited)' LIBRARY_SEARCH_PATHS='$(inherited)' " +
+                  "-allowProvisioningUpdates -quiet",
+          export_options: {
+            signingStyle: "manual",
+            uploadBitcode: false,
+            teamID: TEAM_ID,
+            provisioningProfiles: {
+              "#{BUNDLE_ID}" => "match AppStore #{BUNDLE_ID}"
+            }
+          }
+        )
+      end
+
+      # clean_symbols_from_ipa(ipa_path: ipa_path)
+
+      # 업로드 후 자동으로 심사 요청
+      upload_to_app_store(
+        app_version: options[:version],
+        username: ENV["APPLE_ID"],
+        team_id: "KL4Y9PB9B8",
+        ipa: ipa_path,
+        skip_metadata: false,
+        metadata_path: "./fastlane/metadata",
+        skip_screenshots: true,
+        force: true,
+        submit_for_review: true,
+        automatic_release: false,
+        precheck_include_in_app_purchases: false,
+        reject_if_possible: true
+      )
+
+      UI.success("🎉 앱 업로드 및 심사 요청 완료!")
+      UI.important("")
+      UI.important("📱 심사 진행 상황 확인:")
+      UI.important("   1. https://appstoreconnect.apple.com 접속")
+      UI.important("   2. Picke 앱 선택")
+      UI.important("   3. 버전 #{options[:version]} 심사 상태 확인")
+      UI.important("   4. 빌드 번호: #{new_build_number}")
+      UI.important("")
+      UI.success("✅ 빌드, 업로드, 심사 요청이 모두 성공적으로 완료되었습니다!")
+      UI.success("🚀 이제 Apple의 심사를 기다리기만 하면 됩니다!")
+    else
+      UI.user_error!("⚠️ version 옵션을 지정해주세요: fastlane submit version:'1.0.0'")
+    end
+  end
+
+  # 🚀 이미 업로드된 버전을 심사에 제출
+  desc "Submit already uploaded version for review"
+  lane :submit_for_review do |options|
+    if options[:version]
+      app_store_connect_api_key(
+        key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+        issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+        key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+        is_key_content_base64: true,
+        in_house: false
+      )
+
+      begin
+        upload_to_app_store(
+          app_version: options[:version],
+          username: ENV["APPLE_ID"],
+          team_id: "KL4Y9PB9B8",
+          skip_binary_upload: true,
+          skip_metadata: false,
+          metadata_path: "./fastlane/metadata",
+          skip_screenshots: true,
+          force: true,
+          submit_for_review: true,
+          automatic_release: false,
+          precheck_include_in_app_purchases: false,
+          reject_if_possible: true
+        )
+        UI.success("🎉 심사 제출 완료!")
+      rescue => ex
+        UI.error("❌ 제출 실패: #{ex.message}")
+        UI.important("")
+        UI.important("🔍 App Store Connect에서 확인해야 할 사항:")
+        UI.important("   1. 현재 버전의 상태 (심사 중/대기 중인지)")
+        UI.important("   2. 필수 메타데이터 완성 여부")
+        UI.important("   3. 스크린샷 업로드 완료 여부")
+        UI.important("   4. 이전 버전 정리 완료 여부")
+        UI.important("")
+        UI.important("📱 App Store Connect 링크: https://appstoreconnect.apple.com")
+      end
+    else
+      UI.user_error!("⚠️ version 옵션을 지정해주세요: fastlane submit_for_review version:'1.0.0'")
+    end
+  end
+
+end
+
+# 🤖 TDD 자동화 CI 레인
+desc "TDD 테스트 및 자동 배포"
+lane :tdd_ci do |options|
+  domain = options[:domain] || "All"
+
+  UI.header "🧪 #{domain} 도메인 TDD CI 시작"
+
+  # 1. 클린 빌드
+  clear_derived_data
+
+  # 2. 테스트 실행
+  run_tests(
+    workspace: "Picke.xcworkspace",
+    devices: ["iPhone 15"],
+    scheme: "Picke"
+  )
+
+  # 3. 커버리지 체크
+  slather(
+    cobertura_xml: true,
+    jenkins: true,
+    scheme: "Picke",
+    workspace: "Picke.xcworkspace"
+  )
+
+  # 4. 성공 시 알림
+  slack(
+    message: "✅ #{domain} 도메인 TDD 테스트 성공!",
+    success: true,
+    channel: "#ios-dev"
+  ) if ENV["SLACK_URL"]
+
+  UI.success "🎉 #{domain} 도메인 TDD CI 완료!"
+end
+
+# 🚨 TDD 테스트 실패 시 처리
+error do |lane, exception|
+  slack(
+    message: "❌ TDD 테스트 실패: #{exception.message}",
+    success: false,
+    channel: "#ios-dev"
+  ) if ENV["SLACK_URL"]
+end

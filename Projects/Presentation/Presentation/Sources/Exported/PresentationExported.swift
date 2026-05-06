@@ -7,4 +7,4 @@
 
 
 // MARK: - 여기에 한번에 호출 할꺼 추가
-//@_exported import Service
+@_exported import Splash

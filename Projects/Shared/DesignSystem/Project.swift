@@ -10,7 +10,7 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings:  .settings(),
   dependencies: [
-
+    .Shared(implements: .ThirdParty)
   ],
   sources: ["Sources/**"],
   resources: ["Resources/**", "FontAsset/**"],

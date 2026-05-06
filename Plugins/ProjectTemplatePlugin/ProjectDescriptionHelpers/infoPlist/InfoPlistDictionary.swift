@@ -182,7 +182,36 @@ extension InfoPlistDictionary {
     return self.merging(["GOOGLE_CLIENT_ID": .string(value)]) { (_, new) in new }
   }
   
+  func setGoogleClientiOSID(_ value: String) -> InfoPlistDictionary {
+    return self.merging(["GOOGLE_IOS_CLIENT_ID": .string(value)]) { (_, new) in new }
+  }
+  
+  func setMixpanelToken(_ value: String) -> InfoPlistDictionary {
+    return self.merging(["MIXPANEL_TOKEN": .string(value)]) { (_, new) in new }
+  }
+
+  
   func setBaseURL(_ value: String) -> InfoPlistDictionary {
     return self.merging(["BASE_URL": .string(value)]) { (_, new) in new }
+  }
+  
+  func setAdmobToken(_ value: String) -> InfoPlistDictionary {
+    return self.merging(["ADMOB_TOKEN": .string(value)]) { (_, new) in new }
+  }
+  
+  func setGADApplicationId(_ value: String) -> InfoPlistDictionary {
+    return self.merging(["GADApplicationIdentifier": .string(value)]) { (_, new) in new }
+  }
+  
+  func setSKAdNetworkItems(_ identifiers: [String]) -> InfoPlistDictionary {
+    return self.merging([
+      "SKAdNetworkItems": .array(
+        identifiers.map {
+          .dictionary([
+            "SKAdNetworkIdentifier": .string($0)
+          ])
+        }
+      )
+    ]) { (_, new) in new }
   }
 }

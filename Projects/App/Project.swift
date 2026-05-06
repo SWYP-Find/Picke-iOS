@@ -10,11 +10,17 @@ let project = Project.makeAppModule(
   settings: .appMainSetting,
   scripts: [],
   dependencies: [
-    .Presentation(implements: .Presentation)
+    .Presentation(implements: .Presentation),
+    .Data(implements: .Repository),
+    .SPM.googleMobileAds,
+    .SPM.firebaseCrashlytics,
+    .SPM.mixpanel,
+    .SPM.mixpanelSessionReplay
+    
   ],
   sources: ["Sources/**"],
   resources: ["Resources/**"],
   infoPlist: .appInfoPlist,
+  entitlements: .file(path: "../../Entitlements/Picke.entitlements"),
   hasTests: false
 )
-

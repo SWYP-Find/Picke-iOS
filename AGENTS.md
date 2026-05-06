@@ -48,6 +48,7 @@ Projects/
 ```swift
 // Core Architecture
 ComposableArchitecture: 1.25.5       // TCA
+Dependencies:           1.10.0       // TCA 의존성 관리
 TCAFlow:                1.1.2        // @FlowCoordinator 기반 네비게이션
 WeaveDI:                3.4.1        // 의존성 주입
 IdentifiedCollections:  1.1.0+
@@ -66,8 +67,14 @@ GoogleSignIn-iOS:       9.1.0        // Google 소셜 로그인
 // Firebase
 firebase-ios-sdk:       12.12.0      // Crashlytics / Messaging
 
+// Analytics / Ads
+GoogleMobileAds:        13.3.0       // AdMob 광고
+Mixpanel:               5.2.0        // 제품 분석
+MixpanelSessionReplay:  1.4.0        // 세션 리플레이
+
 // UI / Utility
 SDWebImageSwiftUI:      3.1.4        // 이미지 비동기 로딩
+Kingfisher:             8.2.0        // 이미지 로딩
 LogMacro:               1.1.1        // 로깅 매크로
 ```
 
@@ -122,8 +129,11 @@ LogMacro:               1.1.1        // 로깅 매크로
 - 에이전트가 작성하는 **모든 git commit 메시지는 한국어로 작성**
 - 커밋 제목/본문 모두 한글 기준으로 작성
 - 영문 타입 prefix(`feat`, `fix`, `refactor`, `test`, `chore`)는 사용 가능하지만, **설명 문구는 반드시 한국어**
+- 커밋 제목에는 관련 GitHub 이슈 번호를 포함해 `chore: #1 SPM 의존성 확장`처럼 이슈와 바로 매칭되게 작성
+- 커밋 본문은 장황한 문장보다 `- 변경 요약` bullet 형식을 우선 사용하고, 변경 파일/모듈별 핵심 의도와 후속 주의사항을 짧게 정리
 - 별도 요청이 없는 한 영어 커밋 메시지는 사용하지 않음
 - 커밋 메시지에 `Co-Authored-By: Claude ...` 등의 자동 서명 라인을 절대 추가하지 않음
+- OMX 훅 검증을 위해 커밋 명령에는 `Co-authored-by: OmX <omx@oh-my-codex.dev>` trailer를 포함하되, 최종 커밋 메시지에서는 제거
 
 ### 🧭 TCAFlow 네비게이션 (`docs/agent/tcaflow-navigation.md`)
 - @FlowCoordinator 패턴

@@ -38,6 +38,20 @@ public extension InfoPlist {
           ]
         ]
       ])
+      .setUIRequiredDeviceCapabilities(["armv7"])
+      .setCFBundleDevelopmentRegion()
+      .setUISupportedInterfaceOrientations(["UIInterfaceOrientationPortrait"])
+      .setBaseURL("$(BASE_URL)")
+      .setGoogleClientID("${GOOGLE_CLIENT_ID}")
+      .setGoogleClientiOSID("${GOOGLE_IOS_CLIENT_ID}")
+      .setMixpanelToken("$(MIXPANEL_TOKEN)")
+      .setGIDClientID("${GOOGLE_CLIENT_ID}")
+      .setAdmobToken("${ADMOB_TOKEN}")
+      .setGADApplicationId("${ADMOB_TOKEN}")
+//      .setSKAdNetworkItems([
+//
+//      ])
+    
   )
 
   static let moduleInfoPlist: Self = .extendingDefault(

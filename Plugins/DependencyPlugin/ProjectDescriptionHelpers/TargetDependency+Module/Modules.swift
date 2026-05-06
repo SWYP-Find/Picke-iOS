@@ -20,10 +20,11 @@ public enum ModulePath {
 public extension ModulePath {
   enum Presentations: String, CaseIterable {
     case Presentation
+    case Splash
 
 
     public static let name: String = "Presentation"
-      case Splash
+      
   }
 }
 
@@ -34,6 +35,7 @@ public extension ModulePath {
   enum Networks: String, CaseIterable {
     case Networking
     case Foundations
+    case ThirdPartys
 
     public static let name: String = "Network"
   }
@@ -75,6 +77,7 @@ public extension ModulePath {
     case Utill
     
     public static let name: String = "Shared"
+      case ThirdParty
   }
 }
 
