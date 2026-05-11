@@ -11,33 +11,44 @@ public struct CustomButton: View {
   private let action: () -> Void
   private let title: String
   private let config: PickeCustomButtonConfig
-  private var isEnable: Bool = false
+  private let trailingIcon: Image?
+  private let textStyle: CustomSizeFont
+  private var isEnable: Bool
 
   public init(
     action: @escaping () -> Void,
     title: String,
     config: PickeCustomButtonConfig,
-    isEnable: Bool = false
+    isEnable: Bool = false,
+    trailingIcon: Image? = nil,
+    textStyle: CustomSizeFont = .headingMedium
   ) {
     self.title = title
     self.config = config
     self.action = action
     self.isEnable = isEnable
+    self.trailingIcon = trailingIcon
+    self.textStyle = textStyle
   }
 
   public var body: some View {
-    RoundedRectangle(cornerRadius: config.cornerRadius)
-      .fill(isEnable ? config.enableBackgroundColor : config.disableBackgroundColor)
-      .frame(height: config.frameHeight)
-      .clipShape(Capsule())
-      .overlay {
+    Button(action: action) {
+      HStack(spacing: .s8) {
         Text(title)
-          .pretendardCustomFont(textStyle: .headingLarge)
-          .foregroundStyle(isEnable ? config.enableFontColor : config.disableFontColor)
+          .pretendardCustomFont(textStyle: textStyle)
+        if let trailingIcon {
+          trailingIcon
+        }
       }
-      .onTapGesture {
-        action()
-      }
-      .disabled(!isEnable)
+      .foregroundStyle(isEnable ? config.enableFontColor : config.disableFontColor)
+      .frame(maxWidth: .infinity)
+      .frame(height: config.frameHeight)
+      .background(
+        isEnable ? config.enableBackgroundColor : config.disableBackgroundColor,
+        in: Capsule()
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(!isEnable)
   }
 }

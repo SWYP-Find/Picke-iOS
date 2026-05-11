@@ -4,8 +4,8 @@
 import SwiftUI
 
 public extension ShapeStyle where Self == Color {
-  // MARK: - Brand / Primary
 
+  // MARK: - Brand / Primary
   static var primary50: Color { .init(hex: "F3EBE9") }
   static var primary100: Color { .init(hex: "E7D7D3") }
   static var primary200: Color { .init(hex: "D0AFA8") }
@@ -19,7 +19,6 @@ public extension ShapeStyle where Self == Color {
   static var primaryAlpha8: Color { .init(hex: "893825", alpha: 0.08) }
 
   // MARK: - Brand / Secondary
-
   static var secondary50: Color { .init(hex: "FCF8F1") }
   static var secondary100: Color { .init(hex: "F9F1E3") }
   static var secondary200: Color { .init(hex: "F3E3C7") }
@@ -32,7 +31,6 @@ public extension ShapeStyle where Self == Color {
   static var secondary900: Color { .init(hex: "92784A") }
 
   // MARK: - Brand / Beige
-
   static var beige50: Color { .init(hex: "FEFEFD") }
   static var beige100: Color { .init(hex: "FDFCFB") }
   static var beige200: Color { .init(hex: "FBF9F7") }
@@ -45,7 +43,6 @@ public extension ShapeStyle where Self == Color {
   static var beige900: Color { .init(hex: "B7A88B") }
 
   // MARK: - Brand / Neutral
-
   static var neutral50: Color { .init(hex: "EBEBEB") }
   static var neutral100: Color { .init(hex: "D7D7D7") }
   static var neutral200: Color { .init(hex: "B0AFAE") }
@@ -58,7 +55,6 @@ public extension ShapeStyle where Self == Color {
   static var neutral900: Color { .init(hex: "131212") }
 
   // MARK: - Semantic / Text
-
   static var textBrand: Color { .primary500 }
   static var textInverse: Color { .init(hex: "FEFEFD") }
   static var textMuted: Color { .neutral300 }
@@ -67,17 +63,15 @@ public extension ShapeStyle where Self == Color {
   static var textTertiary: Color { .neutral500 }
 
   // MARK: - Semantic / Border
-
   static var borderDefault: Color { .beige600 }
   static var borderDisabled: Color { .beige500 }
-  static var borderError: Color { .statusError }
+  static var borderError: Color { .statusErrorAlpha }
   static var borderFocus: Color { .beige700 }
   static var borderSelected: Color { .secondary500 }
   static var borderStrong: Color { .primary500 }
   static var borderSubtle: Color { .beige700 }
 
   // MARK: - Semantic / Surface
-
   static var surfaceDefault: Color { .beige50 }
   static var surfaceDisabled: Color { .primary200 }
   static var surfaceSelected: Color { .primary500 }
@@ -85,7 +79,6 @@ public extension ShapeStyle where Self == Color {
   static var surfaceTertiary: Color { .beige400 }
 
   // MARK: - Semantic / Background
-
   static var bgBrand: Color { .beige200 }
   static var bgDefault: Color { .init(hex: "FAFAF9") }
   static var bgInverse: Color { .neutral800 }
@@ -94,7 +87,6 @@ public extension ShapeStyle where Self == Color {
   static var bgTertiary: Color { .neutral50 }
 
   // MARK: - Semantic / Status
-
   static var statusErrorAlpha: Color { .init(hex: "C92D33", alpha: 0.4) }
   static var statusError: Color { .init(hex: "C92D33") }
   static var statusWarningAlpha: Color { .init(hex: "FFB400", alpha: 0.4) }

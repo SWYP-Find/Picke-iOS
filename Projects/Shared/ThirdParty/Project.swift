@@ -12,6 +12,7 @@ let project = Project.makeAppModule(
   dependencies: [
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
+    .SPM.sdwebImage
     
   ],
   sources: ["Sources/**"]
