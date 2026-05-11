@@ -5,7 +5,6 @@
 //  Created by Wonji Suh  on 5/6/26.
 //
 
-
 import Foundation
 import ComposableArchitecture
 
@@ -15,6 +14,7 @@ public struct SplashFeature {
   
   @ObservableState
   public struct State: Equatable {
+    var loading: Bool = true
     
   
     
@@ -35,7 +35,7 @@ public struct SplashFeature {
   // MARK: - ViewAction
   @CasePathable
   public enum View {
-  
+  case onAppear
   }
   
   // MARK: - AsyncAction 비동기 처리 액션
@@ -60,9 +60,7 @@ public struct SplashFeature {
   
   }
   
-  
-  
- 
+  @Dependency(\.continuousClock) var clock
   
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -96,6 +94,10 @@ extension SplashFeature {
     action: View
   ) -> Effect<Action> {
     switch action {
+    case .onAppear:
+      return .run { send in
+        try await clock.sleep(for: .seconds(0.3))
+      }
       
     }
   }
