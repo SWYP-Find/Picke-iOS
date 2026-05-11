@@ -1,0 +1,111 @@
+name: Sync Design Tokens
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 매일 한국 시간 10:00 (UTC 01:00)
+    - cron: '0 1 * * *'
+  repository_dispatch:
+    types: [design-tokens-updated]
+
+concurrency:
+  group: sync-design-tokens
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  TOKENS_REPO: SWYP-Find/design-tokens
+  TOKENS_BRANCH: main
+  TOKENS_FILE: Mode 1.tokens.json
+  LOCAL_JSON_PATH: Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
+  PR_BRANCH: chore/design-tokens-sync
+  PR_BASE: develop
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout iOS repo
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.PR_BASE }}
+          fetch-depth: 0
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '5.10'
+
+      - name: Download tokens JSON from private design-tokens repo
+        env:
+          GH_TOKEN: ${{ secrets.DESIGN_TOKENS_TOKEN }}
+        run: |
+          set -euo pipefail
+          ENCODED=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "${TOKENS_FILE}")
+          curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github.raw" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${TOKENS_REPO}/contents/${ENCODED}?ref=${TOKENS_BRANCH}" \
+            -o "${LOCAL_JSON_PATH}"
+          echo "[sync] downloaded $(wc -c < "${LOCAL_JSON_PATH}") bytes"
+
+      - name: Run TokenGenerator
+        run: swift Tools/TokenGenerator.swift
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet -- \
+            "${LOCAL_JSON_PATH}" \
+            "Projects/Shared/DesignSystem/Sources/Color/ShapeStyle+.swift" \
+            "Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Radius+.swift" \
+            "Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Spacing+.swift" \
+            "Projects/Shared/DesignSystem/Sources/UI/Token/ComponentToken.swift"; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "[sync] 변경사항 없음"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat -- \
+              "${LOCAL_JSON_PATH}" \
+              "Projects/Shared/DesignSystem/Sources/" || true
+          fi
+
+      - name: Create PR
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ env.PR_BASE }}
+          branch: ${{ env.PR_BRANCH }}
+          delete-branch: true
+          commit-message: |
+            chore: design-tokens 동기화 자동 코드젠 #24
+          title: "chore: design-tokens 동기화 자동 코드젠 #24"
+          body: |
+            ## 개요
+            `${{ env.TOKENS_REPO }}` 의 `${{ env.TOKENS_FILE }}` 변경을 자동으로 가져와 `swift Tools/TokenGenerator.swift` 실행 결과를 반영합니다.
+
+            ## 변경 파일
+            - `${{ env.LOCAL_JSON_PATH }}` (디자인 토큰 원본)
+            - `Sources/Color/ShapeStyle+.swift` — 색 토큰 (auto)
+            - `Sources/Extension/CGFloat/CGFloat+Radius+.swift` — radius (auto)
+            - `Sources/Extension/CGFloat/CGFloat+Spacing+.swift` — spacing (auto)
+            - `Sources/UI/Token/ComponentToken.swift` — 컴포넌트 토큰 (auto)
+
+            ## 체크리스트
+            - [ ] 빌드 통과 확인
+            - [ ] 의도치 않은 토큰 변경 없는지 검토
+            - [ ] 머지 후 `tuist generate` 필요 시 후속 작업
+          labels: |
+            🎨 디자인
+            ⚙️ 환경설정
+          add-paths: |
+            Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
+            Projects/Shared/DesignSystem/Sources/Color/ShapeStyle+.swift
+            Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Radius+.swift
+            Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Spacing+.swift
+            Projects/Shared/DesignSystem/Sources/UI/Token/ComponentToken.swift
