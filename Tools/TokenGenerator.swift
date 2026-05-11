@@ -16,6 +16,8 @@ let colorOut = "\(sourcesDir)/Color/ShapeStyle+.swift"
 let cgfloatDir = "\(sourcesDir)/Extension/CGFloat"
 let radiusOut = "\(cgfloatDir)/CGFloat+Radius+.swift"
 let spacingOut = "\(cgfloatDir)/CGFloat+Spacing+.swift"
+let componentOut = "\(sourcesDir)/UI/Token/ComponentToken.swift"
+try? FileManager.default.createDirectory(atPath: "\(sourcesDir)/UI/Token", withIntermediateDirectories: true)
 try? FileManager.default.createDirectory(atPath: cgfloatDir, withIntermediateDirectories: true)
 
 let data: Data
@@ -56,7 +58,99 @@ func aliasToSwiftName(_ alias: String) -> String? {
     let leaf = p[4]
     return leaf == "Alpha" ? "status\(bucket)Alpha" : "status\(bucket)"
   }
+  if p.count == 4, p[0] == "Colors", p[1] == "semantic" {
+    let key = p[2]
+    let prefix = (key == "background") ? "bg" : key
+    return "\(prefix)\(capitalizeFirst(p[3]))"
+  }
   return nil
+}
+
+// 'Primary200' → 'primary200' / 'BorderError' → 'borderError'
+func lowerFirst(_ s: String) -> String {
+  s.prefix(1).lowercased() + s.dropFirst()
+}
+
+let swiftKeywords: Set<String> = [
+  "default", "case", "enum", "class", "struct", "var", "let", "func", "init",
+  "private", "public", "internal", "fileprivate", "static", "extension", "protocol",
+  "where", "as", "is", "self", "Self", "true", "false", "nil", "if", "else", "for", "in",
+  "return", "switch", "break", "continue", "do", "try", "catch", "throw", "throws",
+  "guard", "defer", "import", "typealias", "associatedtype",
+]
+
+func swiftKey(_ s: String) -> String {
+  swiftKeywords.contains(s) ? "`\(s)`" : s
+}
+
+// hex→Swift 변수명 인덱스 (alpha=1 brand/semantic만). Component이 inline hex로 export 됐을 때 fallback 매칭용.
+var hexIndex: [String: String] = [:]
+var knownColorNames: Set<String> = []
+
+func resolveComponentColor(_ node: [String: Any]) -> String? {
+  if let str = node["$value"] as? String, let name = aliasToSwiftName(str) {
+    return ".\(name)"
+  }
+  if let v = node["$value"] as? [String: Any], let hex = v["hex"] as? String {
+    let raw = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
+    let normalized = raw.uppercased()
+    let alpha = (v["alpha"] as? Double) ?? 1.0
+    // 1) aliasData.targetVariableName — 우리 토큰셋에 존재할 때만 사용
+    if let exts = node["$extensions"] as? [String: Any],
+       let alias = exts["com.figma.aliasData"] as? [String: Any],
+       let target = alias["targetVariableName"] as? String, !target.isEmpty
+    {
+      let camel = lowerFirst(target)
+      if knownColorNames.contains(camel) { return ".\(camel)" }
+    }
+    // 2) hex 매칭 — 같은 hex의 brand/semantic 변수가 있으면 그쪽으로 묶기
+    if alpha >= 1.0, let matched = hexIndex[normalized] {
+      return ".\(matched)"
+    }
+    // 3) fallback: inline hex
+    return colorBody(hex: normalized, alpha: alpha)
+  }
+  return nil
+}
+
+func resolveComponentNumber(_ node: [String: Any]) -> String? {
+  if let str = node["$value"] as? String {
+    var s = str
+    if s.hasPrefix("{"), s.hasSuffix("}") { s = String(s.dropFirst().dropLast()) }
+    let p = s.split(separator: ".").map(String.init)
+    if p.count == 2, p[0] == "Radius" { return ".\(swiftKey(p[1]))" }
+  }
+  if let n = node["$value"] as? Double { return formatNumber(n) }
+  return nil
+}
+
+func walkComponent(_ node: [String: Any], indent: String, out: inout [String]) {
+  let keys = node.keys.sorted()
+  // 리프(컬러/숫자) 먼저, 그 다음 그룹(중첩 enum)
+  let leafKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] != nil }
+  let groupKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] == nil }
+  for key in leafKeys {
+    guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
+    switch type {
+    case "color":
+      if let expr = resolveComponentColor(child) {
+        out.append("\(indent)public static var \(swiftKey(key)): Color { \(expr) }")
+      }
+    case "number":
+      if let expr = resolveComponentNumber(child) {
+        out.append("\(indent)public static var \(swiftKey(key)): CGFloat { \(expr) }")
+      }
+    default: continue
+    }
+  }
+  for (i, key) in groupKeys.enumerated() {
+    guard let child = node[key] as? [String: Any] else { continue }
+    if i == 0, !leafKeys.isEmpty { out.append("") }
+    if i > 0 { out.append("") }
+    out.append("\(indent)public enum \(capitalizeFirst(key)) {")
+    walkComponent(child, indent: indent + "  ", out: &out)
+    out.append("\(indent)}")
+  }
 }
 
 func capitalizeFirst(_ s: String) -> String {
@@ -99,13 +193,18 @@ for group in brandGroups {
   lines.append("  // MARK: - Brand / \(capitalizeFirst(group))")
   for s in scales {
     if let node = g[s] as? [String: Any], let v = valueOf(node), let h = hexAlpha(v) {
-      lines.append("  static var \(group)\(s): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
+      let name = "\(group)\(s)"
+      lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
+      knownColorNames.insert(name)
+      if h.alpha >= 1.0 { hexIndex[h.hex] = name }
     }
   }
   if let alpha = g["Alpha"] as? [String: Any] {
     for (k, v) in alpha.sorted(by: { $0.key < $1.key }) {
       if let node = v as? [String: Any], let val = valueOf(node), let h = hexAlpha(val) {
-        lines.append("  static var \(group)Alpha\(k): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
+        let name = "\(group)Alpha\(k)"
+        lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
+        knownColorNames.insert(name)
       }
     }
   }
@@ -127,9 +226,11 @@ for (key, prefix) in semGroups {
     let name = "\(prefix)\(capitalizeFirst(rawName))"
     if let h = hexAlpha(v) {
       lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
+      if h.alpha >= 1.0 { hexIndex[h.hex] = name }
     } else if let aliasStr = v as? String, let target = aliasToSwiftName(aliasStr) {
       lines.append("  static var \(name): Color { .\(target) }")
     }
+    knownColorNames.insert(name)
   }
   lines.append("")
 }
@@ -144,6 +245,8 @@ if let status = semantic["status"] as? [String: Any] {
       let bucketCap = capitalizeFirst(bucket)
       let name = (k == "Alpha") ? "status\(bucketCap)Alpha" : "status\(bucketCap)"
       lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
+      knownColorNames.insert(name)
+      if h.alpha >= 1.0 { hexIndex[h.hex] = name }
     }
   }
 }
@@ -182,5 +285,14 @@ for k in spacingKeys {
 sLines.append("}")
 sLines.append("")
 try writeFile(spacingOut, sLines.joined(separator: "\n"))
+
+// MARK: - Component
+
+let component = json["Component"] as! [String: Any]
+var compLines: [String] = [header, "", "import SwiftUI", "", "public enum ComponentToken {"]
+walkComponent(component, indent: "  ", out: &compLines)
+compLines.append("}")
+compLines.append("")
+try writeFile(componentOut, compLines.joined(separator: "\n"))
 
 print("[token-gen] done.")
