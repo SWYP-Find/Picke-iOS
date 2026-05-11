@@ -4,8 +4,8 @@
 import CoreGraphics
 
 public extension CGFloat {
-  // MARK: - Radius
 
+  // MARK: - Radius
   static let none: CGFloat = 0
   static let `default`: CGFloat = 2
   static let full: CGFloat = 999
