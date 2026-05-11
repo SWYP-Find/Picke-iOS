@@ -184,8 +184,9 @@ tuist graph --format pdf --path ./graph.pdf
 
 Tokens Studio for Figma 가 export 한 `Mode 1.tokens.json`을 Swift 토큰으로 변환합니다.
 
-**입력**
-- `Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json`
+**단일 소스**
+- 토큰 JSON 은 `SWYP-Find/design-tokens` 레포(public)가 단일 소스
+- Picke-iOS 의 `Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json` 은 워크플로우 실행 시에만 다운로드되는 임시 파일이며 git 에 추적되지 않음 (`.gitignore` 처리)
 
 **자동 생성 출력 (⚠️ 직접 수정 금지 — 헤더에 AUTO-GENERATED 마크)**
 - `Sources/Color/ShapeStyle+.swift` — 색 토큰 (`.primary500`, `.bgDefault`, `.borderError` 등)
@@ -193,11 +194,16 @@ Tokens Studio for Figma 가 export 한 `Mode 1.tokens.json`을 Swift 토큰으�
 - `Sources/Extension/CGFloat/CGFloat+Spacing+.swift` — spacing (`.s0` ~ `.s96`)
 - `Sources/UI/Token/ComponentToken.swift` — 컴포넌트 토큰 (`ComponentToken.Button.Primary.Background.default` 등)
 
-**디자이너 핸드오프 흐름**
+**디자이너 핸드오프 흐름 (자동)**
 1. 디자이너가 Tokens Studio → `Mode 1.tokens.json` export
-2. 위 경로에 덮어쓰기
-3. `swift Tools/TokenGenerator.swift` 실행
-4. 빌드 검증 → 커밋
+2. `SWYP-Find/design-tokens` 의 `main` 브랜치에 push
+3. (자동) `notify-ios.yml` → `repository_dispatch(design-tokens-updated)` 발사
+4. (자동) Picke-iOS `sync-design-tokens.yml` 실행 → raw URL 로 JSON 다운로드 → `swift Tools/TokenGenerator.swift` → 4개 출력 파일을 `develop` 에 직접 commit + push
+
+수동 트리거가 필요할 때:
+```bash
+gh workflow run sync-design-tokens.yml --repo SWYP-Find/Picke-iOS
+```
 
 **Component 토큰 해석 우선순위** (TokenGenerator 내부)
 1. `"{Colors.brand.primary.500}"` 같은 string alias → `.primary500`
