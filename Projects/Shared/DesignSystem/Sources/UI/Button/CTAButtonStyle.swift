@@ -10,20 +10,24 @@ import SwiftUI
 // MARK: - Variant
 
 public enum CTAButtonVariant: Sendable {
-  /// `primary500` 배경 + `bgDefault` 텍스트. 비활성 시 `surfaceDisabled`(primary200).
+  /// `ComponentToken.Button.Primary` 시리즈를 사용.
   case primary
 }
 
 public extension CTAButtonVariant {
-  func backgroundColor(isEnabled: Bool) -> Color {
+  func backgroundColor(isEnabled: Bool, isPressed: Bool = false) -> Color {
     switch self {
-    case .primary: isEnabled ? .primary500 : .surfaceDisabled
+    case .primary:
+      guard isEnabled else { return ComponentToken.Button.Primary.Background.disabled }
+      return isPressed
+        ? ComponentToken.Button.Primary.Background.pressed
+        : ComponentToken.Button.Primary.Background.default
     }
   }
 
   func foregroundColor(isEnabled _: Bool) -> Color {
     switch self {
-    case .primary: .bgDefault
+    case .primary: ComponentToken.Button.Primary.Text.default
     }
   }
 }

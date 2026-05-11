@@ -56,10 +56,9 @@ public struct CTAButtonStyle: ButtonStyle {
         minHeight: size.height
       )
       .background(
-        variant.backgroundColor(isEnabled: isEnabled),
+        variant.backgroundColor(isEnabled: isEnabled, isPressed: configuration.isPressed),
         in: Capsule()
       )
-      .opacity(configuration.isPressed ? 0.85 : 1)
       .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
   }
