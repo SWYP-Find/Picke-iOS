@@ -5,10 +5,10 @@
 //  Created by Wonji Suh  on 5/6/26.
 //
 
-import Splash
 import ComposableArchitecture
 import Entity
 import LogMacro
+import Presentation
 
 @Reducer
 public struct AppReducer: Sendable {
@@ -17,6 +17,7 @@ public struct AppReducer: Sendable {
   @ObservableState
   public enum State {
     case splash(SplashFeature.State)
+    case auth(AuthCoordinator.State)
    
     
     public init() {
@@ -27,7 +28,7 @@ public struct AppReducer: Sendable {
     var animationID: String {
       switch self {
       case .splash: return "splash"
-//      case .auth: return "auth"
+      case .auth: return "auth"
       }
     }
   }
@@ -71,6 +72,7 @@ public struct AppReducer: Sendable {
   @CasePathable
   public enum ScopeAction {
     case splash(SplashFeature.Action)
+    case auth(AuthCoordinator.Action)
  
   }
   
@@ -180,7 +182,7 @@ public struct AppReducer: Sendable {
   ) -> Effect<Action> {
     switch action {
     case .completeAuthTransition:
-//      state = .auth(.init())
+      state = .auth(.init())
       return .none
       
     case .completeStaffTransition:
@@ -214,6 +216,14 @@ public struct AppReducer: Sendable {
     state: inout State,
     action: ScopeAction
   ) -> Effect<Action> {
+    switch action {
+    case .splash(.view(.onAppear)):
+      return .send(.view(.presentAuth))
+      
+    default:
+      return .none
+    }
+    
     // 🎯 PFW 철학: 타입 안전한 상태 매칭
 //    switch (action, state) {
 //    case (.staff, .staff), (.member, .member),
@@ -228,7 +238,6 @@ public struct AppReducer: Sendable {
     
     // 🎯 PFW 패턴: 단순한 네비게이션 처리
 //    return handleScopeNavigation(action: action)
-    return .none
   }
   
   // 🎯 PFW 패턴: 네비게이션 로직 분리

@@ -7,16 +7,17 @@
 
 import SwiftUI
 
-import Splash
 import ComposableArchitecture
 import DesignSystem
+
+import Presentation
 
 struct AppView: View {
   @Bindable var store: StoreOf<AppReducer>
   
   var body: some View {
     ZStack(alignment: .topLeading) {
-      Color.gray50
+      Color.primary50
         .edgesIgnoringSafeArea(.all)
       
       SwitchStore(store) { state in
@@ -28,6 +29,15 @@ struct AppView: View {
           }
           
         
+        case .auth:
+          if let store = store.scope(state: \.auth, action: \.scope.auth) {
+            AuthCoordinatorView(store: store)
+              .transition(.asymmetric(
+                insertion: .move(edge: .trailing),
+                removal: .move(edge: .leading)
+              ))
+            
+          }
         }
       }
     }

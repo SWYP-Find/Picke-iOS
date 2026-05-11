@@ -12,6 +12,7 @@ let project = Project.makeAppModule(
   dependencies: [
     .Presentation(implements: .Presentation),
     .Data(implements: .Repository),
+    .Shared(implements: .Shared),
     .SPM.googleMobileAds,
     .SPM.firebaseCrashlytics,
     .SPM.mixpanel,
