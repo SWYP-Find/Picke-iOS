@@ -11,15 +11,13 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: write
 
 env:
   TOKENS_REPO: SWYP-Find/design-tokens
   TOKENS_BRANCH: main
   TOKENS_FILE: Mode 1.tokens.json
   LOCAL_JSON_PATH: Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
-  PR_BRANCH: chore/design-tokens-sync
-  PR_BASE: develop
+  TARGET_BRANCH: develop
 
 jobs:
   sync:
@@ -28,7 +26,7 @@ jobs:
       - name: Checkout iOS repo
         uses: actions/checkout@v5
         with:
-          ref: ${{ env.PR_BASE }}
+          ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
 
       - name: Setup Swift
@@ -48,56 +46,22 @@ jobs:
       - name: Run TokenGenerator
         run: swift Tools/TokenGenerator.swift
 
-      - name: Detect changes
-        id: changes
+      - name: Commit and push directly to target branch
         run: |
-          if git diff --quiet -- \
-            "${LOCAL_JSON_PATH}" \
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # JSON 원본(LOCAL_JSON_PATH)은 design-tokens 레포가 단일 소스이므로 커밋하지 않음
+          git add \
             "Projects/Shared/DesignSystem/Sources/Color/ShapeStyle+.swift" \
             "Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Radius+.swift" \
             "Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Spacing+.swift" \
-            "Projects/Shared/DesignSystem/Sources/UI/Token/ComponentToken.swift"; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "[sync] 변경사항 없음"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --stat -- \
-              "${LOCAL_JSON_PATH}" \
-              "Projects/Shared/DesignSystem/Sources/" || true
+            "Projects/Shared/DesignSystem/Sources/UI/Token/ComponentToken.swift" || true
+          if git diff --cached --quiet; then
+            echo "[sync] 변경사항 없음 — 커밋 건너뜀"
+            exit 0
           fi
-
-      - name: Create PR
-        if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: ${{ env.PR_BASE }}
-          branch: ${{ env.PR_BRANCH }}
-          delete-branch: true
-          commit-message: |
-            chore: design-tokens 동기화 자동 코드젠 #24
-          title: "chore: design-tokens 동기화 자동 코드젠 #24"
-          body: |
-            ## 개요
-            `${{ env.TOKENS_REPO }}` 의 `${{ env.TOKENS_FILE }}` 변경을 자동으로 가져와 `swift Tools/TokenGenerator.swift` 실행 결과를 반영합니다.
-
-            ## 변경 파일
-            - `${{ env.LOCAL_JSON_PATH }}` (디자인 토큰 원본)
-            - `Sources/Color/ShapeStyle+.swift` — 색 토큰 (auto)
-            - `Sources/Extension/CGFloat/CGFloat+Radius+.swift` — radius (auto)
-            - `Sources/Extension/CGFloat/CGFloat+Spacing+.swift` — spacing (auto)
-            - `Sources/UI/Token/ComponentToken.swift` — 컴포넌트 토큰 (auto)
-
-            ## 체크리스트
-            - [ ] 빌드 통과 확인
-            - [ ] 의도치 않은 토큰 변경 없는지 검토
-            - [ ] 머지 후 `tuist generate` 필요 시 후속 작업
-          labels: |
-            🎨 디자인
-            ⚙️ 환경설정
-          add-paths: |
-            Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
-            Projects/Shared/DesignSystem/Sources/Color/ShapeStyle+.swift
-            Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Radius+.swift
-            Projects/Shared/DesignSystem/Sources/Extension/CGFloat/CGFloat+Spacing+.swift
-            Projects/Shared/DesignSystem/Sources/UI/Token/ComponentToken.swift
+          git diff --cached --stat
+          git commit -m "chore: design-tokens 동기화 자동 코드젠 #24"
+          git push origin HEAD:${TARGET_BRANCH}
+          echo "[sync] ${TARGET_BRANCH} 에 직접 push 완료"
