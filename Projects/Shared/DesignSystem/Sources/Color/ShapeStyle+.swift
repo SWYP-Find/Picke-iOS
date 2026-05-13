@@ -91,4 +91,31 @@ public extension ShapeStyle where Self == Color {
   static var statusError: Color { .init(hex: "C92D33") }
   static var statusWarningAlpha: Color { .init(hex: "FFB400", alpha: 0.4) }
   static var statusWarning: Color { .init(hex: "FFB400") }
+  // MARK: - Component
+  static var bedgeFilledBackgroundDefault: Color { .beige600 }
+  static var bedgeFilledBackgroundInverse: Color { .primary500 }
+  static var bedgeFilledTextDefault: Color { .primary500 }
+  static var bedgeFilledTextInverse: Color { .beige50 }
+  static var bedgeOutlineBackround: Color { .beige50 }
+  static var bedgeOutlineBorder: Color { .primary100 }
+  static var bedgeOutlineText: Color { .primary500 }
+  static var buttonPrimaryBackgroundDefault: Color { .primary500 }
+  static var buttonPrimaryBackgroundDisabled: Color { .primary200 }
+  static var buttonPrimaryBackgroundPressed: Color { .primary800 }
+  static var buttonPrimaryTextDefault: Color { .beige50 }
+  static var buttonSecondaryBackgroundDefault: Color { .beige300 }
+  static var buttonSecondaryBackgroundPressed: Color { .beige400 }
+  static var buttonSecondaryBorderDefault: Color { .beige600 }
+  static var buttonSecondaryBorderPressed: Color { .secondary500 }
+  static var buttonSecondaryTextDefault: Color { .neutral600 }
+  static var buttonSecondaryTextDisabled: Color { .neutral300 }
+  static var inputBorderActive: Color { .beige700 }
+  static var inputBorderDefault: Color { .beige600 }
+  static var inputBorderError: Color { .borderError }
+  static var inputSurfaceDefault: Color { .beige50 }
+  static var inputSurfaceDisabled: Color { .beige300 }
+  static var inputTextActive: Color { .neutral500 }
+  static var inputTextDefault: Color { .neutral300 }
+  static var inputTextError: Color { .statusError }
+
 }
