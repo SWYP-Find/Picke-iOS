@@ -7,72 +7,72 @@ public enum ComponentToken {
   public enum Bedge {
     public enum Filled {
       public enum Background {
-        public static var `default`: Color { .beige600 }
-        public static var inverse: Color { .primary500 }
+        public static var `default`: Color { .bedgeFilledBackgroundDefault }
+        public static var inverse: Color { .bedgeFilledBackgroundInverse }
       }
 
       public enum Text {
-        public static var `default`: Color { .primary500 }
-        public static var inverse: Color { .beige50 }
+        public static var `default`: Color { .bedgeFilledTextDefault }
+        public static var inverse: Color { .bedgeFilledTextInverse }
       }
     }
 
     public enum Outline {
-      public static var backround: Color { .beige50 }
-      public static var border: Color { .primary100 }
-      public static var text: Color { .primary500 }
+      public static var backround: Color { .bedgeOutlineBackround }
+      public static var border: Color { .bedgeOutlineBorder }
+      public static var text: Color { .bedgeOutlineText }
     }
   }
 
   public enum Button {
-    public static var radius: CGFloat { .`default` }
+    public static var radius: CGFloat { .buttonRadius }
 
     public enum Primary {
       public enum Background {
-        public static var `default`: Color { .primary500 }
-        public static var disabled: Color { .primary200 }
-        public static var pressed: Color { .primary800 }
+        public static var `default`: Color { .buttonPrimaryBackgroundDefault }
+        public static var disabled: Color { .buttonPrimaryBackgroundDisabled }
+        public static var pressed: Color { .buttonPrimaryBackgroundPressed }
       }
 
       public enum Text {
-        public static var `default`: Color { .beige50 }
+        public static var `default`: Color { .buttonPrimaryTextDefault }
       }
     }
 
     public enum Secondary {
       public enum Background {
-        public static var `default`: Color { .beige300 }
-        public static var pressed: Color { .beige400 }
+        public static var `default`: Color { .buttonSecondaryBackgroundDefault }
+        public static var pressed: Color { .buttonSecondaryBackgroundPressed }
       }
 
       public enum Border {
-        public static var `default`: Color { .beige600 }
-        public static var pressed: Color { .secondary500 }
+        public static var `default`: Color { .buttonSecondaryBorderDefault }
+        public static var pressed: Color { .buttonSecondaryBorderPressed }
       }
 
       public enum Text {
-        public static var `default`: Color { .neutral600 }
-        public static var disabled: Color { .neutral300 }
+        public static var `default`: Color { .buttonSecondaryTextDefault }
+        public static var disabled: Color { .buttonSecondaryTextDisabled }
       }
     }
   }
 
   public enum Input {
     public enum Border {
-      public static var active: Color { .beige700 }
-      public static var `default`: Color { .beige600 }
-      public static var error: Color { .borderError }
+      public static var active: Color { .inputBorderActive }
+      public static var `default`: Color { .inputBorderDefault }
+      public static var error: Color { .inputBorderError }
     }
 
     public enum Surface {
-      public static var `default`: Color { .beige50 }
-      public static var disabled: Color { .beige300 }
+      public static var `default`: Color { .inputSurfaceDefault }
+      public static var disabled: Color { .inputSurfaceDisabled }
     }
 
     public enum Text {
-      public static var active: Color { .neutral500 }
-      public static var `default`: Color { .neutral300 }
-      public static var error: Color { .statusError }
+      public static var active: Color { .inputTextActive }
+      public static var `default`: Color { .inputTextDefault }
+      public static var error: Color { .inputTextError }
     }
   }
 }
