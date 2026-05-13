@@ -158,6 +158,39 @@ func walkComponentFlat(
   }
 }
 
+// Component subtree 의 nested ComponentToken enum. 값은 flat 정의를 forwarding 하므로
+// source of truth 는 항상 ShapeStyle / CGFloat 확장 한 곳.
+//   public static var `default`: Color { .buttonPrimaryBackgroundDefault }
+func walkComponentNested(
+  _ node: [String: Any],
+  pathPrefix: [String],
+  indent: String,
+  out: inout [String]
+) {
+  let keys = node.keys.sorted()
+  let leafKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] != nil }
+  let groupKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] == nil }
+  for key in leafKeys {
+    guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
+    let flatName = flatPropertyName(pathPrefix + [key])
+    switch type {
+    case "color":
+      out.append("\(indent)public static var \(swiftKey(key)): Color { .\(flatName) }")
+    case "number":
+      out.append("\(indent)public static var \(swiftKey(key)): CGFloat { .\(flatName) }")
+    default: continue
+    }
+  }
+  for (i, key) in groupKeys.enumerated() {
+    guard let child = node[key] as? [String: Any] else { continue }
+    if i == 0, !leafKeys.isEmpty { out.append("") }
+    if i > 0 { out.append("") }
+    out.append("\(indent)public enum \(capitalizeFirst(key)) {")
+    walkComponentNested(child, pathPrefix: pathPrefix + [key], indent: indent + "  ", out: &out)
+    out.append("\(indent)}")
+  }
+}
+
 // ["button", "primary", "background", "default"] → "buttonPrimaryBackgroundDefault"
 func flatPropertyName(_ segs: [String]) -> String {
   guard let first = segs.first else { return "" }
@@ -323,10 +356,14 @@ if !componentNumberLines.isEmpty {
   try writeFile(componentNumberOut, cLines.joined(separator: "\n"))
 }
 
-// 옛 nested ComponentToken.swift 폐기: 더 이상 생성하지 않고 잔재 파일이 있으면 제거.
-if FileManager.default.fileExists(atPath: componentOut) {
-  try FileManager.default.removeItem(atPath: componentOut)
-  print("[token-gen] removed legacy \(componentOut)")
-}
+// MARK: - Component (nested ComponentToken)
+
+// flat ShapeStyle / CGFloat 확장을 forwarding 하는 구조적 접근용 enum.
+// 그룹 단위 캡처/자동완성 탐색에 사용. 값의 source of truth 는 flat 정의 한 곳.
+var ctLines: [String] = [header, "", "import SwiftUI", "", "public enum ComponentToken {"]
+walkComponentNested(component, pathPrefix: [], indent: "  ", out: &ctLines)
+ctLines.append("}")
+ctLines.append("")
+try writeFile(componentOut, ctLines.joined(separator: "\n"))
 
 print("[token-gen] done.")
