@@ -95,6 +95,139 @@ LogMacro:               1.1.1        // 로깅 매크로
 - Computed Properties + @ViewBuilder 조합
 - 조건부 렌더링 및 Skeleton 패턴
 
+#### 📐 View 분할 — extension + private func 패턴 (필수)
+
+View `body` 는 최상위 레이아웃 (`ZStack` / `VStack`) 만 두고, 모든 하위 영역은 같은 파일의 `extension View {}` 안에 `private func sectionName() -> some View` (또는 `private var sectionName: some View`) 로 분리합니다.
+
+`LoginView` / `OnBoardingView` 가 정착된 레퍼런스입니다.
+
+```swift
+// ✅ 올바른 패턴 — LoginView 와 동일하게 extension 분리
+public struct OnBoardingView: View {
+  @Bindable var store: StoreOf<OnBoardingFeature>
+
+  public var body: some View {
+    ZStack {
+      Color.bgSubtle.edgesIgnoringSafeArea(.all)
+      VStack(spacing: 0) {
+        topSection()
+          .frame(maxHeight: .infinity)
+        bottomSection()
+          .padding(.horizontal, 16)
+          .padding(.bottom, 40)
+      }
+    }
+  }
+}
+
+extension OnBoardingView {
+  private func topSection() -> some View {
+    TabView(selection: $store.currentIndex) { /* ... */ }
+  }
+
+  private func bottomSection() -> some View {
+    VStack(spacing: 24) {
+      OnBoardingPageIndicator(/* ... */)
+      CustomButton(/* ... */)
+    }
+  }
+}
+
+// ❌ 금지 — body 안에 모든 레이아웃을 inline 으로 작성하지 말 것
+public var body: some View {
+  VStack {
+    TabView { /* ... */ }
+    VStack { /* indicator + button */ }
+  }
+}
+```
+
+규칙:
+- `body` 는 호출자만, 실제 레이아웃은 `extension` 안으로
+- 메서드 이름은 의도가 드러나는 명사형 (`topSection`, `bottomSection`, `loginSNSButtonText`, `logoView`)
+- 한 메서드 안에서 다시 큰 블록이 생기면 더 작게 쪼개기 (재귀 적용)
+- 공통 컴포넌트는 별도 파일 (`Components/*.swift`) 로 추출
+
+#### 🔤 폰트 — `.font(.system(...))` 금지, Pretendard 토큰 사용
+
+```swift
+// ✅ 디자인 시스템 토큰이 있는 경우 (16/14/12 등)
+Text("시작하기")
+  .pretendardCustomFont(textStyle: .headingMedium)
+
+// ✅ 토큰에 없는 임의 크기 (24, 15 등 Figma 스펙 그대로)
+Text(page.title)
+  .pretendardFont(family: .SemiBold, size: 24)
+
+Text(page.subtitle)
+  .pretendardFont(family: .Medium, size: 15)
+
+// ❌ 금지 — 시스템 폰트 직접 사용
+.font(.system(size: 24, weight: .semibold))
+```
+
+#### 🎨 컬러 — `.foregroundStyle(.neutral900)` 단축형 사용
+
+```swift
+// ✅ 컨텍스트 추론 가능한 위치는 점 단축형
+Text(...)
+  .foregroundStyle(.neutral900)
+Color.bgSubtle.edgesIgnoringSafeArea(.all)
+
+// ❌ 금지 — 매번 Color 타입 명시
+.foregroundStyle(Color.neutral900)
+```
+
+`SwiftUI.Color` 의 정적 멤버로 디자인 토큰 (`neutral50` … `neutral900`, `primary50` … `primary900`, `secondary50` …, `bgSubtle`) 이 등록되어 있어 `.foregroundStyle / .fill / .background / .tint` 등에서 모두 점 단축형 사용 가능.
+
+#### 🖼 이미지 — `Image(asset: .xxx)` + 데이터 모델은 `ImageAsset` 타입
+
+```swift
+// ✅ 데이터 모델이 String 이 아닌 ImageAsset 을 보유
+public struct Page: Equatable, Identifiable {
+  public let imageAsset: ImageAsset
+}
+
+// View 에서는 단축 init 만 사용
+Image(asset: page.imageAsset)
+  .resizable()
+  .scaledToFit()
+
+// ❌ 금지 — rawValue 문자열 / bundle 명시
+Image(page.imageName, bundle: .module)
+Image(ImageAsset.onboarding1.rawValue)
+```
+
+이미지 케이스가 추가되면 반드시:
+1. `Projects/Shared/DesignSystem/Resources/ImageAssets.xcassets/<카테고리>/<name>.imageset/` 폴더 + `Contents.json` 추가
+2. `ImageAsset` enum 에 `case <name>` 추가 (raw value = imageset 폴더명과 동일)
+3. `tuist generate` 로 리소스 재인덱싱
+
+#### 🧮 텍스트 / 라벨 — `body` 안에 인라인 표현 금지, State computed 로
+
+표시용 파생값은 View 가 아니라 `State` 의 computed property 로 정의해서 View 에서는 그대로 꺼내기만 한다.
+
+```swift
+// ✅ State 가 자기 자신을 설명
+@ObservableState
+public struct State: Equatable {
+  public var currentIndex: Int
+  public var isLastPage: Bool { currentIndex >= pageCount - 1 }
+  public var primaryButtonTitle: String { isLastPage ? "시작하기" : "다음" }
+}
+
+// View
+CustomButton(
+  title: store.primaryButtonTitle,
+  ...
+)
+
+// ❌ 금지 — View 안에서 store 상태를 다시 가공
+private var primaryButtonTitle: String {
+  store.isLastPage ? "시작하기" : "다음"
+}
+```
+
 ### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드
 - 에러 처리 패턴

@@ -45,7 +45,7 @@ public struct CustomButton: View {
       .frame(height: config.frameHeight)
       .background(
         isEnable ? config.enableBackgroundColor : config.disableBackgroundColor,
-        in: Capsule()
+        in: RoundedRectangle(cornerRadius: config.cornerRadius, style: .continuous)
       )
     }
     .buttonStyle(.plain)
