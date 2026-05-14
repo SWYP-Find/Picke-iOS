@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Entity
 
 /// 간단한 메모리 저장소: Kakao OAuth 콜백에서 받은 authorization code를 보관/소비한다.
 public final actor KakaoAuthCodeStore {
