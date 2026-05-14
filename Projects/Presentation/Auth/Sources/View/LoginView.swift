@@ -9,6 +9,7 @@ import SwiftUI
 import ComposableArchitecture
 
 import DesignSystem
+import Entity
 
 public struct LoginView : View {
   @Bindable var store: StoreOf<LoginFeature>
@@ -19,7 +20,76 @@ public struct LoginView : View {
     ZStack {
       Color.neutral50
         .edgesIgnoringSafeArea(.all)
+      
+      VStack {
+        logoView()
+        
+        Spacer()
+          .frame(height: 200)
+        
+        loginSNSButtonText()
+        
+        logjnButton()
+        
+        Spacer()
+          .frame(height: UIScreen.screenHeight * 0.12)
+      }
     }
-    
+  }
+}
+
+
+extension LoginView {
+  @ViewBuilder
+  private func  logoView() -> some View {
+    VStack(alignment: .center) {
+      Spacer()
+      
+      Text(" 당신의 생각을")
+        .pretendardCustomFont(textStyle: .headingMedium)
+        .foregroundStyle(.neutral200)
+      
+      Image(asset: .loginLogo)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 106, height: 90)
+    }
+  }
+  
+  @ViewBuilder
+  private func loginSNSButtonText() -> some View {
+    HStack {
+      Rectangle()
+        .fill(.borderGray)
+        .frame(width: 64, height: 1)
+      
+      Spacer()
+        .frame(width: 12)
+      
+      Text("SNS 계정으로 로그인")
+        .pretendardFont(family: .Medium, size: 15)
+        .foregroundStyle(.neutral300)
+      
+      
+      Rectangle()
+        .fill(.borderGray)
+        .frame(width: 64, height: 1)
+      
+    }
+  }
+  
+  @ViewBuilder
+  private func logjnButton() -> some View {
+    HStack(alignment: .center, spacing: 32) {
+      ForEach(SocialType.allCases.filter { $0 != .none }) { type in
+        SocialCircleButtonView(
+          store: store,
+          type: type
+        ) {
+          
+        }
+      }
+    }
+    .padding(.top, 32)
   }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import Presentation
 
 public struct ContentView: View {
     public init() {}
@@ -12,4 +13,10 @@ public struct ContentView: View {
 
 #Preview {
   ContentView()
+}
+
+#Preview {
+  AuthCoordinatorView(store: .init(initialState: AuthCoordinator.State(), reducer: {
+    AuthCoordinator()
+  }))
 }

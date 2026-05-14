@@ -7,7 +7,6 @@
 
 import SwiftUI
 import ComposableArchitecture
-import SDWebImageSwiftUI
 
 import DesignSystem
 
@@ -30,10 +29,8 @@ public struct SplashView: View {
         
         Spacer()
         
-        AnimatedImage(name: "splashLogo.gif", isAnimating: .constant(true))
-          .resizable()                       // ← 추가
-          .scaledToFit()                     // .aspectRatio(.fit) 과 동일, 더 짧음
-          .frame(width: 250, height: 250)          
+        SplashLogoAnimation()
+          .equatable()
         
         Spacer()
       }
@@ -41,5 +38,13 @@ public struct SplashView: View {
     .onAppear {
       store.send(.view(.onAppear))
     }
+  }
+}
+
+private struct SplashLogoAnimation: View, Equatable {
+  static func == (lhs: Self, rhs: Self) -> Bool { true }
+  
+  var body: some View {
+    SplashLogoAnimatedImageView()
   }
 }

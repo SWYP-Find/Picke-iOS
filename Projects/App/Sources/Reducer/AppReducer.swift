@@ -149,7 +149,7 @@ public struct AppReducer: Sendable {
     switch action {
     case .presentView:
       return .run { send in
-//        await send(.scope(.splash(.view(.onAppear))))
+        await send(.scope(.splash(.view(.onAppear))))
       }
       
     case .presentRoot:
@@ -218,7 +218,10 @@ public struct AppReducer: Sendable {
   ) -> Effect<Action> {
     switch action {
     case .splash(.view(.onAppear)):
-      return .send(.view(.presentAuth))
+      return .run { send in
+        try await clock.sleep(for: .seconds(3))
+        try await send(.view(.presentAuth))
+      }
       
     default:
       return .none
