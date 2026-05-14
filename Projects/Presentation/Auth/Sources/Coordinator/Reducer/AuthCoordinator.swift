@@ -10,6 +10,7 @@ import Foundation
 import ComposableArchitecture
 import TCAFlow
 
+import Entity
 
 @FlowCoordinator(screen: "AuthScreen", navigation: true)
 public struct AuthCoordinator {
@@ -20,7 +21,8 @@ public struct AuthCoordinator {
     var routes: [Route<AuthScreen.State>]
     
     public init() {
-      self.routes = [.root(.login(.init()), embedInNavigationView: true)]
+      @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
+      self.routes = [.root(.login(.init(userSession: userSession)), embedInNavigationView: true)]
     }
   }
   

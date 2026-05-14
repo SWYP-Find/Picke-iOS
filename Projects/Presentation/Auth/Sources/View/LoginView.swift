@@ -34,6 +34,7 @@ public struct LoginView : View {
         Spacer()
           .frame(height: UIScreen.screenHeight * 0.12)
       }
+      .toastOverlay()
     }
   }
 }
@@ -81,12 +82,12 @@ extension LoginView {
   @ViewBuilder
   private func logjnButton() -> some View {
     HStack(alignment: .center, spacing: 32) {
-      ForEach(SocialType.allCases.filter { $0 != .none }) { type in
+      ForEach(SocialType.allCases) { type in
         SocialCircleButtonView(
           store: store,
           type: type
         ) {
-          
+          store.send(.view(.signInWithSocial(social: type)))
         }
       }
     }

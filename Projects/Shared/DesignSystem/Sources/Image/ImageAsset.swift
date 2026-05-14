@@ -15,5 +15,8 @@ public enum ImageAsset: String {
   case google
   case kakao
   
+  case errorXmark
+  case checkBlue
+  
   case none
 }

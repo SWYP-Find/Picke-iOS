@@ -33,9 +33,9 @@ struct SocialCircleButtonView: View {
           .foregroundColor(.white)
         
         SignInWithAppleButton(.signIn) { request in
-//          store.send(.async(.prepareAppleRequest(request)))
+          store.send(.async(.prepareAppleRequest(request)))
         } onCompletion: { result in
-//          store.send(.async(.appleCompletion(result)))
+          store.send(.async(.appleLogin(result, nonce: store.nonce)))
         }
         .frame(width: circleSize, height: circleSize)
         .clipShape(Circle())
@@ -73,8 +73,6 @@ struct SocialCircleButtonView: View {
       }
       .buttonStyle(.plain)
       
-    case .none:
-      EmptyView()
     }
   }
 }
