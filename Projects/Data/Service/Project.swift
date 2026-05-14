@@ -1,17 +1,19 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeModule(
   name: "Service",
   bundleId: .appBundleID(name: ".Service"),
   product: .staticFramework,
-  settings:  .settings(),
+  settings: .settings(),
   dependencies: [
     .Data(implements: .API),
-    .SPM.asyncMoya
+    .Network(implements: .Foundations),
+    .SPM.asyncMoya,
+    .Data(implements: .Model)
   ],
   sources: ["Sources/**"],
   hasTests: false
