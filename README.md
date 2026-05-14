@@ -1,460 +1,391 @@
-# MultiModuleTemplate
+# Picke iOS
 
-NomadSpot-iOS와 동일한 구조를 갖춘 Tuist 멀티 모듈 iOS 프로젝트 템플릿입니다.
+<div align="center">
 
-## 🏗️ 프로젝트 구조 (Clean Architecture)
+**가치관 충돌에서 시작하는 1:1 철학 배틀 플랫폼, Picke**
+
+![Platform](https://img.shields.io/badge/Platform-iOS-orange.svg)
+![Language](https://img.shields.io/badge/Language-Swift-FA7343.svg?logo=swift&logoColor=white)
+![iOS](https://img.shields.io/badge/iOS-17.0+-34C759.svg)
+![Xcode](https://img.shields.io/badge/Xcode-16.0+-007ACC.svg)
+![TCA](https://img.shields.io/badge/Architecture-TCA-purple.svg)
+![Tuist](https://img.shields.io/badge/Modularization-Tuist-blue.svg)
+![Fastlane](https://img.shields.io/badge/fastlane-00F200.svg?logo=fastlane&logoColor=white)
+
+[🎯 Features](#-주요-기능) | [🏗 Architecture](#-프로젝트-아키텍처) | [🚀 Quick Start](#-빠른-시작) | [🔐 OAuth Flow](#-oauth-인증-플로우)
+
+---
+
+</div>
+
+## 📖 프로젝트 소개
+
+**Picke** 는 일상의 가치관 차이를 1:1 토론으로 풀어내는 모바일 토론·투표 플랫폼입니다.
+"오늘의 배틀" 주제에 대한 사전·사후 투표, 실시간 1:1 채팅 토론, 그리고 리캡 카드까지 한 흐름으로 이어집니다.
+
+> 💡 **왜 만들었나?**
+> SNS 의 단방향 의견 표출 대신, 짧고 명확한 1:1 토론을 통해
+> "내가 왜 그렇게 생각하는지" 를 정리하고 다른 가치관을 마주하는 경험을 제공합니다.
+
+## 🛠 Setup
+
+### AI 도구 연동
+
+프로젝트 규칙은 `AGENTS.md` / `CLAUDE.md` 에 정의되어 있습니다.
+
+```bash
+ln -s AGENTS.md CLAUDE.md
+```
+
+## ✨ 주요 기능
+
+### 🔐 소셜 로그인 (server-mediated OAuth)
+- **Google / Kakao**: WKWebView 기반 `authorize → code 가로채기` → 백엔드 토큰 교환
+- **Apple Sign-In**: `ASAuthorizationAppleIDProvider` 네이티브 통합
+- **자동 토큰 갱신**: `AccessTokenCredential` JWT exp 디코딩 + 만료 5분 전 자동 refresh
+- **401 자동 처리**: `AuthInterceptor` 가 401 감지 → refresh 시도 → 실패 시 자동 로그아웃 알림 발송
+
+### 🥊 오늘의 배틀
+- **사전 투표 → 1:1 채팅 토론 → 사후 투표** 의 한 흐름
+- **재투표** 로 가치관이 바뀌었는지 추적
+- **리캡 카드** 자동 생성 + 공유
+
+### 💬 토론 / 댓글
+- 채팅방형 1:1 토론
+- 콘텐츠별 댓글·대댓글
+- 신고·차단
+
+### 🧭 탐색 / 홈
+- 큐레이팅된 홈 피드
+- 카테고리·태그 탐색
+- 토픽 검색
+
+### 👤 마이페이지
+- 내 콘텐츠 활동 / 토론 기록
+- 나의 철학자 유형
+- 포인트 내역 / 알림 / 설정
+
+## 🏗 프로젝트 아키텍처
+
+### 🎯 Clean Architecture × Tuist 멀티 모듈
 
 ```
-MultiModuleTemplate/
-├── Workspace.swift
-├── Tuist.swift
-├── Projects/
-│   ├── App/                    # 메인 애플리케이션
-│   ├── Presentation/
-│   │   └── Presentation/       # 화면 및 ViewModel 구성
-│   ├── Domain/                 # 🔥 도메인 계층 (비즈니스 로직 + Protocol)
-│   │   ├── Entity/             # 도메인 엔티티 + Entity Protocol
-│   │   ├── UseCase/            # 비즈니스 로직 + UseCase Protocol
-│   │   ├── DomainInterface/    # Domain 계층 인터페이스 모듈
-│   │   └── DataInterface/      # Data 계층 인터페이스 모듈
-│   ├── Data/                   # 데이터 계층 (데이터 접근 + Model)
-│   │   ├── Model/              # 데이터 전송 객체 (DTO, API Response)
-│   │   ├── Repository/         # Repository 구현체 (Domain Protocol 구현)
-│   │   ├── API/                # REST API 클라이언트
-│   │   └── Service/            # 데이터 처리 서비스
-│   ├── Network/                # 네트워크 계층
-│   │   ├── Networking/         # 네트워크 기본 설정 및 클라이언트
-│   │   ├── Foundations/        # 네트워크 기반 유틸리티
-│   │   └── ThirdPartys/        # 네트워크 써드파티 라이브러리 (AsyncMoya, WeaveDI)
-│   └── Shared/
-│       ├── DesignSystem/       # 공통 UI 컴포넌트, 폰트 등
-│       ├── Shared/             # 공통 공유 모듈
-│       └── Utill/              # 공통 유틸리티
-├── Tuist/
-│   ├── Package.swift
-│   └── ProjectDescriptionHelpers/
-└── Plugins/
+Picke-iOS/
+├── 📱 Projects/
+│   ├── App/                       # 메인 애플리케이션 타겟
+│   │   ├── Sources/
+│   │   │   ├── Application/       # AppDelegate, SceneDelegate
+│   │   │   ├── Di/                # WeaveDI 등록 (DiRegister, AppPresentationContextProvider)
+│   │   │   ├── Reducer/           # TCA Root AppReducer
+│   │   │   └── View/              # Root Views
+│   │   └── Derived/               # Tuist 생성 plist
+│   │
+│   ├── Presentation/              # 🎨 UI Layer
+│   │   ├── Auth/                  # 로그인 / 코디네이터 / Toast
+│   │   ├── Splash/                # 스플래시
+│   │   └── Presentation/          # 공통 프레젠테이션 유틸
+│   │
+│   ├── Domain/                    # 🔥 Business Logic Layer
+│   │   ├── Entity/                # LoginEntity, AuthTokens, SocialType, AuthError ...
+│   │   ├── DomainInterface/       # AuthInterface, *OAuth*Interface, KeychainManaging ...
+│   │   └── UseCase/               # AuthUseCaseImpl, UnifiedOAuthUseCase, Provider/{Apple,Google,Kakao}
+│   │
+│   ├── Data/                      # 📡 Data Layer
+│   │   ├── Model/                 # BaseResponseDTO / Login·Token·Logout·Withdraw DTO + Mapper
+│   │   ├── API/                   # PieckeDomain, AuthAPI, BaseAPI
+│   │   ├── Service/               # AuthService (BaseTargetType), OAuthLoginRequest
+│   │   └── Repository/            # AuthRepositoryImpl + OAuth Repository (Apple/Google/Kakao)
+│   │       └── Auth/              # Interceptor, RefreshToken Session, Pool, MoyaProvider 확장
+│   │
+│   ├── Network/                   # 🌐 Network Layer
+│   │   ├── Networking/            # 네트워크 클라이언트 export
+│   │   ├── Foundations/           # APIHeader / TokenProviding / KeychainTokenProvider
+│   │   └── ThirdPartys/           # AsyncMoya / WeaveDI 등 SPM 재노출
+│   │
+│   └── Shared/                    # 🔧 Shared Layer
+│       ├── DesignSystem/          # 공통 UI / 컬러 / 이미지 / Toast
+│       ├── Shared/                # 공유 모델·확장
+│       ├── ThirdParty/            # 써드파티 래퍼
+│       └── Utill/                 # 공통 유틸리티
+│
+├── 🔧 Tuist/
+│   ├── Package.swift              # SPM 의존성 정의
+│   └── ProjectDescriptionHelpers/ # 모듈 템플릿 / Plist 헬퍼
+└── 🧩 Plugins/
+    ├── DependencyPlugin/          # 모듈 의존성 헬퍼 (.Data / .Domain / .Network ...)
+    ├── DependencyPackagePlugin/   # SPM 의존성 헬퍼 (.SPM.asyncMoya ...)
+    └── ProjectTemplatePlugin/     # ProjectConfig / Project.makeModule
 ```
 
-## Tuist graph
-![Tuist Graph](./graph.png)
+### 🏛️ Clean Architecture Pattern
 
-## ✨ 주요 특징
+```mermaid
+graph TD
+    A[🎨 Presentation Layer] --> B[🔥 Domain Layer]
+    B --> C[📡 Data Layer]
+    D[🌐 Network Layer] --> C
+    E[🔧 Shared Layer] --> A
+    E --> B
+    E --> C
 
-- **AsyncMoya 네트워크 통신**: 최신 비동기 네트워킹
-- **TCA SharedState**: 앱 전역 상태 관리
-- **Clean Architecture**: Domain 중심 의존성 설계
-- **Tuist 4.97.2 최적화**: 최신 빌드 시스템
+    A -.-> F[SwiftUI Views]
+    A -.-> G[TCA Reducers]
+    B -.-> H[UseCases]
+    B -.-> I[Entities]
+    C -.-> J[Repositories]
+    C -.-> K[API Services]
+```
+
+### 🔄 의존성 방향 원칙
+
+```
+Presentation → Domain (UseCase / Entity)
+       ↓
+Domain/UseCase → Domain (Interface / Entity)
+       ↓
+Data/Repository → Domain (Interface / Entity) + Data (Model + Service + API)
+       ↓
+Data/Service → Data (API) + Network/Foundations (APIHeader)
+       ↓
+Network/Foundations → Network/ThirdPartys (AsyncMoya, WeaveDI)
+```
+
+**핵심 설계 원칙**
+- ✅ **Presentation** 은 Domain UseCase / Entity 만 직접 참조
+- ✅ **Domain** 은 외부 계층에 의존하지 않는 순수 비즈니스 로직
+- ✅ **Data/Repository** 는 Domain 인터페이스를 구현, DTO ↔ Entity 매핑 담당
+- ✅ 모든 데이터 흐름은 **Domain 을 중심**으로 진행
+
+## 🔐 OAuth 인증 플로우
+
+### Google / Kakao — WKWebView server-mediated OAuth
+
+```
+앱
+  │  authorize URL (response_type=code, redirect_uri=https://picke.store/oauth/<p>)
+  ▼
+WKWebView (OAuthWebViewController)
+  │  사용자 동의 → 구글/카카오가 redirect_uri 로 302
+  │  WKNavigationDelegate.decidePolicyFor 가 picke.store/oauth/<p>?code=... 가로채기
+  │  decisionHandler(.cancel)   ← 401 응답 송신 차단
+  ▼
+authorizationCode 추출 → dismiss
+  ▼
+UnifiedOAuthUseCase
+  │  POST /api/v1/auth/login/<provider>
+  │  body: { authorizationCode, redirectUri }
+  ▼
+AuthRepositoryImpl
+  │  BaseResponseDTO<LoginDataDTO> 디코딩 → LoginEntity
+  ▼
+KeychainManager 저장 + AuthSessionManager.credential 갱신
+```
+
+### Apple — 네이티브 Sign-In
+
+`ASAuthorizationAppleIDProvider` 로 받은 credential / nonce / authorizationCode 를 그대로 백엔드에 전달.
+
+### 토큰 자동 갱신
+
+- `AccessTokenCredential` 가 access token JWT 의 `exp` 를 디코딩해 만료 시점 보관
+- `AuthInterceptor.adapt` 에서 만료 5분 전이면 `TokenRefreshManager` 가 단일화된 refresh 수행
+- 401 응답 시 `retry` 로 토큰 갱신 후 재시도, 실패 시 `NSNotification.refreshTokenExpired` 발송 + 자동 로그아웃
+
+## 🛠 기술 스택
+
+### Core Technologies
+- **🎯 Architecture**: The Composable Architecture (TCA)
+- **📦 Modularization**: Tuist 4.x (Micro Feature Architecture)
+- **💉 Dependency Injection**: WeaveDI 3.4.1
+- **🔀 Navigation**: TCAFlow (커스텀)
+- **⚡ Concurrency**: Swift Concurrency (async/await)
+
+### 📚 주요 라이브러리
+
+#### 🎯 아키텍처 & 상태 관리
+- **[ComposableArchitecture](https://github.com/pointfreeco/swift-composable-architecture)** — 단방향 상태 관리
+- **[TCAFlow](https://github.com/Roy-wonji/TCAFlow.git)** ⭐️ — TCA 기반 화면 전환 / 네비게이션 (커스텀)
+- **[WeaveDI](https://github.com/Roy-wonji/WeaveDI.git)** ⭐️ — 의존성 주입 컨테이너 (커스텀)
+
+#### 🔐 인증 & 보안
+- **AuthenticationServices** — Apple Sign-In, ASWebAuthenticationSession
+- **WebKit** — WKWebView 기반 server-mediated OAuth (Google / Kakao)
+- **[AppAuth-iOS](https://github.com/openid/AppAuth-iOS.git)** — OAuth 2.0 / OpenID Connect 클라이언트 (옵션)
+
+#### 🌐 네트워킹
+- **[AsyncMoya](https://github.com/Roy-wonji/AsyncMoya)** ⭐️ — async/await 기반 HTTP 클라이언트 (커스텀)
+- **Alamofire / Moya** — AsyncMoya 의 기반 스택
+
+#### 🎨 UI & UX
+- **SwiftUI** — 선언형 UI
+- **[SDWebImageSwiftUI](https://github.com/SDWebImage/SDWebImageSwiftUI.git)** — 비동기 이미지 로딩 / 캐싱
+
+#### 🔥 백엔드 / 분석
+- **[Firebase iOS SDK](https://github.com/firebase/firebase-ios-sdk)** — Crashlytics / Messaging
+- **[Mixpanel](https://github.com/mixpanel/mixpanel-swift.git)** — 행동 분석 / Session Replay
+- **[Google Mobile Ads](https://github.com/googleads/swift-package-manager-google-mobile-ads)** — 광고
+
+### 🛠 개발 도구 & 유틸리티
+
+#### 📊 로깅 & 디버깅
+- **LogMacro** — 커스텀 로깅 매크로
+- **IssueReporting** — 개발 단계 이슈 추적
+- **XCTestDynamicOverlay** — 테스트 환경 오버레이
+
+#### ⚡ 성능 & 동시성
+- **Clocks** — 시간 관련 유틸리티
+- **ConcurrencyExtras** — Swift Concurrency 확장
+- **Swift 6.0** — 최신 Swift 언어 기능
+
+#### 🔧 빌드 & 배포
+- **Tuist** — 프로젝트 생성 / 모듈 의존성 관리
+- **Swift Package Manager** — 패키지 의존성 관리
+- **fastlane** — 자동화된 빌드 / 배포 (예정)
+
+### 📱 지원 환경
+- **💻 Xcode**: 16.0 이상
+- **📱 iOS**: 17.0 이상
+- **⚡ Swift**: 6.0 이상
+- **🔧 Tuist**: 4.x 이상
 
 ## 🚀 빠른 시작
 
-### 새 프로젝트 생성 (권장)
+### ✅ 필수 요구사항
+- **💻 Xcode**: 16.0 이상
+- **📱 iOS**: 17.0 이상
+- **⚡ Swift**: 6.0 이상
+- **🔧 Tuist**: 4.x 이상
 
+### 🛠 설치 및 실행
+
+#### 1️⃣ 저장소 클론
 ```bash
-# 1. TuistTool 컴파일 (최초 1회만)
-swiftc TuistTool.swift -o tuisttool
-
-# 2. 새 프로젝트 생성 (대화형으로 이름 설정)
-./tuisttool newproject
+git clone https://github.com/Roy-wonji/Picke-iOS.git
+cd Picke-iOS
 ```
 
-### 템플릿 그대로 사용
-
+#### 2️⃣ Tuist 설치
 ```bash
-# Tuist 4.97.2 최신 명령어
-tuist install     # 의존성 설치 (새로운 명령어)
-tuist generate    # 프로젝트 생성
-tuist build       # 빌드
-tuist test        # 테스트
-
-# 또는 TuistTool 사용 (권장)
-./tuisttool build # clean + install + generate 한번에
+curl -Ls https://install.tuist.io | bash
 ```
 
-## 주요 모듈 설명
+#### 3️⃣ 프로젝트 빌드 / 생성
+```bash
+# 전체 워크플로우 (권장)
+./make build      # clean → install → generate
 
-### 📱 Application Layer
-- **App**: 메인 애플리케이션 모듈 (앱 진입점 및 설정)
-- **Presentation**: ViewController, ViewModel 등 UI 로직 담당
-
-### 🏗 Domain Layer (비즈니스 로직 + Protocol)
-- **Entity**: 순수 도메인 엔티티 + Entity 관련 Protocol
-- **UseCase**: 비즈니스 로직 구현체 + UseCase Protocol
-- **DomainInterface**: Domain Entity를 참조하는 인터페이스 모듈
-- **DataInterface**: Data Model을 참조하는 인터페이스 모듈
-
-### 📊 Data Layer (데이터 접근 + Model)
-- **Model**: DTO 구현체 (Domain Entity로 변환 기능 포함)
-- **Repository**: Repository 구현체 (Domain Protocol 구현)
-- **API**: REST API 클라이언트 및 Endpoint 정의
-- **Service**: 데이터 처리 서비스 (캐싱, 변환 등)
-
-### 🌐 Network Layer
-- **Networking**: 네트워크 기본 설정 및 HTTP 클라이언트
-- **Foundations**: 네트워크 기반 유틸리티
-- **ThirdPartys**: 네트워크 관련 써드파티 라이브러리 (AsyncMoya, WeaveDI)
-
-### 🎨 Shared Layer
-- **DesignSystem**: 공통 UI 컴포넌트, 폰트, 색상 등 디자인 시스템
-- **Shared**: 공통 공유 모듈 및 기본 설정
-- **Utill**: 날짜, 문자열, 로깅 등 공용 유틸리티
-
-### 🔄 의존성 방향 (Clean Architecture)
-```
-Presentation → Domain (UseCase Protocol)
-       ↓
-Domain/UseCase → Domain (Repository Protocol)
-       ↓
-Data/Repository → Domain (Entity + Repository Protocol)
-       ↓
-Data/Model → Domain (Entity 변환)
+# 단계별 실행
+./make clean      # 빌드 산출물 정리
+./make install    # SPM 의존성 설치
+./make generate   # Xcode 프로젝트 생성
 ```
 
-## 개발 환경
-
-- iOS 17.0+
-- Xcode 26.0.1+
-- Swift 6.0+
-- **Tuist 4.97.2** (최신 최적화 적용)
-
-### 버전 호환성
-- **Xcode 26.4 사용 시**: WeaveDI 3.4.1 버전 사용 권장
-
-## 사용 라이브러리
-
-- **ComposableArchitecture**: 상태 관리 및 아키텍처
-- **AsyncMoya**: 비동기 네트워크 통신
-- **WeaveDI**: 의존성 주입
-- **TCACoordinators**: TCA 기반 네비게이션
-- **swift-sharing (TCA SharedState)**: TCA 상태 공유
-
-## ⚡ Tuist 4.97.2 최적화
-
-이 템플릿은 **Tuist 4.97.2**의 최신 기능들을 완전히 활용하여 최적화되었습니다:
-
-### 🚀 **성능 최적화**
-- **새로운 `install` 명령어**: `fetch` 대신 더 빠르고 안정적인 의존성 관리
-- **바이너리 캐시**: 의존성을 framework로 설정하여 빌드 캐시 활용
-- **Swift 6.0 지원**: 최신 Swift 언어 기능 및 성능 개선
-
-### 🔍 **새로운 분석 도구**
-- **`tuist inspect implicit-imports`**: 암시적 의존성 자동 검사
-- **`tuist inspect code-coverage`**: 코드 커버리지 분석
-- **정적 부작용 경고**: 잠재적 의존성 문제 사전 감지
-
-### 📋 **최신 API 사용**
-- **Tuist.swift**: 새로운 설정 파일 형식 (`Config.swift` → `Tuist.swift`)
-- **Package.swift**: 최적화된 패키지 설정 및 성능 향상
-- **Settings API**: 최신 타입 안전 설정 방식
-
-## 🏗 Clean Architecture 설계
-
-### 🎯 Domain 중심 설계
-
-이 프로젝트는 **Domain 계층에 Protocol과 구현을 통합**하여 Clean Architecture를 구현합니다:
-
-#### 📋 Domain Layer (Protocol + Entity + UseCase)
-```swift
-// Domain/Entity/User.swift
-public struct User {
-    public let id: String
-    public let name: String
-    public let email: String
-
-    public init(id: String, name: String, email: String) {
-        self.id = id
-        self.name = name
-        self.email = email
-    }
-
-    // 비즈니스 로직
-    public var displayName: String {
-        return name.isEmpty ? "Unknown User" : name
-    }
-}
-
-// Domain/Repository/UserRepository.swift
-public protocol UserRepository {
-    func fetchUser(id: String) async throws -> User
-    func saveUser(_ user: User) async throws
-}
-
-// Domain/UseCase/GetUserUseCase.swift
-public protocol GetUserUseCase {
-    func execute(id: String) async throws -> User
-}
-
-public final class GetUserUseCaseImpl: GetUserUseCase {
-    private let repository: UserRepository
-
-    public init(repository: UserRepository) {
-        self.repository = repository
-    }
-
-    public func execute(id: String) async throws -> User {
-        return try await repository.fetchUser(id: id)
-    }
-}
+#### 4️⃣ Xcode 열기
+```bash
+open Picke.xcworkspace
 ```
 
-#### 🏗️ Data Layer (Model + Repository 구현)
-```swift
-// Data/Model/UserModel.swift
-import Domain
+### ⚙️ 환경 설정
 
-public struct UserModel: Codable {
-    public let user_id: String
-    public let user_name: String
-    public let user_email: String
+다음 키들을 `Picke-Dev.xcconfig` / `Picke-Stage.xcconfig` / `Picke-Prod.xcconfig` 에 채워주세요.
 
-    // ✅ Model → Entity 변환 (Data가 Domain 의존)
-    public func toEntity() -> User {
-        return User(
-            id: user_id,
-            name: user_name,
-            email: user_email
-        )
-    }
-}
-
-// Data/Repository/UserRepositoryImpl.swift
-import Domain
-
-public final class UserRepositoryImpl: UserRepository {
-    private let apiService: APIService
-
-    public init(apiService: APIService) {
-        self.apiService = apiService
-    }
-
-    public func fetchUser(id: String) async throws -> User {
-        let model: UserModel = try await apiService.fetchUser(id: id)
-        return model.toEntity()  // Model → Entity 변환
-    }
-}
+```xcconfig
+BASE_URL              = picke.store
+GOOGLE_CLIENT_ID      = YOUR_GOOGLE_WEB_CLIENT_ID
+GOOGLE_IOS_CLIENT_ID  = YOUR_GOOGLE_IOS_CLIENT_ID
+REVERSED_CLIENT_ID    = YOUR_REVERSED_CLIENT_ID
+KAKAO_REST_API_KEY    = YOUR_KAKAO_REST_API_KEY
 ```
 
-### 💡 핵심 장점
+### 🌐 OAuth 사전 등록
 
-#### 1. **Domain 중심 의존성**
-```
-✅ Domain 통합 방식:
-Presentation → Domain (Protocol + Entity)
-       ↓
-Data → Domain (Protocol 구현 + Entity 사용)
+| Provider | redirect_uri | 비고 |
+|---|---|---|
+| Google | `https://picke.store/oauth/google` | Web client ID + Google Cloud Console 등록 필요 |
+| Kakao | `https://picke.store/oauth/kakao` | Kakao Developers 콘솔 등록 필요 |
+| Apple | (네이티브) | App Store Connect → Sign in with Apple |
 
-모든 계층이 Domain을 중심으로 의존
-```
+## 🛠️ 주요 명령어
 
-#### 2. **응집도 향상**
-```swift
-// 관련 Protocol과 구현이 같은 모듈에
-// Domain/UseCase/GetUserUseCase.swift
-public protocol GetUserUseCase {
-    func execute(id: String) async throws -> User
-}
-
-public final class GetUserUseCaseImpl: GetUserUseCase {
-    // 구현체도 같은 파일에
-}
+### 🔄 기본 워크플로우
+```bash
+./make build      # 전체 빌드 프로세스 (권장)
+./make generate   # 프로젝트 생성만
+./make clean      # 빌드 산출물 정리
+./make install    # 의존성 설치
 ```
 
-#### 3. **테스트 용이성**
-```swift
-// Mock 구현이 매우 간단
-final class MockUserRepository: UserRepository {
-    func fetchUser(id: String) async throws -> User {
-        return User(id: "mock", name: "Mock User", email: "mock@test.com")
-    }
-}
-
-// 테스트에서 쉽게 사용
-let mockRepo = MockUserRepository()
-let useCase = GetUserUseCaseImpl(repository: mockRepo)
-let user = try await useCase.execute(id: "test")
+### 🚨 문제 해결
+```bash
+tuist clean       # Tuist 캐시 정리
+./make clean      # 모든 빌드 파일 정리
 ```
 
-#### 4. **단순한 구조**
-- **Domain**: Protocol + Entity + UseCase 통합 관리
-- **Data**: Domain Protocol 구현 + Model 변환
-- **모듈 수 감소**: Interface 별도 모듈 불필요
+### 🔍 코드 품질 / 그래프
+```bash
+tuist graph       # 의존성 그래프 생성
+tuist test        # 전체 테스트 실행
+```
+
+## 📄 라이선스
+
+이 프로젝트는 **MIT 라이선스** 하에 배포됩니다.
+자세한 내용은 [LICENSE](LICENSE) 파일을 참고하세요.
+
+## 👥 팀 & 크레딧
+
+### 💻 개발팀
+- **iOS Lead Developer**: 서원지 ([@Roy-wonji](https://github.com/Roy-wonji))
+
+### 🛠 기술 스택
+- **iOS**:
+  ![Swift](https://img.shields.io/badge/swift-F05138?style=for-the-badge&logo=swift&logoColor=white)
+  ![Xcode](https://img.shields.io/badge/xcode-147EFB?style=for-the-badge&logo=xcode&logoColor=white)
+  ![Fastlane](https://img.shields.io/badge/fastlane-00F200?style=for-the-badge&logo=fastlane&logoColor=white)
+
+- **Server**:
+  ![AWS EC2](https://img.shields.io/badge/amazonec2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white)
+  ![AWS](https://img.shields.io/badge/amazonaws-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white)
+  ![Swagger](https://img.shields.io/badge/swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=white)
+
+- **Design**:
+  ![Figma](https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white)
+
+- **VCS**:
+  ![Git](https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white)
+  ![GitHub](https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white)
+
+## 🐈‍⬛ Git 브랜칭 전략
+
+### 1️⃣ Git Branching Strategy
+- **main**: 프로덕션 배포용
+- **develop**: 개발 통합 브랜치
+- **feature/***: 기능별 개발 브랜치
+- **fix/***: 버그 픽스 브랜치
+
+### 📋 워크플로우
+1. **develop** 에서 **feature/<topic>** 브랜치 생성
+2. 기능 개발 → 자체 커밋 단위 SRP 분리
+3. **feature/** → **develop** Pull Request, 코드 리뷰
+4. **develop** → **main** 배포 Pull Request
+
+### ✍️ 커밋 메시지
+- 한국어 사용
+- 관련 GitHub 이슈 번호 매칭 (예: `#20 #2`)
+- 형식: `<type>: <요약> #<issue>`
+- `feat / fix / refactor / chore / docs / test`
+
+## 📞 문의 및 지원
+- 📧 **이메일**: suhwj81@gmail.com
+- 🐛 **버그 신고**: [Issues](https://github.com/Roy-wonji/Picke-iOS/issues)
+- 💡 **기능 제안**: [Discussions](https://github.com/Roy-wonji/Picke-iOS/discussions)
 
 ---
 
-# 🛠️ TuistTool (커스텀 CLI)
+<div align="center">
 
-프로젝트 전용 CLI 도구입니다. Tuist 명령을 래핑하고, 새 프로젝트 생성, 모듈 스캐폴딩 등을 지원합니다.
+**Made with ❤️ by Picke Team**
 
-## 설치 및 사용법
+[![Star this repo](https://img.shields.io/github/stars/Roy-wonji/Picke-iOS?style=social)](https://github.com/Roy-wonji/Picke-iOS)
 
-```bash
-# 컴파일
-swiftc TuistTool.swift -o tuisttool
-
-# 사용법
-./tuisttool <command>
-```
-
-### 지원 명령어 요약
-
-| Command       | 설명 |
-|---------------|------|
-| `newproject`  | **🚀 새 프로젝트 생성**: ProjectConfig.swift 이름 변경, 디렉토리 자동 생성, 완전 자동화된 프로젝트 생성 |
-| `generate`    | `tuist generate` 실행 |
-| `build`       | **clean → install → generate** 순서로 실행 (Tuist 4.97.2 최적화) |
-| `install`     | **새로운!** `tuist install` 실행 (의존성 설치) |
-| `clean`       | `tuist clean` 실행 |
-| `cache`       | `tuist cache` 실행 (바이너리 캐시 생성) |
-| `reset`       | **강력 클린**: 모든 캐시 삭제 후 `install → generate` 재실행 |
-| `inspect`     | **새로운!** 사용 가능한 분석 도구 표시 |
-| `inspect-imports` | **새로운!** 암시적 의존성 검사 |
-| `inspect-coverage` | **새로운!** 코드 커버리지 분석 |
-| `moduleinit`  | **모듈 스캐폴딩 마법사**: 자동 의존성 삽입 및 Interface 폴더 생성 |
-
-### 상세 동작
-
-- **newproject** (완전히 새로워짐!)
-  - 🎯 **ProjectConfig.swift 자동 수정**: 프로젝트 이름, 번들 ID, 팀 ID 자동 변경
-  - 📁 **필수 디렉토리 사전 생성**: MultiModuleTemplateTests, FontAsset 등 자동 생성
-  - 🔍 **이름 변경 검증**: 변경 완료 후 실제로 적용되었는지 확인
-  - 🧹 **기존 워크스페이스 정리**: 충돌 방지를 위한 기존 파일 삭제
-  - ✅ **완전 자동화**: 대화형 또는 명령어 인자로 완전 자동 생성
-
-- **build** (Tuist 4.97.2 최적화)
-  - 내부적으로 `clean → install → generate` 호출 (`fetch` 대신 `install` 사용)
-
-- **install** (새로운 명령어)
-  - Tuist 4.97.2의 새로운 `tuist install` 명령어 실행
-  - 의존성 설치 및 해결 담당
-
-- **inspect 시리즈** (새로운 분석 도구들)
-  - `inspect`: 사용 가능한 분석 도구 목록 표시
-  - `inspect-imports`: 암시적 의존성 검사 (enforceExplicitDependencies 대체)
-  - `inspect-coverage`: 코드 커버리지 분석
-
-- **reset** (개선됨)
-  - `~/Library/Caches/Tuist`, `~/Library/Developer/Xcode/DerivedData`, `.tuist`, `.build`, `Tuist/Dependencies` 삭제
-  - 이후 `install → generate` 순차 실행 (최신 워크플로우)
-- **moduleinit**
-  - `Plugins/DependencyPlugin/ProjectDescriptionHelpers/TargetDependency+Module/Modules.swift`에서 **모듈 타입** 및 **케이스 목록**을 파싱합니다.
-  - `Plugins/DependencyPackagePlugin/ProjectDescriptionHelpers/DependencyPackage/Extension+TargetDependencySPM.swift`에서 **SPM 의존성 목록**을 파싱합니다.
-  - 입력 받은 의존성들을 `Projects/<Layer>/<ModuleName>/Project.swift`의 `dependencies: [` 영역에 자동 삽입합니다.
-  - Domain 계층 생성 시, `Interface/Sources/Base.swift`를 템플릿으로 생성하도록 선택 가능.
-
-> ⚠️ **파일 경로 전제**  
-> - 위 파서는 특정 경로의 파일 구조/포맷을 기대합니다. 경로가 다르거나 파일 포맷이 변경되면 파싱이 실패할 수 있습니다.  
-> - 경로가 다르다면 `availableModuleTypes()`, `parseModulesFromFile()`, `parseSPMLibraries()`의 파일 경로를 프로젝트에 맞게 수정하세요.
-
-## 🚀 동적 프로젝트 이름 설정
-
-"MultiModuleTemplate" 대신 원하는 이름으로 프로젝트를 생성할 수 있습니다.
-
-### 사용 방법
-
-#### 🎯 방법 1: TuistTool 사용 (권장)
-
-```bash
-# 대화형 입력
-./tuisttool newproject
-
-# 명령어 인자로 바로 설정
-./tuisttool newproject MyAwesomeApp --bundle-id com.company.app
-```
-
-#### 🎯 방법 2: 환경변수 (CI/CD용)
-
-```bash
-export PROJECT_NAME="MyAwesomeApp"
-export BUNDLE_ID_PREFIX="com.company.awesome"
-tuist generate
-```
-
-#### 🎯 방법 3: Tuist 템플릿 (완전히 새 프로젝트)
-
-```bash
-mkdir MyNewProject && cd MyNewProject
-tuist scaffold multi-module-project --name MyNewProject
-```
-
-### 설정 가능한 항목
-
-| 항목 | 설명 | 기본값 |
-|------|------|--------|
-| `PROJECT_NAME` | 앱 이름 | MultiModuleTemplate |
-| `BUNDLE_ID_PREFIX` | 번들 ID 접두사 | io.Roy.Module |
-| `TEAM_ID` | 개발팀 ID | N94CS4N6VR |
-
----
-
-## 🎯 자주 쓰는 명령어
-
-### 새 프로젝트 생성
-```bash
-# 대화형 생성 (권장)
-./tuisttool newproject
-
-# 명령어로 한번에 생성
-./tuisttool newproject MyApp --bundle-id com.company.myapp --team-id ABC123
-```
-
-### 기본 개발 워크플로우
-```bash
-# Tuist 4.97.2 최적화된 워크플로우
-./tuisttool build      # clean → install → generate
-./tuisttool test       # 테스트 실행
-
-# 코드 품질 검사
-./tuisttool inspect-imports    # 암시적 의존성 검사
-./tuisttool inspect-coverage   # 코드 커버리지 분석
-```
-
-### 문제 해결
-```bash
-# 강력한 클린 (모든 캐시 삭제)
-./tuisttool reset
-
-# 의존성 재설치
-./tuisttool install
-
-# 프로젝트 구조 분석
-tuist graph --format pdf --path ./graph.pdf
-```
-
-### 모듈 개발
-```bash
-# 새 모듈 생성 (자동 의존성 설정)
-./tuisttool moduleinit
-
-# 특정 모듈만 포커스
-tuist focus <모듈명>
-```
-
-## 🔧 CI/CD 예시
-
-### GitHub Actions (권장)
-```bash
-# CI 파이프라인
-./tuisttool reset      # 모든 캐시 클린
-./tuisttool build      # clean → install → generate
-./tuisttool test       # 테스트 실행
-./tuisttool inspect-imports  # 의존성 검증
-```
-
-### 로컬 재현
-```bash
-# CI와 동일한 환경에서 로컬 테스트
-./tuisttool reset && ./tuisttool build && ./tuisttool test
-```
-
----
-
-## 기여 방법
-
-1. 브랜치를 생성합니다 (`git checkout -b feature/my-feature`)  
-2. 변경사항을 커밋합니다 (`git commit -m 'Add feature'`)  
-3. 브랜치에 푸시합니다 (`git push origin feature/my-feature`)  
-4. Pull Request를 생성합니다
-
-## 라이선스
-
-이 프로젝트는 [MIT License](LICENSE) 하에 배포됩니다.
+</div>
