@@ -53,7 +53,9 @@ public struct AuthCoordinator {
 
   // MARK: - NavigationAction
 
-  public enum NavigationAction: Equatable {}
+  public enum NavigationAction: Equatable {
+    case presentMainTab
+  }
 
   func handleRoute(state: inout State, action: Action) -> Effect<Action> {
     switch action {
@@ -95,9 +97,11 @@ extension AuthCoordinator {
 
     // MARK: - 온보딩 완료 → 루트로 (다음 플로우 연결 지점)
 
-    case .routeAction(_, action: .onboarding(.delegate(.finished))):
-      // TODO: 메인 탭으로 전환하는 NavigationAction 발송
-      return .none
+    case .routeAction(id: _, action: .login(.delegate(.presentMainTab))):
+      return .send(.navigation(.presentMainTab))
+
+    case .routeAction(_, action: .onboarding(.delegate(.presentMainTab))):
+      return .send(.navigation(.presentMainTab))
 
     default:
       return .none
@@ -123,7 +127,10 @@ extension AuthCoordinator {
     state _: inout State,
     action: NavigationAction
   ) -> Effect<Action> {
-    switch action {}
+    switch action {
+    case .presentMainTab:
+      return .none
+    }
   }
 
   private func handleAsyncAction(

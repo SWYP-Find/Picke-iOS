@@ -106,7 +106,7 @@ public struct OnBoardingFeature {
   // MARK: - DelegateAction
 
   public enum DelegateAction: Equatable {
-    case finished
+    case presentMainTab
   }
 
   nonisolated enum CancelID: Hashable {}
@@ -142,7 +142,7 @@ extension OnBoardingFeature {
     switch action {
     case .primaryButtonTapped:
       if state.isLastPage {
-        return .send(.delegate(.finished))
+        return .send(.delegate(.presentMainTab))
       }
       state.currentIndex = min(state.currentIndex + 1, OnBoardingFeature.pageCount - 1)
       return .none
@@ -172,7 +172,7 @@ extension OnBoardingFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .finished:
+    case .presentMainTab:
       .none
     }
   }

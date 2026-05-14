@@ -36,7 +36,17 @@ struct AppView: View {
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)
               ))
-            
+
+          }
+
+        case .mainTab:
+          if let store = store.scope(state: \.mainTab, action: \.scope.mainTab) {
+            MainTabView(store: store)
+              .transition(.asymmetric(
+                insertion: .move(edge: .trailing),
+                removal: .move(edge: .leading)
+              ))
+
           }
         }
       }
@@ -61,4 +71,3 @@ struct AppView: View {
       })
   )
 }
-

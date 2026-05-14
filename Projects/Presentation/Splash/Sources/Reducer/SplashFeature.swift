@@ -6,6 +6,8 @@
 //
 
 import Foundation
+import UseCase
+
 import ComposableArchitecture
 
 @Reducer
@@ -50,10 +52,9 @@ public struct SplashFeature {
    
   }
   
-  // MARK: - NavigationAction
-  
   public enum DelegateAction: Equatable {
-   
+    case presentAuth
+    case presentMainTab
   }
   
   nonisolated enum CancelID: Hashable {
@@ -61,6 +62,7 @@ public struct SplashFeature {
   }
   
   @Dependency(\.continuousClock) var clock
+  @Dependency(\.keychainManager) var keychainManager
   
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -95,8 +97,14 @@ extension SplashFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      let hasStoredCredential = hasStoredCredential
       return .run { send in
-        try await clock.sleep(for: .seconds(0.3))
+        try await clock.sleep(for: .seconds(0.5))
+//        if hasStoredCredential {
+//          await send(.delegate(.presentMainTab))
+//        } else {
+//          await send(.delegate(.presentAuth))
+//        }
       }
       
     }
@@ -115,17 +123,25 @@ extension SplashFeature {
   ) -> Effect<Action> {
     
   }
-  
+
   private func handleDelegateAction(
     state: inout State,
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-      
+    case .presentAuth, .presentMainTab:
+      return .none
     }
   }
   
- 
   
-  
+  private var hasStoredCredential: Bool {
+    guard
+      let accessToken = keychainManager.accessToken(),
+      let refreshToken = keychainManager.refreshToken()
+    else {
+      return false
+    }
+    return !accessToken.isEmpty && !refreshToken.isEmpty
+  }
 }
