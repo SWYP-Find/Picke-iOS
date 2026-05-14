@@ -29,13 +29,22 @@ public struct SplashView: View {
         
         Spacer()
         
-        Image(asset: .splashLogo)
-          .resizable()
-          .scaledToFit()
-          .frame(height: 203)
+        SplashLogoAnimation()
+          .equatable()
         
         Spacer()
       }
     }
+    .onAppear {
+      store.send(.view(.onAppear))
+    }
+  }
+}
+
+private struct SplashLogoAnimation: View, Equatable {
+  static func == (lhs: Self, rhs: Self) -> Bool { true }
+  
+  var body: some View {
+    SplashLogoAnimatedImageView()
   }
 }

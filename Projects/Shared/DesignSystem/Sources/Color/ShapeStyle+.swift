@@ -85,7 +85,9 @@ public extension ShapeStyle where Self == Color {
   static var bgOverlay: Color { .init(hex: "000000", alpha: 0.4) }
   static var bgSubtle: Color { .init(hex: "F5F5F4") }
   static var bgTertiary: Color { .neutral50 }
-
+  static var borderGray: Color { .init(hex: "CCCCCC") }
+  static var gray50: Color { .init(hex: "FFFFFF")}
+  
   // MARK: - Semantic / Status
   static var statusErrorAlpha: Color { .init(hex: "C92D33", alpha: 0.4) }
   static var statusError: Color { .init(hex: "C92D33") }

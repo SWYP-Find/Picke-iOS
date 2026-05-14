@@ -19,7 +19,7 @@ public extension InfoPlist {
       .setCFBundleIdentifier("$(PRODUCT_BUNDLE_IDENTIFIER)")
       .setCFBundleInfoDictionaryVersion("6.0")
       .setCFBundleName("$(PRODUCT_NAME)")
-      .setCFBundleDisplayName("$(BUNDLE_DISPLAY_NAME)")  // 🎯 xconfig에서 설정
+      .setCFBundleDisplayName("$(BUNDLE_DISPLAY_NAME)") // 🎯 xconfig에서 설정
       .setCFBundlePackageType("APPL")
       .setCFBundleShortVersionString(.appVersion())
       .setAppTransportSecurity()
@@ -34,9 +34,9 @@ public extension InfoPlist {
           "UIWindowSceneSessionRoleApplication": [
             [
               "UISceneConfigurationName": "Default Configuration",
-            ]
-          ]
-        ]
+            ],
+          ],
+        ],
       ])
       .setUIRequiredDeviceCapabilities(["armv7"])
       .setCFBundleDevelopmentRegion()
@@ -48,10 +48,14 @@ public extension InfoPlist {
       .setGIDClientID("${GOOGLE_CLIENT_ID}")
       .setAdmobToken("${ADMOB_TOKEN}")
       .setGADApplicationId("${ADMOB_TOKEN}")
+      .setKakaoRestApiKey()
+      .setLSApplicationQueriesSchemes([
+        "kakaokompassauth", // 카카오톡 로그인
+        "kakaolink", // 카카오톡 공유
+      ])
 //      .setSKAdNetworkItems([
 //
 //      ])
-    
   )
 
   static let moduleInfoPlist: Self = .extendingDefault(

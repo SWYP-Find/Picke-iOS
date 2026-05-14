@@ -10,7 +10,8 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings:  .settings(),
   dependencies: [
-    .Presentation(implements: .Splash)
+    .Presentation(implements: .Splash),
+    .Presentation(implements: .Auth)
   ],
   sources: ["Sources/**"]
 )

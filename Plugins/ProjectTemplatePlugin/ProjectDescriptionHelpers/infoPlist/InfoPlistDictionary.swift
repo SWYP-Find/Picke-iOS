@@ -12,45 +12,45 @@ public typealias InfoPlistDictionary = [String: Plist.Value]
 
 extension InfoPlistDictionary {
   func setUIUserInterfaceStyle(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["UIUserInterfaceStyle": .string(value)]) { (_, new) in new }
+    merging(["UIUserInterfaceStyle": .string(value)]) { _, new in new }
   }
-  
+
   func setCFBundleDevelopmentRegion(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleDevelopmentRegion": .string(value)]) { (_, new) in new }
+    merging(["CFBundleDevelopmentRegion": .string(value)]) { _, new in new }
   }
-  
+
   func setCFBundleExecutable(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleExecutable": .string(value)]) { (_, new) in new }
+    merging(["CFBundleExecutable": .string(value)]) { _, new in new }
   }
 
   func setCFBundleIdentifier(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleIdentifier": .string(value)]) { (_, new) in new }
+    merging(["CFBundleIdentifier": .string(value)]) { _, new in new }
   }
-  
+
   func setCFBundleInfoDictionaryVersion(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleInfoDictionaryVersion": .string(value)]) { (_, new) in new }
+    merging(["CFBundleInfoDictionaryVersion": .string(value)]) { _, new in new }
   }
-  
+
   func setCFBundleName(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleName": .string(value)]) { (_, new) in new }
+    merging(["CFBundleName": .string(value)]) { _, new in new }
   }
 
   func setCFBundleDisplayName(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleDisplayName": .string(value)]) { (_, new) in new }
+    merging(["CFBundleDisplayName": .string(value)]) { _, new in new }
   }
 
   func setCFBundlePackageType(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundlePackageType": .string(value)]) { (_, new) in new }
+    merging(["CFBundlePackageType": .string(value)]) { _, new in new }
   }
-  
+
   func setCFBundleShortVersionString(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleShortVersionString": .string(value)]) { (_, new) in new }
+    merging(["CFBundleShortVersionString": .string(value)]) { _, new in new }
   }
-  
+
   // 매개변수 없는 경우, 기본 지역을 "ko"로 설정
   func setCFBundleDevelopmentRegion() -> InfoPlistDictionary {
-    return self.merging(["CFBundleDevelopmentRegion": .string("ko")]) {
-      (_, new) in new
+    merging(["CFBundleDevelopmentRegion": .string("ko")]) {
+      _, new in new
     }
   }
 
@@ -58,160 +58,168 @@ extension InfoPlistDictionary {
     func convertToPlistValue(_ value: Any) -> Plist.Value {
       switch value {
       case let string as String:
-        return .string(string)
+        .string(string)
       case let array as [Any]:
-        return .array(array.map { convertToPlistValue($0) })
+        .array(array.map { convertToPlistValue($0) })
       case let dictionary as [String: Any]:
-        return .dictionary(dictionary.mapValues { convertToPlistValue($0) })
+        .dictionary(dictionary.mapValues { convertToPlistValue($0) })
       case let bool as Bool:
-        return .boolean(bool)
+        .boolean(bool)
       default:
-        return .string("\(value)")
+        .string("\(value)")
       }
     }
     let dict: [String: Plist.Value] = [
-      "CFBundleURLTypes": .array(value.map { .dictionary($0.mapValues { convertToPlistValue($0) }) })
+      "CFBundleURLTypes": .array(value.map { .dictionary($0.mapValues { convertToPlistValue($0) }) }),
     ]
-    return self.merging(dict) { (_, new) in new }
+    return merging(dict) { _, new in new }
   }
-  
+
   func setCFBundleVersion(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["CFBundleVersion": .string(value)]) { (_, new) in new }
+    merging(["CFBundleVersion": .string(value)]) { _, new in new }
   }
-  
+
   func setGIDClientID(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["GIDClientID": .string(value)]) { (_, new) in new }
+    merging(["GIDClientID": .string(value)]) { _, new in new }
   }
-  
+
   func setLSRequiresIPhoneOS(_ value: Bool) -> InfoPlistDictionary {
-    return self.merging(["LSRequiresIPhoneOS": .boolean(value)]) { (_, new) in new }
+    merging(["LSRequiresIPhoneOS": .boolean(value)]) { _, new in new }
   }
-  
+
   func setUIAppFonts(_ value: [String]) -> InfoPlistDictionary {
-    return self.merging(["UIAppFonts": .array(value.map { .string($0) })]) { (_, new) in new }
+    merging(["UIAppFonts": .array(value.map { .string($0) })]) { _, new in new }
   }
-  
+
   func setAppTransportSecurity() -> InfoPlistDictionary {
     let dict: [String: Plist.Value] = [
       "NSAppTransportSecurity": .dictionary([
-        "NSAllowsArbitraryLoads": .boolean(true)
-      ])
+        "NSAllowsArbitraryLoads": .boolean(true),
+      ]),
     ]
-    return self.merging(dict) { (_, new) in new }
+    return merging(dict) { _, new in new }
   }
 
-  // 매개변수 없는 URL 타입 (예: 카카오)
+  // 매개변수 없는 URL 타입 (Google REVERSED_CLIENT_ID)
   func setCFBundleURLTypes() -> InfoPlistDictionary {
     let dict: [String: Plist.Value] = [
       "CFBundleURLTypes": .array([
         .dictionary([
           "CFBundleURLSchemes": .array([
-            .string("${REVERSED_CLIENT_ID}")
-//            .string("com.googleusercontent.apps.882277748169-glpolfiecue4lqqps6hmgj9t8lm1g5qp")
-          ])
-        ])
-      ])
+            .string("${REVERSED_CLIENT_ID}"),
+          ]),
+        ]),
+      ]),
     ]
-    return self.merging(dict) { (_, new) in new }
+    return merging(dict) { _, new in new }
   }
-  
+
+  func setLSApplicationQueriesSchemes(_ value: [String]) -> InfoPlistDictionary {
+    merging([
+      "LSApplicationQueriesSchemes": .array(value.map { .string($0) }),
+    ]) { _, new in new }
+  }
+
+  func setKakaoRestApiKey(_ value: String = "$(KAKAO_REST_API_KEY)") -> InfoPlistDictionary {
+    merging(["KAKAO_REST_API_KEY": .string(value)]) { _, new in new }
+  }
+
   func setUIApplicationSceneManifest(_ value: [String: Any]) -> InfoPlistDictionary {
     func convertToPlistValue(_ value: Any) -> Plist.Value {
       switch value {
       case let string as String:
-        return .string(string)
+        .string(string)
       case let array as [Any]:
-        return .array(array.map { convertToPlistValue($0) })
+        .array(array.map { convertToPlistValue($0) })
       case let dictionary as [String: Any]:
-        return .dictionary(dictionary.mapValues { convertToPlistValue($0) })
+        .dictionary(dictionary.mapValues { convertToPlistValue($0) })
       case let bool as Bool:
-        return .boolean(bool)
+        .boolean(bool)
       default:
-        return .string("\(value)")
+        .string("\(value)")
       }
     }
     let dict: [String: Plist.Value] = [
-      "UIApplicationSceneManifest": convertToPlistValue(value)
+      "UIApplicationSceneManifest": convertToPlistValue(value),
     ]
-    return self.merging(dict) { (_, new) in new }
+    return merging(dict) { _, new in new }
   }
-  
+
   func setUILaunchStoryboardName(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["UILaunchStoryboardName": .string(value)]) { (_, new) in new }
+    merging(["UILaunchStoryboardName": .string(value)]) { _, new in new }
   }
-  
+
   func setUIRequiredDeviceCapabilities(_ value: [String]) -> InfoPlistDictionary {
-    return self.merging(["UIRequiredDeviceCapabilities": .array(value.map { .string($0) })]) { (_, new) in new }
+    merging(["UIRequiredDeviceCapabilities": .array(value.map { .string($0) })]) { _, new in new }
   }
-  
+
   func setUISupportedInterfaceOrientations(_ value: [String]) -> InfoPlistDictionary {
-    return self.merging(["UISupportedInterfaceOrientations": .array(value.map { .string($0) })]) { (_, new) in new }
+    merging(["UISupportedInterfaceOrientations": .array(value.map { .string($0) })]) { _, new in new }
   }
-  
+
   func setNSCameraUsageDescription(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["NSCameraUsageDescription": .string(value)]) { (_, new) in new }
+    merging(["NSCameraUsageDescription": .string(value)]) { _, new in new }
   }
-  
+
   func setUILaunchScreens() -> InfoPlistDictionary {
     let dict: InfoPlistDictionary = [
       "UILaunchScreen": .dictionary([
         "UIColorName": .string(""),
-        "UIImageName": .string("")
-      ])
+        "UIImageName": .string(""),
+      ]),
     ]
-    return self.merging(dict) { _, new in new }
-  }
-  
-  func setAppUseExemptEncryption(value: Bool) -> InfoPlistDictionary {
-    return self.merging(["ITSAppUsesNonExemptEncryption": .boolean(value)]) { (_, new) in new }
-  }
-  
-  func setFirebaseAnalyticsCollectionEnabled() -> InfoPlistDictionary {
-    return self.merging(["FIREBASE_ANALYTICS_COLLECTION_ENABLED": .boolean(false)]) { (_, new) in new }
-  }
-  
-  func setCalenderUsage(_ description: String) -> InfoPlistDictionary {
-    return self.merging(["NSCalendarsUsageDescription": .string(description)]) { (_, new) in new }
-  }
-  
-  func setGoogleReversedClientID(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["REVERSED_CLIENT_ID": .string(value)]) { (_, new) in new }
-  }
-  
-  func setGoogleClientID(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["GOOGLE_CLIENT_ID": .string(value)]) { (_, new) in new }
-  }
-  
-  func setGoogleClientiOSID(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["GOOGLE_IOS_CLIENT_ID": .string(value)]) { (_, new) in new }
-  }
-  
-  func setMixpanelToken(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["MIXPANEL_TOKEN": .string(value)]) { (_, new) in new }
+    return merging(dict) { _, new in new }
   }
 
-  
+  func setAppUseExemptEncryption(value: Bool) -> InfoPlistDictionary {
+    merging(["ITSAppUsesNonExemptEncryption": .boolean(value)]) { _, new in new }
+  }
+
+  func setFirebaseAnalyticsCollectionEnabled() -> InfoPlistDictionary {
+    merging(["FIREBASE_ANALYTICS_COLLECTION_ENABLED": .boolean(false)]) { _, new in new }
+  }
+
+  func setCalenderUsage(_ description: String) -> InfoPlistDictionary {
+    merging(["NSCalendarsUsageDescription": .string(description)]) { _, new in new }
+  }
+
+  func setGoogleReversedClientID(_ value: String) -> InfoPlistDictionary {
+    merging(["REVERSED_CLIENT_ID": .string(value)]) { _, new in new }
+  }
+
+  func setGoogleClientID(_ value: String) -> InfoPlistDictionary {
+    merging(["GOOGLE_CLIENT_ID": .string(value)]) { _, new in new }
+  }
+
+  func setGoogleClientiOSID(_ value: String) -> InfoPlistDictionary {
+    merging(["GOOGLE_IOS_CLIENT_ID": .string(value)]) { _, new in new }
+  }
+
+  func setMixpanelToken(_ value: String) -> InfoPlistDictionary {
+    merging(["MIXPANEL_TOKEN": .string(value)]) { _, new in new }
+  }
+
   func setBaseURL(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["BASE_URL": .string(value)]) { (_, new) in new }
+    merging(["BASE_URL": .string(value)]) { _, new in new }
   }
-  
+
   func setAdmobToken(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["ADMOB_TOKEN": .string(value)]) { (_, new) in new }
+    merging(["ADMOB_TOKEN": .string(value)]) { _, new in new }
   }
-  
+
   func setGADApplicationId(_ value: String) -> InfoPlistDictionary {
-    return self.merging(["GADApplicationIdentifier": .string(value)]) { (_, new) in new }
+    merging(["GADApplicationIdentifier": .string(value)]) { _, new in new }
   }
-  
+
   func setSKAdNetworkItems(_ identifiers: [String]) -> InfoPlistDictionary {
-    return self.merging([
+    merging([
       "SKAdNetworkItems": .array(
         identifiers.map {
           .dictionary([
-            "SKAdNetworkIdentifier": .string($0)
+            "SKAdNetworkIdentifier": .string($0),
           ])
         }
-      )
-    ]) { (_, new) in new }
+      ),
+    ]) { _, new in new }
   }
 }

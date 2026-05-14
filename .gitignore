@@ -131,6 +131,9 @@ iOSInjectionProject/
 # Tuist derived files
 graph.dot
 Derived/
+/Picke-*.png
+docs/graph/
+.tuist-spider/
 
 # Tuist managed dependencies
 **/Tuist/.build

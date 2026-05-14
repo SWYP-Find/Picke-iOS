@@ -178,6 +178,74 @@ tuist graph --format pdf --path ./graph.pdf
 - `Release.xcconfig` — 릴리즈 빌드 공통
 - `Shared.xcconfig` — 모든 환경 공통 설정
 
+## 🎨 디자인 시스템 & 토큰 워크플로우
+
+### 디자인 토큰 코드젠 (`Tools/TokenGenerator.swift`)
+
+Tokens Studio for Figma 가 export 한 `Mode 1.tokens.json`을 Swift 토큰으로 변환합니다.
+
+**단일 소스**
+- 토큰 JSON 은 `SWYP-Find/design-tokens` 레포(public)가 단일 소스
+- Picke-iOS 의 `Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json` 은 워크플로우 실행 시에만 다운로드되는 임시 파일이며 git 에 추적되지 않음 (`.gitignore` 처리)
+
+**자동 생성 출력 (⚠️ 직접 수정 금지 — 헤더에 AUTO-GENERATED 마크)**
+- `Sources/Color/ShapeStyle+.swift` — 색 토큰 (`.primary500`, `.bgDefault`, `.borderError` 등)
+- `Sources/Extension/CGFloat/CGFloat+Radius+.swift` — radius (`.none` / `.default` / `.full`)
+- `Sources/Extension/CGFloat/CGFloat+Spacing+.swift` — spacing (`.s0` ~ `.s96`)
+- `Sources/UI/Token/ComponentToken.swift` — 컴포넌트 토큰 (`ComponentToken.Button.Primary.Background.default` 등)
+
+**디자이너 핸드오프 흐름 (자동)**
+1. 디자이너가 Tokens Studio → `Mode 1.tokens.json` export
+2. `SWYP-Find/design-tokens` 의 `main` 브랜치에 push
+3. (자동) `notify-ios.yml` → `repository_dispatch(design-tokens-updated)` 발사
+4. (자동) Picke-iOS `sync-design-tokens.yml` 실행 → raw URL 로 JSON 다운로드 → `swift Tools/TokenGenerator.swift` → 4개 출력 파일을 `develop` 에 직접 commit + push
+
+수동 트리거가 필요할 때:
+```bash
+gh workflow run sync-design-tokens.yml --repo SWYP-Find/Picke-iOS
+```
+
+**Component 토큰 해석 우선순위** (TokenGenerator 내부)
+1. `"{Colors.brand.primary.500}"` 같은 string alias → `.primary500`
+2. inline hex + `$extensions.com.figma.aliasData.targetVariableName` → 해당 변수명이 우리 토큰셋에 있으면 그쪽으로
+3. inline hex가 brand/semantic 변수의 hex와 일치하면 그 변수로
+4. 위 셋 다 실패 시 `.init(hex: "...")` inline
+
+### DesignSystem 폴더 구조
+
+```
+Projects/Shared/DesignSystem/Sources/
+├── Color/                     # 색 토큰 (auto)
+├── CustomFont/                # Pretendard 폰트 정의
+├── Image/                     # ImageAsset
+├── Extension/
+│   ├── CGFloat/               # radius / spacing (auto)
+│   ├── Color/                 # Color/UIColor hex 초기화 등
+│   ├── Image/
+│   └── ScreenSize/
+└── UI/
+    ├── Button/                # CTA 버튼 컴포넌트
+    ├── Navigaion/             # UINavigationController gesture 확장
+    └── Token/                 # 컴포넌트 토큰 (auto)
+```
+
+### UI 컴포넌트 작성 규칙
+
+- **색·radius는 `ComponentToken.*` 또는 brand/semantic 토큰 참조**. hex 리터럴(`.init(hex: "...")`) 직접 사용 금지
+- **CTA 버튼은 두 API 제공 (병행 유지):**
+  - `CustomButton(action:title:config:isEnable:trailingIcon:)` — Config 기반, 기존 호출처 호환
+  - `Button { } .ctaButtonStyle(.primary, size: .large, icon: nil)` — `ButtonStyle` 기반
+- variant × size 확장 시 `CTAButtonStyle.swift`의 enum에 케이스 추가 → `ComponentToken.Button.*`을 통해 색 분기
+- pressed 상태는 `configuration.isPressed`로 토큰의 `.Background.pressed` 색을 사용 (opacity 변경 X)
+
+### 새 파일 추가 시 Tuist 재생성 필수
+
+`Project.swift`의 `sources: ["Sources/**"]` glob이 새 파일을 자동 픽업하지만, xcodeproj 동기화는 별도:
+```bash
+tuist generate --no-open --path Projects/Shared/DesignSystem
+```
+재생성 전 SourceKit 에러가 떠도 실제 빌드는 정상일 수 있으니, **항상 `xcodebuild`로 실 빌드 확인**할 것.
+
 ## 📊 지원 스킬 목록
 
 ### TDD 자동화 스킬

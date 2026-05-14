@@ -5,10 +5,10 @@
 //  Created by Wonji Suh  on 5/6/26.
 //
 
-import Splash
 import ComposableArchitecture
 import Entity
 import LogMacro
+import Presentation
 
 @Reducer
 public struct AppReducer: Sendable {
@@ -17,6 +17,7 @@ public struct AppReducer: Sendable {
   @ObservableState
   public enum State {
     case splash(SplashFeature.State)
+    case auth(AuthCoordinator.State)
    
     
     public init() {
@@ -27,7 +28,7 @@ public struct AppReducer: Sendable {
     var animationID: String {
       switch self {
       case .splash: return "splash"
-//      case .auth: return "auth"
+      case .auth: return "auth"
       }
     }
   }
@@ -71,6 +72,7 @@ public struct AppReducer: Sendable {
   @CasePathable
   public enum ScopeAction {
     case splash(SplashFeature.Action)
+    case auth(AuthCoordinator.Action)
  
   }
   
@@ -137,7 +139,9 @@ public struct AppReducer: Sendable {
     .ifCaseLet(\.splash, action: \.scope.splash) {
       SplashFeature()
     }
-   
+    .ifCaseLet(\.auth, action: \.scope.auth) {
+      AuthCoordinator()
+    }
   }
   
   private func handleViewAction(
@@ -147,7 +151,7 @@ public struct AppReducer: Sendable {
     switch action {
     case .presentView:
       return .run { send in
-//        await send(.scope(.splash(.view(.onAppear))))
+        await send(.scope(.splash(.view(.onAppear))))
       }
       
     case .presentRoot:
@@ -180,7 +184,7 @@ public struct AppReducer: Sendable {
   ) -> Effect<Action> {
     switch action {
     case .completeAuthTransition:
-//      state = .auth(.init())
+      state = .auth(.init())
       return .none
       
     case .completeStaffTransition:
@@ -214,6 +218,17 @@ public struct AppReducer: Sendable {
     state: inout State,
     action: ScopeAction
   ) -> Effect<Action> {
+    switch action {
+    case .splash(.view(.onAppear)):
+      return .run { send in
+        try await clock.sleep(for: .seconds(3))
+        try await send(.view(.presentAuth))
+      }
+      
+    default:
+      return .none
+    }
+    
     // 🎯 PFW 철학: 타입 안전한 상태 매칭
 //    switch (action, state) {
 //    case (.staff, .staff), (.member, .member),
@@ -228,7 +243,6 @@ public struct AppReducer: Sendable {
     
     // 🎯 PFW 패턴: 단순한 네비게이션 처리
 //    return handleScopeNavigation(action: action)
-    return .none
   }
   
   // 🎯 PFW 패턴: 네비게이션 로직 분리
