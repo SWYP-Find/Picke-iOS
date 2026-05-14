@@ -100,17 +100,23 @@ public extension UnifiedOAuthUseCase {
     return loginEntity
   }
 
-  /// Google 로그인 처리
+  /// Google 로그인 처리 — picke:// 콜백에서 받은 `code` 를 백엔드에 전달.
   func googleLogin(
     token: String
   ) async throws -> LoginEntity {
-    let processedToken = try await googleProvider.signInWithToken(token: token)
-    $userSession.withLock { $0.token = processedToken }
+    let payload = try await googleProvider.signInWithToken(token: token)
+    Log.debug("google authorizationCode", payload.authorizationCode)
+
+    $userSession.withLock {
+      $0.token = payload.authorizationCode ?? ""
+      $0.name = payload.displayName ?? ""
+      $0.provider = .google
+    }
 
     let loginEntity = try await authRepository.login(
       provider: .google,
-      authorizationCode: processedToken,
-      redirectUri: SocialType.google.redirectUri
+      authorizationCode: payload.authorizationCode ?? "",
+      redirectUri: payload.redirectUri ?? SocialType.google.redirectUri
     )
 
     keychainManager.save(
@@ -122,16 +128,15 @@ public extension UnifiedOAuthUseCase {
     return loginEntity
   }
 
-  /// Kakao 로그인 처리 (PKCE + 서버 콜백 기반)
+  /// Kakao 로그인 처리 — picke:// 콜백에서 받은 `code` 를 백엔드에 전달.
   func kakaoLogin(token: String) async throws -> LoginEntity {
     let payload = try await kakaoProvider.signInWithToken(token: token)
-    Log.debug("kakao authcode", payload.authorizationCode)
+    Log.debug("kakao authorizationCode", payload.authorizationCode)
 
     $userSession.withLock {
       $0.token = payload.authorizationCode ?? ""
-      $0.accessToken = payload.accessToken
-      $0.oauthRefreshToken = payload.refreshToken ?? ""
       $0.name = payload.displayName ?? ""
+      $0.provider = .kakao
     }
 
     let loginEntity = try await authRepository.login(
