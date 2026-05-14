@@ -19,7 +19,7 @@ import UIKit
 
 public extension NSNotification.Name {
   /// 리프레시 토큰 만료 시 발송되는 알림
-  static let refreshTokenExpired = NSNotification.Name("PickeRefreshTokenExpired")
+  static let refreshTokenExpired = NSNotification.Name("RefreshTokenExpired")
 }
 
 // MARK: - Token Refresh Manager
@@ -31,6 +31,7 @@ actor TokenRefreshManager {
   private var isRefreshing = false
 
   func refreshCredentialIfNeeded() async throws -> AccessTokenCredential {
+    // 다른 요청이 이미 refresh 중이면 잠시 대기 후 최신 credential 흐름을 다시 탄다.
     if isRefreshing {
       try await _Concurrency.Task.sleep(nanoseconds: 100_000_000)
       return try await refreshCredentialIfNeeded()
@@ -96,8 +97,10 @@ actor TokenRefreshManager {
     let desc = error.localizedDescription.lowercased()
     return desc.contains("401")
       || desc.contains("unauthorized")
+      || desc.contains("유효하지 않은 토큰")
       || desc.contains("token expired")
       || desc.contains("invalid token")
+      || desc.contains("authentication failed")
   }
 
   private func performAutomaticLogout() async {
@@ -123,6 +126,32 @@ actor TokenRefreshManager {
 final class AuthInterceptor: RequestInterceptor, @unchecked Sendable {
   private let tokenRefreshManager = TokenRefreshManager()
 
+  /// AsyncMoya 요청에 토큰을 추가한다.
+  func addAuthToken(to urlRequest: URLRequest) async throws -> URLRequest {
+    var authenticatedRequest = urlRequest
+
+    guard let credential = AuthSessionManager.shared.credential else {
+      Log.debug("⚠️ No credential available, proceeding without token")
+      return urlRequest
+    }
+
+    if credential.requiresRefresh {
+      Log.debug("🔄 Token refresh required, refreshing...")
+      let newCredential = try await tokenRefreshManager.refreshCredentialIfNeeded()
+      authenticatedRequest.setValue("Bearer \(newCredential.accessToken)", forHTTPHeaderField: "Authorization")
+    } else {
+      authenticatedRequest.setValue("Bearer \(credential.accessToken)", forHTTPHeaderField: "Authorization")
+    }
+
+    return authenticatedRequest
+  }
+
+  /// 401 발생 시 토큰을 갱신한다.
+  func handleUnauthorizedError() async throws -> AccessTokenCredential {
+    Log.debug("🚨 401 Unauthorized detected, attempting token refresh")
+    return try await tokenRefreshManager.refreshCredentialIfNeeded()
+  }
+
   func adapt(
     _ urlRequest: URLRequest,
     for _: Session,
@@ -130,7 +159,7 @@ final class AuthInterceptor: RequestInterceptor, @unchecked Sendable {
   ) {
     var adapted = urlRequest
 
-    guard let credential = OptimizedSessionManager.shared.credential else {
+    guard let credential = AuthSessionManager.shared.credential else {
       completion(.success(urlRequest))
       return
     }

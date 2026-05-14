@@ -43,6 +43,7 @@ public final class DefaultAuthRepositoryImpl: AuthInterface, @unchecked Sendable
 
   public func logout() async throws -> AuthExitEntity {
     AuthExitEntity(
+      loggedOut: true,
       code: "200",
       message: "로그아웃이 성공적으로 완료되었습니다.",
       detail: "사용자 세션이 종료되었습니다."

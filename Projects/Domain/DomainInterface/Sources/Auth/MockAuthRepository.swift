@@ -111,7 +111,7 @@ public final class MockAuthRepository: AuthInterface, @unchecked Sendable {
 
     switch configuration {
     case .success, .logoutSuccess:
-      return AuthExitEntity()
+      return AuthExitEntity(loggedOut: true)
     case .serverError:
       throw MockAuthError.serverError
     default:

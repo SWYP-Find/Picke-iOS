@@ -7,18 +7,30 @@
 
 import Foundation
 
+public struct LogoutDataDTO: Decodable, Equatable {
+  public let loggedOut: Bool
+
+  public init(loggedOut: Bool) {
+    self.loggedOut = loggedOut
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case loggedOut = "logged_out"
+  }
+}
+
 public struct LogOutDTO: Decodable {
-  public let code: String?
-  public let message: String?
-  public let detail: String?
+  public let statusCode: Int
+  public let data: LogoutDataDTO?
+  public let error: APIErrorDTO?
 
   public init(
-    code: String? = nil,
-    message: String? = nil,
-    detail: String? = nil
+    statusCode: Int,
+    data: LogoutDataDTO? = nil,
+    error: APIErrorDTO? = nil
   ) {
-    self.code = code
-    self.message = message
-    self.detail = detail
+    self.statusCode = statusCode
+    self.data = data
+    self.error = error
   }
 }

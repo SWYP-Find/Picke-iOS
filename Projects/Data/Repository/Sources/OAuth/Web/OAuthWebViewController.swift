@@ -27,6 +27,7 @@ final class OAuthWebViewController: UIViewController {
     static let dragHandleHeight: CGFloat = 28
     static let webViewTopSpacing: CGFloat = 8
     static let dismissDragThreshold: CGFloat = 96
+    static let dragDismissDuration: TimeInterval = 0.18
   }
 
   private let authorizeURL: URL
@@ -38,6 +39,7 @@ final class OAuthWebViewController: UIViewController {
   private let sheetDragSubject = PassthroughSubject<OAuthSheetDragEvent, Never>()
   private var cancellables: Set<AnyCancellable> = []
   private var didFinish = false
+  private weak var dimmingControl: UIControl?
   private weak var sheetContainer: UIView?
 
   private lazy var webView: WKWebView = {
@@ -81,6 +83,7 @@ final class OAuthWebViewController: UIViewController {
     let sheetContainer = makeSheetContainer()
     let dragHandleView = makeDragHandleView()
     let grabberView = makeGrabberView()
+    self.dimmingControl = dimmingControl
     self.sheetContainer = sheetContainer
 
     rootView.addSubview(dimmingControl)
@@ -192,7 +195,7 @@ final class OAuthWebViewController: UIViewController {
 
     case let .ended(translationY):
       if translationY >= Layout.dismissDragThreshold {
-        finish(.failure(AuthError.userCancelled))
+        dismissFromDrag(sheetContainer: sheetContainer)
       } else {
         UIView.animate(
           withDuration: 0.25,
@@ -214,11 +217,29 @@ final class OAuthWebViewController: UIViewController {
     }
   }
 
-  private func finish(_ result: Result<String, Error>) {
+  private func dismissFromDrag(sheetContainer: UIView) {
+    guard !didFinish else { return }
+    let targetY = max(view.bounds.height - sheetContainer.frame.minY, sheetContainer.bounds.height)
+
+    UIView.animate(
+      withDuration: Layout.dragDismissDuration,
+      delay: 0,
+      options: [.curveEaseIn, .beginFromCurrentState, .allowUserInteraction]
+    ) { [weak self] in
+      sheetContainer.transform = CGAffineTransform(translationX: 0, y: targetY)
+      self?.dimmingControl?.alpha = 0
+    } completion: { [weak self] _ in
+      Task { @MainActor [weak self] in
+        self?.finish(.failure(AuthError.userCancelled), animated: false)
+      }
+    }
+  }
+
+  private func finish(_ result: Result<String, Error>, animated: Bool = true) {
     guard !didFinish else { return }
     didFinish = true
     let completion = onComplete
-    dismiss(animated: true) {
+    dismiss(animated: animated) {
       completion(result)
     }
   }
@@ -246,7 +267,7 @@ private enum OAuthSheetDragEvent {
 
 private final class OAuthSheetDragHandleView: UIControl {
   private let events: PassthroughSubject<OAuthSheetDragEvent, Never>
-  private var initialTouchPoint: CGPoint?
+  private var initialTouchY: CGFloat?
 
   init(events: PassthroughSubject<OAuthSheetDragEvent, Never>) {
     self.events = events
@@ -259,32 +280,32 @@ private final class OAuthSheetDragHandleView: UIControl {
   }
 
   override func beginTracking(_ touch: UITouch, with _: UIEvent?) -> Bool {
-    initialTouchPoint = touch.location(in: self)
+    initialTouchY = touch.location(in: nil).y
     return true
   }
 
   override func continueTracking(_ touch: UITouch, with _: UIEvent?) -> Bool {
-    guard let initialTouchPoint else { return false }
-    let currentPoint = touch.location(in: self)
-    events.send(.changed(currentPoint.y - initialTouchPoint.y))
+    guard let initialTouchY else { return false }
+    let currentY = touch.location(in: nil).y
+    events.send(.changed(currentY - initialTouchY))
     return true
   }
 
   override func endTracking(_ touch: UITouch?, with _: UIEvent?) {
-    defer { initialTouchPoint = nil }
+    defer { initialTouchY = nil }
     guard let touch,
-          let initialTouchPoint
+          let initialTouchY
     else {
       events.send(.cancelled)
       return
     }
 
-    let currentPoint = touch.location(in: self)
-    events.send(.ended(currentPoint.y - initialTouchPoint.y))
+    let currentY = touch.location(in: nil).y
+    events.send(.ended(currentY - initialTouchY))
   }
 
   override func cancelTracking(with _: UIEvent?) {
-    initialTouchPoint = nil
+    initialTouchY = nil
     events.send(.cancelled)
   }
 }

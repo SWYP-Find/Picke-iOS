@@ -7,18 +7,26 @@
 
 import Foundation
 
+public struct WithdrawDataDTO: Decodable, Equatable {
+  public let withdrawn: Bool
+
+  public init(withdrawn: Bool) {
+    self.withdrawn = withdrawn
+  }
+}
+
 public struct WithdrawDTO: Decodable {
-  public let code: String?
-  public let message: String?
-  public let detail: String?
+  public let statusCode: Int
+  public let data: WithdrawDataDTO?
+  public let error: APIErrorDTO?
 
   public init(
-    code: String? = nil,
-    message: String? = nil,
-    detail: String? = nil
+    statusCode: Int,
+    data: WithdrawDataDTO? = nil,
+    error: APIErrorDTO? = nil
   ) {
-    self.code = code
-    self.message = message
-    self.detail = detail
+    self.statusCode = statusCode
+    self.data = data
+    self.error = error
   }
 }

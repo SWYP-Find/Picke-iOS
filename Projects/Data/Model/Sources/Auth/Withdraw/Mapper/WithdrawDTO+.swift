@@ -10,11 +10,13 @@ import Foundation
 
 public extension WithdrawDTO {
   func toDomain(isSuccess: Bool) -> WithdrawEntity {
-    WithdrawEntity(
-      isSuccess: isSuccess,
-      code: code,
-      message: message,
-      detail: detail
+    let withdrawn = data?.withdrawn ?? isSuccess
+
+    return WithdrawEntity(
+      isSuccess: withdrawn,
+      withdrawn: withdrawn,
+      code: error?.code,
+      message: error?.message
     )
   }
 }

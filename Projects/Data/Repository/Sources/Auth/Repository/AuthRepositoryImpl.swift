@@ -100,11 +100,11 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
 
     if (200 ... 299).contains(response.statusCode) {
       keychainManager.clear()
-      if response.data.isEmpty { return AuthExitEntity() }
+      if response.data.isEmpty { return AuthExitEntity(loggedOut: true) }
       if let success = try? decoder.decode(LogOutDTO.self, from: response.data) {
         return success.toDomain()
       }
-      return AuthExitEntity()
+      return AuthExitEntity(loggedOut: true)
     }
 
     if let errorDTO = try? decoder.decode(LogOutDTO.self, from: response.data) {
@@ -120,11 +120,11 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
     let decoder = JSONDecoder()
 
     if (200 ... 299).contains(response.statusCode) {
-      if response.data.isEmpty { return WithdrawEntity(isSuccess: true) }
+      if response.data.isEmpty { return WithdrawEntity(isSuccess: true, withdrawn: true) }
       if let success = try? decoder.decode(WithdrawDTO.self, from: response.data) {
         return success.toDomain(isSuccess: true)
       }
-      return WithdrawEntity(isSuccess: true)
+      return WithdrawEntity(isSuccess: true, withdrawn: true)
     }
 
     if let errorDTO = try? decoder.decode(WithdrawDTO.self, from: response.data) {

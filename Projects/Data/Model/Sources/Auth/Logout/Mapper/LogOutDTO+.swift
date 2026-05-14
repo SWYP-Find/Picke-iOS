@@ -11,9 +11,9 @@ import Foundation
 public extension LogOutDTO {
   func toDomain() -> AuthExitEntity {
     AuthExitEntity(
-      code: code,
-      message: message,
-      detail: detail
+      loggedOut: data?.loggedOut ?? false,
+      code: error?.code,
+      message: error?.message
     )
   }
 }
