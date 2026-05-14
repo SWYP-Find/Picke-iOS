@@ -203,6 +203,36 @@ Image(ImageAsset.onboarding1.rawValue)
 2. `ImageAsset` enum 에 `case <name>` 추가 (raw value = imageset 폴더명과 동일)
 3. `tuist generate` 로 리소스 재인덱싱
 
+#### 🧲 Store 보유 — `@Bindable private var store: StoreOf<Feature>` 고정
+
+TCA View 가 `store` 를 들고 있을 때는 **항상 `@Bindable`** 로 선언한다. 단순 표시뿐이라도 future-proof 하기 위해 동일.
+
+```swift
+// ✅ 올바른 패턴
+public struct OnBoardingView: View {
+  @Bindable var store: StoreOf<OnBoardingFeature>
+}
+
+public struct MainTabView: View {
+  @Bindable private var store: StoreOf<MainTabCoordinator>
+}
+
+// ❌ 금지 — 그냥 let / var
+public struct TabFeatureView: View {
+  let store: StoreOf<TabFeature>          // ← @Bindable 누락
+  var store: StoreOf<HomeFeature>          // ← 동일하게 누락
+}
+```
+
+근거:
+- `$store.binding` 형태가 필요한 시점이 거의 반드시 옴 (TabView selection, TextField, NavigationDestination 등)
+- `@Bindable` 은 read-only 사용 시에도 비용이 없고, 후에 binding 이 추가될 때 시그니처 변경 없이 받음
+- LoginView / OnBoardingView / MainTabView / AuthCoordinatorView 모두 이 규칙 따름
+
+가시성:
+- 외부에서 store 를 주입받는 표면은 `public` 또는 그대로 두고,
+- 그 외 내부에서만 쓸 store 는 `private` 으로 가린다 (`@Bindable private var store`)
+
 #### 🧮 텍스트 / 라벨 — `body` 안에 인라인 표현 금지, State computed 로
 
 표시용 파생값은 View 가 아니라 `State` 의 computed property 로 정의해서 View 에서는 그대로 꺼내기만 한다.
