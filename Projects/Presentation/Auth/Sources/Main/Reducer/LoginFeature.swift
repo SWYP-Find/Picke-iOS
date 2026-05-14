@@ -66,7 +66,10 @@ public struct LoginFeature {
 
   // MARK: - NavigationAction
 
-  public enum DelegateAction: Equatable {}
+  public enum DelegateAction: Equatable {
+    /// 로그인이 성공해 토큰을 모두 확보한 시점. 코디네이터에서 다음 화면으로 전환.
+    case presentOnboarding
+  }
 
   nonisolated enum CancelID: Hashable {
     case googleOAuth
@@ -181,15 +184,12 @@ extension LoginFeature {
       switch result {
       case let .success(loginEntity):
         state.loginEntity = loginEntity
-        return .none
-
-//        if loginEntity.isNewUser  {
-//          return .send(.view(.showPolicyPopUp))
-//        } else if state.userSession.userRole == .manager {
-//          return .send(.navigation(.presentStaffMain))
-//        } else  {
-//          return .send(.navigation(.presentMemberMain))
-//        }
+        
+        if loginEntity.isNewUser {
+          return .send(.delegate(.presentOnboarding))
+        } else {
+          return .send(.delegate(.presentOnboarding))
+        }
 
       case let .failure(error):
         #logNetwork("로그인 실패", error.localizedDescription)
@@ -217,6 +217,9 @@ extension LoginFeature {
     state _: inout State,
     action: DelegateAction
   ) -> Effect<Action> {
-    switch action {}
+    switch action {
+    case .presentOnboarding:
+      return .none
+    }
   }
 }
