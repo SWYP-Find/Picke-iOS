@@ -13,9 +13,9 @@ import Foundation
 import LogMacro
 import Sharing
 
-/// 통합 OAuth UseCase - 로그인/회원가입 플로우를 하나로 통합
+/// 통합 OAuth UseCase — 소셜 인증 → 백엔드 로그인까지 단일 진입점
 public struct UnifiedOAuthUseCase {
-//  @Dependency(\.authRepository) private var authRepository: AuthInterface
+  @Dependency(\.authRepository) private var authRepository: AuthInterface
   @Dependency(\.appleOAuthProvider) private var appleProvider: AppleOAuthProviderInterface
   @Dependency(\.googleOAuthProvider) private var googleProvider: GoogleOAuthProviderInterface
   @Dependency(\.kakaoOAuthProvider) private var kakaoProvider: KakaoOAuthProviderInterface
@@ -55,9 +55,6 @@ public extension UnifiedOAuthUseCase {
         throw AuthError.invalidCredential("Kakao 로그인에 필요한 token이 없습니다")
       }
       return try await kakaoLogin(token: token)
-
-    case .none:
-      throw AuthError.invalidCredential("지원하지 않는 소셜 로그인 타입입니다")
     }
   }
 
@@ -72,14 +69,11 @@ public extension UnifiedOAuthUseCase {
     )
     Log.debug("apple authcode", payload.authorizationCode)
 
-    // Apple 로그인 시 이름 저장 로직 개선
     let userName: String = {
       if let displayName = payload.displayName, !displayName.isEmpty {
-        // 새로운 이름이 있으면 UserDefaults에 저장
         self.$savedAppleUserName.withLock { $0 = displayName }
         return displayName
       } else {
-        // 이름이 없으면 이전에 저장된 이름 사용, 그것도 없으면 빈 문자열
         return self.savedAppleUserName ?? ""
       }
     }()
@@ -90,30 +84,20 @@ public extension UnifiedOAuthUseCase {
       $0.oauthRefreshToken = payload.idToken
       $0.name = userName
     }
-//    let loginEntity = try await authRepository.login(
-//      provider: .apple,
-//      token: payload.authorizationCode ?? ""
-//    )
 
-//    keychainManager.save(
-//      accessToken: loginEntity.token.accessToken,
-//      refreshToken: loginEntity.token.refreshToken
-//    )
+    let loginEntity = try await authRepository.login(
+      provider: .apple,
+      authorizationCode: payload.authorizationCode ?? "",
+      redirectUri: SocialType.apple.redirectUri
+    )
 
-    // AuthSessionManager의 credential도 업데이트
-//    await authRepository.updateSessionCredential(with: loginEntity.token)
+    keychainManager.save(
+      accessToken: loginEntity.token.accessToken,
+      refreshToken: loginEntity.token.refreshToken
+    )
+    authRepository.updateSessionCredential(with: loginEntity.token)
 
-    // UserSession에 oauthRefreshToken 설정 (Apple 로그인의 경우)
-//    self.$userSession.withLock {
-//      $0.oauthRefreshToken = loginEntity.token.oauthRefreshToken
-//    }
-
-//    if loginEntity.isNewUser == true {
-//
-//    } else {
-//
-//    }
-    return .init(name: "", isNewUser: false, provider: .apple, token: .init(accessToken: "", refreshToken: ""))
+    return loginEntity
   }
 
   /// Google 로그인 처리
@@ -122,19 +106,20 @@ public extension UnifiedOAuthUseCase {
   ) async throws -> LoginEntity {
     let processedToken = try await googleProvider.signInWithToken(token: token)
     $userSession.withLock { $0.token = processedToken }
-//    let loginEntity = try await authRepository.login(
-//      provider: .google,
-//      token: processedToken
-//    )
-//    keychainManager.save(
-//      accessToken: loginEntity.token.accessToken,
-//      refreshToken: loginEntity.token.refreshToken
-//    )
 
-    // AuthSessionManager의 credential도 업데이트
-//    await authRepository.updateSessionCredential(with: loginEntity.token)
+    let loginEntity = try await authRepository.login(
+      provider: .google,
+      authorizationCode: processedToken,
+      redirectUri: SocialType.google.redirectUri
+    )
 
-    return .init(name: "", isNewUser: false, provider: .apple, token: .init(accessToken: "", refreshToken: ""))
+    keychainManager.save(
+      accessToken: loginEntity.token.accessToken,
+      refreshToken: loginEntity.token.refreshToken
+    )
+    authRepository.updateSessionCredential(with: loginEntity.token)
+
+    return loginEntity
   }
 
   /// Kakao 로그인 처리 (PKCE + 서버 콜백 기반)
@@ -148,25 +133,20 @@ public extension UnifiedOAuthUseCase {
       $0.oauthRefreshToken = payload.refreshToken ?? ""
       $0.name = payload.displayName ?? ""
     }
-//    let loginEntity = try await authRepository.login(
-//      provider: .kakao,
-//      token: payload.authorizationCode ?? ""
-//    )
 
-//    keychainManager.save(
-//      accessToken: loginEntity.token.accessToken,
-//      refreshToken: loginEntity.token.refreshToken
-//    )
-
-    return .init(
-      name: payload.displayName ?? "",
-      isNewUser: false,
+    let loginEntity = try await authRepository.login(
       provider: .kakao,
-      token: .init(
-        accessToken: payload.accessToken,
-        refreshToken: payload.refreshToken ?? ""
-      )
+      authorizationCode: payload.authorizationCode ?? "",
+      redirectUri: payload.redirectUri ?? SocialType.kakao.redirectUri
     )
+
+    keychainManager.save(
+      accessToken: loginEntity.token.accessToken,
+      refreshToken: loginEntity.token.refreshToken
+    )
+    authRepository.updateSessionCredential(with: loginEntity.token)
+
+    return loginEntity
   }
 
   /// OAuth 플로우 처리 (TCA용)
