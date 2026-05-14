@@ -12,7 +12,7 @@ import UIKit
 import WebKit
 
 /// Google / Kakao OAuth authorize URL 을 WKWebView 에 띄우고,
-/// 서버 콜백 URL (`https://picke.store/oauth/<provider>`) 로 네비게이션이 일어나면
+/// 서버 콜백 URL (`{BASE_URL}/oauth/<provider>`) 로 네비게이션이 일어나면
 /// 요청을 보내기 전에 `?code=...` 만 추출해 webview 를 닫는다.
 /// (서버가 401 응답을 내려도 그 요청이 송신되기 전에 cancel 되므로 사용자에게 노출되지 않음)
 @MainActor
@@ -393,5 +393,28 @@ enum OAuthWebUserAgent {
     Mozilla/5.0 (iPhone; CPU iPhone OS \(osVersion) like Mac OS X) AppleWebKit/605.1.15 \
     (KHTML, like Gecko) Version/\(version.majorVersion).\(version.minorVersion) Mobile/15E148 Safari/604.1
     """
+  }
+}
+
+enum OAuthRedirectConfiguration {
+  static func redirectURI(path: String) -> String {
+    "\(baseURLString)\(path)"
+  }
+
+  static var redirectHost: String {
+    URL(string: baseURLString)?.host ?? baseURLString
+  }
+
+  private static var baseURLString: String {
+    let rawValue = Bundle.main.object(forInfoDictionaryKey: "BASE_URL") as? String ?? ""
+    let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return "" }
+
+    let configuredURL = if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
+      trimmed
+    } else {
+      "https://\(trimmed)"
+    }
+    return configuredURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
   }
 }

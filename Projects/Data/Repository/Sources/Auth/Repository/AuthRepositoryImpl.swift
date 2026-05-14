@@ -99,7 +99,7 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
     let decoder = JSONDecoder()
 
     if (200 ... 299).contains(response.statusCode) {
-      keychainManager.clear()
+      clearLocalSession()
       if response.data.isEmpty { return AuthExitEntity(loggedOut: true) }
       if let success = try? decoder.decode(LogOutDTO.self, from: response.data) {
         return success.toDomain()
@@ -141,5 +141,11 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   public func updateSessionCredential(with tokens: AuthTokens) {
     AuthSessionManager.shared.updateCredential(with: tokens)
     OptimizedSessionManager.shared.updateCredential(with: tokens)
+  }
+
+  private func clearLocalSession() {
+    keychainManager.clear()
+    AuthSessionManager.shared.clear()
+    OptimizedSessionManager.shared.clear()
   }
 }

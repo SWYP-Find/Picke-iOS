@@ -80,27 +80,32 @@ public final class AppleOAuthRepositoryImpl: NSObject, AppleOAuthInterface, @unc
     let name = formatter.string(from: components).trimmingCharacters(in: .whitespacesAndNewlines)
     return name.isEmpty ? nil : name
   }
+
+  private func finishSignIn(with result: Result<AppleOAuthPayload, Error>) {
+    let continuation = signInContinuation
+    signInContinuation = nil
+    currentNonce = nil
+    isSigningIn = false
+    continuation?.resume(with: result)
+  }
 }
 
 // MARK: - ASAuthorizationControllerDelegate
 extension AppleOAuthRepositoryImpl: ASAuthorizationControllerDelegate {
   public func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
     guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-      signInContinuation?.resume(throwing: AuthError.invalidCredential("Invalid credential type"))
-      signInContinuation = nil
+      finishSignIn(with: .failure(AuthError.invalidCredential("Invalid credential type")))
       return
     }
 
     guard let nonce = currentNonce else {
-      signInContinuation?.resume(throwing: AuthError.missingIDToken)
-      signInContinuation = nil
+      finishSignIn(with: .failure(AuthError.missingIDToken))
       return
     }
 
     guard let identityTokenData = credential.identityToken,
           let identityToken = String(data: identityTokenData, encoding: .utf8) else {
-      signInContinuation?.resume(throwing: AuthError.missingIDToken)
-      signInContinuation = nil
+      finishSignIn(with: .failure(AuthError.missingIDToken))
       return
     }
 
@@ -117,10 +122,7 @@ extension AppleOAuthRepositoryImpl: ASAuthorizationControllerDelegate {
     self.$appleUserName.withLock { $0 = displayName }
 
     logger.info("Apple Sign In successful for user: \(displayName ?? "unknown"), \(appleUserName)")
-    signInContinuation?.resume(returning: payload)
-    signInContinuation = nil
-    currentNonce = nil
-    isSigningIn = false
+    finishSignIn(with: .success(payload))
   }
 
   public func authorizationController(
@@ -130,15 +132,11 @@ extension AppleOAuthRepositoryImpl: ASAuthorizationControllerDelegate {
     let nsError = error as NSError
 
     if nsError.code == ASAuthorizationError.canceled.rawValue {
-      signInContinuation?.resume(throwing: AuthError.userCancelled)
+      finishSignIn(with: .failure(AuthError.userCancelled))
     } else {
       logger.error("Apple Sign In failed: \(error.localizedDescription)")
-      signInContinuation?.resume(throwing: AuthError.invalidCredential(error.localizedDescription))
+      finishSignIn(with: .failure(AuthError.invalidCredential(error.localizedDescription)))
     }
-
-    signInContinuation = nil
-    currentNonce = nil
-    isSigningIn = false
   }
 }
 

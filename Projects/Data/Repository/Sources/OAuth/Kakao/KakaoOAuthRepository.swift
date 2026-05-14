@@ -13,15 +13,15 @@ import LogMacro
 import UIKit
 
 /// Kakao OAuth — WKWebView 로 authorize URL 띄우고 redirect 콜백을 navigation 단계에서 가로채는 흐름.
-/// 1) `https://kauth.kakao.com/oauth/authorize?response_type=code&redirect_uri=https://picke.store/oauth/kakao&...`
-/// 2) 사용자 동의 → 카카오가 `https://picke.store/oauth/kakao?code=...` 로 리다이렉트 시도
+/// 1) `https://kauth.kakao.com/oauth/authorize?response_type=code&redirect_uri={BASE_URL}/oauth/kakao&...`
+/// 2) 사용자 동의 → 카카오가 `{BASE_URL}/oauth/kakao?code=...` 로 리다이렉트 시도
 /// 3) WKWebView 가 해당 URL 로 이동하기 전에 navigation 을 cancel 하고 `code` 만 추출
 ///    (서버 401 응답은 송신되지 않고 사용자에게도 노출되지 않음)
 @MainActor
 public final class KakaoOAuthRepository: NSObject, KakaoOAuthInterface {
-  private let serverRedirectUri = "https://picke.store/oauth/kakao"
-  private let redirectHost = "picke.store"
   private let redirectPath = "/oauth/kakao"
+  private var serverRedirectUri: String { OAuthRedirectConfiguration.redirectURI(path: redirectPath) }
+  private var redirectHost: String { OAuthRedirectConfiguration.redirectHost }
 
   /// DI 호환을 위해 유지 (WKWebView 기반에서는 미사용)
   private let presentationContextProvider: ASWebAuthenticationPresentationContextProviding
