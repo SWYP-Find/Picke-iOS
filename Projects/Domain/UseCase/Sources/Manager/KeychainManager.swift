@@ -20,7 +20,7 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
     static let refreshToken = "REFRESH_TOKEN"
   }
 
-  public init(service: String = "io.dddstudy.attendance") {
+  public init(service: String = "io.Picke.co") {
     self.service = service
   }
 
