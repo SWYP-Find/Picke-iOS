@@ -11,7 +11,8 @@ let project = Project.makeModule(
   settings:  .settings(),
   dependencies: [
     .Domain(implements: .Entity),
-    .SPM.weaveDI
+    .SPM.weaveDI,
+    .SPM.composableArchitecture
   ],
   sources: ["Sources/**"],
   hasTests: false

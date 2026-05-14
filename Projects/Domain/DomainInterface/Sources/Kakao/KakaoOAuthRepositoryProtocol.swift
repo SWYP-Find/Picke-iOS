@@ -8,6 +8,7 @@
 import Dependencies
 import Entity
 import Foundation
+import WeaveDI
 
 public protocol KakaoOAuthInterface: Sendable {
   func signIn() async throws -> KakaoOAuthPayload
@@ -17,7 +18,7 @@ public protocol KakaoOAuthInterface: Sendable {
 
 public struct KakaoOAuthRepositoryDependencyKey: DependencyKey {
   public static var liveValue: KakaoOAuthInterface {
-    fatalError("KakaoOAuthRepositoryDependency liveValue not implemented")
+    UnifiedDI.resolve(KakaoOAuthInterface.self) ?? MockKakaoOAuthRepository()
   }
 
   public static var previewValue: KakaoOAuthInterface = MockKakaoOAuthRepository()
