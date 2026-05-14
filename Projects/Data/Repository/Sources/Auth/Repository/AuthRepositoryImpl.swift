@@ -116,7 +116,7 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   // MARK: - 회원 탈퇴
 
   public func withDraw(token: String) async throws -> WithdrawEntity {
-    let response = try await provider.requestResponse(.withdraw(token: token))
+    let response = try await authProvider.requestResponse(.withdraw(token: token))
     let decoder = JSONDecoder()
 
     if (200 ... 299).contains(response.statusCode) {

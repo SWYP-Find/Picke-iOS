@@ -63,7 +63,9 @@ public struct AuthUseCaseImpl: AuthInterface {
 
   public func withDraw(token: String) async throws -> WithdrawEntity {
     let result = try await authRepository.withDraw(token: token)
-    keychainManager.clear()
+    if result.withdrawn {
+      keychainManager.clear()
+    }
     return result
   }
 
