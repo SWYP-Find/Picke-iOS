@@ -34,7 +34,7 @@ public final class AppDIManager: Sendable {
       }
 
       // 🏗️ Repository 계층 (Clean Architecture + PFW)
-//      .register { AuthRepositoryImpl() as AuthInterface }
+      .register { AuthRepositoryImpl() as AuthInterface }
 //      .register { ProfileRepositoryImpl() as ProfileInterface }
 //      .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
 

@@ -139,7 +139,9 @@ public struct AppReducer: Sendable {
     .ifCaseLet(\.splash, action: \.scope.splash) {
       SplashFeature()
     }
-   
+    .ifCaseLet(\.auth, action: \.scope.auth) {
+      AuthCoordinator()
+    }
   }
   
   private func handleViewAction(
