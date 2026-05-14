@@ -20,7 +20,7 @@ public enum AuthAPI: String, CaseIterable {
     case .refresh:
       return "refresh"
     case .withDraw:
-      return "withdraw"
+      return ""
     case .logout:
       return "logout"
     }
