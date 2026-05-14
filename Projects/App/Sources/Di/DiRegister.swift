@@ -39,7 +39,12 @@ public final class AppDIManager: Sendable {
 //      .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
 
       // 🔐 OAuth Provider 계층 (PFW 조합 패턴)
-      .register { GoogleOAuthRepositoryImpl() as GoogleOAuthInterface }
+      .register {
+        MainActor.assumeIsolated {
+          GoogleOAuthRepositoryImpl(presentationContextProvider: AppPresentationContextProvider(
+          )) as GoogleOAuthInterface
+        }
+      }
       .register { AppleLoginRepositoryImpl() as AppleAuthRequestInterface }
       .register {
         MainActor.assumeIsolated {

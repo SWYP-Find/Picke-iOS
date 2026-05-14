@@ -5,17 +5,16 @@
 //  Created by Wonji Suh  on 12/29/25.
 //
 
+import Entity
 import Foundation
 import WeaveDI
 
 /// Google OAuth Provider Interface 프로토콜
 public protocol GoogleOAuthProviderInterface: Sendable {
-  func signInWithToken(
-    token: String
-  ) async throws -> String
+  func signInWithToken(token: String) async throws -> GoogleOAuthPayload
 }
 
-/// Google OAuth Provider의 DependencyKey 구조체
+/// Google OAuth Provider 의 DependencyKey 구조체
 public struct GoogleOAuthProviderDependency: DependencyKey {
   public static var liveValue: GoogleOAuthProviderInterface {
     UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
@@ -28,7 +27,6 @@ public struct GoogleOAuthProviderDependency: DependencyKey {
   public static var previewValue: GoogleOAuthProviderInterface = testValue
 }
 
-/// DependencyValues extension으로 간편한 접근 제공
 public extension DependencyValues {
   var googleOAuthProvider: GoogleOAuthProviderInterface {
     get { self[GoogleOAuthProviderDependency.self] }
@@ -40,9 +38,13 @@ public extension DependencyValues {
 public struct MockGoogleOAuthProvider: GoogleOAuthProviderInterface {
   public init() {}
 
-  public func signInWithToken(
-    token: String
-  ) async throws -> String {
-    return "mock_google_token"
+  public func signInWithToken(token _: String) async throws -> GoogleOAuthPayload {
+    GoogleOAuthPayload(
+      idToken: "mock_google_id_token",
+      accessToken: "mock_google_access_token",
+      authorizationCode: "mock_google_auth_code",
+      displayName: "Mock Google User",
+      redirectUri: "https://picke.store/oauth/google"
+    )
   }
 }
