@@ -25,5 +25,12 @@ public enum ImageAsset: String {
   case onboarding3
   case onboarding4
 
+  // MARK: - GNB 탭 아이콘
+
+  case tabHome
+  case tabExplore
+  case tabQuickBattle
+  case tabMyPage
+
   case none
 }

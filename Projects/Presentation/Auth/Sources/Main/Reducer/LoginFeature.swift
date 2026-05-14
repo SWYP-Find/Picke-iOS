@@ -69,6 +69,7 @@ public struct LoginFeature {
   public enum DelegateAction: Equatable {
     /// 로그인이 성공해 토큰을 모두 확보한 시점. 코디네이터에서 다음 화면으로 전환.
     case presentOnboarding
+    case presentMainTab
   }
 
   nonisolated enum CancelID: Hashable {
@@ -188,7 +189,7 @@ extension LoginFeature {
         if loginEntity.isNewUser {
           return .send(.delegate(.presentOnboarding))
         } else {
-          return .send(.delegate(.presentOnboarding))
+          return .send(.delegate(.presentMainTab))
         }
 
       case let .failure(error):
@@ -219,6 +220,9 @@ extension LoginFeature {
   ) -> Effect<Action> {
     switch action {
     case .presentOnboarding:
+      return .none
+
+    case .presentMainTab:
       return .none
     }
   }

@@ -18,6 +18,7 @@ public struct AppReducer: Sendable {
   public enum State {
     case splash(SplashFeature.State)
     case auth(AuthCoordinator.State)
+    case mainTab(MainTabCoordinator.State)
    
     
     public init() {
@@ -29,6 +30,7 @@ public struct AppReducer: Sendable {
       switch self {
       case .splash: return "splash"
       case .auth: return "auth"
+      case .mainTab: return "mainTab"
       }
     }
   }
@@ -53,8 +55,7 @@ public struct AppReducer: Sendable {
   //MARK: - 앱내에서 사용하는 액션
   public enum InnerAction: Equatable {
     case completeAuthTransition
-    case completeStaffTransition
-    case completeMemberTransition
+    case completeMainTabTransition
   }
   
   //MARK: - 비동기 처리 액션
@@ -73,6 +74,7 @@ public struct AppReducer: Sendable {
   public enum ScopeAction {
     case splash(SplashFeature.Action)
     case auth(AuthCoordinator.Action)
+    case mainTab(MainTabCoordinator.Action)
  
   }
   
@@ -142,6 +144,9 @@ public struct AppReducer: Sendable {
     .ifCaseLet(\.auth, action: \.scope.auth) {
       AuthCoordinator()
     }
+    .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
+      MainTabCoordinator()
+    }
   }
   
   private func handleViewAction(
@@ -155,7 +160,7 @@ public struct AppReducer: Sendable {
       }
       
     case .presentRoot:
-      return startTransition(.completeMemberTransition)
+      return startTransition(.completeMainTabTransition)
       
     case .presentAuth:
       return startTransition(.completeAuthTransition)
@@ -187,13 +192,10 @@ public struct AppReducer: Sendable {
       state = .auth(.init())
       return .none
       
-    case .completeStaffTransition:
-//      state = .staff(.init())
+    case .completeMainTabTransition:
+      state = .mainTab(.init())
       return .none
       
-    case .completeMemberTransition:
-//      state = .member(.init())
-      return .none
     }
   }
   
@@ -205,100 +207,48 @@ public struct AppReducer: Sendable {
   }
   
   // 🎯 PFW 철학: 단순하고 조합 가능한 상태 검증
-//  private func isValidAction(_ action: ScopeAction, for state: State) -> Bool {
-//    switch (action, state) {
-//    case (.staff, .staff), (.member, .member), (.auth, .auth), (.splash, .splash):
-//      return true
-//    default:
-//      return false
-//    }
-//  }
-//  
+  private func isValidAction(_ action: ScopeAction, for state: State) -> Bool {
+    switch (action, state) {
+    case (.auth, .auth), (.splash, .splash), (.mainTab, .mainTab):
+      return true
+    default:
+      return false
+    }
+  }
+
   private func handleScopeAction(
     state: inout State,
     action: ScopeAction
   ) -> Effect<Action> {
-    switch action {
-    case .splash(.view(.onAppear)):
-      return .run { send in
-        try await clock.sleep(for: .seconds(3))
-        try await send(.view(.presentAuth))
-      }
-      
-    default:
+    // 🎯 PFW 철학: 타입 안전한 상태 매칭
+    guard isValidAction(action, for: state) else {
       return .none
     }
-    
-    // 🎯 PFW 철학: 타입 안전한 상태 매칭
-//    switch (action, state) {
-//    case (.staff, .staff), (.member, .member),
-//      (.auth, .auth), (.splash, .splash):
-//      // ✅ 올바른 상태 매칭 - 네비게이션 처리 진행
-//      break
-//      
-//    case (.staff, _), (.member, _), (.auth, _), (.splash, _):
-//      // ✅ 상태 불일치 - PFW 철학: 조용히 무시
-//      return .none
-//    }
-    
+
     // 🎯 PFW 패턴: 단순한 네비게이션 처리
-//    return handleScopeNavigation(action: action)
+    return handleScopeNavigation(action: action)
   }
   
   // 🎯 PFW 패턴: 네비게이션 로직 분리
-//  private func handleScopeNavigation(action: ScopeAction) -> Effect<Action> {
-//    switch action {
-//    case .splash(.navigation(.presentLogin)):
-//      return .run { send in
-//        try await clock.sleep(for: .seconds(0.5))
-//        await send(.view(.presentAuth))
-//      }
-//      .cancellable(id: CancelID.transition, cancelInFlight: true)
-//      
-//    case .splash(.navigation(.presentStaff)):
-//      return .send(.view(.presentStaff))
-//      
-//    case .splash(.navigation(.presentMember)):
-//      return .send(.view(.presentMember))
-//      
-//    case .auth(.navigation(.presentStaff)):
-//      return .send(.view(.presentStaff))
-//      
-//    case .auth(.navigation(.presentMember)):
-//      return .send(.view(.presentMember))
-//      
-//    case .staff(.navigation(.presentLogin)):
-//      return .send(.view(.presentAuth))
-//      
-//    case .staff(.navigation(.presentMember)):
-//      return .send(.view(.presentMember))
-//      
-//    case .member(.navigation(.presentLogin)):
-//      return .send(.view(.presentAuth))
-//      
-//    case .member(.navigation(.presentStaff)):
-//      return .send(.view(.presentStaff))
-//      
-//    default:
-//      return .none
-//    }
-//  }
+  private func handleScopeNavigation(action: ScopeAction) -> Effect<Action> {
+    switch action {
+    case .splash(.view(.onAppear)):
+      return .send(.view(.presentAuth))
+
+    case .splash(.delegate(.presentAuth)):
+      return .send(.view(.presentAuth))
+
+    case .splash(.delegate(.presentMainTab)):
+      return .send(.view(.presentRoot))
+
+    case .auth(.navigation(.presentMainTab)):
+      return .send(.view(.presentRoot))
+
+    default:
+      return .none
+    }
+  }
   
-  // 🎯 PFW 패턴: 간결한 상태 검증
-//  private func isStaffState(_ state: State) -> Bool {
-//    guard case .staff = state else { return false }
-//    return true
-//  }
-//  
-//  private func isMemberState(_ state: State) -> Bool {
-//    guard case .member = state else { return false }
-//    return true
-//  }
-//  
-//  private func isAuthState(_ state: State) -> Bool {
-//    guard case .auth = state else { return false }
-//    return true
-//  }
   
   private func isSplashState(_ state: State) -> Bool {
     guard case .splash = state else { return false }
