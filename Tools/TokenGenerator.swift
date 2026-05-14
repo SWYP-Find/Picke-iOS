@@ -16,7 +16,8 @@ let colorOut = "\(sourcesDir)/Color/ShapeStyle+.swift"
 let cgfloatDir = "\(sourcesDir)/Extension/CGFloat"
 let radiusOut = "\(cgfloatDir)/CGFloat+Radius+.swift"
 let spacingOut = "\(cgfloatDir)/CGFloat+Spacing+.swift"
-let componentOut = "\(sourcesDir)/UI/Token/ComponentToken.swift"
+let componentOut = "\(sourcesDir)/UI/Token/ComponentToken.swift" // legacy nested file (deleted at end)
+let componentNumberOut = "\(cgfloatDir)/CGFloat+Component+.swift"
 try? FileManager.default.createDirectory(atPath: "\(sourcesDir)/UI/Token", withIntermediateDirectories: true)
 try? FileManager.default.createDirectory(atPath: cgfloatDir, withIntermediateDirectories: true)
 
@@ -124,22 +125,59 @@ func resolveComponentNumber(_ node: [String: Any]) -> String? {
   return nil
 }
 
-func walkComponent(_ node: [String: Any], indent: String, out: inout [String]) {
+// Component subtree 를 flat path 로 풀어 ShapeStyle / CGFloat 확장에 직접 추가한다.
+//   Component.button.primary.background.default → buttonPrimaryBackgroundDefault
+//   Component.button.radius                     → buttonRadius
+func walkComponentFlat(
+  _ node: [String: Any],
+  pathPrefix: [String],
+  colorLines: inout [String],
+  numberLines: inout [String]
+) {
   let keys = node.keys.sorted()
-  // 리프(컬러/숫자) 먼저, 그 다음 그룹(중첩 enum)
   let leafKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] != nil }
   let groupKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] == nil }
   for key in leafKeys {
     guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
+    let propName = flatPropertyName(pathPrefix + [key])
     switch type {
     case "color":
       if let expr = resolveComponentColor(child) {
-        out.append("\(indent)public static var \(swiftKey(key)): Color { \(expr) }")
+        colorLines.append("  static var \(propName): Color { \(expr) }")
       }
     case "number":
       if let expr = resolveComponentNumber(child) {
-        out.append("\(indent)public static var \(swiftKey(key)): CGFloat { \(expr) }")
+        numberLines.append("  static let \(propName): CGFloat = \(expr)")
       }
+    default: continue
+    }
+  }
+  for key in groupKeys {
+    guard let child = node[key] as? [String: Any] else { continue }
+    walkComponentFlat(child, pathPrefix: pathPrefix + [key], colorLines: &colorLines, numberLines: &numberLines)
+  }
+}
+
+// Component subtree 의 nested ComponentToken enum. 값은 flat 정의를 forwarding 하므로
+// source of truth 는 항상 ShapeStyle / CGFloat 확장 한 곳.
+//   public static var `default`: Color { .buttonPrimaryBackgroundDefault }
+func walkComponentNested(
+  _ node: [String: Any],
+  pathPrefix: [String],
+  indent: String,
+  out: inout [String]
+) {
+  let keys = node.keys.sorted()
+  let leafKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] != nil }
+  let groupKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] == nil }
+  for key in leafKeys {
+    guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
+    let flatName = flatPropertyName(pathPrefix + [key])
+    switch type {
+    case "color":
+      out.append("\(indent)public static var \(swiftKey(key)): Color { .\(flatName) }")
+    case "number":
+      out.append("\(indent)public static var \(swiftKey(key)): CGFloat { .\(flatName) }")
     default: continue
     }
   }
@@ -148,9 +186,17 @@ func walkComponent(_ node: [String: Any], indent: String, out: inout [String]) {
     if i == 0, !leafKeys.isEmpty { out.append("") }
     if i > 0 { out.append("") }
     out.append("\(indent)public enum \(capitalizeFirst(key)) {")
-    walkComponent(child, indent: indent + "  ", out: &out)
+    walkComponentNested(child, pathPrefix: pathPrefix + [key], indent: indent + "  ", out: &out)
     out.append("\(indent)}")
   }
+}
+
+// ["button", "primary", "background", "default"] → "buttonPrimaryBackgroundDefault"
+func flatPropertyName(_ segs: [String]) -> String {
+  guard let first = segs.first else { return "" }
+  let head = first.prefix(1).lowercased() + first.dropFirst()
+  let tail = segs.dropFirst().map(capitalizeFirst).joined()
+  return swiftKey(head + tail)
 }
 
 func capitalizeFirst(_ s: String) -> String {
@@ -251,6 +297,17 @@ if let status = semantic["status"] as? [String: Any] {
   }
 }
 
+// Component colors — flat ShapeStyle 확장에 직접 합쳐 ComponentToken 중첩 enum 을 폐기.
+let component = json["Component"] as! [String: Any]
+var componentColorLines: [String] = []
+var componentNumberLines: [String] = []
+walkComponentFlat(component, pathPrefix: [], colorLines: &componentColorLines, numberLines: &componentNumberLines)
+if !componentColorLines.isEmpty {
+  lines.append("  // MARK: - Component")
+  lines.append(contentsOf: componentColorLines)
+  lines.append("")
+}
+
 lines.append("}")
 lines.append("")
 try writeFile(colorOut, lines.joined(separator: "\n"))
@@ -286,13 +343,27 @@ sLines.append("}")
 sLines.append("")
 try writeFile(spacingOut, sLines.joined(separator: "\n"))
 
-// MARK: - Component
+// MARK: - Component (numbers)
 
-let component = json["Component"] as! [String: Any]
-var compLines: [String] = [header, "", "import SwiftUI", "", "public enum ComponentToken {"]
-walkComponent(component, indent: "  ", out: &compLines)
-compLines.append("}")
-compLines.append("")
-try writeFile(componentOut, compLines.joined(separator: "\n"))
+// 색상은 위에서 ShapeStyle+.swift 에 이미 추가됨. 숫자만 CGFloat 확장으로 별도 출력.
+
+if !componentNumberLines.isEmpty {
+  var cLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
+  cLines.append("  // MARK: - Component")
+  cLines.append(contentsOf: componentNumberLines)
+  cLines.append("}")
+  cLines.append("")
+  try writeFile(componentNumberOut, cLines.joined(separator: "\n"))
+}
+
+// MARK: - Component (nested ComponentToken)
+
+// flat ShapeStyle / CGFloat 확장을 forwarding 하는 구조적 접근용 enum.
+// 그룹 단위 캡처/자동완성 탐색에 사용. 값의 source of truth 는 flat 정의 한 곳.
+var ctLines: [String] = [header, "", "import SwiftUI", "", "public enum ComponentToken {"]
+walkComponentNested(component, pathPrefix: [], indent: "  ", out: &ctLines)
+ctLines.append("}")
+ctLines.append("")
+try writeFile(componentOut, ctLines.joined(separator: "\n"))
 
 print("[token-gen] done.")
