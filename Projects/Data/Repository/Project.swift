@@ -13,7 +13,8 @@ let project = Project.makeModule(
   dependencies: [
     .Network(implements: .Networking),
     .Domain(implements: .DomainInterface),
-    .SPM.mixpanel
+    .SPM.mixpanel,
+    .SPM.googleSignIn
     
   ],
   sources: ["Sources/**"],
