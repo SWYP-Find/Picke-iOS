@@ -1,0 +1,40 @@
+//
+//  HomeHeaderView.swift
+//  Home
+//
+//  Created by Wonji Suh on 5/15/26.
+//
+
+import SwiftUI
+
+import DesignSystem
+
+/// 홈 화면 최상단 GNB 위 헤더 (PicKé 로고 + 알림 아이콘).
+struct HomeHeaderView: View {
+  let onNotificationTapped: () -> Void
+
+  var body: some View {
+    HStack {
+      Text("PicKé")
+        .pretendardFont(family: .Bold, size: 22)
+        .foregroundStyle(.neutral900)
+
+      Spacer()
+
+      Button(action: onNotificationTapped) {
+        Image(systemName: "bell")
+          .resizable()
+          .scaledToFit()
+          .frame(width: 24, height: 24)
+          .foregroundStyle(.neutral900)
+      }
+    }
+    .padding(.horizontal, 24)
+    .padding(.vertical, 8)
+    .frame(height: 56)
+    .background(Color.beige50)
+    .overlay(alignment: .bottom) {
+      Rectangle().fill(.beige600).frame(height: 1)
+    }
+  }
+}
