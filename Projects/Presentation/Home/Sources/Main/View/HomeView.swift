@@ -34,7 +34,6 @@ public struct HomeView: View {
           todayPickeSection()
           newBattlesSection()
         }
-        .padding(.top, 16)
         .padding(.bottom, 24)
       }
     }
