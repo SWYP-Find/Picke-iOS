@@ -41,7 +41,8 @@ struct BestBattleCardView: View {
       }
       Spacer(minLength: 0)
     }
-    .padding(16)
+    .padding(.vertical, 16) // .pen 7UgWh: padding [16, 12]
+    .padding(.horizontal, 12)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
       RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
