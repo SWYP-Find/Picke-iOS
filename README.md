@@ -136,6 +136,18 @@ graph TD
     C -.-> K[API Services]
 ```
 
+### 🕸️ TuistSpider 확장 뷰
+
+레이어별로 묶어 보거나(Grouped) 모든 모듈을 펼쳐 본(Expanded) 시각화입니다. (TuistSpider 결과)
+
+<div align="center">
+
+| Grouped | Expanded |
+|:---:|:---:|
+| <img src="docs/graphs/Picke-grouped-Picke.png" width="420"> | <img src="docs/graphs/Picke-expanded-Picke.png" width="420"> |
+
+</div>
+
 ### 🔄 의존성 방향 원칙
 
 ```
