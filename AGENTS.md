@@ -279,6 +279,141 @@ private var primaryButtonTitle: String {
 }
 ```
 
+#### 🪟 State 초기값 — inline default + `public init() {}` 만 노출
+
+`@ObservableState` 의 `State` 는 프로퍼티마다 **inline default 값**을 박고, `public init() {}` 만 외부에 노출한다. 긴 파라미터 리스트의 `public init(x:, y:, ...)` 는 쓰지 않는다.
+
+```swift
+// ✅ 올바른 패턴 — 외부는 .init() 만 호출, 변경은 reducer 내부에서
+@ObservableState
+public struct State: Equatable {
+  public var isLoading: Bool = false
+  public var newNotice: Bool = false
+  public var heroes: [HeroBattle] = []
+  public var heroIndex: Int = 0
+  public var hotBattles: [HotBattle] = []
+
+  public var currentHero: HeroBattle? { heroes[safe: heroIndex] }
+
+  public init() {}
+}
+
+// ❌ 금지 — 모든 필드를 init 파라미터로 펼침
+public init(
+  isLoading: Bool = false,
+  newNotice: Bool = false,
+  heroes: [HeroBattle] = [],
+  heroIndex: Int = 0,
+  hotBattles: [HotBattle] = []
+) {
+  self.isLoading = isLoading
+  // …
+}
+```
+
+근거:
+- 호출처는 `Feature.State()` 한 줄이면 충분 — 사용 시점에 노이즈 없음
+- 초기값은 한 곳에서만 정의 — 프로퍼티 추가/제거 시 init 도 따라 고칠 일 없음
+- 테스트/프리뷰에서 다른 값을 넣고 싶으면 `var state = Feature.State(); state.heroes = ... ` 로 직접 mutate
+- Shared / Presents / AppStorage 도 동일하게 inline 으로 선언 (`@Shared(...) var foo: Foo = .empty`)
+
+레퍼런스: `HomeFeature.State`, attendance `ProfileFeature.State`
+
+#### ⚡ AsyncAction — `Result { try await }` + `mapError` + 단일 `Response` Inner 액션
+
+`do/catch + 별도 Loaded / Failed 액션` 분리하지 말고, `Result` 로 감싸서 단일 `xxxResponse(Result<Success, AuthError>)` Inner 액션으로 보낸다. State 캡쳐는 `[키 = state.xxx]` 형태.
+
+```swift
+// ✅ 올바른 패턴
+public enum InnerAction: Equatable {
+  case homeResponse(Result<HomeBundle, AuthError>)
+}
+
+case .fetchHome:
+  state.isLoading = true
+  return .run { [repository = homeRepository] send in
+    let result = await Result {
+      try await repository.fetchHome()
+    }
+    .mapError(AuthError.from)
+    return await send(.inner(.homeResponse(result)))
+  }
+  .cancellable(id: CancelID.fetchHome, cancelInFlight: true)
+
+// 핸들러에서 한 자리에서 success/failure 분기
+case let .homeResponse(result):
+  state.isLoading = false
+  switch result {
+  case let .success(bundle): /* state 갱신 */
+  case let .failure(error):  Log.error("\(error.localizedDescription)")
+  }
+  return .none
+
+// ❌ 금지 — do/catch 로 두 액션을 발사
+return .run { send in
+  do {
+    let bundle = try await repository.fetchHome()
+    await send(.inner(.homeLoaded(bundle)))      // ← 분리됨
+  } catch {
+    await send(.inner(.homeFailed(error.localizedDescription)))
+  }
+}
+```
+
+규칙:
+- 성공/실패 상태 머지 → 하나의 `xxxResponse(Result<Success, AuthError>)` 케이스
+- 에러 타입은 `AuthError` 로 통일하고 `AuthError.from(_:)` 로 변환 (이미 Entity 에 정의됨)
+- 캡쳐는 `[repository = self.repository, userSession = state.userSession]` 처럼 명시
+- `.cancellable(id: CancelID.xxx, cancelInFlight: true)` 로 중복 호출 방지
+- 레퍼런스: `AuthUseCaseImpl.withDraw` / `HomeFeature.fetchHome`
+
+#### 🔌 RepositoryImpl — Provider 선언 패턴
+
+Repository 구현체의 `MoyaProvider` 는 `let` 으로 직접 선언하고, init 기본값으로 `.default` / `.authorized` 팩토리를 그대로 사용한다. `Optional + nil 합치기`나 `MoyaProviderPool` 인다이렉션 금지.
+
+```swift
+// ✅ 올바른 패턴 — 단일 provider (인증 필요)
+public final class HomeRepositoryImpl: HomeInterface, @unchecked Sendable {
+  private let provider: MoyaProvider<HomeService>
+
+  public init(
+    provider: MoyaProvider<HomeService> = MoyaProvider<HomeService>.authorized
+  ) {
+    self.provider = provider
+  }
+}
+
+// ✅ 올바른 패턴 — default + authorized 두 개 필요 (로그인/로그아웃 분리)
+public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
+  private let provider: MoyaProvider<AuthService>
+  private let authProvider: MoyaProvider<AuthService>
+
+  public init(
+    provider: MoyaProvider<AuthService> = MoyaProvider<AuthService>.default,
+    authProvider: MoyaProvider<AuthService> = MoyaProvider<AuthService>.authorized
+  ) {
+    self.provider = provider
+    self.authProvider = authProvider
+  }
+}
+
+// ❌ 금지 — Optional + nil 합치기 + Pool 인다이렉션
+public init(
+  provider: MoyaProvider<AuthService>? = nil,
+  authProvider: MoyaProvider<AuthService>? = nil
+) {
+  self.provider = provider ?? MoyaProviderPool.shared.defaultProvider(for: AuthService.self)
+  self.authProvider = authProvider ?? MoyaProviderPool.shared.authorizedProvider(for: AuthService.self)
+}
+```
+
+규칙:
+- 토큰 인증이 필요한 API → `.authorized` (OptimizedSessionManager 인터셉터 부착)
+- 로그인/회원가입 같이 헤더 없는 API → `.default` (로그 플러그인만)
+- 테스트/프리뷰는 Mock provider 를 init 으로 그대로 주입 — `MockProvider` 변수 따로 둘 필요 없음
+- `MoyaProviderPool` 은 더 이상 RepositoryImpl 에서 직접 호출하지 않는다 (필요 시 풀 자체에서 내부적으로 캐시 처리)
+- 레퍼런스: `HomeRepositoryImpl`, `AuthRepositoryImpl`, AsyncMoya `MoyaProvider+Factory.default`, `Extension+MoyaProvider+Auth.authorized`
+
 ### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드
 - 에러 처리 패턴
