@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
   name: "Home",
@@ -12,6 +12,7 @@ let project = Project.makeAppModule(
   dependencies: [
     .SPM.logMarco,
     .SPM.tcaFlow,
+    .SPM.kingfisher,
     .Domain(implements: .UseCase),
     .Shared(implements: .DesignSystem),
   ],

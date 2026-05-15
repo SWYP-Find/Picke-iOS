@@ -10,15 +10,16 @@ import ProjectDescription
 public extension TargetDependency.SPM {
   static let asyncMoya = TargetDependency.external(name: "AsyncMoya", condition: .none)
   static let logMarco = TargetDependency.external(name: "LogMacro", condition: .none)
-  
+
   static let composableArchitecture = TargetDependency.external(name: "ComposableArchitecture", condition: .none)
   static let dependencies = TargetDependency.external(name: "Dependencies", condition: .none)
   static let identifiedCollections = TargetDependency.external(name: "IdentifiedCollections", condition: .none)
   static let tcaFlow = TargetDependency.external(name: "TCAFlow", condition: .none)
   static let concurrencyExtras = TargetDependency.external(name: "ConcurrencyExtras", condition: .none)
   static let sdwebImage = TargetDependency.external(name: "SDWebImageSwiftUI", condition: .none)
+  static let kingfisher = TargetDependency.external(name: "Kingfisher", condition: .none)
   static let weaveDI = TargetDependency.external(name: "WeaveDI", condition: .none)
-  
+
   static let googleSignIn = TargetDependency.external(name: "GoogleSignIn", condition: .none)
   static let appAuth: TargetDependency = .external(name: "AppAuth")
   static let firebaseCrashlytics = TargetDependency.external(name: "FirebaseCrashlytics", condition: .none)
@@ -27,5 +28,4 @@ public extension TargetDependency.SPM {
   static let googleMobileAds = TargetDependency.external(name: "GoogleMobileAds", condition: .none)
   static let mixpanel = TargetDependency.external(name: "Mixpanel", condition: .none)
   static let mixpanelSessionReplay = TargetDependency.external(name: "MixpanelSessionReplay", condition: .none)
-  
 }
