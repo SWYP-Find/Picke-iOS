@@ -34,6 +34,7 @@ final class OAuthWebViewController: UIViewController {
   private let redirectHost: String
   private let redirectPath: String
   private let customUserAgent: String?
+  private let usesEphemeralSession: Bool
   private let onComplete: (Result<String, Error>) -> Void
   private let backgroundTapSubject = PassthroughSubject<Void, Never>()
   private let sheetDragSubject = PassthroughSubject<OAuthSheetDragEvent, Never>()
@@ -44,6 +45,11 @@ final class OAuthWebViewController: UIViewController {
 
   private lazy var webView: WKWebView = {
     let config = WKWebViewConfiguration()
+    // 카카오처럼 기존 쿠키로 자동 로그인되어 폼이 안 보이고 바로 redirect 되는 흐름을 막아야 할 때만
+    // ephemeral 세션을 사용한다. (구글은 자체 SSO 흐름이 있어 persistent 유지)
+    if usesEphemeralSession {
+      config.websiteDataStore = .nonPersistent()
+    }
     let view = WKWebView(frame: .zero, configuration: config)
     view.navigationDelegate = self
     view.customUserAgent = customUserAgent
@@ -58,12 +64,14 @@ final class OAuthWebViewController: UIViewController {
     redirectHost: String,
     redirectPath: String,
     customUserAgent: String? = nil,
+    usesEphemeralSession: Bool = false,
     onComplete: @escaping (Result<String, Error>) -> Void
   ) {
     self.authorizeURL = authorizeURL
     self.redirectHost = redirectHost
     self.redirectPath = redirectPath
     self.customUserAgent = customUserAgent
+    self.usesEphemeralSession = usesEphemeralSession
     self.onComplete = onComplete
     super.init(nibName: nil, bundle: nil)
     modalPresentationStyle = .overFullScreen
@@ -239,6 +247,11 @@ final class OAuthWebViewController: UIViewController {
     guard !didFinish else { return }
     didFinish = true
     let completion = onComplete
+
+    // 콜백 가로채는 순간 webView 가 흰 빈 페이지로 잠깐 비치는 걸 막기 위해
+    // dismiss 전에 sheetContainer 의 배경 위에 webView 를 가린다.
+    webView.isHidden = true
+
     dismiss(animated: animated) {
       completion(result)
     }
@@ -343,7 +356,8 @@ enum OAuthWebPresenter {
     authorizeURL: URL,
     redirectHost: String,
     redirectPath: String,
-    customUserAgent: String? = nil
+    customUserAgent: String? = nil,
+    usesEphemeralSession: Bool = false
   ) async throws -> String {
     try await withCheckedThrowingContinuation { continuation in
       let controller = OAuthWebViewController(
@@ -351,6 +365,7 @@ enum OAuthWebPresenter {
         redirectHost: redirectHost,
         redirectPath: redirectPath,
         customUserAgent: customUserAgent,
+        usesEphemeralSession: usesEphemeralSession,
         onComplete: { result in
           continuation.resume(with: result)
         }

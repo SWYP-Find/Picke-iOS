@@ -43,7 +43,8 @@ public final class KakaoOAuthRepository: NSObject, KakaoOAuthInterface {
     let code = try await OAuthWebPresenter.present(
       authorizeURL: authorizeURL,
       redirectHost: redirectHost,
-      redirectPath: redirectPath
+      redirectPath: redirectPath,
+      usesEphemeralSession: true
     )
     Log.debug("kakao authorizationCode", code)
 
