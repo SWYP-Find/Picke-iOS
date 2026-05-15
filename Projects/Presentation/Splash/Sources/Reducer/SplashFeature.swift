@@ -99,12 +99,12 @@ extension SplashFeature {
     case .onAppear:
       let hasStoredCredential = hasStoredCredential
       return .run { send in
-        try await clock.sleep(for: .seconds(0.5))
-//        if hasStoredCredential {
-//          await send(.delegate(.presentMainTab))
-//        } else {
-//          await send(.delegate(.presentAuth))
-//        }
+        try await clock.sleep(for: .seconds(1.2))
+        if hasStoredCredential {
+          await send(.delegate(.presentMainTab))
+        } else {
+          await send(.delegate(.presentAuth))
+        }
       }
       
     }
