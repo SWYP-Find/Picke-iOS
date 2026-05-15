@@ -178,7 +178,28 @@ Color.bgSubtle.edgesIgnoringSafeArea(.all)
 .foregroundStyle(Color.neutral900)
 ```
 
-`SwiftUI.Color` 의 정적 멤버로 디자인 토큰 (`neutral50` … `neutral900`, `primary50` … `primary900`, `secondary50` …, `bgSubtle`) 이 등록되어 있어 `.foregroundStyle / .fill / .background / .tint` 등에서 모두 점 단축형 사용 가능.
+`SwiftUI.Color` 의 정적 멤버로 디자인 토큰 (`neutral50` … `neutral900`, `primary50` … `primary900`, `secondary50` …, `beige50` … `beige900`, `bgSubtle`) 이 등록되어 있어 **ShapeStyle 을 받는 모든 modifier 에서 점 단축형 사용**:
+
+```swift
+// ✅ 점 단축형 — ShapeStyle 컨텍스트 모두 적용
+.foregroundStyle(.neutral900)
+.fill(.beige200)
+.stroke(.beige700, lineWidth: 1)
+.background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+.tint(.primary500)
+
+// ❌ 금지 — Color 타입 명시
+.foregroundStyle(Color.neutral900)
+.fill(Color.beige200)
+.stroke(Color.beige700, lineWidth: 1)
+.background(Color.beige50, in: ...)
+```
+
+> **예외:** `Color` 가 View 자체로 쓰여 메서드 체이닝을 받는 경우는 그대로 둔다.
+> ```swift
+> Color.beige50.ignoresSafeArea()        // ✅ View 로 쓰임 — Color 명시 필요
+> Color.neutral500.opacity(0.4)           // ✅ View 로 쓰임 — Color 명시 필요
+> ```
 
 #### 🖼 이미지 — `Image(asset: .xxx)` + 데이터 모델은 `ImageAsset` 타입
 
