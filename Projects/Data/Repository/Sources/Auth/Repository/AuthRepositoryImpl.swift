@@ -26,11 +26,11 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   private let authProvider: MoyaProvider<AuthService>
 
   public init(
-    provider: MoyaProvider<AuthService>? = nil,
-    authProvider: MoyaProvider<AuthService>? = nil
+    provider: MoyaProvider<AuthService> = MoyaProvider<AuthService>.default,
+    authProvider: MoyaProvider<AuthService> = MoyaProvider<AuthService>.authorized
   ) {
-    self.provider = provider ?? MoyaProviderPool.shared.defaultProvider(for: AuthService.self)
-    self.authProvider = authProvider ?? MoyaProviderPool.shared.authorizedProvider(for: AuthService.self)
+    self.provider = provider
+    self.authProvider = authProvider
   }
 
   // MARK: - 로그인
