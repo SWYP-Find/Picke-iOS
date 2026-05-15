@@ -44,7 +44,7 @@ struct QuizCardView: View {
         .pretendardFont(family: .SemiBold, size: 15)
         .foregroundStyle(.neutral900)
         .kerning(-0.375)
-      Text(question.subtitle)
+      Text(question.summary)
         .pretendardFont(family: .Medium, size: 12)
         .foregroundStyle(.neutral200)
         .multilineTextAlignment(.center)
@@ -54,17 +54,17 @@ struct QuizCardView: View {
 
   private var options: some View {
     HStack(spacing: 8) {
-      option(label: question.optionA)
-      option(label: question.optionB)
+      option(label: question.itemA, desc: question.itemADesc)
+      option(label: question.itemB, desc: question.itemBDesc)
     }
   }
 
-  private func option(label: String) -> some View {
+  private func option(label: String, desc: String) -> some View {
     VStack(spacing: 2) {
       Text(label)
         .pretendardFont(family: .SemiBold, size: 13)
         .foregroundStyle(.neutral900)
-      Text("explanation")
+      Text(desc)
         .pretendardFont(family: .Medium, size: 11)
         .foregroundStyle(.neutral300)
     }

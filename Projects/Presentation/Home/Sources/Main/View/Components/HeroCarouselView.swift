@@ -10,6 +10,8 @@ import SwiftUI
 import DesignSystem
 import Entity
 
+import Kingfisher
+
 /// 최상단 Editor Pick 캐러셀. 좌우 스와이프 + 3초마다 자동 스크롤, 마지막 뒤엔 처음으로 wrap.
 struct HeroCarouselView: View {
   let heroes: [HeroBattle]
@@ -88,7 +90,17 @@ struct HeroCardView: View {
 
   private var thumbnail: some View {
     ZStack {
-      Color.neutral500.opacity(0.4)
+      if let url = hero.thumbnailURL {
+        KFImage(url)
+          .resizable()
+          .scaledToFill()
+          .frame(height: 167)
+          .clipped()
+        Color.black.opacity(0.4) // .pen 의 "#00000066" 오버레이
+      } else {
+        Color.neutral500.opacity(0.4)
+      }
+
       HStack(spacing: 24) {
         Text(hero.optionA)
           .pretendardFont(family: .SemiBold, size: 14)
@@ -108,6 +120,7 @@ struct HeroCardView: View {
       .opacity(0.85)
     }
     .frame(height: 167)
+    .clipped()
   }
 
   private var subject: some View {
@@ -116,13 +129,13 @@ struct HeroCardView: View {
         Text(hero.title)
           .pretendardFont(family: .SemiBold, size: 16)
           .foregroundStyle(.beige100)
-        Text(hero.subtitle)
+        Text(hero.summary)
           .pretendardFont(family: .Medium, size: 12)
           .foregroundStyle(.neutral200)
           .lineLimit(2)
         HStack(spacing: 4) {
-          ForEach(hero.tags, id: \.self) { tag in
-            Text(tag)
+          ForEach(hero.tags) { tag in
+            Text(tag.name)
               .pretendardFont(family: .Medium, size: 11)
               .foregroundStyle(.neutral200)
           }
@@ -131,7 +144,6 @@ struct HeroCardView: View {
       }
       Spacer()
       MetaLabelView(systemImage: "eye", text: "\(hero.viewCount)")
-        .foregroundStyle(.neutral200)
     }
     .padding(20)
   }

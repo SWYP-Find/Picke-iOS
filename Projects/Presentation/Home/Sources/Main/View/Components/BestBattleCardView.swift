@@ -30,8 +30,8 @@ struct BestBattleCardView: View {
           .foregroundStyle(.neutral900)
           .lineLimit(2)
         HStack(spacing: 8) {
-          ForEach(battle.categories, id: \.self) { cat in
-            Text(cat)
+          ForEach(battle.tags) { tag in
+            Text(tag.name)
               .pretendardFont(family: .Medium, size: 11)
               .foregroundStyle(.neutral300)
           }
@@ -41,7 +41,7 @@ struct BestBattleCardView: View {
       }
       Spacer(minLength: 0)
     }
-    .padding(.vertical, 16) // .pen 7UgWh: padding [16, 12]
+    .padding(.vertical, 16)
     .padding(.horizontal, 12)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
     .overlay(

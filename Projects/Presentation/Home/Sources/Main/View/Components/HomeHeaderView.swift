@@ -15,26 +15,23 @@ struct HomeHeaderView: View {
 
   var body: some View {
     HStack {
-      Text("PicKé")
-        .pretendardFont(family: .Bold, size: 22)
-        .foregroundStyle(.neutral900)
+      Image(asset: .appLogo)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 62, height: 39)
 
       Spacer()
 
       Button(action: onNotificationTapped) {
-        Image(systemName: "bell")
+        Image(asset: .bell)
           .resizable()
           .scaledToFit()
           .frame(width: 24, height: 24)
-          .foregroundStyle(.neutral900)
       }
     }
     .padding(.horizontal, 24)
     .padding(.vertical, 8)
     .frame(height: 56)
     .background(Color.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle().fill(.beige600).frame(height: 1)
-    }
   }
 }

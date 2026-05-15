@@ -35,8 +35,6 @@ struct VoteCardView: View {
     )
   }
 
-  // MARK: - Tag (.pen `a8Cmg`)
-
   private var header: some View {
     HStack {
       Text("투표")
@@ -54,17 +52,14 @@ struct VoteCardView: View {
     }
   }
 
-  // MARK: - Heading (.pen `h6wU2`)
-
   private var heading: some View {
     VStack(spacing: 6) {
       HStack(spacing: 4) {
-        Text(question.prefix)
+        Text(question.titlePrefix)
           .pretendardFont(family: .SemiBold, size: 15)
           .kerning(-0.375)
           .foregroundStyle(.neutral900)
 
-        // 빈칸 (.pen `q1Pcz`: 52×24, beige200 + beige700 border)
         RoundedRectangle(cornerRadius: 2)
           .fill(.beige200)
           .frame(width: 52, height: 24)
@@ -73,31 +68,27 @@ struct VoteCardView: View {
               .stroke(.beige700, lineWidth: 1)
           )
 
-        Text(question.suffix)
+        Text(question.titleSuffix)
           .pretendardFont(family: .SemiBold, size: 15)
           .kerning(-0.375)
           .foregroundStyle(.neutral900)
       }
 
-      Text("빈칸에 들어갈 가장 적절한 답을 골라주세요")
+      Text(question.summary)
         .pretendardFont(family: .Medium, size: 12)
         .foregroundStyle(.neutral200)
     }
     .frame(maxWidth: .infinity)
   }
 
-  // MARK: - Options grid (.pen `E16jA`)
-
   private var grid: some View {
     LazyVGrid(columns: columns, spacing: 8) {
       ForEach(Array(question.options.enumerated()), id: \.offset) { idx, option in
-        optionButton(index: idx + 1, label: option)
+        optionButton(index: idx + 1, label: option.title)
       }
     }
   }
 
-  /// .pen `I8YUt`: width 151.5, height 44, fill beige300, border beige600.
-  /// 내부 stacking: index(10pt secondary900) + label(13pt neutral900), gap 2, horizontal.
   private func optionButton(index: Int, label: String) -> some View {
     HStack(spacing: 2) {
       Text("\(index).")
