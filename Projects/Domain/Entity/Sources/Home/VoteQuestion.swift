@@ -7,34 +7,62 @@
 
 import Foundation
 
-/// "오늘의 Pické — 투표" 카드.
+/// "오늘의 Pické — 투표" 카드 — API 의 todayVotes.
 public struct VoteQuestion: Equatable, Identifiable {
-  public let id: UUID
+  public let battleId: Int
+  public let titlePrefix: String
+  public let titleSuffix: String
+  public let summary: String
   public let participantCount: Int
-  public let prefix: String
-  public let suffix: String
-  public let options: [String]
+  public let options: [VoteOption]
+
+  public var id: Int { battleId }
 
   public init(
-    id: UUID = UUID(),
+    battleId: Int,
+    titlePrefix: String,
+    titleSuffix: String,
+    summary: String,
     participantCount: Int,
-    prefix: String,
-    suffix: String,
-    options: [String]
+    options: [VoteOption]
   ) {
-    self.id = id
+    self.battleId = battleId
+    self.titlePrefix = titlePrefix
+    self.titleSuffix = titleSuffix
+    self.summary = summary
     self.participantCount = participantCount
-    self.prefix = prefix
-    self.suffix = suffix
     self.options = options
+  }
+
+  // 기존 코드 호환용
+  public var prefix: String { titlePrefix }
+  public var suffix: String { titleSuffix }
+}
+
+public struct VoteOption: Equatable, Identifiable, Hashable {
+  public let label: String
+  public let title: String
+
+  public var id: String { label }
+
+  public init(label: String, title: String) {
+    self.label = label
+    self.title = title
   }
 }
 
 public extension VoteQuestion {
   static let mock = VoteQuestion(
+    battleId: 41,
+    titlePrefix: "도덕의 기준은",
+    titleSuffix: "이다",
+    summary: "빈칸에 들어갈 가장 적절한 답을 골라주세요",
     participantCount: 985,
-    prefix: "도덕의 기준은",
-    suffix: "이다",
-    options: ["결과", "의도", "규칙", "덕"]
+    options: [
+      .init(label: "A", title: "결과"),
+      .init(label: "B", title: "의도"),
+      .init(label: "C", title: "규칙"),
+      .init(label: "D", title: "덕"),
+    ]
   )
 }
