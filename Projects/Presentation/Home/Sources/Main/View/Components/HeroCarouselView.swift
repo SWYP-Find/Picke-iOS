@@ -30,7 +30,7 @@ struct HeroCarouselView: View {
       }
     }
     .tabViewStyle(.page(indexDisplayMode: .never))
-    .frame(height: 360)
+    .frame(height: 341) // .pen 합: control(53) + thumbnail(167) + subject(121)
     .background(Color.neutral800)
     .onReceive(timer) { _ in advance() }
   }
