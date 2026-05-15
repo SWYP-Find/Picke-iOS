@@ -12,6 +12,7 @@ public struct APIHeader {
 
   public static let contentType   = "Content-Type"
   public static let accessToken   = "Authorization"
+  public static let refreshToken  = "X-Refresh-Token"
   public static let accept        = "accept"
 
   @Dependency(\.tokenProvider) private static var tokenProvider
