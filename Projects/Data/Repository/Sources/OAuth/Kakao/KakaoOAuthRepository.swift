@@ -64,7 +64,6 @@ private extension KakaoOAuthRepository {
       URLQueryItem(name: "response_type", value: "code"),
       URLQueryItem(name: "client_id", value: clientID),
       URLQueryItem(name: "redirect_uri", value: serverRedirectUri),
-      URLQueryItem(name: "prompt", value: "login"),
     ]
     guard let url = components?.url else {
       throw AuthError.invalidCredential("Kakao authorize URL 생성 실패")
