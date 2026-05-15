@@ -13,7 +13,6 @@ let project = Project.makeModule(
     .Data(implements: .API),
     .Network(implements: .Foundations),
     .SPM.asyncMoya,
-    .Data(implements: .Model)
   ],
   sources: ["Sources/**"],
   hasTests: false
