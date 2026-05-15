@@ -62,8 +62,8 @@ extension AuthService: BaseTargetType {
     switch self {
     case let .login(_, body):
       body.toDictionary
-    case let .refresh(refreshToken):
-      refreshToken.toDictionary(key: "refreshToken")
+    case .refresh:
+      nil
     case let .withdraw(token):
       token.toDictionary(key: "token")
     case .logout:
@@ -73,10 +73,14 @@ extension AuthService: BaseTargetType {
 
   public var headers: [String: String]? {
     switch self {
+    case let .refresh(refreshToken):
+      var headers = APIHeader.notAccessTokenHeader
+      headers[APIHeader.refreshToken] = refreshToken
+      return headers
     case .withdraw, .logout:
-      APIHeader.baseHeader
+      return APIHeader.baseHeader
     default:
-      APIHeader.notAccessTokenHeader
+      return APIHeader.notAccessTokenHeader
     }
   }
 }
