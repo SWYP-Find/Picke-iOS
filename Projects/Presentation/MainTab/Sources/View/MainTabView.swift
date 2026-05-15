@@ -6,56 +6,105 @@
 //
 
 import SwiftUI
+import UIKit
 
 import DesignSystem
 import Home
+import TCAFlow
 
 import ComposableArchitecture
 
-/// SwiftUI TabView + Picke 디자인 시스템 GNB 아이콘.
-/// (TCAFlowTabRouter 는 systemImage 만 지원하므로, 커스텀 자산을 쓰기 위해 native TabView 사용)
 public struct MainTabView: View {
   @Bindable private var store: StoreOf<MainTabCoordinator>
 
   public init(store: StoreOf<MainTabCoordinator>) {
+    Self.configureTabBarAppearance()
     self.store = store
   }
 
   public var body: some View {
-    TabView(
-      selection: Binding(
-        get: { store.selectedTab },
-        set: { newValue in
-          if newValue == store.selectedTab {
-            store.send(.tabReselected(newValue))
-          }
-          store.send(.selectTab(newValue))
-        }
-      )
-    ) {
-      ForEach(MainTabCoordinator.Tab.allCases, id: \.rawValue) { tab in
-        tabContent(for: tab)
-          .tabItem { tabLabel(for: tab) }
-          .tag(tab.rawValue)
+    TCAFlowTabRouter(
+      selectedTab: $store.selectedTab.sending(\.selectTab),
+      tabs: MainTabCoordinator.Tab.allCases.map {
+        TabItem(title: $0.title, icon: $0.iconAsset.rawValue, tag: $0.rawValue)
+      },
+      onReselect: { tab in
+        store.send(.tabReselected(tab))
+      },
+      tabItemLabel: { tab in
+        tabLabel(for: tab)
       }
+    ) {
+      tabContent(for: $0)
     }
-    .tint(.primary500)
   }
 }
 
 extension MainTabView {
-  private func tabLabel(for tab: MainTabCoordinator.Tab) -> some View {
+  private static func configureTabBarAppearance() {
+    let selectedColor = UIColor.neutral900
+    let normalColor = UIColor.neutral900.withAlphaComponent(0.4)
+    let backgroundColor = UIColor.bgDefault
+    let borderColor = UIColor.borderDefault.withAlphaComponent(0.4)
+    let font = UIFont.pretendardFontFamily(family: .Medium, size: 12)
+
+    let appearance = UITabBarAppearance()
+    appearance.configureWithOpaqueBackground()
+    appearance.backgroundColor = backgroundColor
+    appearance.shadowColor = borderColor
+    appearance.selectionIndicatorImage = UIImage()
+
+    configureItemAppearance(appearance.stackedLayoutAppearance, selectedColor, normalColor, font)
+    configureItemAppearance(appearance.inlineLayoutAppearance, selectedColor, normalColor, font)
+    configureItemAppearance(appearance.compactInlineLayoutAppearance, selectedColor, normalColor, font)
+
+    UITabBar.appearance().standardAppearance = appearance
+    UITabBar.appearance().scrollEdgeAppearance = appearance
+    UITabBar.appearance().tintColor = selectedColor
+    UITabBar.appearance().unselectedItemTintColor = normalColor
+  }
+
+  private static func configureItemAppearance(
+    _ itemAppearance: UITabBarItemAppearance,
+    _ selectedColor: UIColor,
+    _ normalColor: UIColor,
+    _ font: UIFont
+  ) {
+    itemAppearance.normal.iconColor = normalColor
+    itemAppearance.normal.titleTextAttributes = [
+      .font: font,
+      .foregroundColor: normalColor
+    ]
+
+    itemAppearance.selected.iconColor = selectedColor
+    itemAppearance.selected.titleTextAttributes = [
+      .font: font,
+      .foregroundColor: selectedColor
+    ]
+  }
+
+  private func tabLabel(for tab: TabItem) -> some View {
     Label {
       Text(tab.title)
+        .pretendardFont(family: .Medium, size: 12)
     } icon: {
-      Image(asset: tab.iconAsset)
-        .renderingMode(.template)
+      tabIcon(for: tab)
     }
   }
 
   @ViewBuilder
-  private func tabContent(for tab: MainTabCoordinator.Tab) -> some View {
-    switch tab {
+  private func tabIcon(for tab: TabItem) -> some View {
+    if let image = UIImage(assetName: tab.icon)?.withRenderingMode(.alwaysTemplate) {
+      Image(uiImage: image)
+        .renderingMode(.template)
+    } else {
+      Image(systemName: "questionmark")
+    }
+  }
+
+  @ViewBuilder
+  private func tabContent(for tab: Int) -> some View {
+    switch MainTabCoordinator.Tab(rawValue: tab) {
     case .home:
       HomeCoordinatorView(
         store: store.scope(state: \.homeState, action: \.home)
@@ -75,6 +124,9 @@ extension MainTabView {
       HomeCoordinatorView(
         store: store.scope(state: \.myPageState, action: \.myPage)
       )
+
+    case .none:
+      EmptyView()
     }
   }
 }
