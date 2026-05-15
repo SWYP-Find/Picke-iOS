@@ -82,20 +82,23 @@ Picke-iOS/
 │   │
 │   ├── Presentation/              # 🎨 UI Layer
 │   │   ├── Auth/                  # 로그인 / 코디네이터 / Toast
+│   │   ├── Home/                  # 홈 피드 / 큐레이팅 / 스켈레톤
+│   │   ├── MainTab/               # 탭 라우팅 / GNB
 │   │   ├── Splash/                # 스플래시
 │   │   └── Presentation/          # 공통 프레젠테이션 유틸
 │   │
 │   ├── Domain/                    # 🔥 Business Logic Layer
-│   │   ├── Entity/                # LoginEntity, AuthTokens, SocialType, AuthError ...
-│   │   ├── DomainInterface/       # AuthInterface, *OAuth*Interface, KeychainManaging ...
+│   │   ├── Entity/                # Auth / Home / OAuth / Error 도메인 엔티티
+│   │   ├── DomainInterface/       # Auth / Home / OAuth Repository + Manager 인터페이스
 │   │   └── UseCase/               # AuthUseCaseImpl, UnifiedOAuthUseCase, Provider/{Apple,Google,Kakao}
 │   │
 │   ├── Data/                      # 📡 Data Layer
-│   │   ├── Model/                 # BaseResponseDTO / Login·Token·Logout·Withdraw DTO + Mapper
-│   │   ├── API/                   # PieckeDomain, AuthAPI, BaseAPI
-│   │   ├── Service/               # AuthService (BaseTargetType), OAuthLoginRequest
-│   │   └── Repository/            # AuthRepositoryImpl + OAuth Repository (Apple/Google/Kakao)
-│   │       └── Auth/              # Interceptor, RefreshToken Session, Pool, MoyaProvider 확장
+│   │   ├── Model/                 # BaseResponseDTO / Auth·Home DTO + Entity Mapper
+│   │   ├── API/                   # PieckeDomain, AuthAPI, HomeAPI, BaseAPI
+│   │   ├── Service/               # AuthService / HomeService (BaseTargetType), 요청 바디
+│   │   └── Repository/            # Auth·Home RepositoryImpl + OAuth Repository
+│   │       ├── Auth/              # Interceptor, RefreshToken Session, Pool, MoyaProvider 확장
+│   │       └── OAuth/             # Apple / Google / Kakao / Web OAuth 구현
 │   │
 │   ├── Network/                   # 🌐 Network Layer
 │   │   ├── Networking/            # 네트워크 클라이언트 export
@@ -157,7 +160,7 @@ Domain/UseCase → Domain (Interface / Entity)
        ↓
 Data/Repository → Domain (Interface / Entity) + Data (Model + Service + API)
        ↓
-Data/Service → Data (API) + Network/Foundations (APIHeader)
+Data/Service → Data (API) + Network/Foundations (APIHeader) + Domain/Entity (요청 식별값)
        ↓
 Network/Foundations → Network/ThirdPartys (AsyncMoya, WeaveDI)
 ```
@@ -166,6 +169,7 @@ Network/Foundations → Network/ThirdPartys (AsyncMoya, WeaveDI)
 - ✅ **Presentation** 은 Domain UseCase / Entity 만 직접 참조
 - ✅ **Domain** 은 외부 계층에 의존하지 않는 순수 비즈니스 로직
 - ✅ **Data/Repository** 는 Domain 인터페이스를 구현, DTO ↔ Entity 매핑 담당
+- ✅ **Data/Service** 는 endpoint / header / method / parameter 정의만 담당하고 DTO Model 에 의존하지 않음
 - ✅ 모든 데이터 흐름은 **Domain 을 중심**으로 진행
 
 ## 🔐 OAuth 인증 플로우
