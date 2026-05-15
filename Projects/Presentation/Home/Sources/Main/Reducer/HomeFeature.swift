@@ -18,6 +18,7 @@ public struct HomeFeature {
   @ObservableState
   public struct State: Equatable {
     public var isLoading: Bool = false
+    public var hasLoadedHome: Bool = false
     public var newNotice: Bool = false
     public var heroes: [HeroBattle] = []
     public var heroIndex: Int = 0
@@ -92,15 +93,20 @@ public struct HomeFeature {
 
 extension HomeFeature {
   private func handleViewAction(
-    state _: inout State,
+    state: inout State,
     action: View
   ) -> Effect<Action> {
     switch action {
-    case .onAppear, .pullToRefresh:
-      .send(.async(.fetchHome))
+    case .onAppear:
+      guard !state.hasLoadedHome, !state.isLoading else { return .none }
+      return .send(.async(.fetchHome))
+
+    case .pullToRefresh:
+      guard !state.isLoading else { return .none }
+      return .send(.async(.fetchHome))
 
     case .seeMoreTapped:
-      .none
+      return .none
     }
   }
 
@@ -129,16 +135,18 @@ extension HomeFeature {
     switch action {
     case let .homeResponse(result):
       state.isLoading = false
+      state.hasLoadedHome = true
       switch result {
       case let .success(bundle):
-        state.newNotice = bundle.newNotice
-        state.heroes = bundle.heroes
+        let home = bundle.replacingEmptySectionsWithMocks
+        state.newNotice = home.newNotice
+        state.heroes = home.heroes
         state.heroIndex = 0
-        state.hotBattles = bundle.hotBattles
-        state.bestBattles = bundle.bestBattles
-        state.quizzes = bundle.quizzes
-        state.votes = bundle.votes
-        state.newBattles = bundle.newBattles
+        state.hotBattles = home.hotBattles
+        state.bestBattles = home.bestBattles
+        state.quizzes = home.quizzes
+        state.votes = home.votes
+        state.newBattles = home.newBattles
       case let .failure(error):
         Log.error("[HomeFeature] fetchHome failed: \(error.localizedDescription)")
       }

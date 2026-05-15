@@ -40,9 +40,6 @@ public struct HomeView: View {
             newBattlesSection()
           }
           .padding(.bottom, 24)
-          .onAppear {
-            store.send(.view(.onAppear))
-          }
         }
       }
     }

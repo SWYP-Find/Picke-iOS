@@ -46,4 +46,16 @@ public extension HomeBundle {
     votes: [.mock],
     newBattles: NewBattle.mocks
   )
+
+  var replacingEmptySectionsWithMocks: HomeBundle {
+    HomeBundle(
+      newNotice: newNotice,
+      heroes: heroes.isEmpty ? HeroBattle.mocks : heroes,
+      hotBattles: hotBattles.isEmpty ? HotBattle.mocks : hotBattles,
+      bestBattles: bestBattles.isEmpty ? BestBattle.mocks : bestBattles,
+      quizzes: quizzes.isEmpty ? [.mock] : quizzes,
+      votes: votes.isEmpty ? [.mock] : votes,
+      newBattles: newBattles.isEmpty ? NewBattle.mocks : newBattles
+    )
+  }
 }
