@@ -1,12 +1,15 @@
 {
   "images" : [
     {
-      "filename" : "Group 27.svg",
+      "filename" : "tabMyPage.svg",
       "idiom" : "universal"
     }
   ],
   "info" : {
     "author" : "xcode",
     "version" : 1
+  },
+  "properties" : {
+    "preserves-vector-representation" : true
   }
 }

@@ -414,6 +414,41 @@ public init(
 - `MoyaProviderPool` 은 더 이상 RepositoryImpl 에서 직접 호출하지 않는다 (필요 시 풀 자체에서 내부적으로 캐시 처리)
 - 레퍼런스: `HomeRepositoryImpl`, `AuthRepositoryImpl`, AsyncMoya `MoyaProvider+Factory.default`, `Extension+MoyaProvider+Auth.authorized`
 
+#### 🧭 Coordinator — `extension X { @Reducer public enum XScreen { ... } }` 구조 절대 건드리지 말 것
+
+TCAFlow 기반 Coordinator 의 `XScreen` 정의는 반드시 **별도 extension 의 `@Reducer public enum`** 형태를 유지한다. 마이그레이션 / 리팩터링 / 자동 포맷터 어떤 이유로도 이 구조를 본체 안으로 끌어들이거나 `enum`을 `struct`/`Reducer` 로 바꾸지 말 것.
+
+```swift
+// ✅ 올바른 패턴 — extension + @Reducer + public enum + State: Equatable 보조 extension
+@FlowCoordinator(screen: "HomeScreen", navigation: true)
+public struct HomeCoordinator {
+  // … State / Action / handleRoute …
+}
+
+extension HomeCoordinator {
+  @Reducer
+  public enum HomeScreen {
+    case home(HomeFeature)
+    case preVote(PreVoteFeature)
+  }
+}
+
+extension HomeCoordinator.HomeScreen.State: Equatable {}
+
+// ❌ 금지 — Coordinator 본체 안에 enum 을 인라인 선언
+public struct HomeCoordinator {
+  @Reducer
+  public enum HomeScreen { ... }   // 안 됨 (매크로 인식 / Route 추론 깨짐)
+}
+```
+
+규칙:
+- `XScreen` 은 `@Reducer public enum`. struct 로 바꾸지 말 것
+- 본체와 분리된 **별도 extension** 안에 선언
+- `extension Coordinator.XScreen.State: Equatable {}` 보조 conformance 도 같이 유지 (Route diff 비교 필요)
+- 라우터 핸들러 (`routerAction`) 안에서 `state.routes.push/pop/goBack` 직접 호출은 OK, 단 `dismiss`/`submit` 같이 반복되는 종료 액션은 `.send(.view(.backAction))` 으로 일원화
+- 레퍼런스: `HomeCoordinator`, `AuthCoordinator`, `MainTabCoordinator`
+
 ### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드
 - 에러 처리 패턴

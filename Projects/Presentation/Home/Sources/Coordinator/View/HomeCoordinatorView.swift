@@ -24,6 +24,9 @@ public struct HomeCoordinatorView: View {
       switch screen.case {
       case let .home(homeStore):
         HomeView(store: homeStore)
+      case let .preVote(preVoteStore):
+        PreVoteView(store: preVoteStore)
+          .toolbar(.hidden, for: .tabBar)
       }
     }
   }

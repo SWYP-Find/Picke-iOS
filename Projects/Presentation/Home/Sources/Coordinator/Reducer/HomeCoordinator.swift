@@ -56,10 +56,21 @@ public struct HomeCoordinator {
 
 extension HomeCoordinator {
   private func routerAction(
-    state _: inout State,
-    action _: IndexedRouterActionOf<HomeScreen>
+    state: inout State,
+    action: IndexedRouterActionOf<HomeScreen>
   ) -> Effect<Action> {
-    .none
+    switch action {
+    case .routeAction(_, action: .home(.delegate(.presentPreVote))):
+      state.routes.push(.preVote(.init()))
+      return .none
+
+    case .routeAction(_, action: .preVote(.delegate(.dismiss))),
+         .routeAction(_, action: .preVote(.delegate(.submit))):
+      return .send(.view(.backAction))
+
+    default:
+      return .none
+    }
   }
 
   private func handleViewAction(
@@ -81,6 +92,7 @@ extension HomeCoordinator {
   @Reducer
   public enum HomeScreen {
     case home(HomeFeature)
+    case preVote(PreVoteFeature)
   }
 }
 
