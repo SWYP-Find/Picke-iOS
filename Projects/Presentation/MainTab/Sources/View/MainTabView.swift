@@ -26,7 +26,7 @@ public struct MainTabView: View {
     TCAFlowTabRouter(
       selectedTab: $store.selectedTab.sending(\.selectTab),
       tabs: MainTabCoordinator.Tab.allCases.map {
-        TabItem(title: $0.title, icon: $0.iconAsset.rawValue, tag: $0.rawValue)
+        TabItem(title: $0.title, icon: $0.iconAsset(isSelected: false).rawValue, tag: $0.rawValue)
       },
       onReselect: { tab in
         store.send(.tabReselected(tab))
@@ -73,13 +73,13 @@ extension MainTabView {
     itemAppearance.normal.iconColor = normalColor
     itemAppearance.normal.titleTextAttributes = [
       .font: font,
-      .foregroundColor: normalColor
+      .foregroundColor: normalColor,
     ]
 
     itemAppearance.selected.iconColor = selectedColor
     itemAppearance.selected.titleTextAttributes = [
       .font: font,
-      .foregroundColor: selectedColor
+      .foregroundColor: selectedColor,
     ]
   }
 
@@ -94,12 +94,15 @@ extension MainTabView {
 
   @ViewBuilder
   private func tabIcon(for tab: TabItem) -> some View {
-    if let image = UIImage(assetName: tab.icon)?.withRenderingMode(.alwaysTemplate) {
-      Image(uiImage: image)
-        .renderingMode(.template)
-    } else {
-      Image(systemName: "questionmark")
-    }
+    let isSelected = store.selectedTab == tab.tag
+    let asset = MainTabCoordinator.Tab(rawValue: tab.tag)?
+      .iconAsset(isSelected: isSelected) ?? .none
+
+    Image(asset: asset)
+      .renderingMode(.original)
+      .resizable()
+      .scaledToFit()
+      .frame(width: 24, height: 24)
   }
 
   @ViewBuilder
