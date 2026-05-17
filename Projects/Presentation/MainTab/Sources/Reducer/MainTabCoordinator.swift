@@ -35,13 +35,13 @@ public struct MainTabCoordinator {
       }
     }
 
-    /// 디자인 시스템 GNB 아이콘 (Pencil 추출 PNG)
-    public var iconAsset: ImageAsset {
+    /// 디자인 시스템 GNB 아이콘 (탭바 아이콘 폴더 PNG, single-scale)
+    public func iconAsset(isSelected: Bool) -> ImageAsset {
       switch self {
-      case .home: .tabHome
-      case .explore: .tabExplore
-      case .quickBattle: .tabQuickBattle
-      case .myPage: .tabMyPage
+      case .home: isSelected ? .tabHomeActive : .tabHome
+      case .explore: isSelected ? .tabExploreActive : .tabExplore
+      case .quickBattle: isSelected ? .tabQuickBattleActive : .tabQuickBattle
+      case .myPage: isSelected ? .tabMyPageActive : .tabMyPage
       }
     }
   }
