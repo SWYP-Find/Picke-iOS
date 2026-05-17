@@ -12,29 +12,46 @@ import Entity
 
 import Kingfisher
 
-/// "새로운 배틀" 리스트 카드 (제목 + VS 아바타 두 개).
+/// "새로운 배틀" 리스트 카드 (.pen `Card/BattleListCard` 의 thumbnail 제외 구성).
 struct NewBattleCardView: View {
   let battle: NewBattle
 
   var body: some View {
+    content
+      .padding(12)
+      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .overlay(
+        RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+      )
+  }
+}
+
+// MARK: - Sections
+
+extension NewBattleCardView {
+  private var content: some View {
     VStack(alignment: .leading, spacing: 12) {
-      headerRow
-      titleBlock
+      container
       versusRow
     }
-    .padding(12)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-    .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
-    )
   }
 
-  private var headerRow: some View {
-    HStack {
+  private var container: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      metaRow
+      titleBlock
+    }
+  }
+
+  private var metaRow: some View {
+    HStack(spacing: 10) {
       if let tag = battle.tags.first {
         Text(tag.name)
-          .pretendardFont(family: .Medium, size: 11)
+          .pretendardFont(family: .SemiBold, size: 12)
           .foregroundStyle(.primary500)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
       }
       Spacer()
       MetaLabelView(systemImage: "clock", text: "\(battle.durationMinutes)분")
@@ -43,29 +60,31 @@ struct NewBattleCardView: View {
   }
 
   private var titleBlock: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 4) {
       Text(battle.title)
         .pretendardFont(family: .SemiBold, size: 14)
-        .foregroundStyle(.neutral900)
+        .foregroundStyle(.neutral500)
+        .kerning(-0.35)
         .lineLimit(2)
+        .frame(maxWidth: .infinity, alignment: .leading)
       Text(battle.summary)
         .pretendardFont(family: .Medium, size: 12)
-        .foregroundStyle(.neutral300)
+        .foregroundStyle(.neutral200)
+        .lineSpacing(12 * 0.4)
         .lineLimit(2)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
 
   private var versusRow: some View {
     HStack(spacing: 8) {
-      NewBattleAvatarPill(
+      admissionButton(
         label: battle.optionATitle,
         sub: battle.philosopherA,
         imageURL: battle.philosopherAImageURL
       )
-      Text("VS")
-        .pretendardFont(family: .SemiBold, size: 11)
-        .foregroundStyle(.neutral300)
-      NewBattleAvatarPill(
+      vsBadge
+      admissionButton(
         label: battle.optionBTitle,
         sub: battle.philosopherB,
         imageURL: battle.philosopherBImageURL
@@ -74,21 +93,23 @@ struct NewBattleCardView: View {
   }
 }
 
-/// 새로운 배틀 카드 안의 발화자 아바타 (원형 thumbnail + 라벨).
-struct NewBattleAvatarPill: View {
-  let label: String
-  let sub: String
-  let imageURL: URL?
+// MARK: - Sub-components
 
-  var body: some View {
-    HStack(spacing: 8) {
-      avatar
-      VStack(alignment: .leading, spacing: 0) {
+extension NewBattleCardView {
+  private func admissionButton(
+    label: String,
+    sub: String,
+    imageURL: URL?
+  ) -> some View {
+    HStack(spacing: 4) {
+      avatar(for: sub, imageURL: imageURL)
+      VStack(alignment: .leading, spacing: 2) {
         Text(label)
-          .pretendardFont(family: .SemiBold, size: 12)
-          .foregroundStyle(.neutral900)
+          .pretendardFont(family: .SemiBold, size: 14)
+          .foregroundStyle(.neutral600)
+          .kerning(-0.35)
         Text(sub)
-          .pretendardFont(family: .Medium, size: 10)
+          .pretendardFont(family: .Medium, size: 12)
           .foregroundStyle(.neutral300)
       }
       Spacer(minLength: 0)
@@ -102,17 +123,42 @@ struct NewBattleAvatarPill: View {
   }
 
   @ViewBuilder
-  private var avatar: some View {
-    if let url = imageURL {
-      KFImage(url)
+  private func avatar(for philosopherName: String, imageURL: URL?) -> some View {
+    if let imageURL {
+      KFImage(imageURL)
         .resizable()
         .scaledToFill()
-        .frame(width: 28, height: 28)
+        .frame(width: 40, height: 40)
         .clipShape(Circle())
+    } else if let asset = PhilosopherAvatar(rawValue: philosopherName)?.imageAsset {
+      Image(asset: asset)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 40, height: 40)
+        .background(.beige600, in: Circle())
     } else {
       Circle()
-        .fill(.beige500)
-        .frame(width: 28, height: 28)
+        .fill(.beige600)
+        .frame(width: 40, height: 40)
+    }
+  }
+
+  private var vsBadge: some View {
+    Text("VS")
+      .pretendardFont(family: .Bold, size: 8)
+      .foregroundStyle(.neutral800)
+      .frame(width: 24, height: 24)
+      .background(.secondary200, in: Circle())
+      .overlay(Circle().stroke(.beige50, lineWidth: 1.5))
+  }
+}
+
+private extension PhilosopherAvatar {
+  var imageAsset: ImageAsset {
+    switch self {
+    case .plato: .avatarPlato
+    case .sartre: .avatarSartre
+    case .sunja: .avatarSunja
     }
   }
 }
