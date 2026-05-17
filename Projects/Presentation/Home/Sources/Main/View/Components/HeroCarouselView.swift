@@ -16,6 +16,7 @@ import Kingfisher
 struct HeroCarouselView: View {
   let heroes: [HeroBattle]
   @Binding var currentIndex: Int
+  var onTap: (HeroBattle) -> Void = { _ in }
 
   private static let autoScrollInterval: TimeInterval = 3
   private let timer = Timer.publish(every: autoScrollInterval, on: .main, in: .common).autoconnect()
@@ -28,6 +29,8 @@ struct HeroCarouselView: View {
           position: index + 1,
           total: heroes.count
         )
+        .contentShape(Rectangle())
+        .onTapGesture { onTap(hero) }
         .tag(index)
       }
     }
