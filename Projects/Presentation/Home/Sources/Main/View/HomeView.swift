@@ -31,7 +31,8 @@ public struct HomeView: View {
           VStack(spacing: 32) {
             HeroCarouselView(
               heroes: store.heroes,
-              currentIndex: $store.heroIndex
+              currentIndex: $store.heroIndex,
+              onTap: { send(.heroTapped($0)) }
             )
 
             hotBattlesSection()
@@ -43,7 +44,7 @@ public struct HomeView: View {
         }
       }
     }
-    .background(Color.beige50.ignoresSafeArea())
+    .background(Color.beige200.ignoresSafeArea())
     .onAppear { send(.onAppear) }
     .navigationBarHidden(true)
     .scrollIndicators(.hidden)
@@ -71,7 +72,11 @@ extension HomeView {
       }
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 16) {
-          ForEach(store.hotBattles) { HotBattleCardView(battle: $0) }
+          ForEach(store.hotBattles) { battle in
+            HotBattleCardView(battle: battle)
+              .contentShape(Rectangle())
+              .onTapGesture { send(.hotBattleTapped(battle)) }
+          }
         }
         .padding(.horizontal, 16)
       }
@@ -84,7 +89,11 @@ extension HomeView {
         send(.seeMoreTapped(.bestBattles))
       }
       VStack(spacing: 12) {
-        ForEach(store.bestBattles) { BestBattleCardView(battle: $0) }
+        ForEach(store.bestBattles) { battle in
+          BestBattleCardView(battle: battle)
+            .contentShape(Rectangle())
+            .onTapGesture { send(.bestBattleTapped(battle)) }
+        }
       }
       .padding(.horizontal, 16)
     }
@@ -101,6 +110,8 @@ extension HomeView {
         }
         if let vote = store.currentVote {
           VoteCardView(question: vote)
+            .contentShape(Rectangle())
+            .onTapGesture { send(.voteTapped(vote)) }
         }
       }
       .padding(.horizontal, 16)
@@ -113,7 +124,11 @@ extension HomeView {
         send(.seeMoreTapped(.newBattles))
       }
       VStack(spacing: 12) {
-        ForEach(store.newBattles) { NewBattleCardView(battle: $0) }
+        ForEach(store.newBattles) { battle in
+          NewBattleCardView(battle: battle)
+            .contentShape(Rectangle())
+            .onTapGesture { send(.newBattleTapped(battle)) }
+        }
       }
       .padding(.horizontal, 16)
     }

@@ -47,6 +47,11 @@ public struct HomeFeature {
     case onAppear
     case pullToRefresh
     case seeMoreTapped(Section)
+    case voteTapped(VoteQuestion)
+    case heroTapped(HeroBattle)
+    case hotBattleTapped(HotBattle)
+    case bestBattleTapped(BestBattle)
+    case newBattleTapped(NewBattle)
   }
 
   public enum Section: Equatable {
@@ -64,7 +69,9 @@ public struct HomeFeature {
     case homeResponse(Result<HomeBundle, AuthError>)
   }
 
-  public enum DelegateAction: Equatable {}
+  public enum DelegateAction: Equatable {
+    case presentPreVote(battleId: Int)
+  }
 
   nonisolated enum CancelID: Hashable {
     case fetchHome
@@ -107,6 +114,21 @@ extension HomeFeature {
 
     case .seeMoreTapped:
       return .none
+
+    case let .voteTapped(question):
+      return .send(.delegate(.presentPreVote(battleId: question.battleId)))
+
+    case let .heroTapped(battle):
+      return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
+
+    case let .hotBattleTapped(battle):
+      return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
+
+    case let .bestBattleTapped(battle):
+      return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
+
+    case let .newBattleTapped(battle):
+      return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
     }
   }
 
@@ -158,6 +180,9 @@ extension HomeFeature {
     state _: inout State,
     action: DelegateAction
   ) -> Effect<Action> {
-    switch action {}
+    switch action {
+    case .presentPreVote:
+      .none
+    }
   }
 }
