@@ -11,6 +11,7 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .Data(implements: .API),
+    .Domain(implements: .Entity),
     .Network(implements: .Foundations),
     .SPM.asyncMoya,
   ],
