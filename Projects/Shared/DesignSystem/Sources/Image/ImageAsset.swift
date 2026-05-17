@@ -25,17 +25,27 @@ public enum ImageAsset: String {
   case onboarding3
   case onboarding4
 
-  // MARK: - GNB 탭 아이콘
+  // MARK: - GNB 탭 아이콘 (비선택 / 선택)
 
   case tabHome
+  case tabHomeActive
   case tabExplore
+  case tabExploreActive
   case tabQuickBattle
+  case tabQuickBattleActive
   case tabMyPage
-  
-  
-  //MARK: - Home 탭 아이콘
+  case tabMyPageActive
+
+  // MARK: - Home 탭 아이콘
+
   case appLogo
   case bell
+
+  // MARK: - 철학자 아바타
+
+  case avatarPlato
+  case avatarSartre
+  case avatarSunja
 
   case none
 }
