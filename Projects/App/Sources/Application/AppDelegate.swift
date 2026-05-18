@@ -1,24 +1,25 @@
-import UIKit
-import WeaveDI
 import Firebase
 import GoogleMobileAds
 import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
+import UIKit
+import WeaveDI
 
+import DomainInterface
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
   let mixPanelKey = Bundle.main.object(forInfoDictionaryKey: "MIXPANEL_TOKEN") as? String
   func application(
-    _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    _: UIApplication,
+    didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     FirebaseApp.configure()
     #logDebug(
       "Mixpanel initialize",
       [
         "token_exists": !(mixPanelKey?.isEmpty ?? true),
-        "token_prefix": String((mixPanelKey ?? "").prefix(6))
+        "token_prefix": String((mixPanelKey ?? "").prefix(6)),
       ]
     )
     Mixpanel.initialize(token: mixPanelKey ?? "", trackAutomaticEvents: true)
@@ -40,32 +41,41 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // DI 관리자 초기화
     WeaveDI.Container.bootstrapInTask { @DIContainerActor _ in
       await AppDIManager.shared.registerDefaultDependencies()
+
+      // Kingfisher 글로벌 requestModifier 등록 — DI 등록 직후라 KeychainManaging resolve 보장
+      if let keychainManager = UnifiedDI.resolve(KeychainManaging.self) {
+        await MainActor.run {
+          KingfisherConfigurator.configureAuthorizedDownloader(
+            keychainManager: keychainManager
+          )
+        }
+      }
     }
 
     return true
   }
-  
+
   func application(
-    _ application: UIApplication,
+    _: UIApplication,
     configurationForConnecting connectingSceneSession: UISceneSession,
-    options: UIScene.ConnectionOptions
+    options _: UIScene.ConnectionOptions
   ) -> UISceneConfiguration {
-    return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
   }
-  
+
   func application(
-    _ application: UIApplication,
-    didDiscardSceneSessions sceneSessions: Set<UISceneSession>
-  ) {
-  }
-  
+    _: UIApplication,
+    didDiscardSceneSessions _: Set<UISceneSession>
+  ) {}
+
   // MARK: - Image Caching Configuration
+
   private func initializeMixpanelSessionReplay() {
     guard !(mixPanelKey?.isEmpty ?? true) else { return }
-    
+
     var config = MPSessionReplayConfig(wifiOnly: false)
     config.enableSessionReplayOniOS26AndLater = true
-    
+
     MPSessionReplay.initialize(
       token: Mixpanel.mainInstance().apiToken,
       distinctId: Mixpanel.mainInstance().distinctId,
