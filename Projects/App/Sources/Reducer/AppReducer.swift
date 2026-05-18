@@ -233,7 +233,7 @@ public struct AppReducer: Sendable {
   private func handleScopeNavigation(action: ScopeAction) -> Effect<Action> {
     switch action {
     case .splash(.view(.onAppear)):
-      return .none
+      return .send(.view(.presentAuth))
 
     case .splash(.delegate(.presentAuth)):
       return .run { send in
