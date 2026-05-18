@@ -16,10 +16,9 @@ struct HomeSectionHeader: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      Text(title)
+      Text(attributedTitle)
         .pretendardFont(family: .Bold, size: 18)
         .kerning(-0.45)
-        .foregroundStyle(.neutral900)
       Spacer(minLength: 0)
       Button(action: onSeeMoreTapped) {
         Text("더 보기")
@@ -28,5 +27,29 @@ struct HomeSectionHeader: View {
       }
     }
     .padding(.horizontal, 16)
+  }
+
+  /// 강조 규칙:
+  /// - 라틴 단어 (Best · Pické 등) 가 있으면 그 단어만 primary500, 나머지 한글은 neutral900
+  /// - 라틴 단어가 없으면 한글 `배틀` 만 primary500, 나머지 한글은 neutral900
+  private var attributedTitle: AttributedString {
+    var attr = AttributedString(title)
+    attr.foregroundColor = .neutral900
+
+    let latinPattern = /[A-Za-zÀ-ÿ]+/
+    let latinMatches = Array(title.matches(of: latinPattern))
+
+    if latinMatches.isEmpty {
+      if let range = attr.range(of: "배틀") {
+        attr[range].foregroundColor = .primary500
+      }
+    } else {
+      for match in latinMatches {
+        if let range = attr.range(of: String(match.0)) {
+          attr[range].foregroundColor = .primary500
+        }
+      }
+    }
+    return attr
   }
 }

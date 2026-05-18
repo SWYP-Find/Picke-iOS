@@ -19,6 +19,9 @@ struct HeroCarouselView: View {
   var onTap: (HeroBattle) -> Void = { _ in }
 
   private static let autoScrollInterval: TimeInterval = 3
+  private static let controlHeight: CGFloat = 51
+  private static let thumbnailHeight: CGFloat = 220
+  private static let subjectHeight: CGFloat = 88
   private let timer = Timer.publish(every: autoScrollInterval, on: .main, in: .common).autoconnect()
 
   var body: some View {
@@ -35,7 +38,7 @@ struct HeroCarouselView: View {
       }
     }
     .tabViewStyle(.page(indexDisplayMode: .never))
-    .frame(height: 341) // .pen 합: control(53) + thumbnail(167) + subject(121)
+    .frame(height: Self.controlHeight + Self.thumbnailHeight + Self.subjectHeight) // .pen 합: control(53) + thumbnail(167) + subject(121)
     .background(Color.neutral800)
     .onReceive(timer) { _ in advance() }
   }
@@ -54,17 +57,20 @@ struct HeroCardView: View {
   let position: Int
   let total: Int
 
+  private let thumbnailHeight: CGFloat = 220
+
   var body: some View {
     VStack(spacing: 0) {
-      controlRow
-      thumbnail
-      subject
+      controlRow()
+      thumbnail()
+      subject()
     }
-    .background(Color.neutral800)
-    .frame(maxWidth: .infinity)
+    .background(.neutral800)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
   }
 
-  private var controlRow: some View {
+  @ViewBuilder
+  private func controlRow() -> some View {
     HStack {
       Text(hero.badge)
         .pretendardFont(family: .SemiBold, size: 11)
@@ -91,44 +97,54 @@ struct HeroCardView: View {
     .padding(16)
   }
 
-  private var thumbnail: some View {
-    ZStack {
-      if let url = hero.thumbnailURL {
-        KFImage(url)
-          .resizable()
-          .scaledToFill()
-          .frame(height: 167)
-          .clipped()
-        Color.black.opacity(0.4) // .pen 의 "#00000066" 오버레이
-      } else {
-        Color.neutral500.opacity(0.4)
-      }
+  @ViewBuilder
+  private func thumbnail() -> some View {
+    GeometryReader { proxy in
+      ZStack {
+        Rectangle()
+          .fill(.neutral500.opacity(0.4))
 
-      HStack(spacing: 24) {
-        Text(hero.optionA)
-          .pretendardFont(family: .SemiBold, size: 14)
-          .foregroundStyle(.beige100)
-        ZStack {
-          Circle()
-            .stroke(.secondary50.opacity(0.2), lineWidth: 2)
-            .frame(width: 32, height: 32)
-          Text("VS")
-            .pretendardFont(family: .SemiBold, size: 11)
-            .foregroundStyle(.secondary50)
+        if let url = hero.thumbnailURL {
+          KFImage(url)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(
+              width: proxy.size.width,
+              height: proxy.size.height,
+              alignment: .top
+            )
+            .clipped()
         }
-        Text(hero.optionB)
-          .pretendardFont(family: .SemiBold, size: 14)
-          .foregroundStyle(.beige100)
+
+        Color.black.opacity(0.4)
+
+        HStack(spacing: 24) {
+          Text(hero.optionA)
+            .pretendardFont(family: .SemiBold, size: 14)
+            .foregroundStyle(.beige100)
+          ZStack {
+            Circle()
+              .stroke(.secondary50.opacity(0.2), lineWidth: 2)
+              .frame(width: 32, height: 32)
+            Text("VS")
+              .pretendardFont(family: .SemiBold, size: 11)
+              .foregroundStyle(.secondary50)
+          }
+          Text(hero.optionB)
+            .pretendardFont(family: .SemiBold, size: 14)
+            .foregroundStyle(.beige100)
+        }
+        .opacity(0.85)
       }
-      .opacity(0.85)
     }
-    .frame(height: 167)
+    .frame(height: thumbnailHeight)
     .clipped()
   }
 
-  private var subject: some View {
+  @ViewBuilder
+  private func subject() -> some View {
     HStack(alignment: .bottom) {
-      VStack(alignment: .leading, spacing: 4) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(hero.title)
           .pretendardFont(family: .SemiBold, size: 16)
           .foregroundStyle(.beige100)
@@ -136,18 +152,25 @@ struct HeroCardView: View {
           .pretendardFont(family: .Medium, size: 12)
           .foregroundStyle(.neutral200)
           .lineLimit(2)
-        HStack(spacing: 4) {
-          ForEach(hero.tags) { tag in
-            Text(tag.name)
-              .pretendardFont(family: .Medium, size: 11)
-              .foregroundStyle(.neutral200)
+
+        if !hero.tags.isEmpty {
+          HStack(spacing: 4) {
+            ForEach(hero.tags) { tag in
+              Text(tag.name)
+                .pretendardFont(family: .Medium, size: 11)
+                .foregroundStyle(.neutral200)
+            }
           }
+          .padding(.top, 6)
         }
-        .padding(.top, 2)
       }
+
       Spacer()
-      MetaLabelView(systemImage: "eye", text: "\(hero.viewCount)")
+
+      MetaLabelView(systemImage: "eye", text: "\(hero.viewCount.formatted())")
     }
-    .padding(20)
+    .padding(.horizontal, 20)
+    .padding(.top, 20)
+    .padding(.bottom, 20)
   }
 }

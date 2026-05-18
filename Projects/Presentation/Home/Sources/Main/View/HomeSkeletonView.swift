@@ -134,6 +134,7 @@ private struct HomeTodayPickeSkeletonView: View {
     }
   }
 
+  @ViewBuilder
   private func todayQuizCard() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       HStack {
@@ -161,6 +162,7 @@ private struct HomeTodayPickeSkeletonView: View {
     )
   }
 
+  @ViewBuilder
   private func todayVoteCard() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       HStack {
@@ -304,6 +306,7 @@ private struct SkeletonShimmerModifier: ViewModifier {
       }
   }
 
+  @ViewBuilder
   private var shimmer: some View {
     GeometryReader { proxy in
       LinearGradient(
