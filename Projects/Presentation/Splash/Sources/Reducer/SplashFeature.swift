@@ -100,11 +100,11 @@ extension SplashFeature {
       let hasStoredCredential = hasStoredCredential
       return .run { send in
         try await clock.sleep(for: .seconds(1.2))
-//        if hasStoredCredential {
-//          await send(.delegate(.presentMainTab))
-//        } else {
-//          await send(.delegate(.presentAuth))
-//        }
+        if hasStoredCredential {
+          await send(.delegate(.presentMainTab))
+        } else {
+          await send(.delegate(.presentAuth))
+        }
       }
       
     }
