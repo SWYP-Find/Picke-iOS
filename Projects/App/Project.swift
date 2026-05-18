@@ -1,7 +1,7 @@
-import ProjectDescription
-import DependencyPlugin
-import ProjectTemplatePlugin
 import DependencyPackagePlugin
+import DependencyPlugin
+import ProjectDescription
+import ProjectTemplatePlugin
 
 let project = Project.makeAppModule(
   name: Project.Environment.appName,
@@ -16,8 +16,9 @@ let project = Project.makeAppModule(
     .SPM.googleMobileAds,
     .SPM.firebaseCrashlytics,
     .SPM.mixpanel,
-    .SPM.mixpanelSessionReplay
-    
+    .SPM.mixpanelSessionReplay,
+    .SPM.kingfisher,
+
   ],
   sources: ["Sources/**"],
   resources: ["Resources/**"],
