@@ -39,6 +39,7 @@ public struct OnBoardingView: View {
 
 extension OnBoardingView {
   /// 상단: 타이틀 + 서브타이틀 + 일러스트 (페이지 스와이프 지원)
+  @ViewBuilder
   private func topSection() -> some View {
     TabView(selection: $store.currentIndex) {
       ForEach(OnBoardingFeature.pages) { page in
@@ -50,6 +51,7 @@ extension OnBoardingView {
     .animation(.easeInOut(duration: 0.25), value: store.currentIndex)
   }
 
+  @ViewBuilder
   private func pageContent(_ page: OnBoardingFeature.Page) -> some View {
     VStack(spacing: 40) {
       titleBlock(page)
@@ -57,6 +59,7 @@ extension OnBoardingView {
     }
   }
 
+  @ViewBuilder
   private func titleBlock(_ page: OnBoardingFeature.Page) -> some View {
     VStack(spacing: 12) {
       Text(page.title)
@@ -75,6 +78,7 @@ extension OnBoardingView {
     .padding(.horizontal, 16)
   }
 
+  @ViewBuilder
   private func illustration(for page: OnBoardingFeature.Page) -> some View {
     Image(asset: page.imageAsset)
       .resizable()
@@ -83,6 +87,7 @@ extension OnBoardingView {
   }
 
   /// 하단: indicator + CTA 버튼 (Frame 324)
+  @ViewBuilder
   private func bottomSection() -> some View {
     VStack(spacing: 24) {
       OnBoardingPageIndicator(
