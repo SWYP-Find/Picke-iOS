@@ -17,18 +17,21 @@ struct NewBattleCardView: View {
   let battle: NewBattle
 
   var body: some View {
-    content
-      .padding(12)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-      .overlay(
-        RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
-      )
+    VStack(alignment: .leading, spacing: 8) {
+      content
+    }
+    .padding(12)
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .overlay(
+      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+    )
   }
 }
 
 // MARK: - Sections
 
 extension NewBattleCardView {
+  @ViewBuilder
   private var content: some View {
     VStack(alignment: .leading, spacing: 12) {
       container
@@ -36,6 +39,7 @@ extension NewBattleCardView {
     }
   }
 
+  @ViewBuilder
   private var container: some View {
     VStack(alignment: .leading, spacing: 12) {
       metaRow
@@ -43,6 +47,7 @@ extension NewBattleCardView {
     }
   }
 
+  @ViewBuilder
   private var metaRow: some View {
     HStack(spacing: 10) {
       if let tag = battle.tags.first {
@@ -59,6 +64,7 @@ extension NewBattleCardView {
     }
   }
 
+  @ViewBuilder
   private var titleBlock: some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(battle.title)
@@ -76,6 +82,7 @@ extension NewBattleCardView {
     }
   }
 
+  @ViewBuilder
   private var versusRow: some View {
     HStack(spacing: 8) {
       admissionButton(
@@ -96,6 +103,7 @@ extension NewBattleCardView {
 // MARK: - Sub-components
 
 extension NewBattleCardView {
+  @ViewBuilder
   private func admissionButton(
     label: String,
     sub: String,
@@ -123,26 +131,26 @@ extension NewBattleCardView {
   }
 
   @ViewBuilder
-  private func avatar(for philosopherName: String, imageURL: URL?) -> some View {
-    if let imageURL {
-      KFImage(imageURL)
-        .resizable()
-        .scaledToFill()
-        .frame(width: 40, height: 40)
-        .clipShape(Circle())
-    } else if let asset = PhilosopherAvatar(rawValue: philosopherName)?.imageAsset {
-      Image(asset: asset)
-        .resizable()
-        .scaledToFit()
-        .frame(width: 40, height: 40)
-        .background(.beige600, in: Circle())
-    } else {
+  private func avatar(
+    for philosopherName: String,
+    imageURL: URL?
+  ) -> some View {
+    // .pen `Avatar/Philosopher` 매핑: 베이지 40×40 원형 배경 + 가운데 16×28 일러스트
+    ZStack {
       Circle()
         .fill(.beige600)
         .frame(width: 40, height: 40)
+      if let imageURL {
+        KFImage(imageURL)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 20, height: 38)
+      }
     }
+    .frame(width: 40, height: 40)
   }
 
+  @ViewBuilder
   private var vsBadge: some View {
     Text("VS")
       .pretendardFont(family: .Bold, size: 8)

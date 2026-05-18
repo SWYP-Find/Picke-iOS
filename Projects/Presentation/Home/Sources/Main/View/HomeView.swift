@@ -65,6 +65,7 @@ extension HomeView {
       store.newBattles.isEmpty
   }
 
+  @ViewBuilder
   private func hotBattlesSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HomeSectionHeader(title: "지금 뜨는 배틀") {
@@ -83,6 +84,7 @@ extension HomeView {
     }
   }
 
+  @ViewBuilder
   private func bestBattlesSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HomeSectionHeader(title: "Best 배틀") {
@@ -99,6 +101,7 @@ extension HomeView {
     }
   }
 
+  @ViewBuilder
   private func todayPickeSection() -> some View {
     VStack(alignment: .leading, spacing: 16) {
       HomeSectionHeader(title: "오늘의 Pické") {
@@ -111,13 +114,14 @@ extension HomeView {
         if let vote = store.currentVote {
           VoteCardView(question: vote)
             .contentShape(Rectangle())
-            .onTapGesture { send(.voteTapped(vote)) }
+            .onTapGesture {  }
         }
       }
       .padding(.horizontal, 16)
     }
   }
 
+  @ViewBuilder
   private func newBattlesSection() -> some View {
     VStack(alignment: .leading, spacing: 16) {
       HomeSectionHeader(title: "새로운 배틀") {

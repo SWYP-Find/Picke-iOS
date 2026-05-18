@@ -4,7 +4,7 @@
 //
 //  Created by Wonji Suh on 5/15/26.
 //
-//  Pencil .pen `wZ4Yt` (Card/Vote) 기준으로 1:1 매핑.
+//  Pencil .pen `wZ4Yt` (Card/Vote) — Property 1=Default · Property 1=Result 두 상태.
 //
 
 import SwiftUI
@@ -12,34 +12,51 @@ import SwiftUI
 import DesignSystem
 import Entity
 
-/// "오늘의 Pické — 투표" 카드.
+/// "오늘의 Pické — 투표" 카드. 옵션 탭 시 result 모드로 전환되어
+/// 빈칸에 선택지 텍스트가 채워지고 옵션 박스 아래에 percentage bar 들이 표시된다.
 struct VoteCardView: View {
   let question: VoteQuestion
+
+  @State private var selectedIndex: Int?
+  @State private var animatedFill: Bool = false
+
+  private var isResultMode: Bool { selectedIndex != nil }
+
+  private var selectedLabel: String? {
+    guard let idx = selectedIndex else { return nil }
+    return question.options[safe: idx]?.title
+  }
 
   private let columns = [
     GridItem(.flexible(), spacing: 8),
     GridItem(.flexible(), spacing: 8),
   ]
 
+  /// API 가 결과 비율을 내려주기 전까지 사용하는 임시 mock 비율.
+  private static let mockPercentages: [Int] = [45, 25, 20, 10]
+
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
-      header
-      heading
-      grid
+      header()
+      heading()
+      grid()
+      if isResultMode {
+        resultBars()
+      }
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige700, lineWidth: 1)
+      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
     )
   }
 
-  private var header: some View {
+  @ViewBuilder
+  private func header() -> some View {
     HStack {
       Text("투표")
         .pretendardFont(family: .SemiBold, size: 14)
-        .kerning(-0.35)
         .foregroundStyle(.primary500)
         .frame(width: 35, height: 21)
         .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
@@ -52,56 +69,131 @@ struct VoteCardView: View {
     }
   }
 
-  private var heading: some View {
+  @ViewBuilder
+  private func heading() -> some View {
     VStack(spacing: 6) {
       HStack(spacing: 4) {
         Text(question.titlePrefix)
           .pretendardFont(family: .SemiBold, size: 15)
-          .kerning(-0.375)
-          .foregroundStyle(.neutral900)
+          .foregroundStyle(.neutral500)
 
-        RoundedRectangle(cornerRadius: 2)
-          .fill(.beige200)
-          .frame(width: 52, height: 24)
-          .overlay(
-            RoundedRectangle(cornerRadius: 2)
-              .stroke(.beige700, lineWidth: 1)
-          )
+        answerSlot()
 
         Text(question.titleSuffix)
           .pretendardFont(family: .SemiBold, size: 15)
-          .kerning(-0.375)
-          .foregroundStyle(.neutral900)
+          .foregroundStyle(.neutral500)
       }
 
       Text(question.summary)
         .pretendardFont(family: .Medium, size: 12)
-        .foregroundStyle(.neutral200)
+        .foregroundStyle(.neutral300)
     }
     .frame(maxWidth: .infinity)
   }
 
-  private var grid: some View {
-    LazyVGrid(columns: columns, spacing: 8) {
+  /// 빈칸: 선택 전엔 빈 placeholder, 선택 후엔 선택된 옵션 텍스트 표시.
+  @ViewBuilder
+  private func answerSlot() -> some View {
+    if let label = selectedLabel {
+      Text(label)
+        .pretendardFont(family: .SemiBold, size: 15)
+        .foregroundStyle(.primary500)
+        .frame(width: 52, height: 24)
+        .background(.beige200, in: RoundedRectangle(cornerRadius: 2))
+        .overlay(
+          RoundedRectangle(cornerRadius: 2)
+            .stroke(.primary500, lineWidth: 1)
+        )
+    } else {
+      RoundedRectangle(cornerRadius: 2)
+        .fill(.beige200)
+        .frame(width: 52, height: 24)
+        .overlay(
+          RoundedRectangle(cornerRadius: 2)
+            .stroke(.beige600, lineWidth: 1)
+        )
+    }
+  }
+
+  @ViewBuilder
+  private func grid() -> some View {
+    LazyVGrid(columns: columns, spacing: 7) {
       ForEach(Array(question.options.enumerated()), id: \.offset) { idx, option in
-        optionButton(index: idx + 1, label: option.title)
+        optionButton(index: idx, label: option.title)
       }
     }
   }
 
+  @ViewBuilder
   private func optionButton(index: Int, label: String) -> some View {
-    HStack(spacing: 2) {
-      Text("\(index).")
-        .pretendardFont(family: .SemiBold, size: 10)
-        .foregroundStyle(.secondary900)
+    let isSelected = selectedIndex == index
+
+    Button {
+      withAnimation(.easeInOut(duration: 0.2)) {
+        selectedIndex = isSelected ? nil : index
+      }
+    } label: {
       Text(label)
         .pretendardFont(family: .SemiBold, size: 13)
         .foregroundStyle(.neutral900)
+        .frame(maxWidth: .infinity, minHeight: 44)
+        .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
+        .overlay(
+          RoundedRectangle(cornerRadius: 2)
+            .stroke(isSelected ? .primary500 : .beige600, lineWidth: isSelected ? 1.5 : 1)
+        )
     }
-    .frame(maxWidth: .infinity, minHeight: 44)
-    .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
-    .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
-    )
+    .buttonStyle(.plain)
+  }
+
+  /// Result mode 옵션 박스 아래 별도 영역 — 4 row (옵션명 + bar + percentage).
+  /// .pen `Radar Wrap` 디자인을 2-column 으로 재배치.
+  @ViewBuilder
+  private func resultBars() -> some View {
+    LazyVGrid(columns: columns, spacing: 8) {
+      ForEach(Array(question.options.enumerated()), id: \.offset) { idx, option in
+        resultBarRow(
+          label: option.title,
+          percentage: Self.mockPercentages[safe: idx] ?? 0
+        )
+      }
+    }
+    .padding(.top, 4)
+    .onAppear {
+      animatedFill = false
+      withAnimation(.easeOut(duration: 0.6)) {
+        animatedFill = true
+      }
+    }
+    .onDisappear {
+      animatedFill = false
+    }
+  }
+
+  @ViewBuilder
+  private func resultBarRow(label: String, percentage: Int) -> some View {
+    HStack(spacing: 6) {
+      Text(label)
+        .pretendardFont(family: .Medium, size: 10)
+        .foregroundStyle(.neutral400)
+      ZStack(alignment: .leading) {
+        RoundedRectangle(cornerRadius: 1)
+          .fill(.secondary100)
+          .frame(width: 48, height: 4)
+        RoundedRectangle(cornerRadius: 1)
+          .fill(.secondary500)
+          .frame(width: animatedFill ? 48 * CGFloat(percentage) / 100 : 0, height: 4)
+      }
+      Spacer(minLength: 0)
+      Text("\(percentage)%")
+        .pretendardFont(family: .Bold, size: 11)
+        .foregroundStyle(.neutral500)
+    }
+  }
+}
+
+private extension Array {
+  subscript(safe index: Int) -> Element? {
+    indices.contains(index) ? self[index] : nil
   }
 }
