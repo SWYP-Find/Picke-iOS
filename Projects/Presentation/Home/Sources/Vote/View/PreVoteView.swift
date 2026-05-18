@@ -45,6 +45,7 @@ public struct PreVoteView: View {
 // MARK: - Background
 
 extension PreVoteView {
+  @ViewBuilder
   private var backgroundImage: some View {
     ZStack {
       if let urlString = store.battle.backgroundImageURL,
@@ -70,6 +71,7 @@ extension PreVoteView {
 // MARK: - Navigation bar
 
 extension PreVoteView {
+  @ViewBuilder
   private var navigationBar: some View {
     PickeNavigationBar(
       onBack: { send(.backButtonTapped) }
@@ -88,6 +90,7 @@ extension PreVoteView {
 // MARK: - Content (gradient + 카피 + 선택지 + CTA)
 
 extension PreVoteView {
+  @ViewBuilder
   private var contentArea: some View {
     VStack(spacing: 40) {
       contentSection
@@ -111,6 +114,7 @@ extension PreVoteView {
     .ignoresSafeArea(edges: .bottom)
   }
 
+  @ViewBuilder
   private var contentSection: some View {
     VStack(alignment: .leading, spacing: 12) {
       VStack(alignment: .leading, spacing: 20) {
@@ -122,6 +126,7 @@ extension PreVoteView {
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
+  @ViewBuilder
   private var tagsRow: some View {
     HStack(spacing: 9) {
       ForEach(store.battle.tags, id: \.self) { tag in
@@ -135,6 +140,7 @@ extension PreVoteView {
     }
   }
 
+  @ViewBuilder
   private var titleText: some View {
     Text("\(store.battle.titleLine1)\n\(store.battle.titleLine2)")
       .pretendardFont(family: .Bold, size: 24)
@@ -145,6 +151,7 @@ extension PreVoteView {
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 
+  @ViewBuilder
   private var summaryText: some View {
     Text(store.battle.summary)
       .pretendardFont(family: .Regular, size: 13)
@@ -158,6 +165,7 @@ extension PreVoteView {
 // MARK: - 선택지
 
 extension PreVoteView {
+  @ViewBuilder
   private var optionSection: some View {
     ZStack {
       HStack(spacing: 8) {
@@ -168,6 +176,7 @@ extension PreVoteView {
     }
   }
 
+  @ViewBuilder
   private func optionCard(_ option: PreVoteOption) -> some View {
     let isSelected = store.selectedSide == option.philosopher
 
@@ -202,6 +211,7 @@ extension PreVoteView {
     .buttonStyle(.plain)
   }
 
+  @ViewBuilder
   private func avatarView(_ philosopher: PhilosopherAvatar) -> some View {
     let asset: ImageAsset = switch philosopher {
     case .plato: .avatarPlato
@@ -216,6 +226,7 @@ extension PreVoteView {
       .background(.beige600, in: Circle())
   }
 
+  @ViewBuilder
   private var vsBadge: some View {
     Text("VS")
       .pretendardFont(family: .Bold, size: 11)
@@ -229,6 +240,7 @@ extension PreVoteView {
 // MARK: - CTA
 
 extension PreVoteView {
+  @ViewBuilder
   private var primaryButton: some View {
     CustomButton(
       action: { send(.primaryButtonTapped) },

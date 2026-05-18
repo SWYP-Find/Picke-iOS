@@ -83,6 +83,7 @@ extension MainTabView {
     ]
   }
 
+  @ViewBuilder
   private func tabLabel(for tab: TabItem) -> some View {
     Label {
       Text(tab.title)

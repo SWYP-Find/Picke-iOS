@@ -148,6 +148,55 @@ public var body: some View {
 - 한 메서드 안에서 다시 큰 블록이 생기면 더 작게 쪼개기 (재귀 적용)
 - 공통 컴포넌트는 별도 파일 (`Components/*.swift`) 로 추출
 
+#### 🧱 `@ViewBuilder` 함수 vs `var` — 자식 개수 / 분기 유무로 결정
+
+분리한 sub-view 의 선언 형태는 **자식 개수와 분기 유무** 로만 정한다.
+
+```swift
+// ✅ 다중 자식을 감싸거나 if/else · switch 분기가 있으면 `@ViewBuilder` + 함수
+@ViewBuilder
+private func hotBattlesSection() -> some View {
+  VStack(alignment: .leading, spacing: 12) {
+    HomeSectionHeader(title: "지금 뜨는 배틀") { send(.seeMoreTapped(.hotBattles)) }
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 16) {
+        ForEach(store.hotBattles) { HotBattleCardView(battle: $0) }
+      }
+    }
+  }
+}
+
+@ViewBuilder
+private func thumbnail(url: URL?) -> some View {
+  if let url {
+    KFImage(url).resizable().scaledToFill()
+  } else {
+    Color.neutral200
+  }
+}
+
+// ✅ 단일 뷰만 반환하면 `private var` 형태
+private var primaryButton: some View {
+  CustomButton(
+    action: { send(.primaryButtonTapped) },
+    title: "사전 투표하기",
+    config: CustomButtonConfig.primary(.large, height: 52),
+    isEnable: store.isPrimaryButtonEnabled
+  )
+}
+
+// ❌ 금지 — VStack 으로 자식 여러 개 감싸는데 var 만 쓰는 경우 (분기 / 동적 children 추가 시 깨짐)
+private var section: some View {
+  VStack { ... }  // → @ViewBuilder + func 으로 가야 안전
+}
+```
+
+규칙:
+- **`@ViewBuilder` + `private func`** : VStack/HStack/ZStack 등으로 **자식 ≥ 2개** 를 감싸거나 `if` / `switch` / `ForEach` 같은 분기·반복이 있을 때
+- **`private var ...: some View`** : **단일 뷰** 1개만 반환할 때 (단순 wrapping · CTA 버튼 · 단일 Image 등)
+- body 안에서 호출하는 sub-view 가 인자가 필요하면 함수, 없으면 var 가 우선 — 기준은 "자식 수 / 분기 유무" 가 먼저
+- 레퍼런스: `HomeView.hotBattlesSection`, `PreVoteView.primaryButton`, `HeroCardView.thumbnail`
+
 #### 🔤 폰트 — `.font(.system(...))` 금지, Pretendard 토큰 사용
 
 ```swift
