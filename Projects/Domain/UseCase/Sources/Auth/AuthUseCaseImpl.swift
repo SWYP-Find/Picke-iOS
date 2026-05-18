@@ -25,12 +25,14 @@ public struct AuthUseCaseImpl: AuthInterface {
   public func login(
     provider: SocialType,
     authorizationCode: String,
-    redirectUri: String
+    redirectUri: String?,
+    idToken: String?
   ) async throws -> LoginEntity {
     let result = try await authRepository.login(
       provider: provider,
       authorizationCode: authorizationCode,
-      redirectUri: redirectUri
+      redirectUri: redirectUri,
+      idToken: idToken
     )
 
     $userSession.withLock {

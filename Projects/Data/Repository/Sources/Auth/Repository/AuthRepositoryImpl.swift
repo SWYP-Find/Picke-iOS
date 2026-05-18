@@ -38,14 +38,16 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   public func login(
     provider socialProvider: SocialType,
     authorizationCode: String,
-    redirectUri: String
+    redirectUri: String?,
+    idToken: String?
   ) async throws -> LoginEntity {
     let dto: LoginResponseDTO = try await provider.request(
       .login(
         provider: socialProvider,
         body: OAuthLoginRequest(
           authorizationCode: authorizationCode,
-          redirectUri: redirectUri
+          redirectUri: redirectUri,
+          idToken: idToken
         )
       )
     )

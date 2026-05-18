@@ -14,7 +14,8 @@ public protocol AuthInterface: Sendable {
   func login(
     provider: SocialType,
     authorizationCode: String,
-    redirectUri: String
+    redirectUri: String?,
+    idToken: String?
   ) async throws -> LoginEntity
   func refresh() async throws -> AuthTokens
   func withDraw(token: String) async throws -> WithdrawEntity
