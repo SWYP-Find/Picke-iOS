@@ -85,10 +85,15 @@ public extension UnifiedOAuthUseCase {
       $0.name = userName
     }
 
+    let authCode = payload.authorizationCode ?? ""
+    AuthLocalStorage.authCode = authCode
+    AuthLocalStorage.idToken = payload.idToken
+
     let loginEntity = try await authRepository.login(
       provider: .apple,
-      authorizationCode: payload.authorizationCode ?? "",
-      redirectUri: SocialType.apple.redirectUri
+      authorizationCode: authCode,
+      redirectUri: nil,
+      idToken: payload.idToken
     )
 
     keychainManager.save(
@@ -116,7 +121,8 @@ public extension UnifiedOAuthUseCase {
     let loginEntity = try await authRepository.login(
       provider: .google,
       authorizationCode: payload.authorizationCode ?? "",
-      redirectUri: payload.redirectUri ?? SocialType.google.redirectUri
+      redirectUri: payload.redirectUri ?? SocialType.google.redirectUri,
+      idToken: nil
     )
 
     keychainManager.save(
@@ -142,7 +148,8 @@ public extension UnifiedOAuthUseCase {
     let loginEntity = try await authRepository.login(
       provider: .kakao,
       authorizationCode: payload.authorizationCode ?? "",
-      redirectUri: payload.redirectUri ?? SocialType.kakao.redirectUri
+      redirectUri: payload.redirectUri ?? SocialType.kakao.redirectUri,
+      idToken: nil
     )
 
     keychainManager.save(

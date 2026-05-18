@@ -15,7 +15,8 @@ public final class DefaultAuthRepositoryImpl: AuthInterface, @unchecked Sendable
   public func login(
     provider: SocialType,
     authorizationCode _: String,
-    redirectUri _: String
+    redirectUri _: String?,
+    idToken _: String?
   ) async throws -> LoginEntity {
     LoginEntity(
       name: "Mock User",

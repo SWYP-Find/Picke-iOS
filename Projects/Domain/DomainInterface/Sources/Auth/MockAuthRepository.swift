@@ -45,7 +45,8 @@ public final class MockAuthRepository: AuthInterface, @unchecked Sendable {
   public func login(
     provider: SocialType,
     authorizationCode _: String,
-    redirectUri _: String
+    redirectUri _: String?,
+    idToken _: String?
   ) async throws -> LoginEntity {
     loginCallCount += 1
     try await Task.sleep(for: .milliseconds(10))
