@@ -153,16 +153,14 @@ struct HeroCardView: View {
           .foregroundStyle(.neutral200)
           .lineLimit(2)
 
-        if !hero.tags.isEmpty {
-          HStack(spacing: 4) {
-            ForEach(hero.tags) { tag in
-              Text(tag.name)
-                .pretendardFont(family: .Medium, size: 11)
-                .foregroundStyle(.neutral200)
-            }
+        HStack(spacing: 4) {
+          ForEach(hero.tags) { tag in
+            Text(tag.name)
+              .pretendardFont(family: .Medium, size: 11)
+              .foregroundStyle(.neutral200)
           }
-          .padding(.top, 6)
         }
+        .padding(.top, 6)
       }
 
       Spacer()
