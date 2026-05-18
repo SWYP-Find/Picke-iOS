@@ -33,7 +33,7 @@ struct NewBattleCardView: View {
 extension NewBattleCardView {
   @ViewBuilder
   private var content: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 16) {
       container
       versusRow
     }
@@ -132,7 +132,7 @@ extension NewBattleCardView {
 
   @ViewBuilder
   private func avatar(
-    for philosopherName: String,
+    for _: String,
     imageURL: URL?
   ) -> some View {
     // .pen `Avatar/Philosopher` 매핑: 베이지 40×40 원형 배경 + 가운데 16×28 일러스트
