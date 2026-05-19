@@ -38,7 +38,8 @@ struct HeroCarouselView: View {
       }
     }
     .tabViewStyle(.page(indexDisplayMode: .never))
-    .frame(height: Self.controlHeight + Self.thumbnailHeight + Self.subjectHeight) // .pen 합: control(53) + thumbnail(167) + subject(121)
+    .frame(height: Self.controlHeight + Self.thumbnailHeight + Self
+      .subjectHeight) // .pen 합: control(53) + thumbnail(167) + subject(121)
     .background(Color.neutral800)
     .onReceive(timer) { _ in advance() }
   }
@@ -106,6 +107,7 @@ struct HeroCardView: View {
 
         if let url = hero.thumbnailURL {
           KFImage(url)
+            .placeholder { SkeletonView() }
             .resizable()
             .aspectRatio(contentMode: .fill)
             .frame(
