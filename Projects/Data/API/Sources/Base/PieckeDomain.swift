@@ -13,6 +13,7 @@ public enum PieckeDomain {
   case auth
   case profile
   case home
+  case poll
 }
 
 extension PieckeDomain: DomainType {
@@ -28,6 +29,8 @@ extension PieckeDomain: DomainType {
       return"api/v1/me/"
     case .home:
       return"api/v1/home"
+    case .poll:
+      return"api/v1/poll"
     }
   }
 }
