@@ -12,7 +12,6 @@ import Foundation
 import Kingfisher
 
 import DomainInterface
-import Foundations
 
 enum KingfisherConfigurator {
   /// 보호 이미지 (picke 백엔드 `/api/v1/resources/...`) 에만 Bearer 토큰을 첨부한다.
