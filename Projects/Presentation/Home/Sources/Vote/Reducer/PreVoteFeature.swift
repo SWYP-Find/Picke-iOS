@@ -167,11 +167,41 @@ extension PreVoteFeature {
       switch result {
       case let .success(poll):
         state.poll = poll
+        state.battle = makeBattle(from: poll, fallback: state.battle)
       case let .failure(error):
         Log.error("[PreVoteFeature] fetchPoll failed: \(error.localizedDescription)")
       }
       return .none
     }
+  }
+
+  /// API 로 받은 PollDetail 을 화면 모델 PreVoteBattle 로 매핑.
+  /// background/summary/tags 는 응답에 없으므로 fallback (이전 state.battle) 값을 유지한다.
+  /// 옵션은 displayOrder 순으로 앞에서부터 2개만 좌/우 카드에 매핑.
+  private func makeBattle(
+    from poll: PollDetail,
+    fallback: PreVoteBattle
+  ) -> PreVoteBattle {
+    let philosophers: [PhilosopherAvatar] = [.plato, .sartre, .sunja]
+    let mapped = poll.options.enumerated().map { idx, option in
+      PreVoteOption(
+        philosopher: philosophers[safe: idx] ?? .plato,
+        stance: option.title
+      )
+    }
+    let leftOption = mapped[safe: 0] ?? fallback.leftOption
+    let rightOption = mapped[safe: 1] ?? fallback.rightOption
+
+    return PreVoteBattle(
+      battleId: poll.pollId,
+      backgroundImageURL: fallback.backgroundImageURL,
+      tags: fallback.tags,
+      titleLine1: poll.titlePrefix,
+      titleLine2: poll.titleSuffix,
+      summary: fallback.summary,
+      leftOption: leftOption,
+      rightOption: rightOption
+    )
   }
 
   private func handleDelegateAction(
@@ -182,5 +212,11 @@ extension PreVoteFeature {
     case .dismiss, .submit:
       .none
     }
+  }
+}
+
+private extension Array {
+  subscript(safe index: Int) -> Element? {
+    indices.contains(index) ? self[index] : nil
   }
 }
