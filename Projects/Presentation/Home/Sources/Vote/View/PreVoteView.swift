@@ -21,6 +21,31 @@ public struct PreVoteView: View {
   }
 
   public var body: some View {
+    Group {
+      if shouldShowSkeleton {
+        PreVoteSkeletonView()
+      } else {
+        loadedContent
+      }
+    }
+    .background(Color.beige50.ignoresSafeArea())
+    .navigationBarHidden(true)
+    .toolbar(.hidden, for: .navigationBar)
+    .toolbar(.hidden, for: .tabBar)
+    .onAppear { send(.onAppear) }
+    .sheet(item: $store.shareItem) { item in
+      ShareSheet(items: item.items)
+        .presentationDetents([.fraction(0.6)])
+        .toolbar(.hidden, for: .navigationBar)
+    }
+  }
+
+  private var shouldShowSkeleton: Bool {
+    store.isLoading && store.poll == nil
+  }
+
+  @ViewBuilder
+  private var loadedContent: some View {
     ZStack(alignment: .top) {
       backgroundImage
 
@@ -29,15 +54,6 @@ public struct PreVoteView: View {
         Spacer(minLength: 0)
         contentArea
       }
-    }
-    .background(Color.beige50.ignoresSafeArea())
-    .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
-    .sheet(item: $store.shareItem) { item in
-      ShareSheet(items: item.items)
-        .presentationDetents([.fraction(0.6)])
-        .toolbar(.hidden, for: .navigationBar)
     }
   }
 }
@@ -52,7 +68,7 @@ extension PreVoteView {
          let url = URL(string: urlString)
       {
         KFImage(url)
-          .placeholder { Color.neutral200 }
+          .placeholder { SkeletonView() }
           .resizable()
           .scaledToFill()
       } else {
