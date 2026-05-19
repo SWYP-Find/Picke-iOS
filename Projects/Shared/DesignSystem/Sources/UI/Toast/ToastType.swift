@@ -28,15 +28,15 @@ public enum ToastType: Equatable {
   public var backgroundColor: Color {
     switch self {
     case .success:
-      return .neutral50
+      return .gray50
     case .error:
-      return .neutral50
+      return .gray50
     case .warning:
-      return .neutral50
+      return .gray50
     case .info:
-      return .neutral50
+      return .gray50
     case .loading:
-      return .neutral50
+      return .gray50
     }
   }
   
