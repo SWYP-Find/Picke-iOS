@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
 //
 //  TokenGenerator.swift
-//  Reads Mode 1.tokens.json and emits Swift token files.
+//  Reads {primitive,semantic,component}.json (Tokens Studio format) and emits Swift token files.
 //  Run from repo root:  swift Tools/TokenGenerator.swift
 //
 
@@ -10,67 +10,108 @@ import Foundation
 // MARK: - Paths
 
 let cwd = FileManager.default.currentDirectoryPath
-let jsonURL = URL(fileURLWithPath: "\(cwd)/Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json")
+let resourcesDir = "\(cwd)/Projects/Shared/DesignSystem/Resources"
+let primitiveURL = URL(fileURLWithPath: "\(resourcesDir)/primitive.json")
+let semanticURL = URL(fileURLWithPath: "\(resourcesDir)/semantic.json")
+let componentURL = URL(fileURLWithPath: "\(resourcesDir)/component.json")
+
 let sourcesDir = "\(cwd)/Projects/Shared/DesignSystem/Sources"
 let colorOut = "\(sourcesDir)/Color/ShapeStyle+.swift"
 let cgfloatDir = "\(sourcesDir)/Extension/CGFloat"
 let radiusOut = "\(cgfloatDir)/CGFloat+Radius+.swift"
 let spacingOut = "\(cgfloatDir)/CGFloat+Spacing+.swift"
-let componentOut = "\(sourcesDir)/UI/Token/ComponentToken.swift" // legacy nested file (deleted at end)
 let componentNumberOut = "\(cgfloatDir)/CGFloat+Component+.swift"
+let componentTokenOut = "\(sourcesDir)/UI/Token/ComponentToken.swift"
+
 try? FileManager.default.createDirectory(atPath: "\(sourcesDir)/UI/Token", withIntermediateDirectories: true)
 try? FileManager.default.createDirectory(atPath: cgfloatDir, withIntermediateDirectories: true)
 
-let data: Data
-do {
-  data = try Data(contentsOf: jsonURL)
-} catch {
-  fputs("[token-gen] cannot read JSON: \(jsonURL.path)\n", stderr)
-  exit(1)
-}
+// MARK: - Loading
 
-guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-  fputs("[token-gen] invalid JSON root\n", stderr); exit(1)
-}
-
-// MARK: - Helpers
-
-func valueOf(_ any: Any) -> Any? {
-  (any as? [String: Any])?["$value"]
-}
-
-func hexAlpha(_ value: Any) -> (hex: String, alpha: Double)? {
-  guard let d = value as? [String: Any], let hex = d["hex"] as? String else { return nil }
-  let raw = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
-  let a = (d["alpha"] as? Double) ?? 1.0
-  return (raw.uppercased(), a)
-}
-
-func aliasToSwiftName(_ alias: String) -> String? {
-  var s = alias
-  if s.hasPrefix("{"), s.hasSuffix("}") { s = String(s.dropFirst().dropLast()) }
-  let p = s.split(separator: ".").map(String.init)
-  if p.count >= 4, p[0] == "Colors", p[1] == "brand" {
-    if p.count == 5, p[3] == "Alpha" { return "\(p[2])Alpha\(p[4])" }
-    return "\(p[2])\(p[3])"
+func loadJSON(_ url: URL) -> [String: Any] {
+  guard let data = try? Data(contentsOf: url),
+        let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+  else {
+    fputs("[token-gen] cannot read \(url.path)\n", stderr)
+    exit(1)
   }
-  if p.count >= 5, p[0] == "Colors", p[1] == "semantic", p[2] == "status" {
-    let bucket = p[3].prefix(1).uppercased() + p[3].dropFirst()
-    let leaf = p[4]
-    return leaf == "Alpha" ? "status\(bucket)Alpha" : "status\(bucket)"
+  return obj
+}
+
+let primitive = loadJSON(primitiveURL)
+let semantic = loadJSON(semanticURL)
+let component = loadJSON(componentURL)
+
+// MARK: - Registry & reference resolution
+
+typealias TokenNode = [String: Any]
+typealias Registry = [String: TokenNode]
+
+/// Flattens a token tree by dotted path. Leaves are `{$type, $value, ...}` dicts.
+func flatten(_ tree: [String: Any], path: [String], into registry: inout Registry) {
+  for (key, value) in tree {
+    guard let dict = value as? [String: Any] else { continue }
+    let newPath = path + [key]
+    if dict["$type"] != nil, dict["$value"] != nil {
+      registry[newPath.joined(separator: ".")] = dict
+    } else {
+      flatten(dict, path: newPath, into: &registry)
+    }
   }
-  if p.count == 4, p[0] == "Colors", p[1] == "semantic" {
-    let key = p[2]
-    let prefix = (key == "background") ? "bg" : key
-    return "\(prefix)\(capitalizeFirst(p[3]))"
+}
+
+var registry: Registry = [:]
+flatten(primitive, path: [], into: &registry)
+flatten(semantic, path: [], into: &registry)
+flatten(component, path: [], into: &registry)
+
+/// `"{primary.500}"` → `"primary.500"`. Nil for non-references.
+func referencePath(_ s: String) -> String? {
+  guard s.hasPrefix("{"), s.hasSuffix("}") else { return nil }
+  return String(s.dropFirst().dropLast())
+}
+
+/// Recursively resolves a `$value`, following `{...}` references until a literal is reached.
+/// Returns nil only on cycle.
+func resolveValue(_ value: Any, visited: Set<String> = []) -> Any? {
+  if let s = value as? String, let ref = referencePath(s) {
+    if visited.contains(ref) { return nil }
+    guard let node = registry[ref], let nested = node["$value"] else { return s }
+    return resolveValue(nested, visited: visited.union([ref]))
+  }
+  return value
+}
+
+/// Resolves to Double for number/spacing/sizing/borderRadius/borderWidth/fontSizes.
+func resolveNumber(_ value: Any) -> Double? {
+  let resolved = resolveValue(value) ?? value
+  if let n = resolved as? Double { return n }
+  if let n = resolved as? Int { return Double(n) }
+  if let s = resolved as? String, let n = Double(s) { return n }
+  return nil
+}
+
+/// Resolves to a hex color `(uppercase, no '#')` plus alpha. Handles `#RRGGBB` and `rgba(r,g,b,a)`.
+func resolveHex(_ value: Any) -> (hex: String, alpha: Double)? {
+  let resolved = resolveValue(value) ?? value
+  guard let s = resolved as? String else { return nil }
+  if s.hasPrefix("#") {
+    return (String(s.dropFirst()).uppercased(), 1.0)
+  }
+  if s.hasPrefix("rgba(") {
+    let inner = s.replacingOccurrences(of: "rgba(", with: "").replacingOccurrences(of: ")", with: "")
+    let parts = inner.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    if parts.count == 4,
+       let r = Double(parts[0]), let g = Double(parts[1]), let b = Double(parts[2]), let a = Double(parts[3])
+    {
+      let hex = String(format: "%02X%02X%02X", Int(r), Int(g), Int(b))
+      return (hex, a)
+    }
   }
   return nil
 }
 
-// 'Primary200' → 'primary200' / 'BorderError' → 'borderError'
-func lowerFirst(_ s: String) -> String {
-  s.prefix(1).lowercased() + s.dropFirst()
-}
+// MARK: - Naming helpers
 
 let swiftKeywords: Set<String> = [
   "default", "case", "enum", "class", "struct", "var", "let", "func", "init",
@@ -84,123 +125,24 @@ func swiftKey(_ s: String) -> String {
   swiftKeywords.contains(s) ? "`\(s)`" : s
 }
 
-// hex→Swift 변수명 인덱스 (alpha=1 brand/semantic만). Component이 inline hex로 export 됐을 때 fallback 매칭용.
-var hexIndex: [String: String] = [:]
-var knownColorNames: Set<String> = []
-
-func resolveComponentColor(_ node: [String: Any]) -> String? {
-  if let str = node["$value"] as? String, let name = aliasToSwiftName(str) {
-    return ".\(name)"
-  }
-  if let v = node["$value"] as? [String: Any], let hex = v["hex"] as? String {
-    let raw = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
-    let normalized = raw.uppercased()
-    let alpha = (v["alpha"] as? Double) ?? 1.0
-    // 1) aliasData.targetVariableName — 우리 토큰셋에 존재할 때만 사용
-    if let exts = node["$extensions"] as? [String: Any],
-       let alias = exts["com.figma.aliasData"] as? [String: Any],
-       let target = alias["targetVariableName"] as? String, !target.isEmpty
-    {
-      let camel = lowerFirst(target)
-      if knownColorNames.contains(camel) { return ".\(camel)" }
-    }
-    // 2) hex 매칭 — 같은 hex의 brand/semantic 변수가 있으면 그쪽으로 묶기
-    if alpha >= 1.0, let matched = hexIndex[normalized] {
-      return ".\(matched)"
-    }
-    // 3) fallback: inline hex
-    return colorBody(hex: normalized, alpha: alpha)
-  }
-  return nil
-}
-
-func resolveComponentNumber(_ node: [String: Any]) -> String? {
-  if let str = node["$value"] as? String {
-    var s = str
-    if s.hasPrefix("{"), s.hasSuffix("}") { s = String(s.dropFirst().dropLast()) }
-    let p = s.split(separator: ".").map(String.init)
-    if p.count == 2, p[0] == "Radius" { return ".\(swiftKey(p[1]))" }
-  }
-  if let n = node["$value"] as? Double { return formatNumber(n) }
-  return nil
-}
-
-// Component subtree 를 flat path 로 풀어 ShapeStyle / CGFloat 확장에 직접 추가한다.
-//   Component.button.primary.background.default → buttonPrimaryBackgroundDefault
-//   Component.button.radius                     → buttonRadius
-func walkComponentFlat(
-  _ node: [String: Any],
-  pathPrefix: [String],
-  colorLines: inout [String],
-  numberLines: inout [String]
-) {
-  let keys = node.keys.sorted()
-  let leafKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] != nil }
-  let groupKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] == nil }
-  for key in leafKeys {
-    guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
-    let propName = flatPropertyName(pathPrefix + [key])
-    switch type {
-    case "color":
-      if let expr = resolveComponentColor(child) {
-        colorLines.append("  static var \(propName): Color { \(expr) }")
-      }
-    case "number":
-      if let expr = resolveComponentNumber(child) {
-        numberLines.append("  static let \(propName): CGFloat = \(expr)")
-      }
-    default: continue
-    }
-  }
-  for key in groupKeys {
-    guard let child = node[key] as? [String: Any] else { continue }
-    walkComponentFlat(child, pathPrefix: pathPrefix + [key], colorLines: &colorLines, numberLines: &numberLines)
-  }
-}
-
-// Component subtree 의 nested ComponentToken enum. 값은 flat 정의를 forwarding 하므로
-// source of truth 는 항상 ShapeStyle / CGFloat 확장 한 곳.
-//   public static var `default`: Color { .buttonPrimaryBackgroundDefault }
-func walkComponentNested(
-  _ node: [String: Any],
-  pathPrefix: [String],
-  indent: String,
-  out: inout [String]
-) {
-  let keys = node.keys.sorted()
-  let leafKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] != nil }
-  let groupKeys = keys.filter { (node[$0] as? [String: Any])?["$type"] == nil }
-  for key in leafKeys {
-    guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
-    let flatName = flatPropertyName(pathPrefix + [key])
-    switch type {
-    case "color":
-      out.append("\(indent)public static var \(swiftKey(key)): Color { .\(flatName) }")
-    case "number":
-      out.append("\(indent)public static var \(swiftKey(key)): CGFloat { .\(flatName) }")
-    default: continue
-    }
-  }
-  for (i, key) in groupKeys.enumerated() {
-    guard let child = node[key] as? [String: Any] else { continue }
-    if i == 0, !leafKeys.isEmpty { out.append("") }
-    if i > 0 { out.append("") }
-    out.append("\(indent)public enum \(capitalizeFirst(key)) {")
-    walkComponentNested(child, pathPrefix: pathPrefix + [key], indent: indent + "  ", out: &out)
-    out.append("\(indent)}")
-  }
-}
-
-// ["button", "primary", "background", "default"] → "buttonPrimaryBackgroundDefault"
-func flatPropertyName(_ segs: [String]) -> String {
-  guard let first = segs.first else { return "" }
-  let head = first.prefix(1).lowercased() + first.dropFirst()
-  let tail = segs.dropFirst().map(capitalizeFirst).joined()
-  return swiftKey(head + tail)
-}
-
 func capitalizeFirst(_ s: String) -> String {
   s.prefix(1).uppercased() + s.dropFirst()
+}
+
+func lowerFirst(_ s: String) -> String {
+  s.prefix(1).lowercased() + s.dropFirst()
+}
+
+/// `"radius-default"` / `"font-weight-bold"` → `["radius", "default"]` / `["font", "weight", "bold"]`.
+/// Also handles known typos like `"spscing-12"` → `["spscing", "12"]` (preserved verbatim).
+func splitDashed(_ s: String) -> [String] { s.split(separator: "-").map(String.init) }
+
+/// `["gap", "0"]` → `"gap0"`, `["padding", "container", "8"]` → `"paddingContainer8"`.
+func camelCase(_ segs: [String]) -> String {
+  guard let first = segs.first else { return "" }
+  let head = lowerFirst(first)
+  let tail = segs.dropFirst().map(capitalizeFirst).joined()
+  return swiftKey(head + tail)
 }
 
 func formatNumber(_ d: Double) -> String {
@@ -220,150 +162,271 @@ func writeFile(_ path: String, _ contents: String) throws {
 
 let header = """
 // AUTO-GENERATED by Tools/TokenGenerator.swift — DO NOT EDIT
-// Source: Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
+// Source: Projects/Shared/DesignSystem/Resources/{primitive,semantic,component}.json
 """
 
-// MARK: - Colors
+// MARK: - Color emission
 
-let colors = json["Colors"] as! [String: Any]
-let brand = colors["brand"] as! [String: Any]
-let semantic = colors["semantic"] as! [String: Any]
-let scales = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"]
-let brandGroups = ["primary", "secondary", "beige", "neutral"]
+/// Tracks emitted color symbols so downstream emissions can prefer aliases over inline hex.
+var hexToColorName: [String: String] = [:]
 
-var lines: [String] = [header, "", "import SwiftUI", "", "public extension ShapeStyle where Self == Color {", ""]
-
-// brand
-for group in brandGroups {
-  guard let g = brand[group] as? [String: Any] else { continue }
-  lines.append("  // MARK: - Brand / \(capitalizeFirst(group))")
-  for s in scales {
-    if let node = g[s] as? [String: Any], let v = valueOf(node), let h = hexAlpha(v) {
-      let name = "\(group)\(s)"
-      lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
-      knownColorNames.insert(name)
-      if h.alpha >= 1.0 { hexIndex[h.hex] = name }
-    }
+func emitColor(name: String, value: Any, into lines: inout [String]) {
+  guard let parts = resolveHex(value) else { return }
+  if parts.alpha >= 1.0, let existing = hexToColorName[parts.hex] {
+    lines.append("  static var \(name): Color { .\(existing) }")
+  } else {
+    lines.append("  static var \(name): Color { \(colorBody(hex: parts.hex, alpha: parts.alpha)) }")
+    if parts.alpha >= 1.0 { hexToColorName[parts.hex] = name }
   }
-  if let alpha = g["Alpha"] as? [String: Any] {
-    for (k, v) in alpha.sorted(by: { $0.key < $1.key }) {
-      if let node = v as? [String: Any], let val = valueOf(node), let h = hexAlpha(val) {
-        let name = "\(group)Alpha\(k)"
-        lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
-        knownColorNames.insert(name)
-      }
-    }
-  }
-  lines.append("")
 }
 
-// semantic prefixed groups
-let semGroups: [(jsonKey: String, swiftPrefix: String)] = [
+var colorLines: [String] = [header, "", "import SwiftUI", "", "public extension ShapeStyle where Self == Color {", ""]
+
+// Primitive color scales: primary / secondary / beige / gray (50..900)
+let primitiveColorGroups = ["primary", "secondary", "beige", "gray"]
+let scales = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900"]
+for group in primitiveColorGroups {
+  guard let g = primitive[group] as? [String: Any] else { continue }
+  colorLines.append("  // MARK: - Primitive / \(capitalizeFirst(group))")
+  for s in scales {
+    guard let node = g[s] as? [String: Any], let v = node["$value"] else { continue }
+    emitColor(name: "\(group)\(s)", value: v, into: &colorLines)
+  }
+  colorLines.append("")
+}
+
+// Primitive status colors (error / warning, including alpha variants — typo "slpha" normalized).
+colorLines.append("  // MARK: - Primitive / Status")
+for bucket in ["error", "warning"] {
+  guard let b = primitive[bucket] as? [String: Any] else { continue }
+  for (rawKey, value) in b.sorted(by: { $0.key < $1.key }) {
+    guard let node = value as? [String: Any], let v = node["$value"] else { continue }
+    let key = (rawKey == "slpha") ? "alpha" : rawKey
+    emitColor(name: camelCase([bucket, key]), value: v, into: &colorLines)
+  }
+}
+
+colorLines.append("")
+
+// Semantic colors — flat names walked from the tree.
+func walkColorLeaves(
+  _ node: [String: Any],
+  path: [String],
+  emit: (_ flatName: String, _ value: Any) -> Void
+) {
+  for (key, value) in node.sorted(by: { $0.key < $1.key }) {
+    guard let dict = value as? [String: Any] else { continue }
+    if let type = dict["$type"] as? String, let val = dict["$value"] {
+      if type == "color" {
+        emit(camelCase(path + [key]), val)
+      }
+    } else {
+      walkColorLeaves(dict, path: path + [key], emit: emit)
+    }
+  }
+}
+
+let semanticColorRoots: [(jsonKey: String, prefix: String)] = [
+  ("background", "bg"),
   ("text", "text"),
   ("border", "border"),
   ("surface", "surface"),
-  ("background", "bg"),
+  ("action", "action"),
+  ("icon", "icon"),
 ]
-for (key, prefix) in semGroups {
-  guard let group = semantic[key] as? [String: Any] else { continue }
-  lines.append("  // MARK: - Semantic / \(capitalizeFirst(key))")
-  for (rawName, val) in group.sorted(by: { $0.key < $1.key }) {
-    guard let node = val as? [String: Any], let v = valueOf(node) else { continue }
-    let name = "\(prefix)\(capitalizeFirst(rawName))"
-    if let h = hexAlpha(v) {
-      lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
-      if h.alpha >= 1.0 { hexIndex[h.hex] = name }
-    } else if let aliasStr = v as? String, let target = aliasToSwiftName(aliasStr) {
-      lines.append("  static var \(name): Color { .\(target) }")
-    }
-    knownColorNames.insert(name)
+for (root, prefix) in semanticColorRoots {
+  guard let group = semantic[root] as? [String: Any] else { continue }
+  colorLines.append("  // MARK: - Semantic / \(capitalizeFirst(root))")
+  walkColorLeaves(group, path: [prefix]) { name, val in
+    emitColor(name: name, value: val, into: &colorLines)
   }
-  lines.append("")
+  colorLines.append("")
 }
 
-// status nested (status.error.error / status.error.Alpha / status.warning.warning / status.warning.Alpha)
-if let status = semantic["status"] as? [String: Any] {
-  lines.append("  // MARK: - Semantic / Status")
-  for bucket in ["error", "warning"] {
-    guard let b = status[bucket] as? [String: Any] else { continue }
-    for (k, v) in b.sorted(by: { $0.key < $1.key }) {
-      guard let node = v as? [String: Any], let val = valueOf(node), let h = hexAlpha(val) else { continue }
-      let bucketCap = capitalizeFirst(bucket)
-      let name = (k == "Alpha") ? "status\(bucketCap)Alpha" : "status\(bucketCap)"
-      lines.append("  static var \(name): Color { \(colorBody(hex: h.hex, alpha: h.alpha)) }")
-      knownColorNames.insert(name)
-      if h.alpha >= 1.0 { hexIndex[h.hex] = name }
+// Component colors — flat.
+colorLines.append("  // MARK: - Component")
+var componentNumberEntries: [(name: String, value: String)] = []
+
+func walkComponent(_ node: [String: Any], path: [String]) {
+  for (key, value) in node.sorted(by: { $0.key < $1.key }) {
+    guard let dict = value as? [String: Any] else { continue }
+    if let type = dict["$type"] as? String, let val = dict["$value"] {
+      let name = camelCase(path + [key])
+      switch type {
+      case "color":
+        emitColor(name: name, value: val, into: &colorLines)
+      case "sizing", "spacing", "borderRadius", "borderWidth", "number":
+        if let n = resolveNumber(val) {
+          componentNumberEntries.append((name, formatNumber(n)))
+        }
+      default:
+        break
+      }
+    } else {
+      walkComponent(dict, path: path + [key])
     }
   }
 }
 
-// Component colors — flat ShapeStyle 확장에 직접 합쳐 ComponentToken 중첩 enum 을 폐기.
-let component = json["Component"] as! [String: Any]
-var componentColorLines: [String] = []
-var componentNumberLines: [String] = []
-walkComponentFlat(component, pathPrefix: [], colorLines: &componentColorLines, numberLines: &componentNumberLines)
-if !componentColorLines.isEmpty {
-  lines.append("  // MARK: - Component")
-  lines.append(contentsOf: componentColorLines)
-  lines.append("")
+walkComponent(component, path: [])
+
+colorLines.append("}")
+colorLines.append("")
+try writeFile(colorOut, colorLines.joined(separator: "\n"))
+
+// MARK: - Spacing (primitive + semantic gap/padding/border-width)
+
+var spacingLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
+
+// Primitive spacing-N (note: source has typo "spscing-12" — emit canonical s12 from its resolved value).
+spacingLines.append("  // MARK: - Primitive Spacing")
+var spacingPairs: [(value: Int, line: String)] = []
+for (key, value) in primitive {
+  guard key.hasPrefix("spacing-") || key.hasPrefix("spscing-") else { continue }
+  guard let node = value as? [String: Any],
+        let v = node["$value"],
+        let n = resolveNumber(v) else { continue }
+  let suffix = key.replacingOccurrences(of: "spacing-", with: "").replacingOccurrences(of: "spscing-", with: "")
+  guard let intVal = Int(suffix) else { continue }
+  spacingPairs.append((intVal, "  static let s\(intVal): CGFloat = \(formatNumber(n))"))
 }
 
-lines.append("}")
-lines.append("")
-try writeFile(colorOut, lines.joined(separator: "\n"))
+for (_, line) in spacingPairs.sorted(by: { $0.value < $1.value }) {
+  spacingLines.append(line)
+}
+
+spacingLines.append("")
+
+// Primitive sizing (icon / avatar / control).
+spacingLines.append("  // MARK: - Primitive Sizing")
+for group in ["icon", "avatar", "control"] {
+  guard let g = primitive[group] as? [String: Any] else { continue }
+  for (sizeKey, value) in g.sorted(by: { $0.key < $1.key }) {
+    guard let node = value as? [String: Any], let v = node["$value"], let n = resolveNumber(v) else { continue }
+    spacingLines.append("  static let \(camelCase([group, sizeKey])): CGFloat = \(formatNumber(n))")
+  }
+}
+
+spacingLines.append("")
+
+// Semantic gap.
+if let gap = semantic["gap"] as? [String: Any] {
+  spacingLines.append("  // MARK: - Semantic Gap")
+  var gapPairs: [(Int, String)] = []
+  for (key, value) in gap {
+    guard let node = value as? [String: Any], let v = node["$value"], let n = resolveNumber(v),
+          let intKey = Int(key) else { continue }
+    gapPairs.append((intKey, "  static let gap\(intKey): CGFloat = \(formatNumber(n))"))
+  }
+  for (_, line) in gapPairs.sorted(by: { $0.0 < $1.0 }) {
+    spacingLines.append(line)
+  }
+  spacingLines.append("")
+}
+
+// Semantic padding.
+if let padding = semantic["padding"] as? [String: Any] {
+  spacingLines.append("  // MARK: - Semantic Padding")
+  var paddingLines: [String] = []
+  walkColorLeaves(padding, path: ["padding"]) { _, _ in } // unused, just to keep walker available
+  func walkPadding(_ node: [String: Any], path: [String]) {
+    for (key, value) in node.sorted(by: { $0.key < $1.key }) {
+      guard let dict = value as? [String: Any] else { continue }
+      if let type = dict["$type"] as? String, let val = dict["$value"] {
+        if type == "spacing", let n = resolveNumber(val) {
+          paddingLines.append("  static let \(camelCase(path + [key])): CGFloat = \(formatNumber(n))")
+        }
+      } else {
+        walkPadding(dict, path: path + [key])
+      }
+    }
+  }
+  walkPadding(padding, path: ["padding"])
+  spacingLines.append(contentsOf: paddingLines)
+  spacingLines.append("")
+}
+
+// Semantic border-width-{regular,medium,large}.
+spacingLines.append("  // MARK: - Semantic Border Width")
+for variant in ["regular", "medium", "large"] {
+  let key = "border-width-\(variant)"
+  guard let node = semantic[key] as? [String: Any], let v = node["$value"], let n = resolveNumber(v) else { continue }
+  spacingLines.append("  static let \(camelCase(["border", "width", variant])): CGFloat = \(formatNumber(n))")
+}
+
+spacingLines.append("}")
+spacingLines.append("")
+try writeFile(spacingOut, spacingLines.joined(separator: "\n"))
 
 // MARK: - Radius
 
-let radius = json["Radius"] as! [String: Any]
-let radiusOrder = ["none", "default", "full"]
-var rLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
-rLines.append("  // MARK: - Radius")
-for k in radiusOrder {
-  guard let node = radius[k] as? [String: Any], let v = valueOf(node), let n = v as? Double else { continue }
-  let safe = (k == "default") ? "`default`" : k
-  rLines.append("  static let \(safe): CGFloat = \(formatNumber(n))")
+var radiusLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
+radiusLines.append("  // MARK: - Radius")
+for key in ["radius-default", "radius-max"] {
+  guard let node = semantic[key] as? [String: Any], let v = node["$value"], let n = resolveNumber(v) else { continue }
+  let suffix = key.replacingOccurrences(of: "radius-", with: "")
+  radiusLines.append("  static let \(camelCase(["radius", suffix])): CGFloat = \(formatNumber(n))")
 }
 
-rLines.append("}")
-rLines.append("")
-try writeFile(radiusOut, rLines.joined(separator: "\n"))
+radiusLines.append("}")
+radiusLines.append("")
+try writeFile(radiusOut, radiusLines.joined(separator: "\n"))
 
-// MARK: - Spacing
+// MARK: - Component numerics (flat)
 
-let spacing = json["Spacing"] as! [String: Any]
-let spacingKeys = spacing.keys.compactMap(Int.init).sorted()
-var sLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
-sLines.append("  // MARK: - Spacing")
-for k in spacingKeys {
-  guard let node = spacing[String(k)] as? [String: Any], let v = valueOf(node), let n = v as? Double else { continue }
-  sLines.append("  static let s\(k): CGFloat = \(formatNumber(n))")
+if !componentNumberEntries.isEmpty {
+  var cnLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
+  cnLines.append("  // MARK: - Component")
+  for entry in componentNumberEntries.sorted(by: { $0.name < $1.name }) {
+    cnLines.append("  static let \(entry.name): CGFloat = \(entry.value)")
+  }
+  cnLines.append("}")
+  cnLines.append("")
+  try writeFile(componentNumberOut, cnLines.joined(separator: "\n"))
 }
 
-sLines.append("}")
-sLines.append("")
-try writeFile(spacingOut, sLines.joined(separator: "\n"))
+// MARK: - ComponentToken (nested forwarding enum)
 
-// MARK: - Component (numbers)
-
-// 색상은 위에서 ShapeStyle+.swift 에 이미 추가됨. 숫자만 CGFloat 확장으로 별도 출력.
-
-if !componentNumberLines.isEmpty {
-  var cLines: [String] = [header, "", "import CoreGraphics", "", "public extension CGFloat {", ""]
-  cLines.append("  // MARK: - Component")
-  cLines.append(contentsOf: componentNumberLines)
-  cLines.append("}")
-  cLines.append("")
-  try writeFile(componentNumberOut, cLines.joined(separator: "\n"))
+func walkComponentNested(
+  _ node: [String: Any],
+  path: [String],
+  indent: String,
+  out: inout [String]
+) {
+  let leafKeys = node.keys.sorted().filter {
+    guard let d = node[$0] as? [String: Any] else { return false }
+    return d["$type"] != nil
+  }
+  let groupKeys = node.keys.sorted().filter {
+    guard let d = node[$0] as? [String: Any] else { return false }
+    return d["$type"] == nil
+  }
+  for key in leafKeys {
+    guard let child = node[key] as? [String: Any], let type = child["$type"] as? String else { continue }
+    let flat = camelCase(path + [key])
+    switch type {
+    case "color":
+      out.append("\(indent)public static var \(swiftKey(key)): Color { .\(flat) }")
+    case "sizing", "spacing", "borderRadius", "borderWidth", "number":
+      out.append("\(indent)public static var \(swiftKey(key)): CGFloat { .\(flat) }")
+    default:
+      continue
+    }
+  }
+  for (i, key) in groupKeys.enumerated() {
+    guard let child = node[key] as? [String: Any] else { continue }
+    if i == 0, !leafKeys.isEmpty { out.append("") }
+    if i > 0 { out.append("") }
+    out.append("\(indent)public enum \(capitalizeFirst(key)) {")
+    walkComponentNested(child, path: path + [key], indent: indent + "  ", out: &out)
+    out.append("\(indent)}")
+  }
 }
 
-// MARK: - Component (nested ComponentToken)
-
-// flat ShapeStyle / CGFloat 확장을 forwarding 하는 구조적 접근용 enum.
-// 그룹 단위 캡처/자동완성 탐색에 사용. 값의 source of truth 는 flat 정의 한 곳.
 var ctLines: [String] = [header, "", "import SwiftUI", "", "public enum ComponentToken {"]
-walkComponentNested(component, pathPrefix: [], indent: "  ", out: &ctLines)
+walkComponentNested(component, path: [], indent: "  ", out: &ctLines)
 ctLines.append("}")
 ctLines.append("")
-try writeFile(componentOut, ctLines.joined(separator: "\n"))
+try writeFile(componentTokenOut, ctLines.joined(separator: "\n"))
 
 print("[token-gen] done.")
