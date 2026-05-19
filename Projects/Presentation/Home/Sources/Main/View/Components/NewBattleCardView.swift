@@ -161,13 +161,3 @@ extension NewBattleCardView {
       .overlay(Circle().stroke(.beige50, lineWidth: 1.5))
   }
 }
-
-private extension PhilosopherAvatar {
-  var imageAsset: ImageAsset {
-    switch self {
-    case .plato: .avatarPlato
-    case .sartre: .avatarSartre
-    case .sunja: .avatarSunja
-    }
-  }
-}

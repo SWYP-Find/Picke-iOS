@@ -30,7 +30,8 @@ struct HeroCarouselView: View {
         HeroCardView(
           hero: hero,
           position: index + 1,
-          total: heroes.count
+          total: heroes.count,
+          thumbnailHeight: Self.thumbnailHeight
         )
         .contentShape(Rectangle())
         .onTapGesture { onTap(hero) }
@@ -57,8 +58,7 @@ struct HeroCardView: View {
   let hero: HeroBattle
   let position: Int
   let total: Int
-
-  private let thumbnailHeight: CGFloat = 220
+  let thumbnailHeight: CGFloat
 
   var body: some View {
     VStack(spacing: 0) {
