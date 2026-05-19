@@ -23,7 +23,7 @@ public class CustomButtonConfig: PickeCustomButtonConfig {
   ) -> PickeCustomButtonConfig {
     let variant: CTAButtonVariant = .primary
     return PickeCustomButtonConfig(
-      cornerRadius: .default,
+      cornerRadius: .radiusDefault,
       enableFontColor: variant.foregroundColor(isEnabled: true),
       enableBackgroundColor: variant.backgroundColor(isEnabled: true),
       frameHeight: height ?? size.height,
