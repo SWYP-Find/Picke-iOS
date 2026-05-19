@@ -227,15 +227,8 @@ extension PreVoteView {
     .buttonStyle(.plain)
   }
 
-  @ViewBuilder
   private func avatarView(_ philosopher: PhilosopherAvatar) -> some View {
-    let asset: ImageAsset = switch philosopher {
-    case .plato: .avatarPlato
-    case .sartre: .avatarSartre
-    case .sunja: .avatarSunja
-    }
-
-    return Image(asset: asset)
+    Image(asset: philosopher.imageAsset)
       .resizable()
       .scaledToFit()
       .frame(width: 40, height: 40)
