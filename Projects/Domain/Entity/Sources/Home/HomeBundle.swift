@@ -51,7 +51,7 @@ public extension HomeBundle {
     HomeBundle(
       newNotice: newNotice,
       heroes: heroes.isEmpty ? HeroBattle.mocks : heroes,
-      hotBattles: hotBattles.isEmpty ? HotBattle.mocks : hotBattles,
+      hotBattles: hotBattles,
       bestBattles: bestBattles.isEmpty ? BestBattle.mocks : bestBattles,
       quizzes: quizzes.isEmpty ? [.mock] : quizzes,
       votes: votes.isEmpty ? [.mock] : votes,

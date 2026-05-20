@@ -35,7 +35,9 @@ public struct HomeView: View {
               onTap: { send(.heroTapped($0)) }
             )
 
-            hotBattlesSection()
+            if !store.hotBattles.isEmpty {
+              hotBattlesSection()
+            }
             bestBattlesSection()
             todayPickeSection()
             newBattlesSection()
@@ -114,7 +116,7 @@ extension HomeView {
         if let vote = store.currentVote {
           VoteCardView(question: vote)
             .contentShape(Rectangle())
-            .onTapGesture {  }
+            .onTapGesture {}
         }
       }
       .padding(.horizontal, 16)
