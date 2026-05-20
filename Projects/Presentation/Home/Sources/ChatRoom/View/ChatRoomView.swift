@@ -221,10 +221,10 @@ extension ChatRoomView {
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+        .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
         .overlay(
           RoundedRectangle(cornerRadius: 2)
-            .stroke(isSelected ? Color(hex: "E1B974") : .beige600, lineWidth: 1)
+            .stroke(isSelected ? .borderSecondarySelected : .borderBeigeDefault, lineWidth: 1)
         )
     }
     .buttonStyle(.plain)

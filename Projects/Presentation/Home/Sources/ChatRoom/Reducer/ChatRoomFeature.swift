@@ -35,7 +35,8 @@ public struct ChatRoomFeature {
     public var totalDuration: TimeInterval { bundle.totalDuration }
     public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
     public var messages: [ChatMessage] { bundle.messages }
-    public var canScrub: Bool { hasFinishedListening }
+    // TODO: 음원 실재생 연결 후 hasFinishedListening 게이트로 복원
+    public var canScrub: Bool { true }
 
     public var currentNode: ScenarioNode? {
       guard let scenario else { return nil }
