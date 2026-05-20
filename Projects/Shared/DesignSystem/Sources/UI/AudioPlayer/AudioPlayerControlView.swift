@@ -27,7 +27,7 @@ public struct AudioPlayerControlView: View {
   }
 
   public var body: some View {
-    HStack(spacing: 32) {
+    HStack(alignment: .top, spacing: 32) {
       backwardButton()
       playButton()
       forwardButton()
@@ -38,15 +38,11 @@ public struct AudioPlayerControlView: View {
   @ViewBuilder
   private func backwardButton() -> some View {
     Button(action: onBackward) {
-      VStack(spacing: 4) {
-        Image(systemName: "backward.end.fill")
-          .font(.system(size: 28))
-          .foregroundStyle(.primary800)
-        Text("15초")
-          .pretendardFont(family: .Medium, size: 11)
-          .foregroundStyle(.neutral300)
-      }
-      .frame(width: 55, height: 55)
+      controlColumn(
+        systemImage: "backward.end.fill",
+        iconColor: .primary800,
+        caption: "15초"
+      )
     }
     .buttonStyle(.plain)
   }
@@ -54,10 +50,11 @@ public struct AudioPlayerControlView: View {
   @ViewBuilder
   private func playButton() -> some View {
     Button(action: onTogglePlay) {
-      Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-        .font(.system(size: 28))
-        .foregroundStyle(.neutral900)
-        .frame(width: 55, height: 55)
+      controlColumn(
+        systemImage: isPlaying ? "pause.fill" : "play.fill",
+        iconColor: .neutral900,
+        caption: nil
+      )
     }
     .buttonStyle(.plain)
   }
@@ -65,16 +62,33 @@ public struct AudioPlayerControlView: View {
   @ViewBuilder
   private func forwardButton() -> some View {
     Button(action: onForward) {
-      VStack(spacing: 4) {
-        Image(systemName: "forward.end.fill")
-          .font(.system(size: 28))
-          .foregroundStyle(.primary800)
-        Text("15초")
-          .pretendardFont(family: .Medium, size: 11)
-          .foregroundStyle(.neutral300)
-      }
-      .frame(width: 55, height: 55)
+      controlColumn(
+        systemImage: "forward.end.fill",
+        iconColor: .primary800,
+        caption: "15초"
+      )
     }
     .buttonStyle(.plain)
+  }
+
+  /// 세 버튼이 동일한 baseline 으로 정렬되도록 VStack 구조 + caption 자리를 항상 확보한다.
+  @ViewBuilder
+  private func controlColumn(
+    systemImage: String,
+    iconColor: Color,
+    caption: String?
+  ) -> some View {
+    VStack(spacing: 4) {
+      Image(systemName: systemImage)
+        .font(.system(size: 28))
+        .foregroundStyle(iconColor)
+        .frame(width: 40, height: 32)
+
+      Text(caption ?? " ")
+        .pretendardFont(family: .Medium, size: 11)
+        .foregroundStyle(.neutral300)
+        .opacity(caption == nil ? 0 : 1)
+    }
+    .frame(width: 55)
   }
 }
