@@ -47,12 +47,20 @@ public struct ChatRoomFeature {
       return scenario.nodes.flatMap { node in
         node.scripts.map { script in
           ChatMessage(
+            messageId: Self.scriptUUID(scriptId: script.scriptId),
             speaker: speaker(for: script, in: scenario),
             text: script.text,
             startTimeMs: script.startTimeMs
           )
         }
       }
+    }
+
+    /// 같은 scriptId 면 동일한 UUID 를 반환해 ForEach 의 id 가 매 렌더링마다
+    /// 흔들리지 않도록 한다 (자동 스크롤 target 안정화).
+    private static func scriptUUID(scriptId: Int) -> UUID {
+      let hex = String(format: "%012X", scriptId)
+      return UUID(uuidString: "00000000-0000-0000-0000-\(hex)") ?? UUID()
     }
 
     /// 현재 재생 시점에 해당하는 메시지 id. `currentTime` 이상의 startTimeMs 를
@@ -73,7 +81,7 @@ public struct ChatRoomFeature {
       return scenario.audios.values.first
     }
 
-    public var canScrub: Bool { true }
+    public var canScrub: Bool { hasFinishedListening }
 
     private func speaker(for script: ScenarioScript, in scenario: BattleScenario) -> ChatSpeaker {
       switch script.speakerType {

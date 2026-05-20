@@ -218,9 +218,10 @@ extension ChatRoomView {
   }
 
   private struct SpeakerGroup: Equatable, Identifiable {
-    let id = UUID()
     let speaker: ChatSpeaker
     var messages: [ChatMessage]
+
+    var id: UUID { messages.first?.id ?? UUID() }
   }
 }
 
