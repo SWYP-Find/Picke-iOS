@@ -32,6 +32,10 @@ public struct PreVoteView: View {
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
+    .safeAreaInset(edge: .top, spacing: 0) {
+      navigationBar
+        .background(Color.clear)
+    }
     .onAppear { send(.onAppear) }
     .sheet(item: $store.shareItem) { item in
       ShareSheet(items: item.items)
@@ -46,15 +50,16 @@ public struct PreVoteView: View {
 
   @ViewBuilder
   private var loadedContent: some View {
-    ZStack(alignment: .top) {
-      backgroundImage
-
-      VStack(spacing: 0) {
-        navigationBar
-        Spacer(minLength: 0)
+    ScrollView(showsIndicators: false) {
+      ZStack(alignment: .top) {
+        backgroundImage
         contentArea
+          .padding(.top, 380)
       }
+      .frame(maxWidth: .infinity)
     }
+    .scrollBounceBehavior(.basedOnSize)
+    .ignoresSafeArea(edges: .top)
   }
 }
 
