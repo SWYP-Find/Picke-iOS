@@ -51,10 +51,9 @@ public struct PreVoteView: View {
   @ViewBuilder
   private var loadedContent: some View {
     ScrollView(showsIndicators: false) {
-      ZStack(alignment: .top) {
+      VStack(spacing: -120) {
         backgroundImage
         contentArea
-          .padding(.top, 380)
       }
       .frame(maxWidth: .infinity)
     }
@@ -82,10 +81,9 @@ extension PreVoteView {
 
       Color.black.opacity(0.4)
     }
+    .frame(maxWidth: .infinity)
     .frame(height: 512)
     .clipped()
-    .frame(maxWidth: .infinity, alignment: .top)
-    .ignoresSafeArea(edges: .top)
   }
 }
 
