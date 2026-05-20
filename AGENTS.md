@@ -474,13 +474,16 @@ public struct HomeCoordinator {
   // … State / Action / handleRoute …
 }
 
+// swiftformat:disable extensionAccessControl
 extension HomeCoordinator {
   @Reducer
   public enum HomeScreen {
     case home(HomeFeature)
     case preVote(PreVoteFeature)
+    case chatRoom(ChatRoomFeature)
   }
 }
+// swiftformat:enable extensionAccessControl
 
 extension HomeCoordinator.HomeScreen.State: Equatable {}
 
@@ -489,14 +492,60 @@ public struct HomeCoordinator {
   @Reducer
   public enum HomeScreen { ... }   // 안 됨 (매크로 인식 / Route 추론 깨짐)
 }
+
+// ❌ 금지 — 자동 포맷터가 `public extension { enum }` 으로 바꾸도록 방치
+public extension HomeCoordinator {
+  @Reducer
+  enum HomeScreen { ... }   // @Reducer 매크로 확장이 internal 로 생성 → "must be declared public" 에러
+}
 ```
 
 규칙:
 - `XScreen` 은 `@Reducer public enum`. struct 로 바꾸지 말 것
 - 본체와 분리된 **별도 extension** 안에 선언
+- **swiftformat 자동 변환 차단**: 해당 블록 앞뒤로 `// swiftformat:disable extensionAccessControl` / `// swiftformat:enable extensionAccessControl` 주석 페어 필수.
+  - 포맷터가 `public extension X { enum XScreen }` 으로 끌어올리면 `@Reducer` 매크로가 만드는 `State` / `Action` / `body` 가 internal 로 생성되어 `enum 'State' must be declared public because it matches a requirement in public protocol 'CaseReducer'` 빌드 에러가 난다.
 - `extension Coordinator.XScreen.State: Equatable {}` 보조 conformance 도 같이 유지 (Route diff 비교 필요)
 - 라우터 핸들러 (`routerAction`) 안에서 `state.routes.push/pop/goBack` 직접 호출은 OK, 단 `dismiss`/`submit` 같이 반복되는 종료 액션은 `.send(.view(.backAction))` 으로 일원화
 - 레퍼런스: `HomeCoordinator`, `AuthCoordinator`, `MainTabCoordinator`
+
+#### 🌐 DomainType `url` switch — 모든 case 에 `return` 명시 유지
+
+`PieckeDomain` 같은 `DomainType` 의 `url: String` computed property 는 **모든 case 에 `return` 키워드를 명시한다**. 자동 포맷터가 single-expression switch 규칙으로 `return` 을 떼어내려고 하지만, 새 case 추가 시 컴파일 에러 메시지가 끊기고 가독성도 망가지므로 **수동으로라도 되돌려야** 한다.
+
+```swift
+// ✅ 올바른 패턴 — 모든 case 에 return 명시
+extension PieckeDomain: DomainType {
+  public var url: String {
+    switch self {
+    case .auth:
+      return "api/v1/auth/"
+    case .profile:
+      return "api/v1/me/"
+    case .home:
+      return "api/v1/home"
+    case .poll:
+      return "api/v1/poll"
+    case .battle:
+      return "api/v1/battles/"
+    }
+  }
+}
+
+// ❌ 금지 — 포맷터가 떼어낸 implicit return (혼합 상태)
+public var url: String {
+  switch self {
+  case .auth: "api/v1/auth/"          // ← 안 됨
+  case .poll: return "api/v1/poll"    // ← 안 됨 (혼합)
+  }
+}
+```
+
+규칙:
+- 새 case 를 추가했는데 포맷터가 기존 case 의 `return` 을 떼어냈다면 **PR 전에 직접 되돌려서 일관성 유지**
+- 새 도메인 case (`.battle` 등) 도 동일하게 `return "..."` 형태로 작성
+- 포맷터의 `redundantReturn` 룰이 자꾸 깨면 해당 파일에 `// swiftformat:disable redundantReturn` 디렉티브 페어 추가 검토
+- 레퍼런스: `Projects/Data/API/Sources/Base/PieckeDomain.swift`
 
 ### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드

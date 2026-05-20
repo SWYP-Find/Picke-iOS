@@ -118,7 +118,7 @@ extension ChatRoomView {
     Image(asset: speaker.philosopher.imageAsset)
       .resizable()
       .scaledToFit()
-      .frame(width: 16, height: 28)
+      .frame(width: 30, height: 40)
       .frame(width: 40, height: 40)
       .background(.beige600, in: Circle())
   }
@@ -200,11 +200,21 @@ extension ChatRoomView {
           Capsule().fill(.primary500).frame(width: proxy.size.width * progress, height: 4)
           Circle()
             .fill(.primary500)
-            .frame(width: 10, height: 10)
-            .offset(x: max(0, proxy.size.width * progress - 5))
+            .frame(width: 16, height: 16)
+            .offset(x: max(0, proxy.size.width * progress - 8))
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .gesture(
+          DragGesture(minimumDistance: 0)
+            .onChanged { value in
+              guard proxy.size.width > 0, store.totalDuration > 0 else { return }
+              let ratio = min(max(value.location.x / proxy.size.width, 0), 1)
+              send(.scrub(store.totalDuration * Double(ratio)))
+            }
+        )
       }
-      .frame(height: 10)
+      .frame(height: 16)
 
       HStack {
         Text(timeString(store.currentTime))
