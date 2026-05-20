@@ -32,9 +32,11 @@ public struct PreVoteView: View {
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
-    .safeAreaInset(edge: .top, spacing: 0) {
+    .overlay(alignment: .top) {
       navigationBar
         .background(Color.clear)
+        .padding(.top, topInset)
+        .zIndex(10)
     }
     .onAppear { send(.onAppear) }
     .sheet(item: $store.shareItem) { item in
@@ -46,6 +48,14 @@ public struct PreVoteView: View {
 
   private var shouldShowSkeleton: Bool {
     store.isLoading && store.battleDetail == nil
+  }
+
+  private var topInset: CGFloat {
+    UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap(\.windows)
+      .first(where: \.isKeyWindow)?
+      .safeAreaInsets.top ?? 47
   }
 
   @ViewBuilder
@@ -60,7 +70,9 @@ public struct PreVoteView: View {
             Color.clear
               .frame(height: Self.contentOverlapTopOffset)
 
-            contentArea
+            contentArea(
+              minHeight: max(0, proxy.size.height - Self.contentOverlapTopOffset)
+            )
           }
           .frame(width: proxy.size.width)
         }
@@ -70,7 +82,7 @@ public struct PreVoteView: View {
     }
   }
 
-  private static let contentOverlapTopOffset: CGFloat = 392
+  private static let contentOverlapTopOffset: CGFloat = 290
 }
 
 // MARK: - Background
@@ -121,15 +133,20 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private var contentArea: some View {
+  private func contentArea(minHeight: CGFloat) -> some View {
     VStack(spacing: 40) {
       contentSection
       optionSection
+
+      Spacer(minLength: 40)
+
       primaryButton
     }
     .padding(.horizontal, 24)
     .padding(.top, 80)
     .padding(.bottom, 40)
+    .frame(maxWidth: .infinity)
+    .frame(minHeight: minHeight, alignment: .top)
     .background(
       LinearGradient(
         stops: [
