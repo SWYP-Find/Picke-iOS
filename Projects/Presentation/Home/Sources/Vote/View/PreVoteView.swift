@@ -51,17 +51,26 @@ public struct PreVoteView: View {
   @ViewBuilder
   private var loadedContent: some View {
     GeometryReader { proxy in
-      ScrollView(showsIndicators: false) {
-        VStack(spacing: -120) {
-          backgroundImage
-          contentArea
+      ZStack(alignment: .top) {
+        backgroundImage
+          .frame(width: proxy.size.width)
+
+        ScrollView(showsIndicators: false) {
+          VStack(spacing: 0) {
+            Color.clear
+              .frame(height: Self.contentOverlapTopOffset)
+
+            contentArea
+          }
+          .frame(width: proxy.size.width)
         }
-        .frame(width: proxy.size.width)
+        .scrollBounceBehavior(.basedOnSize)
       }
-      .scrollBounceBehavior(.basedOnSize)
       .ignoresSafeArea(edges: .top)
     }
   }
+
+  private static let contentOverlapTopOffset: CGFloat = 392
 }
 
 // MARK: - Background
@@ -118,7 +127,7 @@ extension PreVoteView {
       optionSection
       primaryButton
     }
-    .padding(.horizontal, 20)
+    .padding(.horizontal, 24)
     .padding(.top, 80)
     .padding(.bottom, 40)
     .background(
@@ -213,7 +222,7 @@ extension PreVoteView {
         VStack(spacing: 2) {
           Text(option.stance)
             .pretendardFont(family: .SemiBold, size: 14)
-            .foregroundStyle(.neutral600)
+            .foregroundStyle(.neutral700)
             .kerning(-0.35)
             .lineLimit(2)
             .minimumScaleFactor(0.85)
@@ -232,9 +241,9 @@ extension PreVoteView {
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
-          .stroke(isSelected ? .primary500 : .beige600, lineWidth: isSelected ? 1.5 : 1)
+          .stroke(isSelected ? .beige700 : .beige500, lineWidth: 1)
       )
-      .opacity(isSelected ? 1.0 : 0.88)
+      .opacity(isSelected ? 1.0 : 0.72)
     }
     .buttonStyle(.plain)
   }

@@ -22,6 +22,7 @@ public struct ChatRoomFeature {
     public var scenario: BattleScenario?
     public var isPlaying: Bool = false
     public var currentTime: TimeInterval = 0
+    public var playerDuration: TimeInterval = 0
     public var battleId: Int = 0
     public var isLoadingScenario: Bool = false
     /// 한 번 끝까지 재생되어야 시킹(드래그) 허용
@@ -33,6 +34,7 @@ public struct ChatRoomFeature {
     public var selectedOptionLabel: String?
 
     public var totalDuration: TimeInterval {
+      if playerDuration > 0 { return playerDuration }
       guard let scenario else { return bundle.totalDuration }
       let nodesTotal = scenario.nodes.reduce(0) { $0 + $1.audioDuration }
       return nodesTotal > 0 ? TimeInterval(nodesTotal) : bundle.totalDuration
@@ -62,7 +64,6 @@ public struct ChatRoomFeature {
       return scenario.audios.values.first
     }
 
-    // TODO: 음원 실재생 연결 후 hasFinishedListening 게이트로 복원
     public var canScrub: Bool { true }
 
     private func avatar(for name: String) -> PhilosopherAvatar {
@@ -113,14 +114,15 @@ public struct ChatRoomFeature {
   }
 
   public enum AsyncAction: Equatable {
-    case startTicking
-    case stopTicking
     case fetchScenario
+    case loadAudio(URL)
+    case subscribePlayer
   }
 
   public enum InnerAction: Equatable {
-    case tick
     case scenarioResponse(Result<BattleScenario, AuthError>)
+    case playerTimeUpdated(TimeInterval)
+    case playerDurationUpdated(TimeInterval)
   }
 
   public enum DelegateAction: Equatable {
@@ -128,12 +130,12 @@ public struct ChatRoomFeature {
   }
 
   nonisolated enum CancelID: Hashable {
-    case tick
     case fetchScenario
+    case audioObserver
   }
 
-  @Dependency(\.continuousClock) var clock
   @Dependency(\.battleRepository) private var battleRepository
+  @Dependency(\.audioPlayer) private var audioPlayer
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -161,32 +163,61 @@ extension ChatRoomFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      guard state.scenario == nil, !state.isLoadingScenario else { return .none }
-      return .send(.async(.fetchScenario))
+      let needsFetch = state.scenario == nil && !state.isLoadingScenario
+      let subscribe: Effect<Action> = .send(.async(.subscribePlayer))
+      return needsFetch
+        ? subscribe.merge(with: .send(.async(.fetchScenario)))
+        : subscribe
+
     case .backButtonTapped:
-      return .send(.async(.stopTicking)).concatenate(with: .send(.delegate(.dismiss)))
+      return .run { [player = audioPlayer] send in
+        await player.pause()
+        await send(.delegate(.dismiss))
+      }
+
     case .refreshTapped:
       state.currentTime = 0
       state.isPlaying = false
-      return .send(.async(.stopTicking))
+      return .run { [player = audioPlayer] _ in
+        await player.pause()
+        await player.seek(to: 0)
+      }
+
     case .togglePlayTapped:
       state.isPlaying.toggle()
-      return state.isPlaying ? .send(.async(.startTicking)) : .send(.async(.stopTicking))
+      let playing = state.isPlaying
+      return .run { [player = audioPlayer] _ in
+        if playing { await player.play() } else { await player.pause() }
+      }
+
     case .seekBackwardTapped:
       guard state.canScrub else { return .none }
-      state.currentTime = max(0, state.currentTime - 15)
-      return .none
+      let target = max(0, state.currentTime - 15)
+      state.currentTime = target
+      return .run { [player = audioPlayer] _ in
+        await player.seek(to: target)
+      }
+
     case .seekForwardTapped:
       guard state.canScrub else { return .none }
-      state.currentTime = min(state.totalDuration, state.currentTime + 15)
-      return .none
+      let target = min(state.totalDuration, state.currentTime + 15)
+      state.currentTime = target
+      return .run { [player = audioPlayer] _ in
+        await player.seek(to: target)
+      }
+
     case let .scrub(time):
       guard state.canScrub else { return .none }
-      state.currentTime = min(max(0, time), state.totalDuration)
-      return .none
+      let target = min(max(0, time), state.totalDuration)
+      state.currentTime = target
+      return .run { [player = audioPlayer] _ in
+        await player.seek(to: target)
+      }
+
     case let .optionTapped(label):
       state.selectedOptionLabel = (state.selectedOptionLabel == label) ? nil : label
       return .none
+
     case .confirmOptionTapped:
       guard let label = state.selectedOptionLabel,
             let option = state.interactiveOptions.first(where: { $0.label == label })
@@ -196,23 +227,15 @@ extension ChatRoomFeature {
       state.currentTime = 0
       state.hasFinishedListening = false
       state.isPlaying = false
-      return .send(.async(.stopTicking))
+      return .run { [player = audioPlayer] _ in
+        await player.pause()
+        await player.seek(to: 0)
+      }
     }
   }
 
   private func handleAsyncAction(state: inout State, action: AsyncAction) -> Effect<Action> {
     switch action {
-    case .startTicking:
-      return .run { [clock] send in
-        for await _ in clock.timer(interval: .seconds(1)) {
-          await send(.inner(.tick))
-        }
-      }
-      .cancellable(id: CancelID.tick, cancelInFlight: true)
-
-    case .stopTicking:
-      return .cancel(id: CancelID.tick)
-
     case .fetchScenario:
       state.isLoadingScenario = true
       let battleId = state.battleId
@@ -224,22 +247,30 @@ extension ChatRoomFeature {
         return await send(.inner(.scenarioResponse(result)))
       }
       .cancellable(id: CancelID.fetchScenario, cancelInFlight: true)
+
+    case let .loadAudio(url):
+      state.currentTime = 0
+      state.playerDuration = 0
+      return .run { [player = audioPlayer] send in
+        await player.load(url: url)
+        let duration = await player.duration()
+        if duration > 0 {
+          await send(.inner(.playerDurationUpdated(duration)))
+        }
+      }
+
+    case .subscribePlayer:
+      return .run { [player = audioPlayer] send in
+        for await time in player.currentTimes() {
+          await send(.inner(.playerTimeUpdated(time)))
+        }
+      }
+      .cancellable(id: CancelID.audioObserver, cancelInFlight: true)
     }
   }
 
   private func handleInnerAction(state: inout State, action: InnerAction) -> Effect<Action> {
     switch action {
-    case .tick:
-      let next = state.currentTime + 1
-      if next >= state.totalDuration {
-        state.currentTime = state.totalDuration
-        state.isPlaying = false
-        state.hasFinishedListening = true
-        return .send(.async(.stopTicking))
-      }
-      state.currentTime = next
-      return .none
-
     case let .scenarioResponse(result):
       state.isLoadingScenario = false
       switch result {
@@ -248,9 +279,28 @@ extension ChatRoomFeature {
         if state.currentNodeId == nil {
           state.currentNodeId = scenario.startNodeId
         }
+        if let urlString = scenario.audios[scenario.recommendedPathKey.rawValue]
+          ?? scenario.audios.values.first,
+          let url = URL(string: urlString)
+        {
+          return .send(.async(.loadAudio(url)))
+        }
+        return .none
       case let .failure(error):
         Log.error("[ChatRoomFeature] fetchScenario failed: \(error.localizedDescription)")
+        return .none
       }
+
+    case let .playerTimeUpdated(time):
+      state.currentTime = time
+      if state.totalDuration > 0, time >= state.totalDuration - 0.5 {
+        state.hasFinishedListening = true
+        state.isPlaying = false
+      }
+      return .none
+
+    case let .playerDurationUpdated(duration):
+      state.playerDuration = duration
       return .none
     }
   }
