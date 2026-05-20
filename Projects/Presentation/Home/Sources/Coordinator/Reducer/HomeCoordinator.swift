@@ -64,8 +64,14 @@ extension HomeCoordinator {
       state.routes.push(.preVote(.init()))
       return .none
 
-    case .routeAction(_, action: .preVote(.delegate(.dismiss))),
-         .routeAction(_, action: .preVote(.delegate(.submit))):
+    case .routeAction(_, action: .preVote(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, _)))):
+      state.routes.push(.chatRoom(.init(battleId: battleId)))
+      return .none
+
+    case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
     default:
@@ -88,12 +94,16 @@ extension HomeCoordinator {
   }
 }
 
+// swiftformat:disable extensionAccessControl
 extension HomeCoordinator {
   @Reducer
   public enum HomeScreen {
     case home(HomeFeature)
     case preVote(PreVoteFeature)
+    case chatRoom(ChatRoomFeature)
   }
 }
+
+// swiftformat:enable extensionAccessControl
 
 extension HomeCoordinator.HomeScreen.State: Equatable {}

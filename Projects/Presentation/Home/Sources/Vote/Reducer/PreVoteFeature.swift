@@ -25,6 +25,7 @@ public struct PreVoteFeature {
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
     public var pollId: Int = 1
+    public var battleId: Int = 41
 
     public var isPrimaryButtonEnabled: Bool {
       selectedSide != nil && !isSubmitting
@@ -63,22 +64,26 @@ public struct PreVoteFeature {
 
   public enum AsyncAction: Equatable {
     case fetchPoll
+    case submitPreVote(battleId: Int, optionId: Int)
   }
 
   public enum InnerAction: Equatable {
     case pollResponse(Result<PollDetail, AuthError>)
+    case preVoteResponse(Result<PreVoteResult, AuthError>)
   }
 
   public enum DelegateAction: Equatable {
     case dismiss
-    case submit(pollId: Int, side: PhilosopherAvatar)
+    case voteSubmitted(battleId: Int, result: PreVoteResult)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetchPoll
+    case submitPreVote
   }
 
   @Dependency(\.pollRepository) private var pollRepository
+  @Dependency(\.battleRepository) private var battleRepository
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -133,9 +138,22 @@ extension PreVoteFeature {
 
     case .primaryButtonTapped:
       guard let side = state.selectedSide else { return .none }
+      guard let optionId = optionId(for: side, in: state.battle) else {
+        Log.error("[PreVoteFeature] optionId 매핑 실패 side=\(side)")
+        return .none
+      }
       state.isSubmitting = true
-      return .send(.delegate(.submit(pollId: state.pollId, side: side)))
+      return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
     }
+  }
+
+  private func optionId(
+    for side: PhilosopherAvatar,
+    in battle: PreVoteBattle
+  ) -> Int? {
+    if battle.leftOption.philosopher == side { return battle.leftOption.optionId }
+    if battle.rightOption.philosopher == side { return battle.rightOption.optionId }
+    return nil
   }
 
   private func handleAsyncAction(
@@ -154,6 +172,16 @@ extension PreVoteFeature {
         return await send(.inner(.pollResponse(result)))
       }
       .cancellable(id: CancelID.fetchPoll, cancelInFlight: true)
+
+    case let .submitPreVote(battleId, optionId):
+      return .run { [repository = battleRepository] send in
+        let result = await Result {
+          try await repository.submitPreVote(battleId: battleId, optionId: optionId)
+        }
+        .mapError(AuthError.from)
+        return await send(.inner(.preVoteResponse(result)))
+      }
+      .cancellable(id: CancelID.submitPreVote, cancelInFlight: true)
     }
   }
 
@@ -172,6 +200,16 @@ extension PreVoteFeature {
         Log.error("[PreVoteFeature] fetchPoll failed: \(error.localizedDescription)")
       }
       return .none
+
+    case let .preVoteResponse(result):
+      state.isSubmitting = false
+      switch result {
+      case let .success(voteResult):
+        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: voteResult)))
+      case let .failure(error):
+        Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
+        return .none
+      }
     }
   }
 
@@ -185,6 +223,7 @@ extension PreVoteFeature {
     let philosophers: [PhilosopherAvatar] = [.plato, .sartre, .sunja]
     let mapped = poll.options.enumerated().map { idx, option in
       PreVoteOption(
+        optionId: option.optionId,
         philosopher: philosophers[safe: idx] ?? .plato,
         stance: option.title
       )
@@ -209,7 +248,7 @@ extension PreVoteFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .dismiss, .submit:
+    case .dismiss, .voteSubmitted:
       .none
     }
   }

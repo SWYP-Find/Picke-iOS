@@ -37,6 +37,7 @@ public final class AppDIManager: Sendable {
       .register { AuthRepositoryImpl() as AuthInterface }
       .register { HomeRepositoryImpl() as HomeInterface }
       .register { PollRepositoryImpl() as PollInterface }
+      .register { BattleRepositoryImpl() as BattleInterface }
 //      .register { ProfileRepositoryImpl() as ProfileInterface }
 //      .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
 

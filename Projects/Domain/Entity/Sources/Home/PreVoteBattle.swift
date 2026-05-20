@@ -43,12 +43,14 @@ public struct PreVoteBattle: Equatable, Identifiable {
 }
 
 public struct PreVoteOption: Equatable, Identifiable, Hashable {
+  public let optionId: Int
   public let philosopher: PhilosopherAvatar
   public let stance: String
 
-  public var id: String { philosopher.rawValue }
+  public var id: String { "\(optionId)-\(philosopher.rawValue)" }
 
-  public init(philosopher: PhilosopherAvatar, stance: String) {
+  public init(optionId: Int = 0, philosopher: PhilosopherAvatar, stance: String) {
+    self.optionId = optionId
     self.philosopher = philosopher
     self.stance = stance
   }

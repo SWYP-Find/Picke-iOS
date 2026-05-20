@@ -26,7 +26,9 @@ public struct ChatRoomFeature {
     public var battleTitle: String { bundle.battleTitle }
     public var messages: [ChatMessage] { bundle.messages }
 
-    public init() {}
+    public init(battleId: Int = 0) {
+      self.battleId = battleId
+    }
   }
 
   public enum Action: ViewAction, BindableAction {
