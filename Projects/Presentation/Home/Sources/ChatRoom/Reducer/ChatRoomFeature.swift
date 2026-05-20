@@ -27,10 +27,32 @@ public struct ChatRoomFeature {
     /// 한 번 끝까지 재생되어야 시킹(드래그) 허용
     public var hasFinishedListening: Bool = false
 
+    /// 현재 재생 중인 시나리오 노드 id (없으면 startNodeId 폴백)
+    public var currentNodeId: Int?
+    /// 선택지 영역에서 사용자가 탭한 옵션 label
+    public var selectedOptionLabel: String?
+
     public var totalDuration: TimeInterval { bundle.totalDuration }
     public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
     public var messages: [ChatMessage] { bundle.messages }
     public var canScrub: Bool { hasFinishedListening }
+
+    public var currentNode: ScenarioNode? {
+      guard let scenario else { return nil }
+      let target = currentNodeId ?? scenario.startNodeId
+      return scenario.nodes.first { $0.nodeId == target }
+    }
+
+    public var interactiveOptions: [ScenarioInteractiveOption] {
+      currentNode?.interactiveOptions ?? []
+    }
+
+    /// 현재 노드에 선택지가 있고, 한 번 끝까지 들었으면 선택 카드 노출
+    public var shouldShowOptions: Bool {
+      hasFinishedListening && !interactiveOptions.isEmpty
+    }
+
+    public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
 
     public init(battleId: Int = 0) {
       self.battleId = battleId
@@ -54,6 +76,8 @@ public struct ChatRoomFeature {
     case seekBackwardTapped
     case seekForwardTapped
     case scrub(TimeInterval)
+    case optionTapped(String)
+    case confirmOptionTapped
   }
 
   public enum AsyncAction: Equatable {
@@ -128,6 +152,19 @@ extension ChatRoomFeature {
       guard state.canScrub else { return .none }
       state.currentTime = min(max(0, time), state.totalDuration)
       return .none
+    case let .optionTapped(label):
+      state.selectedOptionLabel = (state.selectedOptionLabel == label) ? nil : label
+      return .none
+    case .confirmOptionTapped:
+      guard let label = state.selectedOptionLabel,
+            let option = state.interactiveOptions.first(where: { $0.label == label })
+      else { return .none }
+      state.currentNodeId = option.nextNodeId
+      state.selectedOptionLabel = nil
+      state.currentTime = 0
+      state.hasFinishedListening = false
+      state.isPlaying = false
+      return .send(.async(.stopTicking))
     }
   }
 
@@ -176,6 +213,9 @@ extension ChatRoomFeature {
       switch result {
       case let .success(scenario):
         state.scenario = scenario
+        if state.currentNodeId == nil {
+          state.currentNodeId = scenario.startNodeId
+        }
       case let .failure(error):
         Log.error("[ChatRoomFeature] fetchScenario failed: \(error.localizedDescription)")
       }

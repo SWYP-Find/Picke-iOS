@@ -25,6 +25,9 @@ public struct ChatRoomView: View {
     VStack(spacing: 0) {
       navigationBar()
       messageList()
+      if store.shouldShowOptions {
+        interactiveOptionsSection()
+      }
       playerBar()
     }
     .background(Color.beige200.ignoresSafeArea())
@@ -160,6 +163,81 @@ extension ChatRoomView {
     let id = UUID()
     let speaker: ChatSpeaker
     var messages: [ChatMessage]
+  }
+}
+
+// MARK: - Interactive Options
+
+extension ChatRoomView {
+  @ViewBuilder
+  private func interactiveOptionsSection() -> some View {
+    VStack(spacing: 12) {
+      optionsHeader()
+      optionsList()
+      confirmButton()
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .frame(maxWidth: .infinity)
+    .background(.beige100)
+  }
+
+  @ViewBuilder
+  private func optionsHeader() -> some View {
+    HStack(spacing: 10) {
+      Rectangle()
+        .fill(.neutral200)
+        .frame(height: 0.5)
+      Text("당신의 입장을 선택해주세요")
+        .pretendardFont(family: .Bold, size: 13)
+        .foregroundStyle(.neutral800)
+        .fixedSize()
+      Rectangle()
+        .fill(.neutral200)
+        .frame(height: 0.5)
+    }
+  }
+
+  @ViewBuilder
+  private func optionsList() -> some View {
+    VStack(spacing: 9) {
+      ForEach(store.interactiveOptions, id: \.label) { option in
+        optionCard(option)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func optionCard(_ option: ScenarioInteractiveOption) -> some View {
+    let isSelected = store.selectedOptionLabel == option.label
+
+    Button {
+      send(.optionTapped(option.label))
+    } label: {
+      Text(option.label)
+        .pretendardFont(family: .Medium, size: 12)
+        .foregroundStyle(isSelected ? .neutral800 : .neutral300)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+        .overlay(
+          RoundedRectangle(cornerRadius: 2)
+            .stroke(isSelected ? Color(hex: "E1B974") : .beige600, lineWidth: 1)
+        )
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  private func confirmButton() -> some View {
+    CustomButton(
+      action: { send(.confirmOptionTapped) },
+      title: "입장 선택하기",
+      config: CustomButtonConfig.primary(.large, height: 42),
+      isEnable: store.isConfirmEnabled
+    )
   }
 }
 
