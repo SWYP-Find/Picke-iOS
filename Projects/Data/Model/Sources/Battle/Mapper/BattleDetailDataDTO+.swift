@@ -12,8 +12,8 @@ public extension BattleDetailDataDTO {
       battleInfo: battleInfo.toDomain(),
       description: description,
       shareUrl: shareUrl,
-      userVoteStatus: UserVoteStatus(rawValue: userVoteStatus),
-      currentStep: BattleStep(rawValue: currentStep),
+      userVoteStatus: userVoteStatus.map { UserVoteStatus(rawValue: $0) } ?? .none,
+      currentStep: currentStep.map { BattleStep(rawValue: $0) } ?? .none,
       categoryTags: categoryTags.map { $0.toDomain() },
       philosopherTags: philosopherTags.map { $0.toDomain() },
       valueTags: valueTags.map { $0.toDomain() }

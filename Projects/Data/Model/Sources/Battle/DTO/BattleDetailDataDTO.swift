@@ -9,8 +9,8 @@ public struct BattleDetailDataDTO: Decodable {
   public let battleInfo: BattleInfoDTO
   public let description: String
   public let shareUrl: String
-  public let userVoteStatus: String
-  public let currentStep: String
+  public let userVoteStatus: String?
+  public let currentStep: String?
   public let categoryTags: [BattleTagDTO]
   public let philosopherTags: [BattleTagDTO]
   public let valueTags: [BattleTagDTO]
