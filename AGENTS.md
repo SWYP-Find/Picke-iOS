@@ -509,43 +509,81 @@ public extension HomeCoordinator {
 - 라우터 핸들러 (`routerAction`) 안에서 `state.routes.push/pop/goBack` 직접 호출은 OK, 단 `dismiss`/`submit` 같이 반복되는 종료 액션은 `.send(.view(.backAction))` 으로 일원화
 - 레퍼런스: `HomeCoordinator`, `AuthCoordinator`, `MainTabCoordinator`
 
-#### 🌐 DomainType `url` switch — 모든 case 에 `return` 명시 유지
+#### 🌐 switch 기반 computed property — 모든 case 에 `return` 명시 유지 (DomainType / BaseTargetType / DependencyKey 공통)
 
-`PieckeDomain` 같은 `DomainType` 의 `url: String` computed property 는 **모든 case 에 `return` 키워드를 명시한다**. 자동 포맷터가 single-expression switch 규칙으로 `return` 을 떼어내려고 하지만, 새 case 추가 시 컴파일 에러 메시지가 끊기고 가독성도 망가지므로 **수동으로라도 되돌려야** 한다.
+`switch self { ... }` 만으로 값을 돌려주는 computed property 는 **모든 case 에 `return` 키워드를 명시한다**. 적용 범위:
+
+1. **`DomainType.url`** — `PieckeDomain` 같은 도메인 prefix 매핑
+2. **`BaseTargetType` 구현체의 `urlPath` / `method` / `parameters` / `task` / `sampleData`** — 모든 Moya TargetType switch
+3. **`DependencyKey.liveValue` / `testValue`** — `UnifiedDI.resolve(...) ?? Default...()` 패턴
+4. 그 외 단일 표현식 switch 를 본문으로 갖는 computed property 전부
+
+자동 포맷터의 `redundantReturn` 룰이 single-expression switch 에서 `return` 을 떼어내려 하지만, **새 case 추가 시 일부만 implicit / 일부는 explicit 으로 혼합되는 상태가 가장 깨지기 쉽다**. 새 case 추가 후엔 항상 기존 case 까지 같이 `return` 으로 정렬할 것.
 
 ```swift
-// ✅ 올바른 패턴 — 모든 case 에 return 명시
+// ✅ DomainType — 모든 case return
 extension PieckeDomain: DomainType {
   public var url: String {
     switch self {
-    case .auth:
-      return "api/v1/auth/"
-    case .profile:
-      return "api/v1/me/"
-    case .home:
-      return "api/v1/home"
-    case .poll:
-      return "api/v1/poll"
-    case .battle:
-      return "api/v1/battles/"
+    case .auth:    return "api/v1/auth/"
+    case .profile: return "api/v1/me/"
+    case .home:    return "api/v1/home"
+    case .poll:    return "api/v1/poll"
+    case .battle:  return "api/v1/battles/"
     }
   }
 }
 
-// ❌ 금지 — 포맷터가 떼어낸 implicit return (혼합 상태)
-public var url: String {
+// ✅ BaseTargetType — urlPath / method / parameters 모두 return 명시
+extension BattleService: BaseTargetType {
+  public var urlPath: String {
+    switch self {
+    case let .preVote(battleId, _):
+      return BattleAPI.preVote(battleId: battleId).description
+    case let .scenario(battleId):
+      return BattleAPI.scenario(battleId: battleId).description
+    }
+  }
+
+  public var method: Moya.Method {
+    switch self {
+    case .preVote:  return .post
+    case .scenario: return .get
+    }
+  }
+
+  public var parameters: [String: Any]? {
+    switch self {
+    case let .preVote(_, body): return body.toDictionary
+    case .scenario:             return nil
+    }
+  }
+}
+
+// ✅ DependencyKey — liveValue / testValue 도 return 명시
+public struct BattleRepositoryDependency: DependencyKey {
+  public static var liveValue: BattleInterface {
+    return UnifiedDI.resolve(BattleInterface.self) ?? DefaultBattleRepositoryImpl()
+  }
+  public static var testValue: BattleInterface {
+    return UnifiedDI.resolve(BattleInterface.self) ?? DefaultBattleRepositoryImpl()
+  }
+}
+
+// ❌ 금지 — 포맷터가 떼어낸 implicit return 혼합
+public var method: Moya.Method {
   switch self {
-  case .auth: "api/v1/auth/"          // ← 안 됨
-  case .poll: return "api/v1/poll"    // ← 안 됨 (혼합)
+  case .preVote:  .post           // ← 안 됨
+  case .scenario: return .get     // ← 혼합 상태
   }
 }
 ```
 
 규칙:
-- 새 case 를 추가했는데 포맷터가 기존 case 의 `return` 을 떼어냈다면 **PR 전에 직접 되돌려서 일관성 유지**
-- 새 도메인 case (`.battle` 등) 도 동일하게 `return "..."` 형태로 작성
-- 포맷터의 `redundantReturn` 룰이 자꾸 깨면 해당 파일에 `// swiftformat:disable redundantReturn` 디렉티브 페어 추가 검토
-- 레퍼런스: `Projects/Data/API/Sources/Base/PieckeDomain.swift`
+- 새 case 추가 후 포맷터가 기존 case 의 `return` 을 떼어냈다면 **PR 전에 직접 되돌려서 일관성 유지**
+- 새 도메인 case (`.battle` 등) / 새 서비스 case (`.scenario` 등) / 새 DI 키 추가 시 모두 동일하게 `return ...` 형태로 작성
+- 포맷터가 반복적으로 깨면 해당 파일 또는 함수 블록에 `// swiftformat:disable redundantReturn` 디렉티브 페어 추가 검토
+- 레퍼런스: `PieckeDomain`, `BattleService`, `AuthService`, `BattleRepositoryDependency`, `HomeRepositoryDependency`
 
 ### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드
