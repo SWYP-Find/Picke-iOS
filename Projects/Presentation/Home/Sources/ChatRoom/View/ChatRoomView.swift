@@ -208,11 +208,15 @@ extension ChatRoomView {
         .gesture(
           DragGesture(minimumDistance: 0)
             .onChanged { value in
-              guard proxy.size.width > 0, store.totalDuration > 0 else { return }
+              guard store.canScrub,
+                    proxy.size.width > 0,
+                    store.totalDuration > 0 else { return }
               let ratio = min(max(value.location.x / proxy.size.width, 0), 1)
               send(.scrub(store.totalDuration * Double(ratio)))
             }
         )
+        .allowsHitTesting(store.canScrub)
+        .opacity(store.canScrub ? 1.0 : 0.6)
       }
       .frame(height: 16)
 
