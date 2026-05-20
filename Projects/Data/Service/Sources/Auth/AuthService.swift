@@ -52,22 +52,22 @@ extension AuthService: BaseTargetType {
   public var method: Moya.Method {
     switch self {
     case .login, .refresh, .logout:
-      .post
+      return .post
     case .withdraw:
-      .delete
+      return .delete
     }
   }
 
   public var parameters: [String: Any]? {
     switch self {
     case let .login(_, body):
-      body.toDictionary
+      return body.toDictionary
     case .refresh:
-      nil
+      return nil
     case let .withdraw(token):
-      token.toDictionary(key: "token")
+      return token.toDictionary(key: "token")
     case .logout:
-      nil
+      return nil
     }
   }
 

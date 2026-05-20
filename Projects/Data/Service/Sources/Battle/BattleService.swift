@@ -23,9 +23,9 @@ extension BattleService: BaseTargetType {
   public var urlPath: String {
     switch self {
     case let .preVote(battleId, _):
-      BattleAPI.preVote(battleId: battleId).description
+      return BattleAPI.preVote(battleId: battleId).description
     case let .scenario(battleId):
-      BattleAPI.scenario(battleId: battleId).description
+      return BattleAPI.scenario(battleId: battleId).description
     }
   }
 
@@ -34,22 +34,22 @@ extension BattleService: BaseTargetType {
   public var method: Moya.Method {
     switch self {
     case .preVote:
-      .post
+      return .post
     case .scenario:
-      .get
+      return .get
     }
   }
 
   public var parameters: [String: Any]? {
     switch self {
     case let .preVote(_, body):
-      body.toDictionary
+    return  body.toDictionary
     case .scenario:
-      nil
+      return nil
     }
   }
 
   public var headers: [String: String]? {
-    APIHeader.baseHeader
+    return APIHeader.baseHeader
   }
 }

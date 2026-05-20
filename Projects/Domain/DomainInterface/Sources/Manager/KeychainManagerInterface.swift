@@ -20,11 +20,11 @@ public protocol KeychainManaging: Sendable {
 
 public struct KeychainManagerDependency: DependencyKey {
   public static var liveValue: KeychainManaging {
-    UnifiedDI.resolve(KeychainManaging.self) ?? InMemoryKeychainManager()
+    return UnifiedDI.resolve(KeychainManaging.self) ?? InMemoryKeychainManager()
   }
 
   public static var testValue: KeychainManaging {
-    InMemoryKeychainManager()
+     return InMemoryKeychainManager()
   }
 
   public static var previewValue: KeychainManaging = testValue

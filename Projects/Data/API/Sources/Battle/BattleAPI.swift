@@ -12,9 +12,9 @@ public enum BattleAPI {
   public var description: String {
     switch self {
     case let .preVote(battleId):
-      "\(battleId)/votes/pre"
+      return "\(battleId)/votes/pre"
     case let .scenario(battleId):
-      "\(battleId)/scenario"
+      return "\(battleId)/scenario"
     }
   }
 }

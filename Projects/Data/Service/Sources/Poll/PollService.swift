@@ -33,13 +33,13 @@ extension PollService: BaseTargetType {
   public var method: Moya.Method {
     switch self {
     case .detailPoll:
-      .get
+      return .get
     }
   }
 
   public var parameters: [String: Any]? { nil }
 
   public var headers: [String: String]? {
-    APIHeader.baseHeader 
+    return APIHeader.baseHeader
   }
 }

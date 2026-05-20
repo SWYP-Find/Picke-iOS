@@ -41,15 +41,19 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
     redirectUri: String?,
     idToken: String?
   ) async throws -> LoginEntity {
+    let body = OAuthLoginRequest(
+      authorizationCode: authorizationCode,
+      redirectUri: redirectUri,
+      idToken: idToken
+    )
+    if let data = try? JSONEncoder().encode(body),
+       let json = String(data: data, encoding: .utf8)
+    {
+      Log.debug("[AuthRepository] POST /api/v1/auth/login/\(socialProvider.rawValue) body=\(json)")
+    }
+
     let dto: LoginResponseDTO = try await provider.request(
-      .login(
-        provider: socialProvider,
-        body: OAuthLoginRequest(
-          authorizationCode: authorizationCode,
-          redirectUri: redirectUri,
-          idToken: idToken
-        )
-      )
+      .login(provider: socialProvider, body: body)
     )
 
     guard let data = dto.data else {
