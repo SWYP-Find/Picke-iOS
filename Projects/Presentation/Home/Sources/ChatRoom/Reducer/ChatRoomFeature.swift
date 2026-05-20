@@ -48,9 +48,9 @@ public struct ChatRoomFeature {
       currentNode?.interactiveOptions ?? []
     }
 
-    /// 현재 노드에 선택지가 있고, 한 번 끝까지 들었으면 선택 카드 노출
+    /// 현재 노드에 선택지가 있으면 선택 카드 노출 (실재생 연동 전 임시 — 항상 노출)
     public var shouldShowOptions: Bool {
-      hasFinishedListening && !interactiveOptions.isEmpty
+      !interactiveOptions.isEmpty
     }
 
     public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
