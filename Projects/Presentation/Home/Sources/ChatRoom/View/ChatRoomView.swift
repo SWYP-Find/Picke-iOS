@@ -92,8 +92,8 @@ extension ChatRoomView {
         .padding(.vertical, 20)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .onChange(of: store.activeMessageId) { _, newId in
-        guard let target = scrollTargetId(for: newId) else { return }
+      .onChange(of: store.currentTime) { _, _ in
+        guard let target = scrollTargetId(for: store.activeMessageId) else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
           proxy.scrollTo(target, anchor: .center)
         }
