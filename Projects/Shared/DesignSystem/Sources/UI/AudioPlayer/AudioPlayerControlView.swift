@@ -40,7 +40,8 @@ public struct AudioPlayerControlView: View {
     Button(action: onBackward) {
       controlColumn(
         systemImage: "backward.end.fill",
-        iconColor: .primary800,
+        iconColor: .gray500,
+        iconSize: CGSize(width: 24, height: 55),
         caption: "15초"
       )
     }
@@ -52,7 +53,8 @@ public struct AudioPlayerControlView: View {
     Button(action: onTogglePlay) {
       controlColumn(
         systemImage: isPlaying ? "pause.fill" : "play.fill",
-        iconColor: .neutral900,
+        iconColor: .gray500,
+        iconSize: CGSize(width: 55, height: 55),
         caption: nil
       )
     }
@@ -64,7 +66,8 @@ public struct AudioPlayerControlView: View {
     Button(action: onForward) {
       controlColumn(
         systemImage: "forward.end.fill",
-        iconColor: .primary800,
+        iconColor: .gray500,
+        iconSize: CGSize(width: 24, height: 55),
         caption: "15초"
       )
     }
@@ -72,23 +75,26 @@ public struct AudioPlayerControlView: View {
   }
 
   /// 세 버튼이 동일한 baseline 으로 정렬되도록 VStack 구조 + caption 자리를 항상 확보한다.
+  /// `iconSize` 는 hit 영역 사이즈 — center play 는 55x55, 양옆 seek 는 24x55.
   @ViewBuilder
   private func controlColumn(
     systemImage: String,
     iconColor: Color,
+    iconSize: CGSize,
     caption: String?
   ) -> some View {
     VStack(spacing: 4) {
       Image(systemName: systemImage)
-        .font(.system(size: 28))
+        .resizable()
+        .scaledToFit()
         .foregroundStyle(iconColor)
-        .frame(width: 40, height: 32)
+        .frame(width: iconSize.width, height: iconSize.height)
+        .contentShape(Rectangle())
 
       Text(caption ?? " ")
         .pretendardFont(family: .Medium, size: 11)
         .foregroundStyle(.neutral300)
         .opacity(caption == nil ? 0 : 1)
     }
-    .frame(width: 55)
   }
 }

@@ -27,19 +27,29 @@ public struct ChatRoomView: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      navigationBar()
-      messageList()
-      if store.shouldShowOptions {
-        interactiveOptionsSection()
+    Group {
+      if shouldShowSkeleton {
+        ChatRoomSkeletonView()
+      } else {
+        VStack(spacing: 0) {
+          navigationBar()
+          messageList()
+          if store.shouldShowOptions {
+            interactiveOptionsSection()
+          }
+          playerBar()
+        }
       }
-      playerBar()
     }
     .background(Color.beige200.ignoresSafeArea())
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
+  }
+
+  private var shouldShowSkeleton: Bool {
+    store.isLoadingScenario && store.scenario == nil
   }
 }
 
