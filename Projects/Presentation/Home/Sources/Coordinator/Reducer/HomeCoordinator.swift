@@ -60,8 +60,8 @@ extension HomeCoordinator {
     action: IndexedRouterActionOf<HomeScreen>
   ) -> Effect<Action> {
     switch action {
-    case .routeAction(_, action: .home(.delegate(.presentPreVote))):
-      state.routes.push(.preVote(.init()))
+    case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
+      state.routes.push(.preVote(.init(battleId: battleId)))
       return .none
 
     case .routeAction(_, action: .preVote(.delegate(.dismiss))):

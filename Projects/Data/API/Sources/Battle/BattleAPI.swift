@@ -6,15 +6,18 @@
 import Foundation
 
 public enum BattleAPI {
+  case detail(battleId: Int)
   case preVote(battleId: Int)
   case scenario(battleId: Int)
 
   public var description: String {
     switch self {
+    case let .detail(battleId):
+      "\(battleId)"
     case let .preVote(battleId):
-      return "\(battleId)/votes/pre"
+      "\(battleId)/votes/pre"
     case let .scenario(battleId):
-      return "\(battleId)/scenario"
+      "\(battleId)/scenario"
     }
   }
 }

@@ -19,19 +19,20 @@ public struct PreVoteFeature {
   @ObservableState
   public struct State: Equatable {
     public var battle: PreVoteBattle = .mock
-    public var poll: PollDetail?
+    public var battleDetail: BattleDetail?
     public var selectedSide: PhilosopherAvatar?
     public var isLoading: Bool = false
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
-    public var pollId: Int = 1
-    public var battleId: Int = 41
+    public var battleId: Int
 
     public var isPrimaryButtonEnabled: Bool {
       selectedSide != nil && !isSubmitting
     }
 
-    public init() {}
+    public init(battleId: Int = 0) {
+      self.battleId = battleId
+    }
   }
 
   /// 공유 시트 트리거. `.sheet(item:)` 에 바로 바인딩.
@@ -63,12 +64,12 @@ public struct PreVoteFeature {
   }
 
   public enum AsyncAction: Equatable {
-    case fetchPoll
+    case fetchBattleDetail
     case submitPreVote(battleId: Int, optionId: Int)
   }
 
   public enum InnerAction: Equatable {
-    case pollResponse(Result<PollDetail, AuthError>)
+    case battleDetailResponse(Result<BattleDetail, AuthError>)
     case preVoteResponse(Result<PreVoteResult, AuthError>)
   }
 
@@ -78,11 +79,10 @@ public struct PreVoteFeature {
   }
 
   nonisolated enum CancelID: Hashable {
-    case fetchPoll
+    case fetchBattleDetail
     case submitPreVote
   }
 
-  @Dependency(\.pollRepository) private var pollRepository
   @Dependency(\.battleRepository) private var battleRepository
 
   public var body: some Reducer<State, Action> {
@@ -115,21 +115,17 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      guard state.poll == nil, !state.isLoading else { return .none }
-      return .send(.async(.fetchPoll))
+      guard state.battleDetail == nil, !state.isLoading else { return .none }
+      return .send(.async(.fetchBattleDetail))
 
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
     case .shareTapped:
-      let title = state.poll.map { "\($0.titlePrefix) \($0.titleSuffix)" }
-        ?? "\(state.battle.titleLine1) \(state.battle.titleLine2)"
-      state.shareItem = ShareItem(
-        items: [
-          title,
-          "https://picke.store/poll/\(state.pollId)",
-        ]
-      )
+      let title = state.battleDetail?.battleInfo.title ?? state.battle.titleLine1
+      let url = state.battleDetail?.shareUrl
+        ?? "https://picke.store/battles/\(state.battleId)"
+      state.shareItem = ShareItem(items: [title, url])
       return .none
 
     case let .optionTapped(side):
@@ -161,17 +157,17 @@ extension PreVoteFeature {
     action: AsyncAction
   ) -> Effect<Action> {
     switch action {
-    case .fetchPoll:
+    case .fetchBattleDetail:
       state.isLoading = true
-      let pollId = state.pollId
-      return .run { [repository = pollRepository] send in
+      let battleId = state.battleId
+      return .run { [repository = battleRepository] send in
         let result = await Result {
-          try await repository.fetchPoll(pollId: pollId)
+          try await repository.fetchBattle(battleId: battleId)
         }
         .mapError(AuthError.from)
-        return await send(.inner(.pollResponse(result)))
+        return await send(.inner(.battleDetailResponse(result)))
       }
-      .cancellable(id: CancelID.fetchPoll, cancelInFlight: true)
+      .cancellable(id: CancelID.fetchBattleDetail, cancelInFlight: true)
 
     case let .submitPreVote(battleId, optionId):
       return .run { [repository = battleRepository] send in
@@ -190,14 +186,14 @@ extension PreVoteFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
-    case let .pollResponse(result):
+    case let .battleDetailResponse(result):
       state.isLoading = false
       switch result {
-      case let .success(poll):
-        state.poll = poll
-        state.battle = makeBattle(from: poll, fallback: state.battle)
+      case let .success(detail):
+        state.battleDetail = detail
+        state.battle = makeBattle(from: detail, fallback: state.battle)
       case let .failure(error):
-        Log.error("[PreVoteFeature] fetchPoll failed: \(error.localizedDescription)")
+        Log.error("[PreVoteFeature] fetchBattle failed: \(error.localizedDescription)")
       }
       return .none
 
@@ -213,18 +209,20 @@ extension PreVoteFeature {
     }
   }
 
-  /// API 로 받은 PollDetail 을 화면 모델 PreVoteBattle 로 매핑.
-  /// background/summary/tags 는 응답에 없으므로 fallback (이전 state.battle) 값을 유지한다.
-  /// 옵션은 displayOrder 순으로 앞에서부터 2개만 좌/우 카드에 매핑.
+  /// API 로 받은 BattleDetail 을 화면 모델 PreVoteBattle 로 매핑.
+  /// 옵션 0, 1 만 좌/우 카드에 매핑 (label A→left, B→right).
   private func makeBattle(
-    from poll: PollDetail,
+    from detail: BattleDetail,
     fallback: PreVoteBattle
   ) -> PreVoteBattle {
+    let info = detail.battleInfo
     let philosophers: [PhilosopherAvatar] = [.plato, .sartre, .sunja]
-    let mapped = poll.options.enumerated().map { idx, option in
+    let mapped = info.options.enumerated().map { idx, option in
       PreVoteOption(
         optionId: option.optionId,
-        philosopher: philosophers[safe: idx] ?? .plato,
+        philosopher: avatar(for: option.representative)
+          ?? philosophers[safe: idx]
+          ?? .plato,
         stance: option.title
       )
     }
@@ -232,15 +230,19 @@ extension PreVoteFeature {
     let rightOption = mapped[safe: 1] ?? fallback.rightOption
 
     return PreVoteBattle(
-      battleId: poll.pollId,
-      backgroundImageURL: fallback.backgroundImageURL,
-      tags: fallback.tags,
-      titleLine1: poll.titlePrefix,
-      titleLine2: poll.titleSuffix,
-      summary: fallback.summary,
+      battleId: info.battleId,
+      backgroundImageURL: info.thumbnailUrl.isEmpty ? fallback.backgroundImageURL : info.thumbnailUrl,
+      tags: detail.categoryTags.map { "#\($0.name)" },
+      titleLine1: info.title,
+      titleLine2: "",
+      summary: detail.description.isEmpty ? info.summary : detail.description,
       leftOption: leftOption,
       rightOption: rightOption
     )
+  }
+
+  private func avatar(for representative: String) -> PhilosopherAvatar? {
+    PhilosopherAvatar.allCases.first { $0.rawValue == representative }
   }
 
   private func handleDelegateAction(

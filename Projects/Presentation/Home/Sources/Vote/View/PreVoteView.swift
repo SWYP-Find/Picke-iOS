@@ -41,7 +41,7 @@ public struct PreVoteView: View {
   }
 
   private var shouldShowSkeleton: Bool {
-    store.isLoading && store.poll == nil
+    store.isLoading && store.battleDetail == nil
   }
 
   @ViewBuilder

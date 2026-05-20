@@ -11,6 +11,7 @@ import Foundations
 import AsyncMoya
 
 public enum BattleService {
+  case detail(battleId: Int)
   case preVote(battleId: Int, body: PreVoteRequest)
   case scenario(battleId: Int)
 }
@@ -22,10 +23,12 @@ extension BattleService: BaseTargetType {
 
   public var urlPath: String {
     switch self {
+    case let .detail(battleId):
+      BattleAPI.detail(battleId: battleId).description
     case let .preVote(battleId, _):
-      return BattleAPI.preVote(battleId: battleId).description
+      BattleAPI.preVote(battleId: battleId).description
     case let .scenario(battleId):
-      return BattleAPI.scenario(battleId: battleId).description
+      BattleAPI.scenario(battleId: battleId).description
     }
   }
 
@@ -33,23 +36,27 @@ extension BattleService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
+    case .detail:
+      .get
     case .preVote:
-      return .post
+      .post
     case .scenario:
-      return .get
+      .get
     }
   }
 
   public var parameters: [String: Any]? {
     switch self {
+    case .detail:
+      nil
     case let .preVote(_, body):
-    return  body.toDictionary
+      body.toDictionary
     case .scenario:
-      return nil
+      nil
     }
   }
 
   public var headers: [String: String]? {
-    return APIHeader.baseHeader
+    APIHeader.baseHeader
   }
 }
