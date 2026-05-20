@@ -2,7 +2,6 @@
 //  PreVoteSkeletonView.swift
 //  Home
 //
-//  .pen `사전 투표창 - Skeleton Loader` (nTffe) 1:1 매핑.
 //  PreVoteView 의 로딩 상태 placeholder.
 //
 
@@ -13,6 +12,8 @@ import DesignSystem
 struct PreVoteSkeletonView: View {
   private static let designWidth: CGFloat = 375
   private static let designHeight: CGFloat = 812
+  private static let ctaHeight: CGFloat = 52
+  private static let ctaBottomSpacing: CGFloat = 40
 
   var body: some View {
     GeometryReader { proxy in
@@ -21,31 +22,37 @@ struct PreVoteSkeletonView: View {
       ZStack(alignment: .topLeading) {
         Color.beige50
 
-        // 상단 이미지 영역
-        block(width: 375, height: 329.25, x: 0, y: 0)
+        // 상단 이미지 영역: PreVoteView backgroundImage 높이와 동일.
+        block(width: 375, height: 512, x: 0, y: 0, cornerRadius: 0)
 
-        // 헤더 영역
-        block(width: 375, height: 60, x: 0, y: 70)
+        // Navigation bar
+        block(width: 20, height: 10, x: 20, y: 56, cornerRadius: 2)
+        block(width: 24, height: 24, x: 331, y: 50, cornerRadius: 2)
 
         // 태그 2개
-        block(width: 29, height: 17, x: 22, y: 360)
-        block(width: 49, height: 17, x: 72, y: 360)
+        block(width: 29, height: 17, x: 20, y: 370)
+        block(width: 49, height: 17, x: 58, y: 370)
 
         // 타이틀
-        block(width: 167, height: 68, x: 16, y: 399)
+        block(width: 210, height: 68, x: 20, y: 407)
 
         // 설명
-        block(width: 235.5, height: 61.43, x: 16, y: 479)
+        block(width: 265, height: 61, x: 20, y: 487)
 
         // 좌/우 옵션 카드
-        block(width: 167, height: 105.72, x: 14.625, y: 574)
-        block(width: 167, height: 105.72, x: 193.375, y: 574)
+        block(width: 163.5, height: 104, x: 20, y: 580)
+        block(width: 163.5, height: 104, x: 191.5, y: 580)
 
-        // VS 작은 점
-        block(width: 15, height: 15, x: 373.5, y: 619, cornerRadius: 8)
+        // VS badge
+        block(width: 28, height: 28, x: 173.5, y: 632, cornerRadius: 14)
 
-        // CTA 영역
-        block(width: 87, height: 24, x: 144, y: 734)
+        // CTA: picke.pen Button/Primary/Large 343x52, 하단 40.
+        block(
+          width: 343,
+          height: Self.ctaHeight,
+          x: 20,
+          y: Self.designHeight - Self.ctaBottomSpacing - Self.ctaHeight
+        )
       }
       .frame(width: Self.designWidth, height: Self.designHeight, alignment: .topLeading)
       .scaleEffect(scale, anchor: .topLeading)

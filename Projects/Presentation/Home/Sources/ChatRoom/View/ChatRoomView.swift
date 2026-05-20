@@ -12,10 +12,15 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Kingfisher
 
 @ViewAction(for: ChatRoomFeature.self)
 public struct ChatRoomView: View {
   @Bindable public var store: StoreOf<ChatRoomFeature>
+  private static let bubbleMaxWidth: CGFloat = 222
+  private static let avatarSize: CGFloat = 32.7
+  private static let avatarImageWidth: CGFloat = 24
+  private static let avatarImageHeight: CGFloat = 28
 
   public init(store: StoreOf<ChatRoomFeature>) {
     self.store = store
@@ -103,35 +108,50 @@ extension ChatRoomView {
 
   @ViewBuilder
   private func messageGroup(_ group: SpeakerGroup) -> some View {
-    HStack(alignment: .top, spacing: 8) {
-      if group.speaker.side == .left {
+    switch group.speaker.side {
+    case .left:
+      HStack(alignment: .top, spacing: 8) {
         avatar(group.speaker)
         bubbleColumn(speaker: group.speaker, messages: group.messages)
         Spacer(minLength: 40)
-      } else {
+      }
+
+    case .right:
+      HStack(alignment: .top, spacing: 8) {
         Spacer(minLength: 40)
         bubbleColumn(speaker: group.speaker, messages: group.messages)
         avatar(group.speaker)
       }
+
+    case .center:
+      VStack(spacing: 6) {
+        ForEach(group.messages) { message in
+          narratorBubble(text: message.text)
+        }
+      }
+      .frame(maxWidth: .infinity)
     }
   }
 
   @ViewBuilder
   private func avatar(_ speaker: ChatSpeaker) -> some View {
-    Image(asset: speaker.philosopher.imageAsset)
+    KFImage(URL(string: speaker.imageURL ?? ""))
+      .placeholder {
+        SkeletonView(cornerRadius: Self.avatarSize / 2)
+      }
       .resizable()
       .scaledToFit()
-      .frame(width: 30, height: 40)
-      .frame(width: 40, height: 40)
+      .frame(width: Self.avatarImageWidth, height: Self.avatarImageHeight)
+      .frame(width: Self.avatarSize, height: Self.avatarSize)
       .background(.beige600, in: Circle())
   }
 
   @ViewBuilder
   private func bubbleColumn(speaker: ChatSpeaker, messages: [ChatMessage]) -> some View {
     VStack(alignment: speaker.side == .left ? .leading : .trailing, spacing: 6) {
-      Text(speaker.philosopher.rawValue)
+      Text(speaker.name)
         .pretendardFont(family: .SemiBold, size: 13)
-        .foregroundStyle(.neutral800)
+        .foregroundStyle(.neutral500)
         .padding(.horizontal, 4)
 
       VStack(alignment: .leading, spacing: 6) {
@@ -140,15 +160,18 @@ extension ChatRoomView {
         }
       }
     }
+    .frame(maxWidth: Self.bubbleMaxWidth, alignment: speaker.side == .left ? .leading : .trailing)
   }
 
   @ViewBuilder
   private func bubble(text: String, side: ChatSpeakerSide) -> some View {
     Text(text)
       .pretendardFont(family: .Regular, size: 13)
-      .foregroundStyle(.neutral400)
+      .foregroundStyle(.neutral500)
+      .lineSpacing(13 * 0.4)
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
+      .frame(maxWidth: Self.bubbleMaxWidth, alignment: .leading)
       .background(
         side == .left ? Color.beige50 : Color.beige400,
         in: RoundedRectangle(cornerRadius: 2)
@@ -156,6 +179,23 @@ extension ChatRoomView {
       .overlay(
         RoundedRectangle(cornerRadius: 2)
           .stroke(side == .left ? Color.beige600 : Color.beige700, lineWidth: 1)
+      )
+  }
+
+  @ViewBuilder
+  private func narratorBubble(text: String) -> some View {
+    Text(text)
+      .pretendardFont(family: .Regular, size: 12)
+      .foregroundStyle(.neutral400)
+      .lineSpacing(12 * 0.4)
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .frame(maxWidth: 280)
+      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .overlay(
+        RoundedRectangle(cornerRadius: 2)
+          .stroke(.beige600, lineWidth: 1)
       )
   }
 

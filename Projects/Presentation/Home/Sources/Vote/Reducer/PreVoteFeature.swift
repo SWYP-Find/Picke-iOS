@@ -18,20 +18,21 @@ public struct PreVoteFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var battle: PreVoteBattle = .mock
+    public var battle: PreVoteBattle?
     public var battleDetail: BattleDetail?
-    public var selectedSide: PhilosopherAvatar?
+    public var selectedOptionId: Int?
     public var isLoading: Bool = false
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
     public var battleId: Int
 
     public var isPrimaryButtonEnabled: Bool {
-      selectedSide != nil && !isSubmitting
+      selectedOptionId != nil && !isSubmitting
     }
 
-    public init(battleId: Int = 0) {
+    public init(battleId: Int = 0, battle: PreVoteBattle? = nil) {
       self.battleId = battleId
+      self.battle = battle
     }
   }
 
@@ -59,7 +60,7 @@ public struct PreVoteFeature {
     case onAppear
     case backButtonTapped
     case shareTapped
-    case optionTapped(PhilosopherAvatar)
+    case optionTapped(optionId: Int)
     case primaryButtonTapped
   }
 
@@ -115,41 +116,31 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      guard state.battleDetail == nil, !state.isLoading else { return .none }
+      guard state.battleDetail == nil,
+            state.battle == nil,
+            !state.isLoading
+      else { return .none }
       return .send(.async(.fetchBattleDetail))
 
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
     case .shareTapped:
-      let title = state.battleDetail?.battleInfo.title ?? state.battle.titleLine1
+      let title = state.battleDetail?.battleInfo.title ?? state.battle?.titleLine1 ?? ""
       let url = state.battleDetail?.shareUrl
         ?? "https://picke.store/battles/\(state.battleId)"
       state.shareItem = ShareItem(items: [title, url])
       return .none
 
-    case let .optionTapped(side):
-      state.selectedSide = (state.selectedSide == side) ? nil : side
+    case let .optionTapped(optionId):
+      state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
       return .none
 
     case .primaryButtonTapped:
-      guard let side = state.selectedSide else { return .none }
-      guard let optionId = optionId(for: side, in: state.battle) else {
-        Log.error("[PreVoteFeature] optionId 매핑 실패 side=\(side)")
-        return .none
-      }
+      guard let optionId = state.selectedOptionId else { return .none }
       state.isSubmitting = true
       return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
     }
-  }
-
-  private func optionId(
-    for side: PhilosopherAvatar,
-    in battle: PreVoteBattle
-  ) -> Int? {
-    if battle.leftOption.philosopher == side { return battle.leftOption.optionId }
-    if battle.rightOption.philosopher == side { return battle.rightOption.optionId }
-    return nil
   }
 
   private func handleAsyncAction(
@@ -191,7 +182,7 @@ extension PreVoteFeature {
       switch result {
       case let .success(detail):
         state.battleDetail = detail
-        state.battle = makeBattle(from: detail, fallback: state.battle)
+        state.battle = makeBattle(from: detail)
       case let .failure(error):
         Log.error("[PreVoteFeature] fetchBattle failed: \(error.localizedDescription)")
       }
@@ -211,27 +202,26 @@ extension PreVoteFeature {
 
   /// API 로 받은 BattleDetail 을 화면 모델 PreVoteBattle 로 매핑.
   /// 옵션 0, 1 만 좌/우 카드에 매핑 (label A→left, B→right).
-  private func makeBattle(
-    from detail: BattleDetail,
-    fallback: PreVoteBattle
-  ) -> PreVoteBattle {
+  private func makeBattle(from detail: BattleDetail) -> PreVoteBattle? {
     let info = detail.battleInfo
-    let philosophers: [PhilosopherAvatar] = [.plato, .sartre, .sunja]
-    let mapped = info.options.enumerated().map { idx, option in
+    let mapped = info.options.map { option in
       PreVoteOption(
         optionId: option.optionId,
-        philosopher: avatar(for: option.representative)
-          ?? philosophers[safe: idx]
-          ?? .plato,
+        representative: option.representative,
+        imageURL: option.imageUrl,
         stance: option.title
       )
     }
-    let leftOption = mapped[safe: 0] ?? fallback.leftOption
-    let rightOption = mapped[safe: 1] ?? fallback.rightOption
+    guard let leftOption = mapped[safe: 0],
+          let rightOption = mapped[safe: 1]
+    else {
+      Log.error("[PreVoteFeature] 서버 option 데이터 부족 count=\(mapped.count)")
+      return nil
+    }
 
     return PreVoteBattle(
       battleId: info.battleId,
-      backgroundImageURL: info.thumbnailUrl.isEmpty ? fallback.backgroundImageURL : info.thumbnailUrl,
+      backgroundImageURL: info.thumbnailUrl,
       tags: detail.categoryTags.map { "#\($0.name)" },
       titleLine1: info.title,
       titleLine2: "",
@@ -239,10 +229,6 @@ extension PreVoteFeature {
       leftOption: leftOption,
       rightOption: rightOption
     )
-  }
-
-  private func avatar(for representative: String) -> PhilosopherAvatar? {
-    PhilosopherAvatar.allCases.first { $0.rawValue == representative }
   }
 
   private func handleDelegateAction(

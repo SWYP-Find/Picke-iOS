@@ -35,8 +35,15 @@ public struct PreVoteView: View {
     .overlay(alignment: .top) {
       navigationBar
         .background(Color.clear)
-        .padding(.top, topInset)
+        .padding(.top, 12)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
         .zIndex(10)
+    }
+    .overlay(alignment: .bottom) {
+      primaryButton
+        .padding(.horizontal, Self.ctaHorizontalPadding)
+        .padding(.bottom, Self.ctaBottomSpacing)
     }
     .onAppear { send(.onAppear) }
     .sheet(item: $store.shareItem) { item in
@@ -47,51 +54,51 @@ public struct PreVoteView: View {
   }
 
   private var shouldShowSkeleton: Bool {
-    store.isLoading && store.battleDetail == nil
-  }
-
-  private var topInset: CGFloat {
-    UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .flatMap(\.windows)
-      .first(where: \.isKeyWindow)?
-      .safeAreaInsets.top ?? 47
+    store.isLoading || store.battle == nil
   }
 
   @ViewBuilder
   private var loadedContent: some View {
-    GeometryReader { proxy in
-      ZStack(alignment: .top) {
-        backgroundImage
-          .frame(width: proxy.size.width)
+    if let battle = store.battle {
+      GeometryReader { proxy in
+        ZStack(alignment: .top) {
+          backgroundImage(battle)
+            .frame(width: proxy.size.width)
 
-        ScrollView(showsIndicators: false) {
-          VStack(spacing: 0) {
-            Color.clear
-              .frame(height: Self.contentOverlapTopOffset)
+          ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+              Color.clear
+                .frame(height: Self.contentOverlapTopOffset)
 
-            contentArea(
-              minHeight: max(0, proxy.size.height - Self.contentOverlapTopOffset)
-            )
+              contentArea(battle)
+            }
+            .frame(width: proxy.size.width)
           }
-          .frame(width: proxy.size.width)
+          .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
+        .ignoresSafeArea(edges: .top)
       }
-      .ignoresSafeArea(edges: .top)
+    } else {
+      PreVoteSkeletonView()
     }
   }
 
   private static let contentOverlapTopOffset: CGFloat = 290
+  private static let contentSectionSpacing: CGFloat = 32
+  private static let optionCardHeight: CGFloat = 104
+  private static let ctaHeight: CGFloat = 52
+  private static let ctaBottomSpacing: CGFloat = 40
+  private static let ctaHorizontalPadding: CGFloat = 20
+  private static let contentBottomSpacing: CGFloat = ctaHeight + ctaBottomSpacing + contentSectionSpacing
 }
 
 // MARK: - Background
 
 extension PreVoteView {
   @ViewBuilder
-  private var backgroundImage: some View {
+  private func backgroundImage(_ battle: PreVoteBattle) -> some View {
     ZStack {
-      if let urlString = store.battle.backgroundImageURL,
+      if let urlString = battle.backgroundImageURL,
          let url = URL(string: urlString)
       {
         KFImage(url)
@@ -115,16 +122,26 @@ extension PreVoteView {
 extension PreVoteView {
   @ViewBuilder
   private var navigationBar: some View {
-    PickeNavigationBar(
-      onBack: { send(.backButtonTapped) }
-    ) {
+    HStack {
+      Button { send(.backButtonTapped) } label: {
+        Image(systemName: "chevron.left")
+          .font(.system(size: 24, weight: .regular))
+          .frame(width: 20, height: 10)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+
+      Spacer()
+
       Button { send(.shareTapped) } label: {
         Image(systemName: "square.and.arrow.up")
-          .font(.system(size: 16, weight: .semibold))
+          .font(.system(size: 24, weight: .regular))
           .frame(width: 24, height: 24)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
     }
+    .padding(.horizontal, 20)
     .foregroundStyle(.beige50)
   }
 }
@@ -133,20 +150,15 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private func contentArea(minHeight: CGFloat) -> some View {
-    VStack(spacing: 40) {
-      contentSection
-      optionSection
-
-      Spacer(minLength: 40)
-
-      primaryButton
+  private func contentArea(_ battle: PreVoteBattle) -> some View {
+    VStack(spacing: Self.contentSectionSpacing) {
+      contentSection(battle)
+      optionSection(battle)
     }
-    .padding(.horizontal, 24)
+    .padding(.horizontal, 20)
     .padding(.top, 80)
-    .padding(.bottom, 40)
+    .padding(.bottom, Self.contentBottomSpacing)
     .frame(maxWidth: .infinity)
-    .frame(minHeight: minHeight, alignment: .top)
     .background(
       LinearGradient(
         stops: [
@@ -162,21 +174,21 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private var contentSection: some View {
+  private func contentSection(_ battle: PreVoteBattle) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       VStack(alignment: .leading, spacing: 20) {
-        tagsRow
-        titleText
+        tagsRow(battle)
+        titleText(battle)
       }
-      summaryText
+      summaryText(battle)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   @ViewBuilder
-  private var tagsRow: some View {
+  private func tagsRow(_ battle: PreVoteBattle) -> some View {
     HStack(spacing: 9) {
-      ForEach(store.battle.tags, id: \.self) { tag in
+      ForEach(battle.tags, id: \.self) { tag in
         Text(tag)
           .pretendardFont(family: .SemiBold, size: 12)
           .foregroundStyle(.primary500)
@@ -188,8 +200,8 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private var titleText: some View {
-    Text("\(store.battle.titleLine1)\n\(store.battle.titleLine2)")
+  private func titleText(_ battle: PreVoteBattle) -> some View {
+    Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
       .pretendardFont(family: .Bold, size: 24)
       .foregroundStyle(.neutral500)
       .kerning(-0.6)
@@ -200,8 +212,8 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private var summaryText: some View {
-    Text(store.battle.summary)
+  private func summaryText(_ battle: PreVoteBattle) -> some View {
+    Text(battle.summary)
       .pretendardFont(family: .Regular, size: 13)
       .foregroundStyle(.neutral400)
       .lineSpacing(13 * 0.4)
@@ -215,11 +227,11 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private var optionSection: some View {
+  private func optionSection(_ battle: PreVoteBattle) -> some View {
     ZStack {
       HStack(spacing: 8) {
-        optionCard(store.battle.leftOption)
-        optionCard(store.battle.rightOption)
+        optionCard(battle.leftOption)
+        optionCard(battle.rightOption)
       }
       .frame(maxWidth: .infinity)
       vsBadge
@@ -228,13 +240,13 @@ extension PreVoteView {
 
   @ViewBuilder
   private func optionCard(_ option: PreVoteOption) -> some View {
-    let isSelected = store.selectedSide == option.philosopher
+    let isSelected = store.selectedOptionId == option.optionId
 
     return Button {
-      send(.optionTapped(option.philosopher))
+      send(.optionTapped(optionId: option.optionId))
     } label: {
       VStack(spacing: 12) {
-        avatarView(option.philosopher)
+        avatarView(imageURL: option.imageURL)
 
         VStack(spacing: 2) {
           Text(option.stance)
@@ -245,7 +257,7 @@ extension PreVoteView {
             .minimumScaleFactor(0.85)
             .multilineTextAlignment(.center)
 
-          Text(option.philosopher.rawValue)
+          Text(option.representative)
             .pretendardFont(family: .Medium, size: 12)
             .foregroundStyle(.neutral300)
             .lineLimit(1)
@@ -253,7 +265,8 @@ extension PreVoteView {
             .multilineTextAlignment(.center)
         }
       }
-      .frame(maxWidth: .infinity, minHeight: 121)
+      .frame(maxWidth: .infinity)
+      .frame(height: Self.optionCardHeight)
       .padding(8)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
@@ -265,10 +278,15 @@ extension PreVoteView {
     .buttonStyle(.plain)
   }
 
-  private func avatarView(_ philosopher: PhilosopherAvatar) -> some View {
-    Image(asset: philosopher.imageAsset)
+  private func avatarView(imageURL: String) -> some View {
+    KFImage(URL(string: imageURL))
+      .placeholder {
+        SkeletonView()
+          .frame(width: 28, height: 20)
+      }
       .resizable()
       .scaledToFit()
+      .frame(width: 28, height: 20)
       .frame(width: 40, height: 40)
       .background(.beige600, in: Circle())
   }
@@ -292,7 +310,7 @@ extension PreVoteView {
     CustomButton(
       action: { send(.primaryButtonTapped) },
       title: "사전 투표하기",
-      config: CustomButtonConfig.primary(.large, height: 52),
+      config: CustomButtonConfig.primary(.large, height: Self.ctaHeight),
       isEnable: store.isPrimaryButtonEnabled
     )
   }
@@ -300,7 +318,7 @@ extension PreVoteView {
 
 #Preview {
   PreVoteView(
-    store: Store(initialState: PreVoteFeature.State()) {
+    store: Store(initialState: PreVoteFeature.State(battle: .mock)) {
       PreVoteFeature()
     }
   )

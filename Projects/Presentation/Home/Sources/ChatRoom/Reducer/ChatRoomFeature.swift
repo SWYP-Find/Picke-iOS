@@ -46,12 +46,8 @@ public struct ChatRoomFeature {
       guard let scenario else { return bundle.messages }
       return scenario.nodes.flatMap { node in
         node.scripts.map { script in
-          let isRight = script.speakerType.rawValue == "B"
           return ChatMessage(
-            speaker: ChatSpeaker(
-              philosopher: avatar(for: script.speakerName),
-              side: isRight ? .right : .left
-            ),
+            speaker: speaker(for: script, in: scenario),
             text: script.text
           )
         }
@@ -66,8 +62,43 @@ public struct ChatRoomFeature {
 
     public var canScrub: Bool { true }
 
-    private func avatar(for name: String) -> PhilosopherAvatar {
-      PhilosopherAvatar.allCases.first { $0.rawValue == name } ?? .plato
+    private func speaker(for script: ScenarioScript, in scenario: BattleScenario) -> ChatSpeaker {
+      switch script.speakerType {
+      case .a:
+        return speaker(label: "A", side: .left, fallbackName: script.speakerName, in: scenario)
+      case .b:
+        return speaker(label: "B", side: .right, fallbackName: script.speakerName, in: scenario)
+      case .narrator:
+        return ChatSpeaker(name: script.speakerName, side: .center)
+      case .philosopher, .unknown:
+        if let philosopher = scenario.philosophers.first(where: { $0.name == script.speakerName }) {
+          let side: ChatSpeakerSide = philosopher.label == "B" ? .right : .left
+          return ChatSpeaker(
+            label: philosopher.label,
+            name: philosopher.name,
+            imageURL: philosopher.imageUrl,
+            side: side
+          )
+        }
+        return ChatSpeaker(name: script.speakerName, side: .center)
+      }
+    }
+
+    private func speaker(
+      label: String,
+      side: ChatSpeakerSide,
+      fallbackName: String,
+      in scenario: BattleScenario
+    ) -> ChatSpeaker {
+      guard let philosopher = scenario.philosophers.first(where: { $0.label == label }) else {
+        return ChatSpeaker(label: label, name: fallbackName, side: side)
+      }
+      return ChatSpeaker(
+        label: philosopher.label,
+        name: philosopher.name,
+        imageURL: philosopher.imageUrl,
+        side: side
+      )
     }
 
     public var currentNode: ScenarioNode? {

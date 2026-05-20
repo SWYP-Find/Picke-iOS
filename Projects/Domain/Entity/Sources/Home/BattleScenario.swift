@@ -120,6 +120,8 @@ public struct ScenarioInteractiveOption: Equatable, Hashable, Identifiable {
 }
 
 public enum ScenarioSpeakerType: String, Equatable, Hashable, CaseIterable {
+  case a = "A"
+  case b = "B"
   case narrator = "NARRATOR"
   case philosopher = "PHILOSOPHER"
   case unknown

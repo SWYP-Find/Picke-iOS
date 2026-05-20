@@ -10,16 +10,26 @@ import Foundation
 public enum ChatSpeakerSide: Equatable, Hashable {
   case left
   case right
+  case center
 }
 
 public struct ChatSpeaker: Equatable, Identifiable, Hashable {
-  public let philosopher: PhilosopherAvatar
+  public let label: String?
+  public let name: String
+  public let imageURL: String?
   public let side: ChatSpeakerSide
 
-  public var id: PhilosopherAvatar { philosopher }
+  public var id: String { "\(label ?? name)-\(side)" }
 
-  public init(philosopher: PhilosopherAvatar, side: ChatSpeakerSide) {
-    self.philosopher = philosopher
+  public init(
+    label: String? = nil,
+    name: String,
+    imageURL: String? = nil,
+    side: ChatSpeakerSide
+  ) {
+    self.label = label
+    self.name = name
+    self.imageURL = imageURL
     self.side = side
   }
 }
@@ -66,8 +76,18 @@ public struct ChatRoomBundle: Equatable {
 
 public extension ChatRoomBundle {
   static let mock: ChatRoomBundle = {
-    let plato = ChatSpeaker(philosopher: .plato, side: .left)
-    let sartre = ChatSpeaker(philosopher: .sartre, side: .right)
+    let plato = ChatSpeaker(
+      label: "A",
+      name: "플라톤",
+      imageURL: "https://picke.store/api/v1/resources/images/PHILOSOPHER/plato.png",
+      side: .left
+    )
+    let sartre = ChatSpeaker(
+      label: "B",
+      name: "사르트르",
+      imageURL: "https://picke.store/api/v1/resources/images/PHILOSOPHER/sartre.png",
+      side: .right
+    )
     return ChatRoomBundle(
       battleTitle: "뒤샹의 변기, 예술인가 도발인가",
       totalDuration: 268,
