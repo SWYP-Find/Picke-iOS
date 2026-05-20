@@ -26,11 +26,11 @@ public protocol AuthInterface: Sendable {
 /// Auth Repository 의 DependencyKey 구조체
 public struct AuthRepositoryDependency: DependencyKey {
   public static var liveValue: AuthInterface {
-    UnifiedDI.resolve(AuthInterface.self) ?? DefaultAuthRepositoryImpl()
+    return UnifiedDI.resolve(AuthInterface.self) ?? DefaultAuthRepositoryImpl()
   }
 
   public static var testValue: AuthInterface {
-    UnifiedDI.resolve(AuthInterface.self) ?? DefaultAuthRepositoryImpl()
+    return UnifiedDI.resolve(AuthInterface.self) ?? DefaultAuthRepositoryImpl()
   }
 
   public static var previewValue: AuthInterface = liveValue

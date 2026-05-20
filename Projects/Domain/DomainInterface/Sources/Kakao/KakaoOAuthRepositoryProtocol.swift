@@ -18,7 +18,7 @@ public protocol KakaoOAuthInterface: Sendable {
 
 public struct KakaoOAuthRepositoryDependencyKey: DependencyKey {
   public static var liveValue: KakaoOAuthInterface {
-    UnifiedDI.resolve(KakaoOAuthInterface.self) ?? MockKakaoOAuthRepository()
+    return UnifiedDI.resolve(KakaoOAuthInterface.self) ?? MockKakaoOAuthRepository()
   }
 
   public static var previewValue: KakaoOAuthInterface = MockKakaoOAuthRepository()

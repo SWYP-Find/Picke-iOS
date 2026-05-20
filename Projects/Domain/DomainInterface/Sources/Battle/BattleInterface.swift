@@ -9,6 +9,7 @@ import WeaveDI
 
 public protocol BattleInterface: Sendable {
   func submitPreVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
+  func fetchScenario(battleId: Int) async throws -> BattleScenario
 }
 
 public struct BattleRepositoryDependency: DependencyKey {

@@ -18,11 +18,11 @@ public protocol HomeInterface: Sendable {
 
 public struct HomeRepositoryDependency: DependencyKey {
   public static var liveValue: HomeInterface {
-    UnifiedDI.resolve(HomeInterface.self) ?? DefaultHomeRepositoryImpl()
+    return UnifiedDI.resolve(HomeInterface.self) ?? DefaultHomeRepositoryImpl()
   }
 
   public static var testValue: HomeInterface {
-    UnifiedDI.resolve(HomeInterface.self) ?? DefaultHomeRepositoryImpl()
+    return UnifiedDI.resolve(HomeInterface.self) ?? DefaultHomeRepositoryImpl()
   }
 
   public static var previewValue: HomeInterface = liveValue

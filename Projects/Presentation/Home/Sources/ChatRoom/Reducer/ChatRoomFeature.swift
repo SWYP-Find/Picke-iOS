@@ -8,6 +8,7 @@
 import Foundation
 
 import ComposableArchitecture
+import DomainInterface
 import Entity
 import LogMacro
 
@@ -18,14 +19,16 @@ public struct ChatRoomFeature {
   @ObservableState
   public struct State: Equatable {
     public var bundle: ChatRoomBundle = .mock
+    public var scenario: BattleScenario?
     public var isPlaying: Bool = false
     public var currentTime: TimeInterval = 0
     public var battleId: Int = 0
+    public var isLoadingScenario: Bool = false
     /// 한 번 끝까지 재생되어야 시킹(드래그) 허용
     public var hasFinishedListening: Bool = false
 
     public var totalDuration: TimeInterval { bundle.totalDuration }
-    public var battleTitle: String { bundle.battleTitle }
+    public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
     public var messages: [ChatMessage] { bundle.messages }
     public var canScrub: Bool { hasFinishedListening }
 
@@ -56,10 +59,12 @@ public struct ChatRoomFeature {
   public enum AsyncAction: Equatable {
     case startTicking
     case stopTicking
+    case fetchScenario
   }
 
   public enum InnerAction: Equatable {
     case tick
+    case scenarioResponse(Result<BattleScenario, AuthError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -68,9 +73,11 @@ public struct ChatRoomFeature {
 
   nonisolated enum CancelID: Hashable {
     case tick
+    case fetchScenario
   }
 
   @Dependency(\.continuousClock) var clock
+  @Dependency(\.battleRepository) private var battleRepository
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -98,7 +105,8 @@ extension ChatRoomFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      return .none
+      guard state.scenario == nil, !state.isLoadingScenario else { return .none }
+      return .send(.async(.fetchScenario))
     case .backButtonTapped:
       return .send(.async(.stopTicking)).concatenate(with: .send(.delegate(.dismiss)))
     case .refreshTapped:
@@ -123,10 +131,10 @@ extension ChatRoomFeature {
     }
   }
 
-  private func handleAsyncAction(state _: inout State, action: AsyncAction) -> Effect<Action> {
+  private func handleAsyncAction(state: inout State, action: AsyncAction) -> Effect<Action> {
     switch action {
     case .startTicking:
-      .run { [clock] send in
+      return .run { [clock] send in
         for await _ in clock.timer(interval: .seconds(1)) {
           await send(.inner(.tick))
         }
@@ -134,7 +142,19 @@ extension ChatRoomFeature {
       .cancellable(id: CancelID.tick, cancelInFlight: true)
 
     case .stopTicking:
-      .cancel(id: CancelID.tick)
+      return .cancel(id: CancelID.tick)
+
+    case .fetchScenario:
+      state.isLoadingScenario = true
+      let battleId = state.battleId
+      return .run { [repository = battleRepository] send in
+        let result = await Result {
+          try await repository.fetchScenario(battleId: battleId)
+        }
+        .mapError(AuthError.from)
+        return await send(.inner(.scenarioResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchScenario, cancelInFlight: true)
     }
   }
 
@@ -149,6 +169,16 @@ extension ChatRoomFeature {
         return .send(.async(.stopTicking))
       }
       state.currentTime = next
+      return .none
+
+    case let .scenarioResponse(result):
+      state.isLoadingScenario = false
+      switch result {
+      case let .success(scenario):
+        state.scenario = scenario
+      case let .failure(error):
+        Log.error("[ChatRoomFeature] fetchScenario failed: \(error.localizedDescription)")
+      }
       return .none
     }
   }

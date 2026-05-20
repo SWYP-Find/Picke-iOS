@@ -17,11 +17,11 @@ public protocol GoogleOAuthProviderInterface: Sendable {
 /// Google OAuth Provider 의 DependencyKey 구조체
 public struct GoogleOAuthProviderDependency: DependencyKey {
   public static var liveValue: GoogleOAuthProviderInterface {
-    UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
+    return UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
   }
 
   public static var testValue: GoogleOAuthProviderInterface {
-    UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
+    return UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
   }
 
   public static var previewValue: GoogleOAuthProviderInterface = testValue

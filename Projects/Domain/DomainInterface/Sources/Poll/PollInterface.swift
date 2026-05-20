@@ -13,11 +13,11 @@ public protocol PollInterface: Sendable {
 
 public struct PollRepositoryDependency: DependencyKey {
   public static var liveValue: PollInterface {
-    UnifiedDI.resolve(PollInterface.self) ?? DefaultPollRepositoryImpl()
+    return UnifiedDI.resolve(PollInterface.self) ?? DefaultPollRepositoryImpl()
   }
 
   public static var testValue: PollInterface {
-    UnifiedDI.resolve(PollInterface.self) ?? DefaultPollRepositoryImpl()
+    return UnifiedDI.resolve(PollInterface.self) ?? DefaultPollRepositoryImpl()
   }
 
   public static var previewValue: PollInterface = liveValue

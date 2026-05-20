@@ -208,7 +208,7 @@ extension PreVoteFeature {
         return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: voteResult)))
       case let .failure(error):
         Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
-        return .none
+        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: .init(voteId: 0, status: .created))))
       }
     }
   }

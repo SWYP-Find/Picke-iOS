@@ -12,6 +12,7 @@ import AsyncMoya
 
 public enum BattleService {
   case preVote(battleId: Int, body: PreVoteRequest)
+  case scenario(battleId: Int)
 }
 
 extension BattleService: BaseTargetType {
@@ -23,6 +24,8 @@ extension BattleService: BaseTargetType {
     switch self {
     case let .preVote(battleId, _):
       BattleAPI.preVote(battleId: battleId).description
+    case let .scenario(battleId):
+      BattleAPI.scenario(battleId: battleId).description
     }
   }
 
@@ -32,6 +35,8 @@ extension BattleService: BaseTargetType {
     switch self {
     case .preVote:
       .post
+    case .scenario:
+      .get
     }
   }
 
@@ -39,18 +44,12 @@ extension BattleService: BaseTargetType {
     switch self {
     case let .preVote(_, body):
       body.toDictionary
+    case .scenario:
+      nil
     }
   }
 
   public var headers: [String: String]? {
     APIHeader.baseHeader
-  }
-}
-
-public struct PreVoteRequest: Encodable {
-  public let optionId: Int
-
-  public init(optionId: Int) {
-    self.optionId = optionId
   }
 }
