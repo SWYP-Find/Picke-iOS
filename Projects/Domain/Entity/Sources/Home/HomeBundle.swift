@@ -47,15 +47,6 @@ public extension HomeBundle {
     newBattles: NewBattle.mocks
   )
 
-  var replacingEmptySectionsWithMocks: HomeBundle {
-    HomeBundle(
-      newNotice: newNotice,
-      heroes: heroes.isEmpty ? HeroBattle.mocks : heroes,
-      hotBattles: hotBattles,
-      bestBattles: bestBattles.isEmpty ? BestBattle.mocks : bestBattles,
-      quizzes: quizzes.isEmpty ? [.mock] : quizzes,
-      votes: votes.isEmpty ? [.mock] : votes,
-      newBattles: newBattles.isEmpty ? NewBattle.mocks : newBattles
-    )
-  }
+  /// 서버 응답을 그대로 노출 — 빈 섹션은 UI 에서 숨김.
+  var replacingEmptySectionsWithMocks: HomeBundle { self }
 }
