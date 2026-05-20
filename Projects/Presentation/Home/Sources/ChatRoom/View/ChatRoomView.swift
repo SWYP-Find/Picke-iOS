@@ -80,16 +80,34 @@ extension ChatRoomView {
 extension ChatRoomView {
   @ViewBuilder
   private func messageList() -> some View {
-    ScrollView(showsIndicators: false) {
-      VStack(alignment: .leading, spacing: 20) {
-        ForEach(groupedMessages, id: \.id) { group in
-          messageGroup(group)
+    ScrollViewReader { proxy in
+      ScrollView(showsIndicators: false) {
+        VStack(alignment: .leading, spacing: 20) {
+          ForEach(groupedMessages, id: \.id) { group in
+            messageGroup(group)
+              .id(group.messages.last?.id ?? group.id)
+          }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .onChange(of: store.activeMessageId) { _, newId in
+        guard let target = scrollTargetId(for: newId) else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+          proxy.scrollTo(target, anchor: .center)
         }
       }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 20)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+
+  /// 활성 메시지가 속한 SpeakerGroup 의 마지막 메시지 id 로 스크롤한다.
+  private func scrollTargetId(for activeId: UUID?) -> UUID? {
+    guard let activeId else { return nil }
+    for group in groupedMessages where group.messages.contains(where: { $0.id == activeId }) {
+      return group.messages.last?.id ?? activeId
+    }
+    return activeId
   }
 
   private var groupedMessages: [SpeakerGroup] {

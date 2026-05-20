@@ -46,12 +46,25 @@ public struct ChatRoomFeature {
       guard let scenario else { return bundle.messages }
       return scenario.nodes.flatMap { node in
         node.scripts.map { script in
-          return ChatMessage(
+          ChatMessage(
             speaker: speaker(for: script, in: scenario),
-            text: script.text
+            text: script.text,
+            startTimeMs: script.startTimeMs
           )
         }
       }
+    }
+
+    /// 현재 재생 시점에 해당하는 메시지 id. `currentTime` 이상의 startTimeMs 를
+    /// 가지지 않은 마지막 메시지를 활성으로 본다.
+    public var activeMessageId: UUID? {
+      let currentMs = Int(currentTime * 1000)
+      var active: ChatMessage?
+      for message in messages {
+        guard let start = message.startTimeMs else { continue }
+        if start <= currentMs { active = message } else { break }
+      }
+      return active?.id ?? messages.first?.id
     }
 
     public var audioUrl: String? {
