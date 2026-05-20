@@ -32,11 +32,42 @@ public struct ChatRoomFeature {
     /// 선택지 영역에서 사용자가 탭한 옵션 label
     public var selectedOptionLabel: String?
 
-    public var totalDuration: TimeInterval { bundle.totalDuration }
+    public var totalDuration: TimeInterval {
+      guard let scenario else { return bundle.totalDuration }
+      let nodesTotal = scenario.nodes.reduce(0) { $0 + $1.audioDuration }
+      return nodesTotal > 0 ? TimeInterval(nodesTotal) : bundle.totalDuration
+    }
+
     public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
-    public var messages: [ChatMessage] { bundle.messages }
+
+    public var messages: [ChatMessage] {
+      guard let scenario else { return bundle.messages }
+      return scenario.nodes.flatMap { node in
+        node.scripts.map { script in
+          let isRight = script.speakerType.rawValue == "B"
+          return ChatMessage(
+            speaker: ChatSpeaker(
+              philosopher: avatar(for: script.speakerName),
+              side: isRight ? .right : .left
+            ),
+            text: script.text
+          )
+        }
+      }
+    }
+
+    public var audioUrl: String? {
+      guard let scenario else { return nil }
+      if let url = scenario.audios[scenario.recommendedPathKey.rawValue] { return url }
+      return scenario.audios.values.first
+    }
+
     // TODO: 음원 실재생 연결 후 hasFinishedListening 게이트로 복원
     public var canScrub: Bool { true }
+
+    private func avatar(for name: String) -> PhilosopherAvatar {
+      PhilosopherAvatar.allCases.first { $0.rawValue == name } ?? .plato
+    }
 
     public var currentNode: ScenarioNode? {
       guard let scenario else { return nil }

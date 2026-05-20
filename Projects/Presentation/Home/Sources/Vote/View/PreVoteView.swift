@@ -50,15 +50,17 @@ public struct PreVoteView: View {
 
   @ViewBuilder
   private var loadedContent: some View {
-    ScrollView(showsIndicators: false) {
-      VStack(spacing: -120) {
-        backgroundImage
-        contentArea
+    GeometryReader { proxy in
+      ScrollView(showsIndicators: false) {
+        VStack(spacing: -120) {
+          backgroundImage
+          contentArea
+        }
+        .frame(width: proxy.size.width)
       }
-      .frame(maxWidth: .infinity)
+      .scrollBounceBehavior(.basedOnSize)
+      .ignoresSafeArea(edges: .top)
     }
-    .scrollBounceBehavior(.basedOnSize)
-    .ignoresSafeArea(edges: .top)
   }
 }
 
@@ -116,7 +118,7 @@ extension PreVoteView {
       optionSection
       primaryButton
     }
-    .padding(.horizontal, 16)
+    .padding(.horizontal, 20)
     .padding(.top, 80)
     .padding(.bottom, 40)
     .background(
@@ -166,7 +168,8 @@ extension PreVoteView {
       .foregroundStyle(.neutral500)
       .kerning(-0.6)
       .lineSpacing(24 * 0.4)
-      .fixedSize(horizontal: false, vertical: true)
+      .multilineTextAlignment(.leading)
+      .lineLimit(nil)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 
@@ -176,7 +179,8 @@ extension PreVoteView {
       .pretendardFont(family: .Regular, size: 13)
       .foregroundStyle(.neutral400)
       .lineSpacing(13 * 0.4)
-      .fixedSize(horizontal: false, vertical: true)
+      .multilineTextAlignment(.leading)
+      .lineLimit(nil)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
@@ -191,6 +195,7 @@ extension PreVoteView {
         optionCard(store.battle.leftOption)
         optionCard(store.battle.rightOption)
       }
+      .frame(maxWidth: .infinity)
       vsBadge
     }
   }
@@ -210,15 +215,19 @@ extension PreVoteView {
             .pretendardFont(family: .SemiBold, size: 14)
             .foregroundStyle(.neutral600)
             .kerning(-0.35)
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
             .multilineTextAlignment(.center)
 
           Text(option.philosopher.rawValue)
             .pretendardFont(family: .Medium, size: 12)
             .foregroundStyle(.neutral300)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
             .multilineTextAlignment(.center)
         }
       }
-      .frame(maxWidth: .infinity)
+      .frame(maxWidth: .infinity, minHeight: 121)
       .padding(8)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
