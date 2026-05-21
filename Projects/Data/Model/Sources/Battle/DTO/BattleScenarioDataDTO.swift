@@ -17,7 +17,7 @@ public struct BattleScenarioDataDTO: Decodable {
 }
 
 public struct ScenarioPhilosopherDTO: Decodable {
-  public let label: String
+  public let label: String?
   public let name: String
   public let stance: String
   public let imageUrl: String
