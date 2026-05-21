@@ -162,6 +162,7 @@ public struct ChatRoomFeature {
   @CasePathable
   public enum View {
     case onAppear
+    case onDisappear
     case backButtonTapped
     case refreshTapped
     case togglePlayTapped
@@ -238,6 +239,13 @@ extension ChatRoomFeature {
       return needsFetch
         ? subscribe.merge(with: .send(.async(.fetchScenario)))
         : subscribe
+
+    case .onDisappear:
+      state.isPlaying = false
+      return .merge(
+        .cancel(id: CancelID.audioObserver),
+        .run { [player = audioPlayer] _ in await player.pause() }
+      )
 
     case .backButtonTapped:
       return .run { [player = audioPlayer] send in

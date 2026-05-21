@@ -17,10 +17,13 @@ import Kingfisher
 @ViewAction(for: ChatRoomFeature.self)
 public struct ChatRoomView: View {
   @Bindable public var store: StoreOf<ChatRoomFeature>
-  private static let bubbleMaxWidth: CGFloat = 222
-  private static let avatarSize: CGFloat = 32.7
-  private static let avatarImageWidth: CGFloat = 24
-  private static let avatarImageHeight: CGFloat = 28
+
+  private enum Metric {
+    static let bubbleMaxWidth: CGFloat = 222
+    static let avatarSize: CGFloat = 32.7
+    static let avatarImageWidth: CGFloat = 24
+    static let avatarImageHeight: CGFloat = 28
+  }
 
   public init(store: StoreOf<ChatRoomFeature>) {
     self.store = store
@@ -46,6 +49,7 @@ public struct ChatRoomView: View {
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
+    .onDisappear { send(.onDisappear) }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
@@ -166,12 +170,12 @@ extension ChatRoomView {
   private func avatar(_ speaker: ChatSpeaker) -> some View {
     KFImage(URL(string: speaker.imageURL ?? ""))
       .placeholder {
-        SkeletonView(cornerRadius: Self.avatarSize / 2)
+        SkeletonView(cornerRadius: Metric.avatarSize / 2)
       }
       .resizable()
       .scaledToFit()
-      .frame(width: Self.avatarImageWidth, height: Self.avatarImageHeight)
-      .frame(width: Self.avatarSize, height: Self.avatarSize)
+      .frame(width: Metric.avatarImageWidth, height: Metric.avatarImageHeight)
+      .frame(width: Metric.avatarSize, height: Metric.avatarSize)
       .background(.beige600, in: Circle())
   }
 
@@ -189,7 +193,7 @@ extension ChatRoomView {
         }
       }
     }
-    .frame(maxWidth: Self.bubbleMaxWidth, alignment: speaker.side == .left ? .leading : .trailing)
+    .frame(maxWidth: Metric.bubbleMaxWidth, alignment: speaker.side == .left ? .leading : .trailing)
   }
 
   @ViewBuilder
@@ -200,7 +204,7 @@ extension ChatRoomView {
       .lineSpacing(13 * 0.4)
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
-      .frame(maxWidth: Self.bubbleMaxWidth, alignment: .leading)
+      .frame(maxWidth: Metric.bubbleMaxWidth, alignment: .leading)
       .background(
         side == .left ? Color.beige50 : Color.beige400,
         in: RoundedRectangle(cornerRadius: 2)

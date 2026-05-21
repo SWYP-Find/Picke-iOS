@@ -164,7 +164,7 @@ extension PreVoteFeature {
       case .pre:
         return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
       case .post:
-        return .send(.async(.submitPostVote(battleId: state.battleId, optionId: optionId)))
+        return .none
       }
     }
   }
