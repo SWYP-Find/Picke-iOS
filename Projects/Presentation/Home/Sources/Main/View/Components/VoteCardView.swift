@@ -92,13 +92,18 @@ struct VoteCardView: View {
   }
 
   /// 빈칸: 선택 전엔 빈 placeholder, 선택 후엔 선택된 옵션 텍스트 표시.
+  /// 선택된 라벨 길이에 맞춰 가변 폭 — 글자가 잘리지 않도록 horizontal padding 만 두고
+  /// 최소 폭을 placeholder(52pt) 와 동일하게 유지한다.
   @ViewBuilder
   private func answerSlot() -> some View {
     if let label = selectedLabel {
       Text(label)
         .pretendardFont(family: .SemiBold, size: 15)
         .foregroundStyle(.primary500)
-        .frame(width: 52, height: 24)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+        .padding(.horizontal, 8)
+        .frame(minWidth: 52, minHeight: 24)
         .background(.beige200, in: RoundedRectangle(cornerRadius: 2))
         .overlay(
           RoundedRectangle(cornerRadius: 2)
