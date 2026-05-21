@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
   name: "Chat",
@@ -14,6 +14,8 @@ let project = Project.makeAppModule(
     .Shared(implements: .DesignSystem),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
+    .SPM.kingfisher,
+    .SPM.logMarco,
   ],
   sources: ["Sources/**"]
 )

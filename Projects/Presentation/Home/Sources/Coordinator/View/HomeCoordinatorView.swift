@@ -9,6 +9,7 @@ import Foundation
 
 import SwiftUI
 
+import Chat
 import ComposableArchitecture
 import TCAFlow
 
@@ -27,8 +28,8 @@ public struct HomeCoordinatorView: View {
       case let .preVote(preVoteStore):
         PreVoteView(store: preVoteStore)
           .toolbar(.hidden, for: .tabBar)
-      case let .chatRoom(chatRoomStore):
-        ChatRoomView(store: chatRoomStore)
+      case let .chat(chatStore):
+        ChatCoordinatorView(store: chatStore)
           .toolbar(.hidden, for: .tabBar)
       }
     }

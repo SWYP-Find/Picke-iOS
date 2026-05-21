@@ -1,36 +1,37 @@
 //
-//  HomeCoordinator.swift
-//  Home
+//  ChatCoordinator.swift
+//  Chat
 //
-//  Created by Wonji Suh on 5/15/26.
+//  채팅방 모듈 진입점. battleId 를 받아 ChatRoomFeature 를 root 로 띄운다.
+//  향후 사후 투표 결과 / 공유 등 후속 화면이 필요해지면 ChatScreen enum 에 case 만 추가.
 //
 
 import Foundation
 
-import Chat
 import ComposableArchitecture
 import TCAFlow
 
-@FlowCoordinator(screen: "HomeScreen", navigation: true)
-public struct HomeCoordinator {
+@FlowCoordinator(screen: "ChatScreen", navigation: true)
+public struct ChatCoordinator {
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<HomeScreen.State>]
+    public var routes: [Route<ChatScreen.State>]
 
-    public init() {
-      routes = [.root(.home(.init()), embedInNavigationView: true)]
+    public init(battleId: Int = 0) {
+      routes = [.root(.chatRoom(.init(battleId: battleId)), embedInNavigationView: true)]
     }
   }
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<HomeScreen>)
+    case router(IndexedRouterActionOf<ChatScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
     case navigation(NavigationAction)
+    case delegate(DelegateAction)
   }
 
   @CasePathable
@@ -43,6 +44,10 @@ public struct HomeCoordinator {
   public enum InnerAction: Equatable {}
   public enum NavigationAction: Equatable {}
 
+  public enum DelegateAction: Equatable {
+    case dismiss
+  }
+
   func handleRoute(state: inout State, action: Action) -> Effect<Action> {
     switch action {
     case let .router(routeAction):
@@ -51,32 +56,22 @@ public struct HomeCoordinator {
       handleViewAction(state: &state, action: viewAction)
     case .async, .inner, .navigation:
       .none
+    case let .delegate(delegateAction):
+      handleDelegateAction(state: &state, action: delegateAction)
     }
   }
 }
 
-extension HomeCoordinator {
+extension ChatCoordinator {
   private func routerAction(
-    state: inout State,
-    action: IndexedRouterActionOf<HomeScreen>
+    state _: inout State,
+    action: IndexedRouterActionOf<ChatScreen>
   ) -> Effect<Action> {
     switch action {
-    case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
-      state.routes.push(.preVote(.init(battleId: battleId)))
-      return .none
-
-    case .routeAction(_, action: .preVote(.delegate(.dismiss))):
-      return .send(.view(.backAction))
-
-    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, _)))):
-      state.routes.push(.chat(.init(battleId: battleId)))
-      return .none
-
-    case .routeAction(_, action: .chat(.delegate(.dismiss))):
-      return .send(.view(.backAction))
-
+    case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
+      .send(.delegate(.dismiss))
     default:
-      return .none
+      .none
     }
   }
 
@@ -93,18 +88,26 @@ extension HomeCoordinator {
       return .none
     }
   }
+
+  private func handleDelegateAction(
+    state _: inout State,
+    action: DelegateAction
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss:
+      .none
+    }
+  }
 }
 
 // swiftformat:disable extensionAccessControl
-extension HomeCoordinator {
+extension ChatCoordinator {
   @Reducer
-  public enum HomeScreen {
-    case home(HomeFeature)
-    case preVote(PreVoteFeature)
-    case chat(ChatCoordinator)
+  public enum ChatScreen {
+    case chatRoom(ChatRoomFeature)
   }
 }
 
 // swiftformat:enable extensionAccessControl
 
-extension HomeCoordinator.HomeScreen.State: Equatable {}
+extension ChatCoordinator.ChatScreen.State: Equatable {}
