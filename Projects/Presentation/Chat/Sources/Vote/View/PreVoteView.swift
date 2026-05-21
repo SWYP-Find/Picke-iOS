@@ -314,7 +314,7 @@ extension PreVoteView {
   private var primaryButton: some View {
     CustomButton(
       action: { send(.primaryButtonTapped) },
-      title: "사전 투표하기",
+      title: store.primaryButtonTitle,
       config: CustomButtonConfig.primary(.large, height: Self.ctaHeight),
       isEnable: store.isPrimaryButtonEnabled
     )

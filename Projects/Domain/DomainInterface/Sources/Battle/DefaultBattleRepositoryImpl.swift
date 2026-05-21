@@ -32,6 +32,10 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
     )
   }
 
+  public func submitPostVote(battleId _: Int, optionId _: Int) async throws -> PreVoteResult {
+    PreVoteResult(voteId: 0, status: .none)
+  }
+
   public func submitPreVote(battleId _: Int, optionId _: Int) async throws -> PreVoteResult {
     PreVoteResult(voteId: 0, status: .none)
   }

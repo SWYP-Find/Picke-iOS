@@ -52,6 +52,20 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     return data.toDomain()
   }
 
+  public func submitPostVote(battleId: Int, optionId: Int) async throws -> PreVoteResult {
+    let dto: PreVoteResponseDTO = try await provider.request(
+      .postVote(battleId: battleId, body: PreVoteRequest(optionId: optionId))
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "최종 투표 응답이 비어 있습니다"
+      Log.error("[BattleRepositoryImpl] empty postVote payload: \(message)")
+      throw AuthError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
+
   public func fetchScenario(battleId: Int) async throws -> BattleScenario {
     let dto: BattleScenarioResponseDTO = try await provider.request(
       .scenario(battleId: battleId)

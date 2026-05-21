@@ -78,6 +78,10 @@ extension ChatCoordinator {
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
+      state.routes.push(.preVote(.init(battleId: battleId, voteMode: .post)))
+      return .none
+
     default:
       return .none
     }
@@ -103,7 +107,7 @@ extension ChatCoordinator {
   ) -> Effect<Action> {
     switch action {
     case .dismiss:
-      return  .none
+      .none
     }
   }
 }

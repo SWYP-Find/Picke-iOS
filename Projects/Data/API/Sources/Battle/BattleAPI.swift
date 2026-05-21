@@ -8,6 +8,7 @@ import Foundation
 public enum BattleAPI {
   case detail(battleId: Int)
   case preVote(battleId: Int)
+  case postVote(battleId: Int)
   case scenario(battleId: Int)
 
   public var description: String {
@@ -16,6 +17,8 @@ public enum BattleAPI {
       "\(battleId)"
     case let .preVote(battleId):
       "\(battleId)/votes/pre"
+    case let .postVote(battleId):
+      "\(battleId)/votes/post"
     case let .scenario(battleId):
       "\(battleId)/scenario"
     }

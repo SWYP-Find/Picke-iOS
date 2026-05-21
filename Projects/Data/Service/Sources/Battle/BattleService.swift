@@ -13,6 +13,7 @@ import AsyncMoya
 public enum BattleService {
   case detail(battleId: Int)
   case preVote(battleId: Int, body: PreVoteRequest)
+  case postVote(battleId: Int, body: PreVoteRequest)
   case scenario(battleId: Int)
 }
 
@@ -27,6 +28,8 @@ extension BattleService: BaseTargetType {
       BattleAPI.detail(battleId: battleId).description
     case let .preVote(battleId, _):
       BattleAPI.preVote(battleId: battleId).description
+    case let .postVote(battleId, _):
+      BattleAPI.postVote(battleId: battleId).description
     case let .scenario(battleId):
       BattleAPI.scenario(battleId: battleId).description
     }
@@ -40,6 +43,8 @@ extension BattleService: BaseTargetType {
       .get
     case .preVote:
       .post
+    case .postVote:
+      .post
     case .scenario:
       .get
     }
@@ -50,6 +55,8 @@ extension BattleService: BaseTargetType {
     case .detail:
       nil
     case let .preVote(_, body):
+      body.toDictionary
+    case let .postVote(_, body):
       body.toDictionary
     case .scenario:
       nil

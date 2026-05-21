@@ -191,6 +191,7 @@ public struct ChatRoomFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case requestFinalVote(battleId: Int)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -391,7 +392,11 @@ extension ChatRoomFeature {
         switch customAlertAction {
         case .confirmTapped:
           state.customAlert = nil
-          return .none
+          let battleId = state.battleId
+          return .run { [player = audioPlayer] send in
+            await player.pause()
+            await send(.delegate(.requestFinalVote(battleId: battleId)))
+          }
         case .cancelTapped:
           state.customAlert = nil
           state.currentTime = 0
@@ -410,7 +415,7 @@ extension ChatRoomFeature {
 
   private func handleDelegateAction(state _: inout State, action: DelegateAction) -> Effect<Action> {
     switch action {
-    case .dismiss:
+    case .dismiss, .requestFinalVote:
       .none
     }
   }

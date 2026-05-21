@@ -10,6 +10,7 @@ import WeaveDI
 public protocol BattleInterface: Sendable {
   func fetchBattle(battleId: Int) async throws -> BattleDetail
   func submitPreVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
+  func submitPostVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
   func fetchScenario(battleId: Int) async throws -> BattleScenario
 }
 
