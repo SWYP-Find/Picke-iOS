@@ -71,8 +71,13 @@ extension ChatCoordinator {
     case .routeAction(_, action: .preVote(.delegate(.dismiss))):
       return .send(.delegate(.dismiss))
 
-    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, _)))):
-      state.routes.push(.chatRoom(.init(battleId: battleId)))
+    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _)))):
+      switch voteMode {
+      case .pre:
+        state.routes.push(.chatRoom(.init(battleId: battleId)))
+      case .post:
+        state.routes.push(.comment(.init(battleId: battleId)))
+      }
       return .none
 
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
@@ -81,6 +86,9 @@ extension ChatCoordinator {
     case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
       state.routes.push(.preVote(.init(battleId: battleId, voteMode: .post)))
       return .none
+
+    case .routeAction(_, action: .comment(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     default:
       return .none
@@ -118,6 +126,7 @@ extension ChatCoordinator {
   public enum ChatScreen {
     case preVote(PreVoteFeature)
     case chatRoom(ChatRoomFeature)
+    case comment(CommentFeature)
   }
 }
 

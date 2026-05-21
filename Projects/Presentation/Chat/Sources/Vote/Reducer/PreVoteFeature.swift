@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 import ComposableArchitecture
 import DomainInterface
@@ -57,11 +58,15 @@ public struct PreVoteFeature {
   /// 공유 시트 트리거. `.sheet(item:)` 에 바로 바인딩.
   public struct ShareItem: Equatable, Identifiable {
     public let id: UUID
-    public let items: [String]
+    public let items: [Any]
 
-    public init(id: UUID = UUID(), items: [String]) {
+    public init(id: UUID = UUID(), items: [Any]) {
       self.id = id
       self.items = items
+    }
+
+    public static func == (lhs: ShareItem, rhs: ShareItem) -> Bool {
+      lhs.id == rhs.id
     }
   }
 
@@ -84,6 +89,7 @@ public struct PreVoteFeature {
 
   public enum AsyncAction: Equatable {
     case fetchBattleDetail
+    case prepareShare(title: String, url: String, imageURL: String?)
     case submitPreVote(battleId: Int, optionId: Int)
     case submitPostVote(battleId: Int, optionId: Int)
   }
@@ -91,12 +97,13 @@ public struct PreVoteFeature {
   public enum InnerAction: Equatable {
     case battleDetailResponse(Result<BattleDetail, AuthError>)
     case preVoteResponse(Result<PreVoteResult, AuthError>)
+    case sharePrepared(ShareItem)
     case postVoteResponse(Result<PreVoteResult, AuthError>)
   }
 
   public enum DelegateAction: Equatable {
     case dismiss
-    case voteSubmitted(battleId: Int, result: PreVoteResult)
+    case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -150,8 +157,8 @@ extension PreVoteFeature {
       let title = state.battleDetail?.battleInfo.title ?? state.battle?.titleLine1 ?? ""
       let url = state.battleDetail?.shareUrl
         ?? "https://picke.store/battles/\(state.battleId)"
-      state.shareItem = ShareItem(items: [title, url])
-      return .none
+      let imageURL = state.battleDetail?.battleInfo.thumbnailUrl ?? state.battle?.backgroundImageURL
+      return .send(.async(.prepareShare(title: title, url: url, imageURL: imageURL)))
 
     case let .optionTapped(optionId):
       state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
@@ -164,7 +171,7 @@ extension PreVoteFeature {
       case .pre:
         return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
       case .post:
-        return .none
+        return .send(.async(.submitPostVote(battleId: state.battleId, optionId: optionId)))
       }
     }
   }
@@ -185,6 +192,21 @@ extension PreVoteFeature {
         return await send(.inner(.battleDetailResponse(result)))
       }
       .cancellable(id: CancelID.fetchBattleDetail, cancelInFlight: true)
+
+    case let .prepareShare(title, url, imageURL):
+      return .run { send in
+        var items: [Any] = [title, url]
+
+        if let imageURL,
+           let remoteURL = URL(string: imageURL),
+           let (data, _) = try? await URLSession.shared.data(from: remoteURL),
+           let image = UIImage(data: data)
+        {
+          items.append(image)
+        }
+
+        await send(.inner(.sharePrepared(ShareItem(items: items))))
+      }
 
     case let .submitPreVote(battleId, optionId):
       return .run { [repository = battleRepository] send in
@@ -228,20 +250,24 @@ extension PreVoteFeature {
       state.isSubmitting = false
       switch result {
       case let .success(voteResult):
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: voteResult)))
+        return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .pre, result: voteResult)))
       case let .failure(error):
         Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: .init(voteId: 0, status: .created))))
+        return .none
       }
+
+    case let .sharePrepared(item):
+      state.shareItem = item
+      return .none
 
     case let .postVoteResponse(result):
       state.isSubmitting = false
       switch result {
       case let .success(voteResult):
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: voteResult)))
+        return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .post, result: voteResult)))
       case let .failure(error):
         Log.error("[PreVoteFeature] submitPostVote failed: \(error.localizedDescription)")
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: .init(voteId: 0, status: .created))))
+        return .none
       }
     }
   }
@@ -283,7 +309,7 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .dismiss, .voteSubmitted:
-      .none
+      return .none
     }
   }
 }

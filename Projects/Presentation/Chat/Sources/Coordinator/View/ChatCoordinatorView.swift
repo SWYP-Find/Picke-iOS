@@ -26,6 +26,9 @@ public struct ChatCoordinatorView: View {
       case let .chatRoom(chatRoomStore):
         ChatRoomView(store: chatRoomStore)
           .toolbar(.hidden, for: .tabBar)
+      case let .comment(commentStore):
+        CommentView(store: commentStore)
+          .toolbar(.hidden, for: .tabBar)
       }
     }
   }

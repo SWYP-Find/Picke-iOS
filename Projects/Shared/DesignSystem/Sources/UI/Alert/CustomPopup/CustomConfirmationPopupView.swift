@@ -130,7 +130,6 @@ struct CustomConfirmationPopup: View {
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
-        .padding(.vertical, 20)
 
       HStack(spacing: 10) {
         Button(action: onCancel) {
@@ -156,13 +155,13 @@ struct CustomConfirmationPopup: View {
         .buttonStyle(.plain)
       }
     }
+    .padding(.top, 20)
     .frame(width: 313)
     .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
       RoundedRectangle(cornerRadius: 2)
         .stroke(.primary500, lineWidth: 1.5)
     )
-    .opacity(0.9)
     .onTapGesture {}
   }
 }

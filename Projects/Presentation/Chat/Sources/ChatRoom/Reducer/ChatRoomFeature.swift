@@ -26,7 +26,7 @@ public struct ChatRoomFeature {
     public var playerDuration: TimeInterval = 0
     public var battleId: Int = 0
     public var isLoadingScenario: Bool = false
-    /// 한 번 끝까지 재생되어야 시킹(드래그) 허용
+    /// 한 번 끝까지 재생된 콘텐츠는 이후 재진입 시 시킹/건너뛰기를 허용한다.
     public var hasFinishedListening: Bool = false
     public var hasPresentedFinalVoteAlert: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
@@ -147,6 +147,15 @@ public struct ChatRoomFeature {
 
     public init(battleId: Int = 0) {
       self.battleId = battleId
+      hasFinishedListening = Self.hasListenedBefore(battleId: battleId)
+    }
+
+    private static func hasListenedBefore(battleId: Int) -> Bool {
+      UserDefaults.standard.bool(forKey: listenedKey(battleId: battleId))
+    }
+
+    fileprivate static func listenedKey(battleId: Int) -> String {
+      "picke.chatRoom.hasFinishedListening.\(battleId)"
     }
   }
 
@@ -303,7 +312,6 @@ extension ChatRoomFeature {
       state.currentNodeId = option.nextNodeId
       state.selectedOptionLabel = nil
       state.currentTime = 0
-      state.hasFinishedListening = false
       state.isPlaying = false
       return .run { [player = audioPlayer] _ in
         await player.pause()
@@ -374,10 +382,12 @@ extension ChatRoomFeature {
     case let .playerTimeUpdated(time):
       state.currentTime = time
       if state.totalDuration > 0,
-         time >= state.totalDuration - 0.5,
-         !state.hasFinishedListening
+         time >= state.totalDuration - 0.5
       {
-        state.hasFinishedListening = true
+        if !state.hasFinishedListening {
+          state.hasFinishedListening = true
+          UserDefaults.standard.set(true, forKey: State.listenedKey(battleId: state.battleId))
+        }
         state.isPlaying = false
         if !state.hasPresentedFinalVoteAlert {
           state.hasPresentedFinalVoteAlert = true
