@@ -2,7 +2,7 @@
 //  ChatCoordinator.swift
 //  Chat
 //
-//  채팅방 모듈 진입점. battleId 를 받아 ChatRoomFeature 를 root 로 띄운다.
+//  채팅방 모듈 진입점. battleId 를 받아 PreVote → ChatRoom 흐름을 자체적으로 라우팅한다.
 //  향후 사후 투표 결과 / 공유 등 후속 화면이 필요해지면 ChatScreen enum 에 case 만 추가.
 //
 
@@ -20,7 +20,7 @@ public struct ChatCoordinator {
     public var routes: [Route<ChatScreen.State>]
 
     public init(battleId: Int = 0) {
-      routes = [.root(.chatRoom(.init(battleId: battleId)), embedInNavigationView: true)]
+      routes = [.root(.preVote(.init(battleId: battleId)), embedInNavigationView: true)]
     }
   }
 
@@ -64,14 +64,22 @@ public struct ChatCoordinator {
 
 extension ChatCoordinator {
   private func routerAction(
-    state _: inout State,
+    state: inout State,
     action: IndexedRouterActionOf<ChatScreen>
   ) -> Effect<Action> {
     switch action {
+    case .routeAction(_, action: .preVote(.delegate(.dismiss))):
+      return .send(.delegate(.dismiss))
+
+    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, _)))):
+      state.routes.push(.chatRoom(.init(battleId: battleId)))
+      return .none
+
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
-      .send(.delegate(.dismiss))
+      return .send(.view(.backAction))
+
     default:
-      .none
+      return .none
     }
   }
 
@@ -95,7 +103,7 @@ extension ChatCoordinator {
   ) -> Effect<Action> {
     switch action {
     case .dismiss:
-      .none
+      return  .none
     }
   }
 }
@@ -104,6 +112,7 @@ extension ChatCoordinator {
 extension ChatCoordinator {
   @Reducer
   public enum ChatScreen {
+    case preVote(PreVoteFeature)
     case chatRoom(ChatRoomFeature)
   }
 }

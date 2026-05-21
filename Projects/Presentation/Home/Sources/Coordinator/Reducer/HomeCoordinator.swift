@@ -62,13 +62,6 @@ extension HomeCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
-      state.routes.push(.preVote(.init(battleId: battleId)))
-      return .none
-
-    case .routeAction(_, action: .preVote(.delegate(.dismiss))):
-      return .send(.view(.backAction))
-
-    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, _)))):
       state.routes.push(.chat(.init(battleId: battleId)))
       return .none
 
@@ -100,7 +93,6 @@ extension HomeCoordinator {
   @Reducer
   public enum HomeScreen {
     case home(HomeFeature)
-    case preVote(PreVoteFeature)
     case chat(ChatCoordinator)
   }
 }
