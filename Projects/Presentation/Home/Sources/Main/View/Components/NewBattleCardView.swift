@@ -51,7 +51,7 @@ extension NewBattleCardView {
   private var metaRow: some View {
     HStack(spacing: 10) {
       if let tag = battle.tags.first {
-        Text(tag.name)
+        Text("#\(tag.name)")
           .pretendardFont(family: .SemiBold, size: 12)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)

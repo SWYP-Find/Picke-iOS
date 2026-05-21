@@ -10,6 +10,7 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings:  .settings(),
   dependencies: [
+    .SPM.composableArchitecture,
     .Shared(implements: .ThirdParty)
   ],
   sources: ["Sources/**"],

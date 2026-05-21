@@ -474,13 +474,16 @@ public struct HomeCoordinator {
   // … State / Action / handleRoute …
 }
 
+// swiftformat:disable extensionAccessControl
 extension HomeCoordinator {
   @Reducer
   public enum HomeScreen {
     case home(HomeFeature)
     case preVote(PreVoteFeature)
+    case chatRoom(ChatRoomFeature)
   }
 }
+// swiftformat:enable extensionAccessControl
 
 extension HomeCoordinator.HomeScreen.State: Equatable {}
 
@@ -489,14 +492,98 @@ public struct HomeCoordinator {
   @Reducer
   public enum HomeScreen { ... }   // 안 됨 (매크로 인식 / Route 추론 깨짐)
 }
+
+// ❌ 금지 — 자동 포맷터가 `public extension { enum }` 으로 바꾸도록 방치
+public extension HomeCoordinator {
+  @Reducer
+  enum HomeScreen { ... }   // @Reducer 매크로 확장이 internal 로 생성 → "must be declared public" 에러
+}
 ```
 
 규칙:
 - `XScreen` 은 `@Reducer public enum`. struct 로 바꾸지 말 것
 - 본체와 분리된 **별도 extension** 안에 선언
+- **swiftformat 자동 변환 차단**: 해당 블록 앞뒤로 `// swiftformat:disable extensionAccessControl` / `// swiftformat:enable extensionAccessControl` 주석 페어 필수.
+  - 포맷터가 `public extension X { enum XScreen }` 으로 끌어올리면 `@Reducer` 매크로가 만드는 `State` / `Action` / `body` 가 internal 로 생성되어 `enum 'State' must be declared public because it matches a requirement in public protocol 'CaseReducer'` 빌드 에러가 난다.
 - `extension Coordinator.XScreen.State: Equatable {}` 보조 conformance 도 같이 유지 (Route diff 비교 필요)
 - 라우터 핸들러 (`routerAction`) 안에서 `state.routes.push/pop/goBack` 직접 호출은 OK, 단 `dismiss`/`submit` 같이 반복되는 종료 액션은 `.send(.view(.backAction))` 으로 일원화
 - 레퍼런스: `HomeCoordinator`, `AuthCoordinator`, `MainTabCoordinator`
+
+#### 🌐 switch 기반 computed property — 모든 case 에 `return` 명시 유지 (DomainType / BaseTargetType / DependencyKey 공통)
+
+`switch self { ... }` 만으로 값을 돌려주는 computed property 는 **모든 case 에 `return` 키워드를 명시한다**. 적용 범위:
+
+1. **`DomainType.url`** — `PieckeDomain` 같은 도메인 prefix 매핑
+2. **`BaseTargetType` 구현체의 `urlPath` / `method` / `parameters` / `task` / `sampleData`** — 모든 Moya TargetType switch
+3. **`DependencyKey.liveValue` / `testValue`** — `UnifiedDI.resolve(...) ?? Default...()` 패턴
+4. 그 외 단일 표현식 switch 를 본문으로 갖는 computed property 전부
+
+자동 포맷터의 `redundantReturn` 룰이 single-expression switch 에서 `return` 을 떼어내려 하지만, **새 case 추가 시 일부만 implicit / 일부는 explicit 으로 혼합되는 상태가 가장 깨지기 쉽다**. 새 case 추가 후엔 항상 기존 case 까지 같이 `return` 으로 정렬할 것.
+
+```swift
+// ✅ DomainType — 모든 case return
+extension PieckeDomain: DomainType {
+  public var url: String {
+    switch self {
+    case .auth:    return "api/v1/auth/"
+    case .profile: return "api/v1/me/"
+    case .home:    return "api/v1/home"
+    case .poll:    return "api/v1/poll"
+    case .battle:  return "api/v1/battles/"
+    }
+  }
+}
+
+// ✅ BaseTargetType — urlPath / method / parameters 모두 return 명시
+extension BattleService: BaseTargetType {
+  public var urlPath: String {
+    switch self {
+    case let .preVote(battleId, _):
+      return BattleAPI.preVote(battleId: battleId).description
+    case let .scenario(battleId):
+      return BattleAPI.scenario(battleId: battleId).description
+    }
+  }
+
+  public var method: Moya.Method {
+    switch self {
+    case .preVote:  return .post
+    case .scenario: return .get
+    }
+  }
+
+  public var parameters: [String: Any]? {
+    switch self {
+    case let .preVote(_, body): return body.toDictionary
+    case .scenario:             return nil
+    }
+  }
+}
+
+// ✅ DependencyKey — liveValue / testValue 도 return 명시
+public struct BattleRepositoryDependency: DependencyKey {
+  public static var liveValue: BattleInterface {
+    return UnifiedDI.resolve(BattleInterface.self) ?? DefaultBattleRepositoryImpl()
+  }
+  public static var testValue: BattleInterface {
+    return UnifiedDI.resolve(BattleInterface.self) ?? DefaultBattleRepositoryImpl()
+  }
+}
+
+// ❌ 금지 — 포맷터가 떼어낸 implicit return 혼합
+public var method: Moya.Method {
+  switch self {
+  case .preVote:  .post           // ← 안 됨
+  case .scenario: return .get     // ← 혼합 상태
+  }
+}
+```
+
+규칙:
+- 새 case 추가 후 포맷터가 기존 case 의 `return` 을 떼어냈다면 **PR 전에 직접 되돌려서 일관성 유지**
+- 새 도메인 case (`.battle` 등) / 새 서비스 case (`.scenario` 등) / 새 DI 키 추가 시 모두 동일하게 `return ...` 형태로 작성
+- 포맷터가 반복적으로 깨면 해당 파일 또는 함수 블록에 `// swiftformat:disable redundantReturn` 디렉티브 페어 추가 검토
+- 레퍼런스: `PieckeDomain`, `BattleService`, `AuthService`, `BattleRepositoryDependency`, `HomeRepositoryDependency`
 
 ### 📏 Swift 코딩 규칙 (`docs/agent/swift-coding-rules.md`)
 - Swift 스타일 가이드
@@ -663,6 +750,21 @@ tuist generate --no-open --path Projects/Shared/DesignSystem
 - `@ios-performance-pfw` — Point-Free Workshop 전문
 - `@swiftui-uikit-interop` — SwiftUI ↔ UIKit 상호 운용성 전문
 - `@swift-concurrency` — Swift 6 Concurrency 및 async/await 전문
+
+### SwiftUI 전문 가이드 스킬 — `swiftui-expert-skill`
+- **출처**: [AvdLee/SwiftUI-Agent-Skill](https://github.com/AvdLee/SwiftUI-Agent-Skill) (Agent Skills 오픈 포맷)
+- **로컬 설치 위치**
+  - Claude Code: `~/.claude/plugins/SwiftUI-Agent-Skill/`
+  - Codex: `~/.codex/skills/swiftui-expert-skill/`
+  - Cursor 도 동일 폴더를 `Plugins` 가이드대로 등록하면 됨
+- **재설치 / 업데이트**
+  ```bash
+  rm -rf ~/.claude/plugins/SwiftUI-Agent-Skill ~/.codex/skills/swiftui-expert-skill
+  git clone https://github.com/AvdLee/SwiftUI-Agent-Skill.git ~/.claude/plugins/SwiftUI-Agent-Skill
+  cp -R ~/.claude/plugins/SwiftUI-Agent-Skill/swiftui-expert-skill ~/.codex/skills/swiftui-expert-skill
+  ```
+- **언제 호출**: SwiftUI 상태관리(`@Observable` / 프로퍼티 래퍼 선택), 뷰 컴포지션, 리스트·내비게이션·시트, Swift Charts, 애니메이션, macOS multi-window, iOS 26+ Liquid Glass, 접근성, Instruments 트레이스 분석.
+- **호출 방법**: 프롬프트에 *"swiftui-expert skill 을 사용해 ..."* 형태로 지시하거나, `.trace` 경로/녹화 요청처럼 트리거 키워드가 들어오면 자동 활성화.
 
 ### 자동 호출 키워드
 다음 키워드 언급 시 **자동으로 성능 최적화 스킬 호출**:

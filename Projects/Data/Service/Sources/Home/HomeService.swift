@@ -24,7 +24,7 @@ extension HomeService: BaseTargetType {
   public var urlPath: String {
     switch self {
     case .home:
-      HomeAPI.home.description
+      return HomeAPI.home.description
     }
   }
 
@@ -33,13 +33,13 @@ extension HomeService: BaseTargetType {
   public var method: Moya.Method {
     switch self {
     case .home:
-      .get
+      return .get
     }
   }
 
   public var parameters: [String: Any]? { nil }
 
   public var headers: [String: String]? {
-    APIHeader.baseHeader // 인증 헤더 포함 (액세스 토큰)
+    return APIHeader.baseHeader // 인증 헤더 포함 (액세스 토큰)
   }
 }

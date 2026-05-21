@@ -26,6 +26,7 @@ public enum TagType: String, Equatable, Hashable, Decodable {
   case philosopher = "PHILOSOPHER"
   case category = "CATEGORY"
   case era = "ERA"
+  case value = "VALUE"
   case unknown
 
   public init(rawValue: String) {
@@ -33,6 +34,7 @@ public enum TagType: String, Equatable, Hashable, Decodable {
     case "PHILOSOPHER": self = .philosopher
     case "CATEGORY": self = .category
     case "ERA": self = .era
+    case "VALUE": self = .value
     default: self = .unknown
     }
   }

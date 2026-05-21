@@ -7,6 +7,7 @@
 
 import Foundation
 
+import Chat
 import ComposableArchitecture
 import TCAFlow
 
@@ -60,12 +61,11 @@ extension HomeCoordinator {
     action: IndexedRouterActionOf<HomeScreen>
   ) -> Effect<Action> {
     switch action {
-    case .routeAction(_, action: .home(.delegate(.presentPreVote))):
-      state.routes.push(.preVote(.init()))
+    case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
+      state.routes.push(.chat(.init(battleId: battleId)))
       return .none
 
-    case .routeAction(_, action: .preVote(.delegate(.dismiss))),
-         .routeAction(_, action: .preVote(.delegate(.submit))):
+    case .routeAction(_, action: .chat(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
     default:
@@ -88,12 +88,15 @@ extension HomeCoordinator {
   }
 }
 
+// swiftformat:disable extensionAccessControl
 extension HomeCoordinator {
   @Reducer
   public enum HomeScreen {
     case home(HomeFeature)
-    case preVote(PreVoteFeature)
+    case chat(ChatCoordinator)
   }
 }
+
+// swiftformat:enable extensionAccessControl
 
 extension HomeCoordinator.HomeScreen.State: Equatable {}

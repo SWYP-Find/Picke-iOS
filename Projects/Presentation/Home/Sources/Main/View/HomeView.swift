@@ -29,16 +29,26 @@ public struct HomeView: View {
           HomeSkeletonView()
         } else {
           VStack(spacing: 32) {
-            HeroCarouselView(
-              heroes: store.heroes,
-              currentIndex: $store.heroIndex,
-              onTap: { send(.heroTapped($0)) }
-            )
+            if !store.heroes.isEmpty {
+              HeroCarouselView(
+                heroes: store.heroes,
+                currentIndex: $store.heroIndex,
+                onTap: { send(.heroTapped($0)) }
+              )
+            }
 
-            hotBattlesSection()
-            bestBattlesSection()
-            todayPickeSection()
-            newBattlesSection()
+            if !store.hotBattles.isEmpty {
+              hotBattlesSection()
+            }
+            if !store.bestBattles.isEmpty {
+              bestBattlesSection()
+            }
+            if !store.quizzes.isEmpty || !store.votes.isEmpty {
+              todayPickeSection()
+            }
+            if !store.newBattles.isEmpty {
+              newBattlesSection()
+            }
           }
           .padding(.bottom, 24)
         }
@@ -114,7 +124,7 @@ extension HomeView {
         if let vote = store.currentVote {
           VoteCardView(question: vote)
             .contentShape(Rectangle())
-            .onTapGesture {  }
+            .onTapGesture {}
         }
       }
       .padding(.horizontal, 16)

@@ -17,11 +17,11 @@ public protocol KakaoOAuthProviderInterface: Sendable {
 /// Kakao OAuth Provider의 DependencyKey 구조체
 public struct KakaoOAuthProviderDependency: DependencyKey {
   public static var liveValue: KakaoOAuthProviderInterface {
-    UnifiedDI.resolve(KakaoOAuthProviderInterface.self) ?? MockKakaoOAuthProvider()
+    return UnifiedDI.resolve(KakaoOAuthProviderInterface.self) ?? MockKakaoOAuthProvider()
   }
 
   public static var testValue: KakaoOAuthProviderInterface {
-    UnifiedDI.resolve(KakaoOAuthProviderInterface.self) ?? MockKakaoOAuthProvider()
+    return UnifiedDI.resolve(KakaoOAuthProviderInterface.self) ?? MockKakaoOAuthProvider()
   }
 
   public static var previewValue: KakaoOAuthProviderInterface = testValue

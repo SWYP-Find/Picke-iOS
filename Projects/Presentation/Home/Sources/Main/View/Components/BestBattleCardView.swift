@@ -31,7 +31,7 @@ struct BestBattleCardView: View {
           .lineLimit(2)
         HStack(spacing: 8) {
           ForEach(battle.tags) { tag in
-            Text(tag.name)
+            Text("#\(tag.name)")
               .pretendardFont(family: .Medium, size: 11)
               .foregroundStyle(.neutral300)
           }

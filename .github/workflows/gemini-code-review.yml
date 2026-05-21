@@ -119,65 +119,75 @@ jobs:
                 responseMimeType: "application/json",
               },
             });
-            const prompt = `You are a senior iOS engineer performing a code review on a Swift 6 / SwiftUI / TCA 1.25 multi-module Clean Architecture project built with Tuist 4.
-
-            [Tone and Style Guidelines]
-            - Do NOT include unnecessary praise, greetings, or overly verbose explanations.
-            - Do NOT provide unsolicited CS insights (컴퓨터 과학적 통찰) or related interview questions.
-            - Provide concise, objective, and well-organized feedback suitable for immediate practical use.
-
-            CRITICAL LINE NUMBER RULES (MUST FOLLOW):
-            - Each diff line is annotated with [LINE N] for added lines or [CTX N] for context lines.
-            - You MUST only comment on [LINE N] lines (added/modified code). NEVER comment on [CTX] or [DEL] lines.
-            - Use the EXACT number N shown in the [LINE N] annotation. Do NOT compute line numbers yourself.
-            - The "code_snippet" field must contain the actual code from that [LINE N] line.
-
-            [PR Context]
-            Title: ${pr_title}
-            Description: ${pr_body}
-
-            [Project Architecture]
-            - Stack: Swift 6, SwiftUI, TCA 1.25, Tuist 4 (multi-module)
-            - Layer dependency: Presentation → Domain ← Data, Network is only referenced by Data
-            - Deployment target: iOS 26.0 (iPhone only)
-            - Source roots: Projects/App, Projects/Presentation, Projects/Domain/{Entity,UseCase,DomainInterface,DataInterface}, Projects/Data/{Model,Repository,API,Service}, Projects/Network/*, Projects/Shared/*
-
-            [Review Criteria]
-            1. TCA Convention: Verify @Reducer + @ObservableState usage; Action naming describes events that occurred (e.g., xxxButtonTapped, xxxResponse), NOT intended effects (e.g., performLogin, loadData); Effect is .none when no side effect and .run for async work; shared logic lives in private methods, NOT shared Actions; Effect.run must NOT capture entire @ObservableState (extract needed values first); Reducer must NOT perform CPU-intensive work (offload to Effect); Store.scope must use stored property paths only (no computed transforms); Navigation uses @Reducer enum; transient UI state (hover, focus, animation) stays in SwiftUI @State, not TCA State.
-            2. Module Architecture: Respect Presentation → Domain ← Data dependency direction; Network is only imported by Data; module boundaries expose protocols (DomainInterface / DataInterface); DTO-to-Entity mapping stays in Data layer.
-            3. SwiftUI Convention: SubViews are structs (NOT @ViewBuilder functions); use @Binding when a SubView mutates parent @State; no "View" suffix in View names (unless clarity requires it); use .frame(maxWidth/maxHeight: .infinity) instead of Spacer() for simple expansion; required props via init, optional props via ViewModifier-style functions.
-            4. Swift Code Quality: guard early return with shorthand optional binding (guard let value else { ... }) followed by a blank line; final class by default; private first (avoid fileprivate unless required); never force unwrap; operator line break puts operator at the start of the next line; function params line-break with closing paren on its own line; ternary for simple return/assignment only, split on '?'; [weak self] + guard let self else { return } in closures; constant groups as private enum (Metric/Font/Constant), NOT struct; empty collection literals ([] / [:]); indent 4 spaces; 120-char line limit.
-            5. Actionable Feedback: When improvement is needed you MUST provide a concrete Swift fix using GitHub's \`\`\`suggestion block.
-
-            [Severity Prefix]
-            Each comment body MUST start with a severity tag on its own line, then a blank line, then the actual comment:
-            - 🔴 [P1] Critical: force-unwrap crash risk, retain cycles / memory leaks, heavy or blocking work inside a Reducer, main-thread blocking
-            - 🟠 [P2] Major: module dependency-direction violations (e.g., Domain importing Data), Effect.run capturing entire @ObservableState, sharing logic through Actions, Store.scope with computed property, serious concurrency or error-mapping issues
-            - 🟡 [P3] Minor: Action naming that describes intent/effect (performLogin, loadData, setRecords), SubView written as @ViewBuilder function, Swift API Design Guideline violations on public APIs, inefficient Effect composition
-            - 🔵 [P4] Readability: View-suffix naming, Spacer() misuse, missing final / private, guard / ternary / line-break style violations, constant groups declared as struct instead of enum
-            - ⚪ [P5] Nitpick: typos, whitespace, formatting
-
-            Format: "🔴 **[P1] Critical**\\n\\nActual comment content here..."
-
-            Ignore comments and formatting-only changes. Write all review comments in Korean using Markdown, without greetings or closings.
-
-            Respond ONLY with a JSON object in this exact format:
-            {
-              "summary": "전체 리뷰 요약 (한국어, 마크다운)",
-              "comments": [
-                {
-                  "path": "file path relative to repo root (from the b/ prefix in diff)",
-                  "line": <exact N from [LINE N] annotation>,
-                  "code_snippet": "the actual code content from that line",
-                  "body": "🔴/🟠/🟡/🔵/⚪ **[P1~P5] Label**\\n\\n리뷰 코멘트 (한국어, 마크다운. 개선이 필요하면 \\\`\\\`\\\`suggestion 블록 포함)"
-                }
-              ]
-            }
-            If no issues are found, return {"summary": "...", "comments": []}.
-
-            <annotated_diff>
-            ${annotated_diff}
-            </annotated_diff>`;
+            const TRIPLE = "```";
+            const promptLines = [
+              "You are a senior iOS engineer performing a code review on a Swift 6 / SwiftUI / TCA 1.25 multi-module Clean Architecture project built with Tuist 4.",
+              "",
+              "[Tone and Style Guidelines]",
+              "- Do NOT include unnecessary praise, greetings, or overly verbose explanations.",
+              "- Do NOT provide unsolicited CS insights (컴퓨터 과학적 통찰) or related interview questions.",
+              "- Provide concise, objective, and well-organized feedback suitable for immediate practical use.",
+              "",
+              "CRITICAL LINE NUMBER RULES (MUST FOLLOW):",
+              "- Each diff line is annotated with [LINE N] for added lines or [CTX N] for context lines.",
+              "- You MUST only comment on [LINE N] lines (added/modified code). NEVER comment on [CTX] or [DEL] lines.",
+              "- Use the EXACT number N shown in the [LINE N] annotation. Do NOT compute line numbers yourself.",
+              "- The \"code_snippet\" field must contain the actual code from that [LINE N] line.",
+              "",
+              "[PR Context]",
+              "Title: " + pr_title,
+              "Description: " + pr_body,
+              "",
+              "[Project Architecture]",
+              "- Stack: Swift 6, SwiftUI, TCA 1.25, Tuist 4 (multi-module)",
+              "- Layer dependency: Presentation → Domain ← Data, Network is only referenced by Data",
+              "- Deployment target: iOS 26.0 (iPhone only)",
+              "- Source roots: Projects/App, Projects/Presentation, Projects/Domain/{Entity,UseCase,DomainInterface,DataInterface}, Projects/Data/{Model,Repository,API,Service}, Projects/Network/*, Projects/Shared/*",
+              "",
+              "[Review Criteria]",
+              "1. TCA Convention: Verify @Reducer + @ObservableState usage; Action naming describes events that occurred (e.g., xxxButtonTapped, xxxResponse), NOT intended effects (e.g., performLogin, loadData); Effect is .none when no side effect and .run for async work; shared logic lives in private methods, NOT shared Actions; Effect.run must NOT capture entire @ObservableState (extract needed values first); Reducer must NOT perform CPU-intensive work (offload to Effect); Store.scope must use stored property paths only (no computed transforms); Navigation uses @Reducer enum; transient UI state (hover, focus, animation) stays in SwiftUI @State, not TCA State.",
+              "2. Module Architecture: Respect Presentation → Domain ← Data dependency direction; Network is only imported by Data; module boundaries expose protocols (DomainInterface / DataInterface); DTO-to-Entity mapping stays in Data layer.",
+              "3. SwiftUI Convention (이 프로젝트는 AGENTS.md 규칙을 따른다 — SubView 분리는 @ViewBuilder private func 또는 private var 형태가 정식이며 위반이 아니다. SubView 를 struct 로 강제하는 의견은 절대 내지 말 것); use @Binding when a SubView mutates parent @State; no \"View\" suffix in View names (unless clarity requires it); use .frame(maxWidth/maxHeight: .infinity) instead of Spacer() for simple expansion; required props via init, optional props via ViewModifier-style functions.",
+              "4. Swift Code Quality: guard early return with shorthand optional binding (guard let value else { ... }) followed by a blank line; final class by default; private first (avoid fileprivate unless required); never force unwrap; operator line break puts operator at the start of the next line; function params line-break with closing paren on its own line; ternary for simple return/assignment only, split on '?'; [weak self] + guard let self else { return } in closures; constant groups as private enum (Metric/Font/Constant), NOT struct; empty collection literals ([] / [:]); indent 4 spaces; 120-char line limit.",
+              "5. Actionable Feedback: When improvement is needed you MUST provide a concrete Swift fix using GitHub's " + TRIPLE + "suggestion block.",
+              "",
+              "[Severity Prefix]",
+              "Each comment body MUST start with a severity tag on its own line, then a blank line, then the actual comment:",
+              "- 🔴 [P1] Critical: force-unwrap crash risk, retain cycles / memory leaks, heavy or blocking work inside a Reducer, main-thread blocking",
+              "- 🟠 [P2] Major: module dependency-direction violations (e.g., Domain importing Data), Effect.run capturing entire @ObservableState, sharing logic through Actions, Store.scope with computed property, serious concurrency or error-mapping issues",
+              "- 🟡 [P3] Minor: Action naming that describes intent/effect (performLogin, loadData, setRecords), SubView written as @ViewBuilder function, Swift API Design Guideline violations on public APIs, inefficient Effect composition",
+              "- 🔵 [P4] Readability: View-suffix naming, Spacer() misuse, missing final / private, guard / ternary / line-break style violations, constant groups declared as struct instead of enum",
+              "(P5 Nitpick 등급은 사용하지 않는다. 빈 줄·공백·trailing comma·주석 줄 같은 포맷 의견은 절대 만들지 말 것.)",
+              "",
+              "Format: \"🔴 **[P1] Critical**\\n\\nActual comment content here...\"",
+              "",
+              "Ignore the following entirely — these are NOT review issues for this project:",
+              "- blank lines, whitespace, trailing commas, comment-only lines (P5 nitpicks)",
+              "- SubView 를 struct 로 분리하라는 의견 (이 프로젝트는 AGENTS.md 의 @ViewBuilder 패턴이 정식)",
+              "- import 순서, 줄 단위 들여쓰기",
+              "- description 같은 BaseTargetType 의 정식 프로퍼티 네이밍 의견",
+              "",
+              "Only report substantive issues — bugs, architecture violations, security/concurrency risks. Do NOT generate P5 nitpicks. Write all review comments in Korean using Markdown, without greetings or closings.",
+              "",
+              "Respond ONLY with a JSON object in this exact format:",
+              "{",
+              "  \"summary\": \"전체 리뷰 요약 (한국어, 마크다운)\",",
+              "  \"comments\": [",
+              "    {",
+              "      \"path\": \"file path relative to repo root (from the b/ prefix in diff)\",",
+              "      \"line\": <exact N from [LINE N] annotation>,",
+              "      \"code_snippet\": \"the actual code content from that line\",",
+              "      \"body\": \"🔴/🟠/🟡/🔵 **[P1~P4] Label**\\n\\n리뷰 코멘트 (한국어, 마크다운. 개선이 필요하면 " + TRIPLE + "suggestion 블록 포함)\"",
+              "    }",
+              "  ]",
+              "}",
+              "If no issues are found, return {\"summary\": \"...\", \"comments\": []}.",
+              "",
+              "<annotated_diff>",
+              annotated_diff,
+              "</annotated_diff>"
+            ];
+            const prompt = promptLines.join("\n");
             const result = await model.generateContent(prompt);
             const text = result.response.text();
             fs.writeFileSync("review_result.json", text);

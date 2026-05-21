@@ -21,7 +21,7 @@ struct HotBattleCardView: View {
       thumbnail
       VStack(alignment: .leading, spacing: 6) {
         if let tag = battle.tags.first {
-          Text(tag.name)
+          Text("#\(tag.name)")
             .pretendardFont(family: .Medium, size: 11)
             .foregroundStyle(.primary500)
         }

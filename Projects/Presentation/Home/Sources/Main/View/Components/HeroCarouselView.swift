@@ -157,7 +157,7 @@ struct HeroCardView: View {
 
         HStack(spacing: 4) {
           ForEach(hero.tags) { tag in
-            Text(tag.name)
+            Text("#\(tag.name)")
               .pretendardFont(family: .Medium, size: 11)
               .foregroundStyle(.neutral200)
           }

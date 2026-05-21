@@ -43,13 +43,22 @@ public struct PreVoteBattle: Equatable, Identifiable {
 }
 
 public struct PreVoteOption: Equatable, Identifiable, Hashable {
-  public let philosopher: PhilosopherAvatar
+  public let optionId: Int
+  public let representative: String
+  public let imageURL: String
   public let stance: String
 
-  public var id: String { philosopher.rawValue }
+  public var id: Int { optionId }
 
-  public init(philosopher: PhilosopherAvatar, stance: String) {
-    self.philosopher = philosopher
+  public init(
+    optionId: Int,
+    representative: String,
+    imageURL: String,
+    stance: String
+  ) {
+    self.optionId = optionId
+    self.representative = representative
+    self.imageURL = imageURL
     self.stance = stance
   }
 }
@@ -73,7 +82,17 @@ public extension PreVoteBattle {
     누군가는 현대 미술의 혁명이라고 부릅니다.
     과연 이 변기의 '진짜 모습'은 무엇일까요?
     """,
-    leftOption: .init(philosopher: .plato, stance: "변기는 변기다"),
-    rightOption: .init(philosopher: .sartre, stance: "예술이다")
+    leftOption: .init(
+      optionId: 1,
+      representative: "플라톤",
+      imageURL: "https://picke.store/api/v1/resources/images/PHILOSOPHER/plato.png",
+      stance: "변기는 변기다"
+    ),
+    rightOption: .init(
+      optionId: 2,
+      representative: "사르트르",
+      imageURL: "https://picke.store/api/v1/resources/images/PHILOSOPHER/sartre.png",
+      stance: "예술이다"
+    )
   )
 }
