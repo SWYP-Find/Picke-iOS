@@ -751,6 +751,21 @@ tuist generate --no-open --path Projects/Shared/DesignSystem
 - `@swiftui-uikit-interop` — SwiftUI ↔ UIKit 상호 운용성 전문
 - `@swift-concurrency` — Swift 6 Concurrency 및 async/await 전문
 
+### SwiftUI 전문 가이드 스킬 — `swiftui-expert-skill`
+- **출처**: [AvdLee/SwiftUI-Agent-Skill](https://github.com/AvdLee/SwiftUI-Agent-Skill) (Agent Skills 오픈 포맷)
+- **로컬 설치 위치**
+  - Claude Code: `~/.claude/plugins/SwiftUI-Agent-Skill/`
+  - Codex: `~/.codex/skills/swiftui-expert-skill/`
+  - Cursor 도 동일 폴더를 `Plugins` 가이드대로 등록하면 됨
+- **재설치 / 업데이트**
+  ```bash
+  rm -rf ~/.claude/plugins/SwiftUI-Agent-Skill ~/.codex/skills/swiftui-expert-skill
+  git clone https://github.com/AvdLee/SwiftUI-Agent-Skill.git ~/.claude/plugins/SwiftUI-Agent-Skill
+  cp -R ~/.claude/plugins/SwiftUI-Agent-Skill/swiftui-expert-skill ~/.codex/skills/swiftui-expert-skill
+  ```
+- **언제 호출**: SwiftUI 상태관리(`@Observable` / 프로퍼티 래퍼 선택), 뷰 컴포지션, 리스트·내비게이션·시트, Swift Charts, 애니메이션, macOS multi-window, iOS 26+ Liquid Glass, 접근성, Instruments 트레이스 분석.
+- **호출 방법**: 프롬프트에 *"swiftui-expert skill 을 사용해 ..."* 형태로 지시하거나, `.trace` 경로/녹화 요청처럼 트리거 키워드가 들어오면 자동 활성화.
+
 ### 자동 호출 키워드
 다음 키워드 언급 시 **자동으로 성능 최적화 스킬 호출**:
 - `ifCaseLet`, `TCA`, `Effect`, `메모리 누수`, `성능`, `최적화`

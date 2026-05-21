@@ -1,8 +1,9 @@
 //
 //  PreVoteSkeletonView.swift
-//  Home
+//  Chat
 //
 //  PreVoteView 의 로딩 상태 placeholder.
+//  .pen `사전 투표창 - Skeleton Loader` 를 의미 단위(hero / 카피 / 옵션 / CTA) 로 재구성한다.
 //
 
 import SwiftUI
@@ -10,52 +11,92 @@ import SwiftUI
 import DesignSystem
 
 struct PreVoteSkeletonView: View {
-  private static let designWidth: CGFloat = 375
-  private static let designHeight: CGFloat = 812
-
   var body: some View {
-    GeometryReader { proxy in
-      let scale = proxy.size.width / Self.designWidth
-
-      ZStack(alignment: .topLeading) {
-        Color.beige50
-
-        block(width: 375, height: 329.25, x: 0, y: 0)
-        block(width: 375, height: 60, x: 0, y: 70)
-
-        block(width: 29, height: 17, x: 22, y: 360)
-        block(width: 49, height: 17, x: 72, y: 360)
-
-        block(width: 167, height: 68, x: 16, y: 399)
-        block(width: 235.51, height: 61.43, x: 16, y: 479)
-
-        block(width: 167, height: 105.72, x: 14.63, y: 574.04)
-        block(width: 167, height: 105.72, x: 193.38, y: 574.04)
-        block(width: 15, height: 15, x: 373.5, y: 619)
-
-        block(width: 87, height: 24, x: 144, y: 734)
-      }
-      .frame(width: Self.designWidth, height: Self.designHeight, alignment: .topLeading)
-      .scaleEffect(scale, anchor: .topLeading)
-      .frame(
-        width: proxy.size.width,
-        height: Self.designHeight * scale,
-        alignment: .topLeading
-      )
+    VStack(spacing: 0) {
+      hero
+      contentSection
+      Spacer(minLength: 0)
+      ctaButton
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .background(Color.beige50.ignoresSafeArea())
+  }
+}
+
+// MARK: - Hero
+
+private extension PreVoteSkeletonView {
+  @ViewBuilder
+  var hero: some View {
+    SkeletonView(cornerRadius: 6)
+      .frame(height: 329)
+      .overlay(alignment: .top) {
+        SkeletonView(cornerRadius: 6)
+          .frame(height: 60)
+          .padding(.top, 70)
+      }
+  }
+}
+
+// MARK: - Content
+
+private extension PreVoteSkeletonView {
+  @ViewBuilder
+  var contentSection: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      tagsRow
+      titleBlock
+      summaryBlock
+      optionsRow
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 24)
   }
 
   @ViewBuilder
-  private func block(
-    width: CGFloat,
-    height: CGFloat,
-    x: CGFloat,
-    y: CGFloat,
-    cornerRadius: CGFloat = 6
-  ) -> some View {
-    SkeletonView(cornerRadius: cornerRadius)
-      .frame(width: width, height: height)
-      .offset(x: x, y: y)
+  var tagsRow: some View {
+    HStack(spacing: 8) {
+      SkeletonView(cornerRadius: 6)
+        .frame(width: 29, height: 17)
+      SkeletonView(cornerRadius: 6)
+        .frame(width: 49, height: 17)
+    }
+  }
+
+  @ViewBuilder
+  var titleBlock: some View {
+    SkeletonView(cornerRadius: 6)
+      .frame(width: 167, height: 68)
+  }
+
+  @ViewBuilder
+  var summaryBlock: some View {
+    SkeletonView(cornerRadius: 6)
+      .frame(width: 235.5, height: 61.43)
+  }
+
+  @ViewBuilder
+  var optionsRow: some View {
+    ZStack {
+      HStack(spacing: 8) {
+        SkeletonView(cornerRadius: 6)
+        SkeletonView(cornerRadius: 6)
+      }
+      .frame(height: 105.72)
+
+      SkeletonView(cornerRadius: 7.5)
+        .frame(width: 15, height: 15)
+    }
+  }
+}
+
+// MARK: - CTA
+
+private extension PreVoteSkeletonView {
+  @ViewBuilder
+  var ctaButton: some View {
+    SkeletonView(cornerRadius: 6)
+      .frame(width: 87, height: 24)
+      .padding(.bottom, 40)
   }
 }
