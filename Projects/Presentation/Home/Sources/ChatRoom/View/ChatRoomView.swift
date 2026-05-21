@@ -46,6 +46,7 @@ public struct ChatRoomView: View {
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
   private var shouldShowSkeleton: Bool {
@@ -102,8 +103,8 @@ extension ChatRoomView {
         .padding(.vertical, 20)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .onChange(of: store.currentTime) { _, _ in
-        guard let target = scrollTargetId(for: store.activeMessageId) else { return }
+      .onChange(of: store.activeMessageId) { _, activeMessageId in
+        guard let target = scrollTargetId(for: activeMessageId) else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
           proxy.scrollTo(target, anchor: .center)
         }
@@ -270,7 +271,7 @@ extension ChatRoomView {
   @ViewBuilder
   private func optionsList() -> some View {
     VStack(spacing: 9) {
-      ForEach(store.interactiveOptions, id: \.label) { option in
+      ForEach(store.visibleOptions, id: \.label) { option in
         optionCard(option)
       }
     }

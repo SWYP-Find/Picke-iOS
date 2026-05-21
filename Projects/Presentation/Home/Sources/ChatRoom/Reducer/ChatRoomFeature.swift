@@ -8,6 +8,7 @@
 import Foundation
 
 import ComposableArchitecture
+import DesignSystem
 import DomainInterface
 import Entity
 import LogMacro
@@ -27,6 +28,8 @@ public struct ChatRoomFeature {
     public var isLoadingScenario: Bool = false
     /// 한 번 끝까지 재생되어야 시킹(드래그) 허용
     public var hasFinishedListening: Bool = false
+    public var hasPresentedFinalVoteAlert: Bool = false
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     /// 현재 재생 중인 시나리오 노드 id (없으면 startNodeId 폴백)
     public var currentNodeId: Int?
@@ -132,9 +135,12 @@ public struct ChatRoomFeature {
       currentNode?.interactiveOptions ?? []
     }
 
-    /// 현재 노드에 선택지가 있으면 선택 카드 노출 (실재생 연동 전 임시 — 항상 노출)
+    public var visibleOptions: [ScenarioInteractiveOption] {
+      interactiveOptions
+    }
+
     public var shouldShowOptions: Bool {
-      !interactiveOptions.isEmpty
+      !visibleOptions.isEmpty
     }
 
     public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
@@ -149,6 +155,7 @@ public struct ChatRoomFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
+    case scope(ScopeAction)
     case delegate(DelegateAction)
   }
 
@@ -177,6 +184,11 @@ public struct ChatRoomFeature {
     case playerDurationUpdated(TimeInterval)
   }
 
+  @CasePathable
+  public enum ScopeAction: Equatable {
+    case customAlert(PresentationAction<CustomAlertAction>)
+  }
+
   public enum DelegateAction: Equatable {
     case dismiss
   }
@@ -201,9 +213,14 @@ public struct ChatRoomFeature {
         handleAsyncAction(state: &state, action: asyncAction)
       case let .inner(innerAction):
         handleInnerAction(state: &state, action: innerAction)
+      case let .scope(scopeAction):
+        handleScopeAction(state: &state, action: scopeAction)
       case let .delegate(delegateAction):
         handleDelegateAction(state: &state, action: delegateAction)
       }
+    }
+    .ifLet(\.$customAlert, action: \.scope.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -272,7 +289,7 @@ extension ChatRoomFeature {
 
     case .confirmOptionTapped:
       guard let label = state.selectedOptionLabel,
-            let option = state.interactiveOptions.first(where: { $0.label == label })
+            let option = state.visibleOptions.first(where: { $0.label == label })
       else { return .none }
       state.currentNodeId = option.nextNodeId
       state.selectedOptionLabel = nil
@@ -303,12 +320,14 @@ extension ChatRoomFeature {
     case let .loadAudio(url):
       state.currentTime = 0
       state.playerDuration = 0
+      state.isPlaying = true
       return .run { [player = audioPlayer] send in
         await player.load(url: url)
         let duration = await player.duration()
         if duration > 0 {
           await send(.inner(.playerDurationUpdated(duration)))
         }
+        await player.play()
       }
 
     case .subscribePlayer:
@@ -345,15 +364,47 @@ extension ChatRoomFeature {
 
     case let .playerTimeUpdated(time):
       state.currentTime = time
-      if state.totalDuration > 0, time >= state.totalDuration - 0.5 {
+      if state.totalDuration > 0,
+         time >= state.totalDuration - 0.5,
+         !state.hasFinishedListening
+      {
         state.hasFinishedListening = true
         state.isPlaying = false
+        if !state.hasPresentedFinalVoteAlert {
+          state.hasPresentedFinalVoteAlert = true
+          state.customAlert = .finalVote()
+        }
       }
       return .none
 
     case let .playerDurationUpdated(duration):
       state.playerDuration = duration
       return .none
+    }
+  }
+
+  private func handleScopeAction(state: inout State, action: ScopeAction) -> Effect<Action> {
+    switch action {
+    case let .customAlert(alertAction):
+      switch alertAction {
+      case let .presented(customAlertAction):
+        switch customAlertAction {
+        case .confirmTapped:
+          state.customAlert = nil
+          return .none
+        case .cancelTapped:
+          state.customAlert = nil
+          state.currentTime = 0
+          state.isPlaying = true
+          return .run { [player = audioPlayer] _ in
+            await player.seek(to: 0)
+            await player.play()
+          }
+        }
+      case .dismiss:
+        state.customAlert = nil
+        return .none
+      }
     }
   }
 

@@ -32,18 +32,22 @@ public struct PreVoteView: View {
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
-    .overlay(alignment: .top) {
-      navigationBar
-        .background(Color.clear)
-        .padding(.top, 12)
-        .frame(maxWidth: .infinity)
-        .contentShape(Rectangle())
-        .zIndex(10)
-    }
     .overlay(alignment: .bottom) {
-      primaryButton
-        .padding(.horizontal, Self.ctaHorizontalPadding)
-        .padding(.bottom, Self.ctaBottomSpacing)
+      if !shouldShowSkeleton {
+        primaryButton
+          .padding(.horizontal, Self.ctaHorizontalPadding)
+          .padding(.bottom, Self.ctaBottomSpacing)
+      }
+    }
+    .overlay(alignment: .top) {
+      if !shouldShowSkeleton {
+        navigationBar
+          .background(Color.clear)
+          .padding(.top, 12)
+          .frame(maxWidth: .infinity)
+          .contentShape(Rectangle())
+          .zIndex(10)
+      }
     }
     .onAppear { send(.onAppear) }
     .sheet(item: $store.shareItem) { item in
@@ -83,13 +87,14 @@ public struct PreVoteView: View {
     }
   }
 
-  private static let contentOverlapTopOffset: CGFloat = 290
-  private static let contentSectionSpacing: CGFloat = 32
-  private static let optionCardHeight: CGFloat = 104
+  private static let contentOverlapTopOffset: CGFloat = 280
+  private static let rootContentSpacing: CGFloat = 40
+  private static let contentToOptionSpacing: CGFloat = 32
+  private static let optionCardHeight: CGFloat = 106
   private static let ctaHeight: CGFloat = 52
   private static let ctaBottomSpacing: CGFloat = 40
-  private static let ctaHorizontalPadding: CGFloat = 20
-  private static let contentBottomSpacing: CGFloat = ctaHeight + ctaBottomSpacing + contentSectionSpacing
+  private static let ctaHorizontalPadding: CGFloat = 16
+  private static let contentBottomSpacing: CGFloat = ctaHeight + ctaBottomSpacing + rootContentSpacing
 }
 
 // MARK: - Background
@@ -141,7 +146,7 @@ extension PreVoteView {
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, 20)
+    .padding(.horizontal, 16)
     .foregroundStyle(.beige50)
   }
 }
@@ -151,11 +156,11 @@ extension PreVoteView {
 extension PreVoteView {
   @ViewBuilder
   private func contentArea(_ battle: PreVoteBattle) -> some View {
-    VStack(spacing: Self.contentSectionSpacing) {
+    VStack(spacing: Self.contentToOptionSpacing) {
       contentSection(battle)
       optionSection(battle)
     }
-    .padding(.horizontal, 20)
+    .padding(.horizontal, 16)
     .padding(.top, 80)
     .padding(.bottom, Self.contentBottomSpacing)
     .frame(maxWidth: .infinity)
@@ -251,7 +256,7 @@ extension PreVoteView {
         VStack(spacing: 2) {
           Text(option.stance)
             .pretendardFont(family: .SemiBold, size: 14)
-            .foregroundStyle(.neutral700)
+            .foregroundStyle(.neutral600)
             .kerning(-0.35)
             .lineLimit(2)
             .minimumScaleFactor(0.85)
@@ -265,15 +270,15 @@ extension PreVoteView {
             .multilineTextAlignment(.center)
         }
       }
+      .padding(8)
       .frame(maxWidth: .infinity)
       .frame(height: Self.optionCardHeight)
-      .padding(8)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
           .stroke(isSelected ? .beige700 : .beige500, lineWidth: 1)
       )
-      .opacity(isSelected ? 1.0 : 0.72)
+      .opacity(isSelected ? 1.0 : 0.88)
     }
     .buttonStyle(.plain)
   }
