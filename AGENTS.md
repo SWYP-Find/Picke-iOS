@@ -499,6 +499,73 @@ return .run { send in
 - `.cancellable(id: CancelID.xxx, cancelInFlight: true)` 로 중복 호출 방지
 - 레퍼런스: `AuthUseCaseImpl.withDraw` / `HomeFeature.fetchHome`
 
+#### 🧩 UseCase 강제 — Feature 는 Repository 직접 의존 금지 (필수)
+
+Clean Architecture 의존 방향(`Presentation → Domain ← Data`) 을 지키기 위해 **Feature/Reducer 는 절대로 `@Dependency(\.xxxRepository)` 를 직접 잡지 않는다**. 모든 외부 IO 는 `XxxUseCase` 프로토콜을 통해서만 호출한다.
+
+```swift
+// ✅ 올바른 패턴 — Feature 는 UseCase 만 의존
+@Reducer
+public struct PreVoteFeature {
+  @Dependency(\.battleUseCase) private var battleUseCase
+  @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
+
+  // ... .run { [useCase = battleUseCase] send in
+  //       try await useCase.fetchBattle(battleId: battleId)
+  //     }
+}
+
+// UseCase Impl — Projects/Domain/UseCase/Sources/<도메인>/<Domain>UseCase.swift
+// 별도 protocol 만들지 않고 기존 Interface 를 그대로 채택한다 (Attendance_iOS 패턴).
+public struct BattleUseCaseImpl: BattleInterface {
+  @Dependency(\.battleRepository) private var battleRepository
+
+  public init() {}
+
+  public func fetchBattle(battleId: Int) async throws -> BattleDetail {
+    try await battleRepository.fetchBattle(battleId: battleId)
+  }
+  // ... 나머지 메서드도 동일하게 repository 로 단순 위임
+}
+
+extension BattleUseCaseImpl: DependencyKey {
+  public static var liveValue = BattleUseCaseImpl()
+  public static var testValue = BattleUseCaseImpl()
+  public static var previewValue = BattleUseCaseImpl()
+}
+
+public extension DependencyValues {
+  var battleUseCase: BattleUseCaseImpl {
+    get { self[BattleUseCaseImpl.self] }
+    set { self[BattleUseCaseImpl.self] = newValue }
+  }
+}
+
+// ❌ 금지 — Feature 가 Repository 를 직접 잡음
+@Reducer
+public struct PreVoteFeature {
+  @Dependency(\.battleRepository) private var battleRepository   // ← UseCase 거치게
+  @Dependency(\.perspectiveRepository) private var perspectiveRepository
+}
+
+// ❌ 금지 — UseCase 용 새 protocol 을 별도로 만들기 (Interface 중복 정의)
+public protocol BattleUseCase: Sendable { ... }
+public struct BattleUseCaseImpl: BattleUseCase { ... }
+```
+
+규칙:
+- **Feature/Reducer**: `@Dependency(\.<domain>UseCase)` 만 사용 — Repository 키 사용 금지
+- **UseCase Impl**: 기존 `XxxInterface` 를 **그대로 채택** (별도 `XxxUseCase` protocol 만들지 않음 — Attendance_iOS `AuthUseCaseImpl: AuthInterface` 패턴)
+- **Repository 잡는 방식**: Impl 안에서 `@Dependency(\.xxxRepository) private var xxxRepository` 로 직접 잡고, `public init() {}` 만 노출 (Attendance 패턴)
+- **DependencyKey 채택**: Impl 자체에 `extension XxxUseCaseImpl: DependencyKey { liveValue / testValue / previewValue }` 를 모두 정의 — 별도 `enum XxxUseCaseKey` 만들지 않음
+- **liveValue / testValue / previewValue 모두 명시**: 세 값 모두 `XxxUseCaseImpl()` 로 동일하게 둠 (Attendance 패턴 — 테스트/프리뷰에서 별도 mock 이 필요해지면 그때 교체)
+- **DependencyValues 키 이름**: `<domain>UseCase` (`battleUseCase`, `homeUseCase`, `commentUseCase`, `perspectiveUseCase`) — 키 타입은 `XxxUseCaseImpl` (Interface 가 아닌 Impl)
+- **Repository 키 (`battleRepository`, `homeRepository`, …)** 는 UseCase Impl 안에서만 사용. Presentation 에서는 호출 금지
+- 동일 도메인의 모든 IO 를 하나의 UseCase 파일에 모음 (multi-method UseCase). 액션 1개짜리 도메인이면 Attendance `FetchMyAttendancesUseCase` 처럼 별도 protocol 1개 + Impl 1개 형태도 OK
+- 새 IO 가 추가되면: 1) Repository 메서드 추가 → 2) UseCase Impl 에 위임 메서드 추가 → 3) Feature 에서 UseCase 호출
+
+레퍼런스: `BattleUseCaseImpl`, `HomeUseCaseImpl`, `CommentUseCaseImpl`, `PerspectiveUseCaseImpl`, Attendance_iOS `AuthUseCaseImpl`
+
 #### 🔌 RepositoryImpl — Provider 선언 패턴
 
 Repository 구현체의 `MoyaProvider` 는 `let` 으로 직접 선언하고, init 기본값으로 `.default` / `.authorized` 팩토리를 그대로 사용한다. `Optional + nil 합치기`나 `MoyaProviderPool` 인다이렉션 금지.

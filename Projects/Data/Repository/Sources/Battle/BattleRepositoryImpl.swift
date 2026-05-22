@@ -90,10 +90,12 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     let dto: BattlePerspectivePageResponseDTO = try await provider.request(
       .perspectives(
         battleId: battleId,
-        cursor: cursor,
-        size: size,
-        optionLabel: optionLabel,
-        sort: sort?.queryValue
+        query: PerspectivesQueryRequest(
+          cursor: cursor,
+          size: size,
+          optionLabel: optionLabel,
+          sort: sort?.queryValue
+        )
       )
     )
 
@@ -125,6 +127,21 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     }
 
     return data.toDomain()
+  }
+
+  public func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective? {
+    let dto: BaseResponseDTO<BattlePerspectiveDTO>
+    do {
+      dto = try await provider.request(.myPerspective(battleId: battleId))
+    } catch {
+      Log.debug("[BattleRepositoryImpl] fetchMyPerspective failed (no participation): \(error.localizedDescription)")
+      return nil
+    }
+
+    if dto.statusCode >= 400 {
+      return nil
+    }
+    return dto.data?.toDomain()
   }
 
   public func fetchScenario(battleId: Int) async throws -> BattleScenario {

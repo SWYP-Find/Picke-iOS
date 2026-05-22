@@ -21,6 +21,7 @@ public enum PerspectiveService {
   case createComment(perspectiveId: Int, body: PerspectiveCommentBody)
   case updateComment(perspectiveId: Int, commentId: Int, body: PerspectiveCommentBody)
   case deleteComment(perspectiveId: Int, commentId: Int)
+  case deletePerspective(perspectiveId: Int)
 }
 
 extension PerspectiveService: BaseTargetType {
@@ -31,15 +32,17 @@ extension PerspectiveService: BaseTargetType {
   public var urlPath: String {
     switch self {
     case let .detail(perspectiveId):
-      PerspectiveAPI.detail(perspectiveId: perspectiveId).description
+      return PerspectiveAPI.detail(perspectiveId: perspectiveId).description
     case let .listLabeledComments(perspectiveId, _, _):
-      PerspectiveAPI.listLabeledComments(perspectiveId: perspectiveId).description
+      return PerspectiveAPI.listLabeledComments(perspectiveId: perspectiveId).description
     case let .createComment(perspectiveId, _):
-      PerspectiveAPI.createComment(perspectiveId: perspectiveId).description
+      return PerspectiveAPI.createComment(perspectiveId: perspectiveId).description
     case let .updateComment(perspectiveId, commentId, _):
-      PerspectiveAPI.updateComment(perspectiveId: perspectiveId, commentId: commentId).description
+      return PerspectiveAPI.updateComment(perspectiveId: perspectiveId, commentId: commentId).description
     case let .deleteComment(perspectiveId, commentId):
-      PerspectiveAPI.deleteComment(perspectiveId: perspectiveId, commentId: commentId).description
+      return PerspectiveAPI.deleteComment(perspectiveId: perspectiveId, commentId: commentId).description
+    case let .deletePerspective(perspectiveId):
+      return PerspectiveAPI.detail(perspectiveId: perspectiveId).description
     }
   }
 
@@ -47,15 +50,13 @@ extension PerspectiveService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
-    case .detail:
-      .get
-    case .listLabeledComments:
+    case .detail, .listLabeledComments:
       .get
     case .createComment:
       .post
     case .updateComment:
       .put
-    case .deleteComment:
+    case .deleteComment, .deletePerspective:
       .delete
     }
   }
@@ -74,6 +75,8 @@ extension PerspectiveService: BaseTargetType {
     case let .updateComment(_, _, body):
       return body.toDictionary
     case .deleteComment:
+      return nil
+    case .deletePerspective:
       return nil
     }
   }

@@ -36,6 +36,7 @@ public enum CustomAlertStyle: Equatable {
   case confirmation
   case finalVote
   case report
+  case alreadyWatched
 }
 
 @CasePathable
@@ -87,6 +88,17 @@ public extension CustomAlertState where Action == CustomAlertAction {
       cancelTitle: "",
       isDestructive: true,
       style: .report
+    )
+  }
+
+  static func alreadyWatched() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "다시 콘텐츠를 시청하시겠습니까?",
+      message: "이미 참여 완료한 배틀입니다.\n기존 내역이 삭제되고\n다시 처음부터 진행됩니다.",
+      confirmTitle: "다시",
+      cancelTitle: "취소",
+      isDestructive: true,
+      style: .alreadyWatched
     )
   }
 }

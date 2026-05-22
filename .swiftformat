@@ -1,3 +1,4 @@
 --indent 2
 --swiftversion 6.0
 --maxwidth 120
+--disable redundantReturn

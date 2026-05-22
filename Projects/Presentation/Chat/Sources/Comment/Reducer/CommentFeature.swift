@@ -11,6 +11,7 @@ import Foundation
 import ComposableArchitecture
 import DesignSystem
 import DomainInterface
+import UseCase
 import Entity
 import LogMacro
 
@@ -117,9 +118,9 @@ public struct CommentFeature {
     case createComment
   }
 
-  @Dependency(\.battleRepository) private var battleRepository
-  @Dependency(\.commentRepository) private var commentRepository
-  @Dependency(\.perspectiveRepository) private var perspectiveRepository
+  @Dependency(\.battleUseCase) private var battleUseCase
+  @Dependency(\.commentUseCase) private var commentUseCase
+  @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -264,7 +265,7 @@ extension CommentFeature {
     switch action {
     case .fetchBattle:
       let battleId = state.battleId
-      return .run { [repository = battleRepository] send in
+      return .run { [repository = battleUseCase] send in
         let result = await Result {
           try await repository.fetchBattle(battleId: battleId)
         }
@@ -276,7 +277,7 @@ extension CommentFeature {
     case .fetchVoteStats:
       state.isLoadingStats = true
       let battleId = state.battleId
-      return .run { [repository = battleRepository] send in
+      return .run { [repository = battleUseCase] send in
         let result = await Result {
           try await repository.fetchVoteStats(battleId: battleId)
         }
@@ -291,7 +292,7 @@ extension CommentFeature {
       let cursor = reset ? nil : state.nextCursor
       let optionLabel = state.selectedFilter.queryLabel
       let sort = state.selectedSort.perspectiveSort
-      return .run { [repository = battleRepository] send in
+      return .run { [repository = battleUseCase] send in
         let result = await Result {
           try await repository.fetchPerspectives(
             battleId: battleId,
@@ -307,7 +308,7 @@ extension CommentFeature {
       .cancellable(id: CancelID.fetchPerspectives, cancelInFlight: true)
 
     case let .toggleLike(commentId, currentlyLiked):
-      return .run { [repository = commentRepository] send in
+      return .run { [repository = commentUseCase] send in
         let result = await Result {
           if currentlyLiked {
             try await repository.unlikeComment(commentId: commentId)
@@ -321,7 +322,7 @@ extension CommentFeature {
       .cancellable(id: CancelID.toggleLike, cancelInFlight: false)
 
     case let .createComment(perspectiveId, content):
-      return .run { [repository = perspectiveRepository] send in
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           try await repository.createComment(perspectiveId: perspectiveId, content: content)
         }

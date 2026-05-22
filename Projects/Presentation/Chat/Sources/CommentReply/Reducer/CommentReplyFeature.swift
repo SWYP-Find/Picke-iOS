@@ -15,6 +15,7 @@ import Foundation
 
 import ComposableArchitecture
 import DomainInterface
+import UseCase
 import Entity
 import LogMacro
 
@@ -98,8 +99,8 @@ public struct CommentReplyFeature {
     case like
   }
 
-  @Dependency(\.perspectiveRepository) private var perspectiveRepository
-  @Dependency(\.commentRepository) private var commentRepository
+  @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
+  @Dependency(\.commentUseCase) private var commentUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -199,7 +200,7 @@ extension CommentReplyFeature {
     case .fetchParent:
       state.isLoadingDetail = true
       let pid = state.perspectiveId
-      return .run { [repository = perspectiveRepository] send in
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           try await repository.fetchPerspective(perspectiveId: pid)
         }
@@ -212,7 +213,7 @@ extension CommentReplyFeature {
       state.isLoadingReplies = true
       let pid = state.perspectiveId
       let cursor = reset ? nil : state.nextCursor
-      return .run { [repository = perspectiveRepository] send in
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           try await repository.fetchLabeledComments(perspectiveId: pid, cursor: cursor, size: 20)
         }
@@ -223,7 +224,7 @@ extension CommentReplyFeature {
 
     case let .createReply(content):
       let pid = state.perspectiveId
-      return .run { [repository = perspectiveRepository] send in
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           try await repository.createComment(perspectiveId: pid, content: content)
         }
@@ -234,7 +235,7 @@ extension CommentReplyFeature {
 
     case let .updateReply(commentId, content):
       let pid = state.perspectiveId
-      return .run { [repository = perspectiveRepository] send in
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           try await repository.updateComment(perspectiveId: pid, commentId: commentId, content: content)
         }
@@ -245,7 +246,7 @@ extension CommentReplyFeature {
 
     case let .deleteReply(commentId):
       let pid = state.perspectiveId
-      return .run { [repository = perspectiveRepository] send in
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           try await repository.deleteComment(perspectiveId: pid, commentId: commentId)
           return commentId
@@ -257,7 +258,7 @@ extension CommentReplyFeature {
 
     case let .toggleParentLike(currentlyLiked):
       let commentId = state.perspectiveId
-      return .run { [repository = commentRepository] send in
+      return .run { [repository = commentUseCase] send in
         let result = await Result {
           if currentlyLiked {
             try await repository.unlikeComment(commentId: commentId)
@@ -271,7 +272,7 @@ extension CommentReplyFeature {
       .cancellable(id: CancelID.like, cancelInFlight: false)
 
     case let .toggleReplyLike(commentId, currentlyLiked):
-      return .run { [repository = commentRepository] send in
+      return .run { [repository = commentUseCase] send in
         let result = await Result {
           if currentlyLiked {
             try await repository.unlikeComment(commentId: commentId)

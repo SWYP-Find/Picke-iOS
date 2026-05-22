@@ -10,6 +10,7 @@ import Foundation
 import ComposableArchitecture
 import DesignSystem
 import DomainInterface
+import UseCase
 import Entity
 import LogMacro
 
@@ -232,7 +233,7 @@ public struct ChatRoomFeature {
     case audioObserver
   }
 
-  @Dependency(\.battleRepository) private var battleRepository
+  @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.audioPlayer) private var audioPlayer
 
   public var body: some Reducer<State, Action> {
@@ -357,7 +358,7 @@ extension ChatRoomFeature {
     case .fetchScenario:
       state.isLoadingScenario = true
       let battleId = state.battleId
-      return .run { [repository = battleRepository] send in
+      return .run { [repository = battleUseCase] send in
         let result = await Result {
           try await repository.fetchScenario(battleId: battleId)
         }

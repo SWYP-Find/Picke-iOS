@@ -15,15 +15,15 @@ public enum PerspectiveAPI {
   public var description: String {
     switch self {
     case let .detail(perspectiveId):
-      "\(perspectiveId)"
+      return "\(perspectiveId)"
     case let .listLabeledComments(perspectiveId):
-      "\(perspectiveId)/comments/labeled"
+      return "\(perspectiveId)/comments/labeled"
     case let .createComment(perspectiveId):
-      "\(perspectiveId)/comments"
+      return "\(perspectiveId)/comments"
     case let .updateComment(perspectiveId, commentId):
-      "\(perspectiveId)/comments/\(commentId)"
+      return "\(perspectiveId)/comments/\(commentId)"
     case let .deleteComment(perspectiveId, commentId):
-      "\(perspectiveId)/comments/\(commentId)"
+      return "\(perspectiveId)/comments/\(commentId)"
     }
   }
 }

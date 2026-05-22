@@ -12,21 +12,24 @@ public enum BattleAPI {
   case scenario(battleId: Int)
   case voteStats(battleId: Int)
   case perspectives(battleId: Int)
+  case myPerspective(battleId: Int)
 
   public var description: String {
     switch self {
     case let .detail(battleId):
-      "\(battleId)"
+      return "\(battleId)"
     case let .preVote(battleId):
-      "\(battleId)/votes/pre"
+      return "\(battleId)/votes/pre"
     case let .postVote(battleId):
-      "\(battleId)/votes/post"
+      return "\(battleId)/votes/post"
     case let .scenario(battleId):
-      "\(battleId)/scenario"
+      return "\(battleId)/scenario"
     case let .voteStats(battleId):
-      "\(battleId)/vote-stats"
+      return "\(battleId)/vote-stats"
     case let .perspectives(battleId):
-      "\(battleId)/perspectives"
+      return "\(battleId)/perspectives"
+    case let .myPerspective(battleId):
+      return "\(battleId)/perspectives/me"
     }
   }
 }

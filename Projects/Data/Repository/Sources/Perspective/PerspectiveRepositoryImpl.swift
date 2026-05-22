@@ -105,6 +105,17 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
       throw CommentError.backendError(message)
     }
   }
+
+  public func deletePerspective(perspectiveId: Int) async throws {
+    let dto: BaseResponseDTO<String> = try await provider.request(
+      .deletePerspective(perspectiveId: perspectiveId)
+    )
+
+    if dto.statusCode >= 400 {
+      let message = dto.error?.message ?? "perspective 삭제 실패"
+      throw BattleError.backendError(message)
+    }
+  }
 }
 
 public struct EmptyDTO: Decodable {}

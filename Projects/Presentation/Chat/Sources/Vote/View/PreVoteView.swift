@@ -55,6 +55,7 @@ public struct PreVoteView: View {
         .presentationDetents([.fraction(0.6)])
         .toolbar(.hidden, for: .navigationBar)
     }
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
   private var shouldShowSkeleton: Bool {

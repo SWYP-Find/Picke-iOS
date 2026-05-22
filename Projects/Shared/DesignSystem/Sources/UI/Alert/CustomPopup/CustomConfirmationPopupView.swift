@@ -59,9 +59,9 @@ struct CustomConfirmationPopup: View {
   private var popupHorizontalPadding: CGFloat {
     switch style {
     case .confirmation:
-      20
-    case .finalVote, .report:
-      0
+      return 20
+    case .finalVote, .report, .alreadyWatched:
+      return 0
     }
   }
 
@@ -74,7 +74,61 @@ struct CustomConfirmationPopup: View {
       finalVoteContent
     case .report:
       reportContent
+    case .alreadyWatched:
+      alreadyWatchedContent
     }
+  }
+
+  @ViewBuilder
+  private var alreadyWatchedContent: some View {
+    VStack(spacing: 12) {
+      VStack(spacing: 8) {
+        Text(title)
+          .pretendardFont(family: .SemiBold, size: 16)
+          .foregroundStyle(.primary800)
+          .kerning(-0.4)
+          .multilineTextAlignment(.center)
+          .padding(.horizontal, 20)
+
+        if !message.isEmpty {
+          Text(message)
+            .pretendardFont(family: .Medium, size: 13)
+            .foregroundStyle(.neutral400)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 20)
+        }
+      }
+
+      HStack(spacing: 0) {
+        Button(action: onCancel) {
+          Text(cancelTitle.isEmpty ? "취소" : cancelTitle)
+            .pretendardFont(family: .Medium, size: 14)
+            .foregroundStyle(.primary500)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.secondary50, in: Rectangle())
+        }
+        .buttonStyle(.plain)
+
+        Button(action: onConfirm) {
+          Text(confirmTitle.isEmpty ? "다시" : confirmTitle)
+            .pretendardFont(family: .Medium, size: 14)
+            .foregroundStyle(.secondary50)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.primary500, in: Rectangle())
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(.top, 24)
+    .frame(width: 343)
+    .background(.beige500, in: RoundedRectangle(cornerRadius: 6))
+    .overlay(
+      RoundedRectangle(cornerRadius: 6)
+        .stroke(.primary500, lineWidth: 1.5)
+    )
+    .onTapGesture {}
   }
 
   private var confirmationContent: some View {

@@ -84,4 +84,8 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
       createdAt: Date()
     )
   }
+
+  public func fetchMyPerspective(battleId _: Int) async throws -> BattlePerspective? {
+    nil
+  }
 }
