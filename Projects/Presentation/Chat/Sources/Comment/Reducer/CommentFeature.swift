@@ -28,6 +28,7 @@ public struct CommentFeature {
     public var hasNext: Bool = false
     public var selectedFilter: CommentFilter = .all
     public var selectedSort: CommentSort = .popular
+    public var reportTargetCommentID: UUID?
     public var comments: [CommentItem]
     public var commentText: String = ""
 
@@ -76,6 +77,9 @@ public struct CommentFeature {
     case sortTapped(CommentSort)
     case moreTapped(UUID)
     case replyTapped(UUID)
+    case reportButtonTapped(UUID)
+    case reportConfirmTapped(UUID)
+    case reportPopupDismissed
     case likeTapped(UUID)
     case sendTapped
   }
@@ -83,23 +87,28 @@ public struct CommentFeature {
   public enum AsyncAction: Equatable {
     case fetchVoteStats
     case fetchPerspectives(reset: Bool)
+    case toggleLike(commentId: Int, currentlyLiked: Bool)
   }
 
   public enum InnerAction: Equatable {
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
+    case likeResponse(Result<CommentLikeResult, CommentError>)
   }
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case openReply(CommentItem)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetchVoteStats
     case fetchPerspectives
+    case toggleLike
   }
 
   @Dependency(\.battleRepository) private var battleRepository
+  @Dependency(\.commentRepository) private var commentRepository
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -145,22 +154,45 @@ extension CommentFeature {
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
-    case .shareTapped, .moreTapped, .replyTapped:
+    case .shareTapped:
+      return .none
+
+    case let .moreTapped(id), let .replyTapped(id):
+      guard let comment = state.comments.first(where: { $0.id == id }) else { return .none }
+      state.reportTargetCommentID = nil
+      return .send(.delegate(.openReply(comment)))
+
+    case let .reportButtonTapped(id):
+      state.reportTargetCommentID = state.reportTargetCommentID == id ? nil : id
+      return .none
+
+    case .reportPopupDismissed:
+      state.reportTargetCommentID = nil
+      return .none
+
+    case let .reportConfirmTapped(id):
+      state.reportTargetCommentID = nil
+      Log.debug("[CommentFeature] report comment tapped: \(id)")
       return .none
 
     case let .filterTapped(filter):
       state.selectedFilter = filter
+      state.reportTargetCommentID = nil
       return .send(.async(.fetchPerspectives(reset: true)))
 
     case let .sortTapped(sort):
       state.selectedSort = sort
+      state.reportTargetCommentID = nil
       return .send(.async(.fetchPerspectives(reset: true)))
 
     case let .likeTapped(id):
-      guard let index = state.comments.firstIndex(where: { $0.id == id }) else { return .none }
+      guard let index = state.comments.firstIndex(where: { $0.id == id }),
+            let commentId = state.comments[index].perspectiveId
+      else { return .none }
+      let wasLiked = state.comments[index].isLiked
       state.comments[index].isLiked.toggle()
       state.comments[index].likeCount += state.comments[index].isLiked ? 1 : -1
-      return .none
+      return .send(.async(.toggleLike(commentId: commentId, currentlyLiked: wasLiked)))
 
     case .sendTapped:
       let text = state.commentText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -178,6 +210,7 @@ extension CommentFeature {
         at: 0
       )
       state.commentText = ""
+      state.reportTargetCommentID = nil
       return .none
     }
   }
@@ -219,6 +252,20 @@ extension CommentFeature {
         return await send(.inner(.perspectivesResponse(result, reset: reset)))
       }
       .cancellable(id: CancelID.fetchPerspectives, cancelInFlight: true)
+
+    case let .toggleLike(commentId, currentlyLiked):
+      return .run { [repository = commentRepository] send in
+        let result = await Result {
+          if currentlyLiked {
+            try await repository.unlikeComment(commentId: commentId)
+          } else {
+            try await repository.likeComment(commentId: commentId)
+          }
+        }
+        .mapError(CommentError.from)
+        return await send(.inner(.likeResponse(result)))
+      }
+      .cancellable(id: CancelID.toggleLike, cancelInFlight: false)
     }
   }
 
@@ -249,6 +296,18 @@ extension CommentFeature {
         state.hasNext = page.hasNext
       case let .failure(error):
         Log.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)")
+      }
+      return .none
+
+    case let .likeResponse(result):
+      switch result {
+      case let .success(payload):
+        if let index = state.comments.firstIndex(where: { $0.perspectiveId == payload.perspectiveId }) {
+          state.comments[index].likeCount = payload.likeCount
+          state.comments[index].isLiked = payload.isLiked
+        }
+      case let .failure(error):
+        Log.error("[CommentFeature] toggleLike failed: \(error.localizedDescription)")
       }
       return .none
     }
@@ -361,20 +420,9 @@ public struct VoteOptionSummary: Equatable {
   }
 }
 
-public enum CommentOption: Equatable {
-  case a
-  case b
-
-  public var label: String {
-    switch self {
-    case .a: "A"
-    case .b: "B"
-    }
-  }
-}
-
 public struct CommentItem: Equatable, Identifiable {
   public let id: UUID
+  public var perspectiveId: Int?
   public var author: String
   public var timeAgo: String
   public var option: CommentOption
@@ -386,6 +434,7 @@ public struct CommentItem: Equatable, Identifiable {
 
   public init(
     id: UUID = UUID(),
+    perspectiveId: Int? = nil,
     author: String,
     timeAgo: String,
     option: CommentOption,
@@ -396,6 +445,7 @@ public struct CommentItem: Equatable, Identifiable {
     createdOrder: Int
   ) {
     self.id = id
+    self.perspectiveId = perspectiveId
     self.author = author
     self.timeAgo = timeAgo
     self.option = option
@@ -411,6 +461,7 @@ public struct CommentItem: Equatable, Identifiable {
     let optionFallback: CommentOption = item.option.label == "B" ? .b : .a
     self.init(
       id: UUID(uuidString: Self.deterministicUUID(perspectiveId: item.perspectiveId)) ?? UUID(),
+      perspectiveId: item.perspectiveId,
       author: item.user.nickname,
       timeAgo: Self.relativeTimeString(from: item.createdAt),
       option: optionFallback,

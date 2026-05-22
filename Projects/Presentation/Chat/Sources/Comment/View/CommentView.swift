@@ -9,6 +9,7 @@ import SwiftUI
 
 import ComposableArchitecture
 import DesignSystem
+import Entity
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {
@@ -38,6 +39,7 @@ public struct CommentView: View {
     .contentShape(Rectangle())
     .onTapGesture {
       isCommentFocused = false
+      send(.reportPopupDismissed)
     }
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
@@ -233,12 +235,16 @@ private extension CommentView {
     VStack(alignment: .leading, spacing: 8) {
       commentHeader(comment)
 
-      Text(comment.content)
-        .pretendardFont(family: .Regular, size: 13)
-        .foregroundStyle(.neutral400)
-        .lineSpacing(13 * 0.4)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 2)
+      Button { send(.replyTapped(comment.id)) } label: {
+        Text(comment.content)
+          .pretendardFont(family: .Regular, size: 13)
+          .foregroundStyle(.neutral400)
+          .lineSpacing(13 * 0.4)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.vertical, 2)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .buttonStyle(.plain)
 
       commentActions(comment)
     }
@@ -279,14 +285,33 @@ private extension CommentView {
 
       Spacer()
 
-      Button { send(.moreTapped(comment.id)) } label: {
+      Button { send(.reportButtonTapped(comment.id)) } label: {
         Image(systemName: "ellipsis")
           .font(.system(size: 18, weight: .regular))
           .frame(width: 24, height: 24)
       }
       .buttonStyle(.plain)
       .foregroundStyle(.neutral300)
+      .overlay(alignment: .topTrailing) {
+        if store.reportTargetCommentID == comment.id {
+          reportPopup(comment.id)
+            .offset(x: -2, y: 30)
+            .zIndex(1)
+        }
+      }
     }
+  }
+
+  func reportPopup(_ id: UUID) -> some View {
+    Button { send(.reportConfirmTapped(id)) } label: {
+      Image(systemName: "light.beacon.max.fill")
+        .font(.system(size: 17, weight: .medium))
+        .frame(width: 24, height: 24)
+      .foregroundStyle(.beige50)
+      .frame(width: 34, height: 34)
+      .background(.primary500, in: Capsule())
+    }
+    .buttonStyle(.plain)
   }
 
   func optionBadge(_ option: CommentOption) -> some View {
@@ -301,9 +326,12 @@ private extension CommentView {
 
   func commentActions(_ comment: CommentItem) -> some View {
     HStack(spacing: 12) {
-      Text("더보기")
-        .pretendardFont(family: .Medium, size: 12)
-        .foregroundStyle(.neutral300)
+      Button { send(.moreTapped(comment.id)) } label: {
+        Text("더보기")
+          .pretendardFont(family: .Medium, size: 12)
+          .foregroundStyle(.neutral300)
+      }
+      .buttonStyle(.plain)
 
       Spacer()
 

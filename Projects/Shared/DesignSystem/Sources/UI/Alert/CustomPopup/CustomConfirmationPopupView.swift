@@ -45,7 +45,7 @@ struct CustomConfirmationPopup: View {
         .onTapGesture(perform: onCancel)
 
       popupContent
-        .padding(.horizontal, 20)
+        .padding(.horizontal, popupHorizontalPadding)
         .offset(y: isContentVisible ? 0 : 120)
         .opacity(isContentVisible ? 1 : 0)
     }
@@ -53,6 +53,15 @@ struct CustomConfirmationPopup: View {
       withAnimation(.easeInOut(duration: 0.3)) {
         isContentVisible = true
       }
+    }
+  }
+
+  private var popupHorizontalPadding: CGFloat {
+    switch style {
+    case .confirmation:
+      20
+    case .finalVote:
+      0
     }
   }
 
@@ -162,6 +171,7 @@ struct CustomConfirmationPopup: View {
       RoundedRectangle(cornerRadius: 2)
         .stroke(.primary500, lineWidth: 1.5)
     )
+    .opacity(0.9)
     .onTapGesture {}
   }
 }

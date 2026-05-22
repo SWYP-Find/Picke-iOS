@@ -7,6 +7,18 @@
 
 import Foundation
 
+public enum CommentOption: Equatable {
+  case a
+  case b
+
+  public var label: String {
+    switch self {
+    case .a: "A"
+    case .b: "B"
+    }
+  }
+}
+
 public struct CommentAuthor: Equatable, Hashable {
   public let name: String
   public let imageURL: String?
@@ -44,6 +56,69 @@ public struct Comment: Equatable, Identifiable, Hashable {
     self.likeCount = likeCount
     self.replyCount = replyCount
     self.isLiked = isLiked
+  }
+}
+
+public struct CommentReplyItem: Equatable, Identifiable {
+  public let id: UUID
+  public var author: String
+  public var timeAgo: String
+  public var option: CommentOption
+  public var content: String
+  public var likeCount: Int
+  public var isLiked: Bool
+  public var createdOrder: Int
+
+  public init(
+    id: UUID = UUID(),
+    author: String,
+    timeAgo: String,
+    option: CommentOption,
+    content: String,
+    likeCount: Int,
+    isLiked: Bool = false,
+    createdOrder: Int
+  ) {
+    self.id = id
+    self.author = author
+    self.timeAgo = timeAgo
+    self.option = option
+    self.content = content
+    self.likeCount = likeCount
+    self.isLiked = isLiked
+    self.createdOrder = createdOrder
+  }
+
+  public static func mocks(for option: CommentOption) -> [CommentReplyItem] {
+    [
+      .init(
+        id: UUID(uuidString: "00000000-0000-0000-0001-000000000001") ?? UUID(),
+        author: "사색하는 사슴",
+        timeAgo: "2분 전",
+        option: option,
+        content: "네덜란드 사례를 일반화하기엔 무리가 있지 않나요? 한국의 사회문화적 맥락은 다릅니다.",
+        likeCount: 1340,
+        createdOrder: 3
+      ),
+      .init(
+        id: UUID(uuidString: "00000000-0000-0000-0001-000000000002") ?? UUID(),
+        author: "논쟁하는 사자",
+        timeAgo: "2분 전",
+        option: option,
+        content: "제도 자체보다 사각지대를 줄이는 보완책을 같이 봐야 한다고 생각해요.",
+        likeCount: 534,
+        createdOrder: 2
+      ),
+      .init(
+        id: UUID(uuidString: "00000000-0000-0000-0001-000000000003") ?? UUID(),
+        author: "질문하는 독자",
+        timeAgo: "5분 전",
+        option: option == .a ? .b : .a,
+        content: "반대 입장도 이해되지만, 개인의 자기결정권을 완전히 배제하기는 어렵지 않을까요?",
+        likeCount: 219,
+        createdOrder: 1
+      ),
+    ]
   }
 }
 

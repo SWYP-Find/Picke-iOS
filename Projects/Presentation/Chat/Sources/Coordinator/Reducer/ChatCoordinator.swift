@@ -90,6 +90,13 @@ extension ChatCoordinator {
     case .routeAction(_, action: .comment(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .comment(.delegate(.openReply(comment)))):
+      state.routes.push(.commentReply(.init(parentComment: comment)))
+      return .none
+
+    case .routeAction(_, action: .commentReply(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     default:
       return .none
     }
@@ -127,6 +134,7 @@ extension ChatCoordinator {
     case preVote(PreVoteFeature)
     case chatRoom(ChatRoomFeature)
     case comment(CommentFeature)
+    case commentReply(CommentReplyFeature)
   }
 }
 
