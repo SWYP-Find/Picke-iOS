@@ -33,6 +33,10 @@ public struct ChatRoomFeature {
 
     /// 현재 재생 중인 시나리오 노드 id (없으면 startNodeId 폴백)
     public var currentNodeId: Int?
+    /// 현재 타임라인에서 화면에 노출된 노드들. nextNodeId/autoNextNodeId 를 따라 누적된다.
+    public var visibleNodeIds: [Int] = []
+    /// 인터랙티브 노드 끝에 도달해 사용자의 입장 선택을 기다리는 상태.
+    public var isWaitingForNodeSelection: Bool = false
     /// 선택지 영역에서 사용자가 탭한 옵션 label
     public var selectedOptionLabel: String?
 
@@ -47,7 +51,8 @@ public struct ChatRoomFeature {
 
     public var messages: [ChatMessage] {
       guard let scenario else { return bundle.messages }
-      return scenario.nodes.flatMap { node in
+      let nodes = visibleNodes(in: scenario)
+      return nodes.flatMap { node in
         node.scripts.map { script in
           ChatMessage(
             messageId: Self.scriptUUID(scriptId: script.scriptId),
@@ -132,7 +137,8 @@ public struct ChatRoomFeature {
     }
 
     public var interactiveOptions: [ScenarioInteractiveOption] {
-      currentNode?.interactiveOptions ?? []
+      guard isWaitingForNodeSelection else { return [] }
+      return currentNode?.interactiveOptions ?? []
     }
 
     public var visibleOptions: [ScenarioInteractiveOption] {
@@ -140,7 +146,7 @@ public struct ChatRoomFeature {
     }
 
     public var shouldShowOptions: Bool {
-      !visibleOptions.isEmpty
+      isWaitingForNodeSelection && !visibleOptions.isEmpty
     }
 
     public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
@@ -156,6 +162,23 @@ public struct ChatRoomFeature {
 
     fileprivate static func listenedKey(battleId: Int) -> String {
       "picke.chatRoom.hasFinishedListening.\(battleId)"
+    }
+
+    public func visibleNodes(in scenario: BattleScenario) -> [ScenarioNode] {
+      let ids = visibleNodeIds.isEmpty ? [currentNodeId ?? scenario.startNodeId] : visibleNodeIds
+      return ids.compactMap { id in
+        scenario.nodes.first { $0.nodeId == id }
+      }
+    }
+
+    public func nodeStartTime(for nodeId: Int) -> TimeInterval {
+      guard let node = scenario?.nodes.first(where: { $0.nodeId == nodeId }) else { return 0 }
+      return TimeInterval((node.scripts.map(\.startTimeMs).min() ?? 0)) / 1000
+    }
+
+    public func nodeEndTime(for node: ScenarioNode) -> TimeInterval {
+      let start = TimeInterval((node.scripts.map(\.startTimeMs).min() ?? 0)) / 1000
+      return start + TimeInterval(node.audioDuration)
     }
   }
 
@@ -265,6 +288,10 @@ extension ChatRoomFeature {
     case .refreshTapped:
       state.currentTime = 0
       state.isPlaying = false
+      state.currentNodeId = state.scenario?.startNodeId
+      state.visibleNodeIds = state.scenario.map { [$0.startNodeId] } ?? []
+      state.isWaitingForNodeSelection = false
+      state.selectedOptionLabel = nil
       return .run { [player = audioPlayer] _ in
         await player.pause()
         await player.seek(to: 0)
@@ -310,12 +337,17 @@ extension ChatRoomFeature {
             let option = state.visibleOptions.first(where: { $0.label == label })
       else { return .none }
       state.currentNodeId = option.nextNodeId
+      if !state.visibleNodeIds.contains(option.nextNodeId) {
+        state.visibleNodeIds.append(option.nextNodeId)
+      }
       state.selectedOptionLabel = nil
-      state.currentTime = 0
-      state.isPlaying = false
+      state.isWaitingForNodeSelection = false
+      let targetTime = state.nodeStartTime(for: option.nextNodeId)
+      state.currentTime = targetTime
+      state.isPlaying = true
       return .run { [player = audioPlayer] _ in
-        await player.pause()
-        await player.seek(to: 0)
+        await player.seek(to: targetTime)
+        await player.play()
       }
     }
   }
@@ -367,6 +399,11 @@ extension ChatRoomFeature {
         if state.currentNodeId == nil {
           state.currentNodeId = scenario.startNodeId
         }
+        if state.visibleNodeIds.isEmpty {
+          state.visibleNodeIds = [scenario.startNodeId]
+        }
+        state.isWaitingForNodeSelection = false
+        state.selectedOptionLabel = nil
         if let urlString = scenario.audios[scenario.recommendedPathKey.rawValue]
           ?? scenario.audios.values.first,
           let url = URL(string: urlString)
@@ -381,6 +418,9 @@ extension ChatRoomFeature {
 
     case let .playerTimeUpdated(time):
       state.currentTime = time
+      if let effect = advanceNodeIfNeeded(state: &state, time: time) {
+        return effect
+      }
       if state.totalDuration > 0,
          time >= state.totalDuration - 0.5
       {
@@ -400,6 +440,38 @@ extension ChatRoomFeature {
       state.playerDuration = duration
       return .none
     }
+  }
+
+  private func advanceNodeIfNeeded(
+    state: inout State,
+    time: TimeInterval
+  ) -> Effect<Action>? {
+    guard let scenario = state.scenario,
+          let currentNode = state.currentNode
+    else { return nil }
+
+    let nodeEndTime = state.nodeEndTime(for: currentNode)
+    guard time >= nodeEndTime - 0.25 else { return nil }
+
+    if !currentNode.interactiveOptions.isEmpty {
+      guard !state.isWaitingForNodeSelection else { return nil }
+      state.isWaitingForNodeSelection = true
+      state.isPlaying = false
+      return .run { [player = audioPlayer] _ in
+        await player.pause()
+      }
+    }
+
+    guard let nextNodeId = currentNode.autoNextNodeId,
+          scenario.nodes.contains(where: { $0.nodeId == nextNodeId }),
+          state.currentNodeId != nextNodeId
+    else { return nil }
+
+    state.currentNodeId = nextNodeId
+    if !state.visibleNodeIds.contains(nextNodeId) {
+      state.visibleNodeIds.append(nextNodeId)
+    }
+    return .none
   }
 
   private func handleScopeAction(state: inout State, action: ScopeAction) -> Effect<Action> {

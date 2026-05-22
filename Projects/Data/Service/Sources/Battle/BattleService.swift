@@ -15,6 +15,7 @@ public enum BattleService {
   case preVote(battleId: Int, body: PreVoteRequest)
   case postVote(battleId: Int, body: PreVoteRequest)
   case scenario(battleId: Int)
+  case voteStats(battleId: Int)
 }
 
 extension BattleService: BaseTargetType {
@@ -32,6 +33,8 @@ extension BattleService: BaseTargetType {
       BattleAPI.postVote(battleId: battleId).description
     case let .scenario(battleId):
       BattleAPI.scenario(battleId: battleId).description
+    case let .voteStats(battleId):
+      BattleAPI.voteStats(battleId: battleId).description
     }
   }
 
@@ -47,6 +50,8 @@ extension BattleService: BaseTargetType {
       .post
     case .scenario:
       .get
+    case .voteStats:
+      .get
     }
   }
 
@@ -59,6 +64,8 @@ extension BattleService: BaseTargetType {
     case let .postVote(_, body):
       body.toDictionary
     case .scenario:
+      nil
+    case .voteStats:
       nil
     }
   }

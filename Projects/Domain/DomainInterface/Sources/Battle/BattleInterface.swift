@@ -12,6 +12,7 @@ public protocol BattleInterface: Sendable {
   func submitPreVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
   func submitPostVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
   func fetchScenario(battleId: Int) async throws -> BattleScenario
+  func fetchVoteStats(battleId: Int) async throws -> BattleVoteStats
 }
 
 public struct BattleRepositoryDependency: DependencyKey {

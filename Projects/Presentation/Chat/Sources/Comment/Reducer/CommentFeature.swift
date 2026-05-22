@@ -2,12 +2,16 @@
 //  CommentFeature.swift
 //  Chat
 //
-//  댓글 화면 mock 상태. 서버 API 가 붙기 전까지 화면/상호작용 형태를 고정한다.
+//  댓글 화면. vote-stats API 로 상단 통계만 실데이터 사용,
+//  댓글 리스트는 아직 mock.
 //
 
 import Foundation
 
 import ComposableArchitecture
+import DomainInterface
+import Entity
+import LogMacro
 
 @Reducer
 public struct CommentFeature {
@@ -18,6 +22,7 @@ public struct CommentFeature {
     public var battleId: Int
     public var title: String
     public var voteSummary: VoteSummary
+    public var isLoadingStats: Bool = false
     public var selectedFilter: CommentFilter = .all
     public var selectedSort: CommentSort = .popular
     public var comments: [CommentItem]
@@ -54,11 +59,14 @@ public struct CommentFeature {
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
+    case async(AsyncAction)
+    case inner(InnerAction)
     case delegate(DelegateAction)
   }
 
   @CasePathable
   public enum View {
+    case onAppear
     case backButtonTapped
     case shareTapped
     case filterTapped(CommentFilter)
@@ -69,9 +77,23 @@ public struct CommentFeature {
     case sendTapped
   }
 
+  public enum AsyncAction: Equatable {
+    case fetchVoteStats
+  }
+
+  public enum InnerAction: Equatable {
+    case voteStatsResponse(Result<BattleVoteStats, AuthError>)
+  }
+
   public enum DelegateAction: Equatable {
     case dismiss
   }
+
+  nonisolated enum CancelID: Hashable {
+    case fetchVoteStats
+  }
+
+  @Dependency(\.battleRepository) private var battleRepository
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -89,6 +111,12 @@ public struct CommentFeature {
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
 
+      case let .async(asyncAction):
+        return handleAsyncAction(state: &state, action: asyncAction)
+
+      case let .inner(innerAction):
+        return handleInnerAction(state: &state, action: innerAction)
+
       case .delegate:
         return .none
       }
@@ -102,6 +130,10 @@ extension CommentFeature {
     action: View
   ) -> Effect<Action> {
     switch action {
+    case .onAppear:
+      guard !state.isLoadingStats else { return .none }
+      return .send(.async(.fetchVoteStats))
+
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
@@ -146,6 +178,65 @@ extension CommentFeature {
       state.commentText = ""
       return .none
     }
+  }
+
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
+    switch action {
+    case .fetchVoteStats:
+      state.isLoadingStats = true
+      let battleId = state.battleId
+      return .run { [repository = battleRepository] send in
+        let result = await Result {
+          try await repository.fetchVoteStats(battleId: battleId)
+        }
+        .mapError(AuthError.from)
+        return await send(.inner(.voteStatsResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchVoteStats, cancelInFlight: true)
+    }
+  }
+
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .voteStatsResponse(result):
+      state.isLoadingStats = false
+      switch result {
+      case let .success(stats):
+        state.voteSummary = makeSummary(from: stats, fallback: state.voteSummary)
+      case let .failure(error):
+        Log.error("[CommentFeature] fetchVoteStats failed: \(error.localizedDescription)")
+      }
+      return .none
+    }
+  }
+
+  /// API 응답(BattleVoteStats) 을 화면 모델 VoteSummary 로 매핑.
+  /// 옵션이 2개 이상이라 가정 — 부족하거나 매핑 실패 시 fallback 유지.
+  private func makeSummary(from stats: BattleVoteStats, fallback: VoteSummary) -> VoteSummary {
+    guard stats.options.count >= 2 else { return fallback }
+    let a = stats.options[0]
+    let b = stats.options[1]
+    return VoteSummary(
+      changeBadgeTitle: fallback.changeBadgeTitle,
+      optionA: VoteOptionSummary(
+        label: a.label ?? "A",
+        title: a.title,
+        representative: a.stance.isEmpty ? fallback.optionA.representative : a.stance,
+        percentage: a.ratio
+      ),
+      optionB: VoteOptionSummary(
+        label: b.label ?? "B",
+        title: b.title,
+        representative: b.stance.isEmpty ? fallback.optionB.representative : b.stance,
+        percentage: b.ratio
+      )
+    )
   }
 }
 

@@ -43,6 +43,7 @@ public struct CommentView: View {
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .onAppear {
+      send(.onAppear)
       withAnimation(.easeOut(duration: 0.75).delay(0.15)) {
         hasAnimatedVoteProgress = true
       }
