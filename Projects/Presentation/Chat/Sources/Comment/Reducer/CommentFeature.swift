@@ -492,8 +492,10 @@ public struct CommentItem: Equatable, Identifiable {
   public let id: UUID
   public var perspectiveId: Int?
   public var author: String
+  public var authorImageURL: String?
   public var timeAgo: String
   public var option: CommentOption
+  public var optionLabel: String?
   public var content: String
   public var replyCount: Int
   public var likeCount: Int
@@ -504,8 +506,10 @@ public struct CommentItem: Equatable, Identifiable {
     id: UUID = UUID(),
     perspectiveId: Int? = nil,
     author: String,
+    authorImageURL: String? = nil,
     timeAgo: String,
     option: CommentOption,
+    optionLabel: String? = nil,
     content: String,
     replyCount: Int,
     likeCount: Int,
@@ -515,8 +519,10 @@ public struct CommentItem: Equatable, Identifiable {
     self.id = id
     self.perspectiveId = perspectiveId
     self.author = author
+    self.authorImageURL = authorImageURL
     self.timeAgo = timeAgo
     self.option = option
+    self.optionLabel = optionLabel
     self.content = content
     self.replyCount = replyCount
     self.likeCount = likeCount
@@ -531,8 +537,10 @@ public struct CommentItem: Equatable, Identifiable {
       id: UUID(uuidString: Self.deterministicUUID(perspectiveId: item.perspectiveId)) ?? UUID(),
       perspectiveId: item.perspectiveId,
       author: item.user.nickname,
+      authorImageURL: item.user.characterImageUrl,
       timeAgo: Self.relativeTimeString(from: item.createdAt),
       option: optionFallback,
+      optionLabel: item.option.title,
       content: item.content,
       replyCount: item.commentCount,
       likeCount: item.likeCount,

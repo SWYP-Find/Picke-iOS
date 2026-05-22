@@ -10,6 +10,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Kingfisher
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {
@@ -275,14 +276,7 @@ private extension CommentView {
 
   func commentHeader(_ comment: CommentItem) -> some View {
     HStack(alignment: .top, spacing: 6) {
-      Circle()
-        .fill(.beige600)
-        .frame(width: 36, height: 36)
-        .overlay {
-          Text(String(comment.author.prefix(1)))
-            .pretendardFont(family: .SemiBold, size: 13)
-            .foregroundStyle(.primary500)
-        }
+      avatar(urlString: comment.authorImageURL, fallback: comment.author)
 
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 6) {
@@ -292,11 +286,11 @@ private extension CommentView {
             .lineLimit(1)
 
           Text(comment.timeAgo)
-            .pretendardFont(family: .SemiBold, size: 10)
+            .pretendardFont(family: .Medium, size: 12)
             .foregroundStyle(.neutral300)
         }
 
-        optionBadge(comment.option)
+        optionBadge(comment)
       }
 
       Spacer()
@@ -311,9 +305,10 @@ private extension CommentView {
     }
   }
 
-  func optionBadge(_ option: CommentOption) -> some View {
-    let summary = option == .a ? store.voteSummary.optionA : store.voteSummary.optionB
-    return Text("\(option.label)  \(summary.title)")
+  func optionBadge(_ comment: CommentItem) -> some View {
+    let summary = comment.option == .a ? store.voteSummary.optionA : store.voteSummary.optionB
+    let label = comment.optionLabel ?? summary.title
+    return Text(label)
       .pretendardFont(family: .Medium, size: 12)
       .foregroundStyle(.primary500)
       .padding(.horizontal, 4)
@@ -355,6 +350,28 @@ private extension CommentView {
         .frame(width: 16, height: 16)
       Text(text)
         .pretendardFont(family: .Medium, size: 12)
+    }
+  }
+
+  @ViewBuilder
+  func avatar(urlString: String?, fallback: String) -> some View {
+    if let urlString, let url = URL(string: urlString) {
+      KFImage(url)
+        .placeholder { Color.beige600 }
+        .resizable()
+        .scaledToFill()
+        .frame(width: 36, height: 36)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(.beige600, lineWidth: 1))
+    } else {
+      Circle()
+        .fill(.beige600)
+        .frame(width: 36, height: 36)
+        .overlay {
+          Text(String(fallback.prefix(1)))
+            .pretendardFont(family: .SemiBold, size: 13)
+            .foregroundStyle(.primary500)
+        }
     }
   }
 }
