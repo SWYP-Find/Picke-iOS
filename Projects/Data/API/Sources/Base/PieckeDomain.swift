@@ -16,6 +16,7 @@ public enum PieckeDomain {
   case poll
   case battle
   case comment
+  case perspective
 }
 
 extension PieckeDomain: DomainType {
@@ -37,6 +38,8 @@ extension PieckeDomain: DomainType {
       "api/v1/battles/"
     case .comment:
       "api/v1/comments/"
+    case .perspective:
+      "api/v1/perspectives/"
     }
   }
 }

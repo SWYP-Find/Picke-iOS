@@ -1,0 +1,84 @@
+//
+//  PerspectiveService.swift
+//  Service
+//
+
+import Foundation
+
+import API
+import Foundations
+
+import AsyncMoya
+
+public struct PerspectiveCommentBody: Encodable {
+  public let content: String
+  public init(content: String) { self.content = content }
+}
+
+public enum PerspectiveService {
+  case detail(perspectiveId: Int)
+  case listLabeledComments(perspectiveId: Int, cursor: String?, size: Int?)
+  case createComment(perspectiveId: Int, body: PerspectiveCommentBody)
+  case updateComment(perspectiveId: Int, commentId: Int, body: PerspectiveCommentBody)
+  case deleteComment(perspectiveId: Int, commentId: Int)
+}
+
+extension PerspectiveService: BaseTargetType {
+  public typealias Domain = PieckeDomain
+
+  public var domain: PieckeDomain { .perspective }
+
+  public var urlPath: String {
+    switch self {
+    case let .detail(perspectiveId):
+      PerspectiveAPI.detail(perspectiveId: perspectiveId).description
+    case let .listLabeledComments(perspectiveId, _, _):
+      PerspectiveAPI.listLabeledComments(perspectiveId: perspectiveId).description
+    case let .createComment(perspectiveId, _):
+      PerspectiveAPI.createComment(perspectiveId: perspectiveId).description
+    case let .updateComment(perspectiveId, commentId, _):
+      PerspectiveAPI.updateComment(perspectiveId: perspectiveId, commentId: commentId).description
+    case let .deleteComment(perspectiveId, commentId):
+      PerspectiveAPI.deleteComment(perspectiveId: perspectiveId, commentId: commentId).description
+    }
+  }
+
+  public var error: [Int: AsyncMoya.NetworkError]? { nil }
+
+  public var method: Moya.Method {
+    switch self {
+    case .detail:
+      .get
+    case .listLabeledComments:
+      .get
+    case .createComment:
+      .post
+    case .updateComment:
+      .put
+    case .deleteComment:
+      .delete
+    }
+  }
+
+  public var parameters: [String: Any]? {
+    switch self {
+    case .detail:
+      return nil
+    case let .listLabeledComments(_, cursor, size):
+      var query: [String: Any] = [:]
+      if let cursor { query["cursor"] = cursor }
+      if let size { query["size"] = size }
+      return query.isEmpty ? nil : query
+    case let .createComment(_, body):
+      return body.toDictionary
+    case let .updateComment(_, _, body):
+      return body.toDictionary
+    case .deleteComment:
+      return nil
+    }
+  }
+
+  public var headers: [String: String]? {
+    APIHeader.baseHeader
+  }
+}

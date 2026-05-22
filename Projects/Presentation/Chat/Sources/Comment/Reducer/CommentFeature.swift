@@ -9,6 +9,7 @@
 import Foundation
 
 import ComposableArchitecture
+import DesignSystem
 import DomainInterface
 import Entity
 import LogMacro
@@ -29,6 +30,7 @@ public struct CommentFeature {
     public var selectedFilter: CommentFilter = .all
     public var selectedSort: CommentSort = .popular
     public var reportTargetCommentID: UUID?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var comments: [CommentItem]
     public var commentText: String = ""
 
@@ -65,6 +67,7 @@ public struct CommentFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
+    case scope(ScopeAction)
     case delegate(DelegateAction)
   }
 
@@ -94,6 +97,11 @@ public struct CommentFeature {
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
+  }
+
+  @CasePathable
+  public enum ScopeAction: Equatable {
+    case customAlert(PresentationAction<CustomAlertAction>)
   }
 
   public enum DelegateAction: Equatable {
@@ -132,9 +140,15 @@ public struct CommentFeature {
       case let .inner(innerAction):
         return handleInnerAction(state: &state, action: innerAction)
 
+      case let .scope(scopeAction):
+        return handleScopeAction(state: &state, action: scopeAction)
+
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$customAlert, action: \.scope.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -163,11 +177,13 @@ extension CommentFeature {
       return .send(.delegate(.openReply(comment)))
 
     case let .reportButtonTapped(id):
-      state.reportTargetCommentID = state.reportTargetCommentID == id ? nil : id
+      state.reportTargetCommentID = id
+      state.customAlert = .report()
       return .none
 
     case .reportPopupDismissed:
       state.reportTargetCommentID = nil
+      state.customAlert = nil
       return .none
 
     case let .reportConfirmTapped(id):
@@ -212,6 +228,37 @@ extension CommentFeature {
       state.commentText = ""
       state.reportTargetCommentID = nil
       return .none
+    }
+  }
+
+  private func handleScopeAction(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .customAlert(alertAction):
+      switch alertAction {
+      case let .presented(customAlertAction):
+        switch customAlertAction {
+        case .confirmTapped:
+          guard let id = state.reportTargetCommentID else {
+            state.customAlert = nil
+            return .none
+          }
+          state.customAlert = nil
+          return .send(.view(.reportConfirmTapped(id)))
+
+        case .cancelTapped:
+          state.reportTargetCommentID = nil
+          state.customAlert = nil
+          return .none
+        }
+
+      case .dismiss:
+        state.reportTargetCommentID = nil
+        state.customAlert = nil
+        return .none
+      }
     }
   }
 

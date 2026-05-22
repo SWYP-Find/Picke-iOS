@@ -39,7 +39,6 @@ public struct CommentView: View {
     .contentShape(Rectangle())
     .onTapGesture {
       isCommentFocused = false
-      send(.reportPopupDismissed)
     }
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
@@ -50,6 +49,7 @@ public struct CommentView: View {
         hasAnimatedVoteProgress = true
       }
     }
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 }
 
@@ -165,20 +165,20 @@ private extension CommentView {
 private extension CommentView {
   var filterSection: some View {
     VStack(spacing: 12) {
-      HStack(spacing: 8) {
+      HStack(spacing: 0) {
         ForEach(CommentFilter.allCases, id: \.self) { filter in
           filterButton(filter)
         }
-        Spacer()
       }
+      .frame(maxWidth: .infinity)
 
       HStack(spacing: 0) {
         sortButton(.popular)
         sortButton(.latest)
         Spacer()
       }
+      .padding(.horizontal, 16)
     }
-    .padding(.horizontal, 16)
     .padding(.top, 14)
     .padding(.bottom, 12)
   }
@@ -191,9 +191,10 @@ private extension CommentView {
       Text(filter.title)
         .pretendardFont(family: .Medium, size: 14)
         .foregroundStyle(isSelected ? .primary500 : .neutral300)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(isSelected ? Color.primary50 : Color.clear, in: RoundedRectangle(cornerRadius: 2))
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
@@ -258,7 +259,7 @@ private extension CommentView {
   }
 
   func commentHeader(_ comment: CommentItem) -> some View {
-    HStack(alignment: .top, spacing: 8) {
+    HStack(alignment: .top, spacing: 6) {
       Circle()
         .fill(.beige600)
         .frame(width: 36, height: 36)
@@ -292,26 +293,7 @@ private extension CommentView {
       }
       .buttonStyle(.plain)
       .foregroundStyle(.neutral300)
-      .overlay(alignment: .topTrailing) {
-        if store.reportTargetCommentID == comment.id {
-          reportPopup(comment.id)
-            .offset(x: -2, y: 30)
-            .zIndex(1)
-        }
-      }
     }
-  }
-
-  func reportPopup(_ id: UUID) -> some View {
-    Button { send(.reportConfirmTapped(id)) } label: {
-      Image(systemName: "light.beacon.max.fill")
-        .font(.system(size: 17, weight: .medium))
-        .frame(width: 24, height: 24)
-      .foregroundStyle(.beige50)
-      .frame(width: 34, height: 34)
-      .background(.primary500, in: Capsule())
-    }
-    .buttonStyle(.plain)
   }
 
   func optionBadge(_ option: CommentOption) -> some View {

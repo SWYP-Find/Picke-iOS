@@ -61,6 +61,7 @@ public struct Comment: Equatable, Identifiable, Hashable {
 
 public struct CommentReplyItem: Equatable, Identifiable {
   public let id: UUID
+  public var commentId: Int?
   public var author: String
   public var timeAgo: String
   public var option: CommentOption
@@ -71,6 +72,7 @@ public struct CommentReplyItem: Equatable, Identifiable {
 
   public init(
     id: UUID = UUID(),
+    commentId: Int? = nil,
     author: String,
     timeAgo: String,
     option: CommentOption,
@@ -80,6 +82,7 @@ public struct CommentReplyItem: Equatable, Identifiable {
     createdOrder: Int
   ) {
     self.id = id
+    self.commentId = commentId
     self.author = author
     self.timeAgo = timeAgo
     self.option = option
@@ -87,6 +90,36 @@ public struct CommentReplyItem: Equatable, Identifiable {
     self.likeCount = likeCount
     self.isLiked = isLiked
     self.createdOrder = createdOrder
+  }
+
+  /// 서버 PerspectiveComment 응답을 화면 모델로 변환.
+  public init(item: PerspectiveComment, parentOption: CommentOption, order: Int) {
+    let id = UUID(uuidString: Self.deterministicUUID(commentId: item.commentId)) ?? UUID()
+    self.init(
+      id: id,
+      commentId: item.commentId,
+      author: item.user.nickname,
+      timeAgo: Self.relativeTimeString(from: item.createdAt),
+      option: parentOption,
+      content: item.content,
+      likeCount: item.likeCount,
+      isLiked: item.isLiked,
+      createdOrder: order
+    )
+  }
+
+  private static func deterministicUUID(commentId: Int) -> String {
+    let hex = String(format: "%012X", commentId)
+    return "00000000-0000-0000-0002-\(hex)"
+  }
+
+  private static func relativeTimeString(from date: Date?) -> String {
+    guard let date else { return "방금 전" }
+    let interval = Date().timeIntervalSince(date)
+    if interval < 60 { return "방금 전" }
+    if interval < 3600 { return "\(Int(interval / 60))분 전" }
+    if interval < 86400 { return "\(Int(interval / 3600))시간 전" }
+    return "\(Int(interval / 86400))일 전"
   }
 
   public static func mocks(for option: CommentOption) -> [CommentReplyItem] {

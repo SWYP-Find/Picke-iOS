@@ -38,6 +38,7 @@ public final class AppDIManager: Sendable {
       .register { HomeRepositoryImpl() as HomeInterface }
       .register { BattleRepositoryImpl() as BattleInterface }
       .register { CommentRepositoryImpl() as CommentInterface }
+      .register { PerspectiveRepositoryImpl() as PerspectiveInterface }
       .register { AudioPlayerRepositoryImpl() as AudioPlayerInterface }
 //      .register { ProfileRepositoryImpl() as ProfileInterface }
 //      .register { AppUpdateRepositoryImpl() as AppUpdateInterface }

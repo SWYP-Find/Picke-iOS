@@ -35,6 +35,7 @@ public struct CustomAlertState<Action>: Equatable {
 public enum CustomAlertStyle: Equatable {
   case confirmation
   case finalVote
+  case report
 }
 
 @CasePathable
@@ -76,6 +77,16 @@ public extension CustomAlertState where Action == CustomAlertAction {
       confirmTitle: "최종투표하기",
       cancelTitle: "다시 들어볼래요",
       style: .finalVote
+    )
+  }
+
+  static func report() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "",
+      confirmTitle: "신고",
+      cancelTitle: "",
+      isDestructive: true,
+      style: .report
     )
   }
 }

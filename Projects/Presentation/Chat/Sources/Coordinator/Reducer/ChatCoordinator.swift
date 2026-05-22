@@ -91,7 +91,14 @@ extension ChatCoordinator {
       return .send(.view(.backAction))
 
     case let .routeAction(_, action: .comment(.delegate(.openReply(comment)))):
-      state.routes.push(.commentReply(.init(parentComment: comment)))
+      state.routes.push(
+        .commentReply(
+          .init(
+            perspectiveId: comment.perspectiveId ?? 0,
+            parentComment: comment
+          )
+        )
+      )
       return .none
 
     case .routeAction(_, action: .commentReply(.delegate(.dismiss))):

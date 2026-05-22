@@ -298,7 +298,10 @@ private extension CommentReplyView {
 #Preview {
   CommentReplyView(
     store: Store(
-      initialState: CommentReplyFeature.State(parentComment: CommentItem.mocks[0])
+      initialState: CommentReplyFeature.State(
+        perspectiveId: CommentItem.mocks[0].perspectiveId ?? 0,
+        parentComment: CommentItem.mocks[0]
+      )
     ) {
       CommentReplyFeature()
     }

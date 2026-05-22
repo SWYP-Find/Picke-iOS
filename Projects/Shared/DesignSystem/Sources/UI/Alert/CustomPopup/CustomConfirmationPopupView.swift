@@ -60,7 +60,7 @@ struct CustomConfirmationPopup: View {
     switch style {
     case .confirmation:
       20
-    case .finalVote:
+    case .finalVote, .report:
       0
     }
   }
@@ -72,6 +72,8 @@ struct CustomConfirmationPopup: View {
       confirmationContent
     case .finalVote:
       finalVoteContent
+    case .report:
+      reportContent
     }
   }
 
@@ -172,6 +174,24 @@ struct CustomConfirmationPopup: View {
         .stroke(.primary500, lineWidth: 1.5)
     )
     .opacity(0.9)
+    .onTapGesture {}
+  }
+
+  private var reportContent: some View {
+    Button(action: onConfirm) {
+      HStack(spacing: 4) {
+        Image(systemName: "light.beacon.max")
+          .font(.system(size: 15, weight: .regular))
+          .frame(width: 24, height: 24)
+
+        Text(confirmTitle)
+          .pretendardFont(family: .Medium, size: 13)
+      }
+      .foregroundStyle(.beige50)
+      .frame(width: 70, height: 34)
+      .background(.primary500, in: Capsule())
+    }
+    .buttonStyle(.plain)
     .onTapGesture {}
   }
 }
