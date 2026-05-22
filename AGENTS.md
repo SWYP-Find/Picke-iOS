@@ -775,6 +775,22 @@ public var method: Moya.Method {
 - 커밋 메시지에 `Co-Authored-By: Claude ...` 등의 자동 서명 라인을 절대 추가하지 않음
 - OMX 훅 검증을 위해 커밋 명령에는 `Co-authored-by: OmX <omx@oh-my-codex.dev>` trailer를 포함하되, 최종 커밋 메시지에서는 제거
 
+### 📦 커밋 단위 / 크기 규칙 — 30 파일 이상이면 끊어서 (필수)
+
+한 번에 너무 많은 파일을 묶으면 리뷰가 불가능하고 회귀 발생 시 bisect 가 어렵다. 변경된 파일 수가 많으면 **의미 단위로 끊어서 여러 커밋**으로 나눈다.
+
+규칙:
+- 한 커밋의 **변경 파일 수가 30개를 초과하면 반드시 분할**
+- 분할 기준은 **모듈 / 도메인 / 변경 종류** 가 우선:
+  - 예) `API + Service + RepositoryImpl` 같이 도메인 레이어 한 줄기 → 1 커밋
+  - 예) `UseCase 신규 정의` → 1 커밋
+  - 예) `Feature 들의 @Dependency 교체` → 1 커밋
+  - 예) `View / Reducer UI 변경` → 1 커밋
+  - 예) `AGENTS.md / .swiftformat 같은 규칙 / 설정` → 1 커밋
+- 분할 후 각 커밋은 **단독으로 빌드 가능**해야 함 (의존하는 다른 커밋이 같은 PR 안에 있으면 OK, 다른 PR 에 있으면 분할 순서 조정)
+- 작업 시작 전에 변경 범위를 보고 **30 파일이 넘을 것 같으면 미리 단계로 쪼개기**
+- 단순 포맷터 / 자동 변환 (예: 전역 시그니처 멀티라인) 은 30 파일 넘어도 1 커밋 OK — 단 커밋 메시지에 "전역 자동 변환" 명시
+
 ### 🧭 TCAFlow 네비게이션 (`docs/agent/tcaflow-navigation.md`)
 - @FlowCoordinator 패턴
 - 기본 네비게이션 동작 (Push, Present, Dismiss)
