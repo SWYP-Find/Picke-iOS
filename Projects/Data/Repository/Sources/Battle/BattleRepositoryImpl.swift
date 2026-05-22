@@ -80,6 +80,32 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     return data.toDomain()
   }
 
+  public func fetchPerspectives(
+    battleId: Int,
+    cursor: String?,
+    size: Int?,
+    optionLabel: String?,
+    sort: BattlePerspectiveSort?
+  ) async throws -> BattlePerspectivePage {
+    let dto: BattlePerspectivePageResponseDTO = try await provider.request(
+      .perspectives(
+        battleId: battleId,
+        cursor: cursor,
+        size: size,
+        optionLabel: optionLabel,
+        sort: sort?.queryValue
+      )
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "댓글 목록 응답이 비어 있습니다"
+      Log.error("[BattleRepositoryImpl] empty perspectives payload: \(message)")
+      throw BattleError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
+
   public func fetchScenario(battleId: Int) async throws -> BattleScenario {
     let dto: BattleScenarioResponseDTO = try await provider.request(
       .scenario(battleId: battleId)

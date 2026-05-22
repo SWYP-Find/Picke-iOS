@@ -23,6 +23,9 @@ public struct CommentFeature {
     public var title: String
     public var voteSummary: VoteSummary
     public var isLoadingStats: Bool = false
+    public var isLoadingComments: Bool = false
+    public var nextCursor: String?
+    public var hasNext: Bool = false
     public var selectedFilter: CommentFilter = .all
     public var selectedSort: CommentSort = .popular
     public var comments: [CommentItem]
@@ -79,10 +82,12 @@ public struct CommentFeature {
 
   public enum AsyncAction: Equatable {
     case fetchVoteStats
+    case fetchPerspectives(reset: Bool)
   }
 
   public enum InnerAction: Equatable {
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
+    case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
   }
 
   public enum DelegateAction: Equatable {
@@ -91,6 +96,7 @@ public struct CommentFeature {
 
   nonisolated enum CancelID: Hashable {
     case fetchVoteStats
+    case fetchPerspectives
   }
 
   @Dependency(\.battleRepository) private var battleRepository
@@ -131,8 +137,10 @@ extension CommentFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      guard !state.isLoadingStats else { return .none }
-      return .send(.async(.fetchVoteStats))
+      return .merge(
+        .send(.async(.fetchVoteStats)),
+        .send(.async(.fetchPerspectives(reset: true)))
+      )
 
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
@@ -142,17 +150,11 @@ extension CommentFeature {
 
     case let .filterTapped(filter):
       state.selectedFilter = filter
-      return .none
+      return .send(.async(.fetchPerspectives(reset: true)))
 
     case let .sortTapped(sort):
       state.selectedSort = sort
-      switch sort {
-      case .popular:
-        state.comments.sort { $0.likeCount > $1.likeCount }
-      case .latest:
-        state.comments.sort { $0.createdOrder > $1.createdOrder }
-      }
-      return .none
+      return .send(.async(.fetchPerspectives(reset: true)))
 
     case let .likeTapped(id):
       guard let index = state.comments.firstIndex(where: { $0.id == id }) else { return .none }
@@ -196,6 +198,27 @@ extension CommentFeature {
         return await send(.inner(.voteStatsResponse(result)))
       }
       .cancellable(id: CancelID.fetchVoteStats, cancelInFlight: true)
+
+    case let .fetchPerspectives(reset):
+      state.isLoadingComments = true
+      let battleId = state.battleId
+      let cursor = reset ? nil : state.nextCursor
+      let optionLabel = state.selectedFilter.queryLabel
+      let sort = state.selectedSort.perspectiveSort
+      return .run { [repository = battleRepository] send in
+        let result = await Result {
+          try await repository.fetchPerspectives(
+            battleId: battleId,
+            cursor: cursor,
+            size: 20,
+            optionLabel: optionLabel,
+            sort: sort
+          )
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.perspectivesResponse(result, reset: reset)))
+      }
+      .cancellable(id: CancelID.fetchPerspectives, cancelInFlight: true)
     }
   }
 
@@ -211,6 +234,21 @@ extension CommentFeature {
         state.voteSummary = makeSummary(from: stats, fallback: state.voteSummary)
       case let .failure(error):
         Log.error("[CommentFeature] fetchVoteStats failed: \(error.localizedDescription)")
+      }
+      return .none
+
+    case let .perspectivesResponse(result, reset):
+      state.isLoadingComments = false
+      switch result {
+      case let .success(page):
+        let mapped = page.items.enumerated().map { idx, item in
+          CommentItem(item: item, order: idx)
+        }
+        state.comments = reset ? mapped : state.comments + mapped
+        state.nextCursor = page.nextCursor
+        state.hasNext = page.hasNext
+      case let .failure(error):
+        Log.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)")
       }
       return .none
     }
@@ -252,6 +290,15 @@ public enum CommentFilter: String, CaseIterable, Equatable {
     case .optionB: "B"
     }
   }
+
+  /// 서버 쿼리에 보낼 optionLabel — `all` 은 nil.
+  public var queryLabel: String? {
+    switch self {
+    case .all: nil
+    case .optionA: "A"
+    case .optionB: "B"
+    }
+  }
 }
 
 public enum CommentSort: String, CaseIterable, Equatable {
@@ -262,6 +309,13 @@ public enum CommentSort: String, CaseIterable, Equatable {
     switch self {
     case .popular: "인기순"
     case .latest: "최신순"
+    }
+  }
+
+  public var perspectiveSort: BattlePerspectiveSort {
+    switch self {
+    case .popular: .popular
+    case .latest: .latest
     }
   }
 }
@@ -350,6 +404,36 @@ public struct CommentItem: Equatable, Identifiable {
     self.likeCount = likeCount
     self.isLiked = isLiked
     self.createdOrder = createdOrder
+  }
+
+  /// API 응답 BattlePerspective 를 화면 모델로 변환.
+  public init(item: BattlePerspective, order: Int) {
+    let optionFallback: CommentOption = item.option.label == "B" ? .b : .a
+    self.init(
+      id: UUID(uuidString: Self.deterministicUUID(perspectiveId: item.perspectiveId)) ?? UUID(),
+      author: item.user.nickname,
+      timeAgo: Self.relativeTimeString(from: item.createdAt),
+      option: optionFallback,
+      content: item.content,
+      replyCount: item.commentCount,
+      likeCount: item.likeCount,
+      isLiked: item.isLiked,
+      createdOrder: order
+    )
+  }
+
+  private static func deterministicUUID(perspectiveId: Int) -> String {
+    let hex = String(format: "%012X", perspectiveId)
+    return "00000000-0000-0000-0000-\(hex)"
+  }
+
+  private static func relativeTimeString(from date: Date?) -> String {
+    guard let date else { return "방금 전" }
+    let interval = Date().timeIntervalSince(date)
+    if interval < 60 { return "방금 전" }
+    if interval < 3600 { return "\(Int(interval / 60))분 전" }
+    if interval < 86400 { return "\(Int(interval / 3600))시간 전" }
+    return "\(Int(interval / 86400))일 전"
   }
 
   public static let mocks: [CommentItem] = [

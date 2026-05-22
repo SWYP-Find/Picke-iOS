@@ -16,6 +16,7 @@ public enum BattleService {
   case postVote(battleId: Int, body: PreVoteRequest)
   case scenario(battleId: Int)
   case voteStats(battleId: Int)
+  case perspectives(battleId: Int, cursor: String?, size: Int?, optionLabel: String?, sort: String?)
 }
 
 extension BattleService: BaseTargetType {
@@ -35,6 +36,8 @@ extension BattleService: BaseTargetType {
       BattleAPI.scenario(battleId: battleId).description
     case let .voteStats(battleId):
       BattleAPI.voteStats(battleId: battleId).description
+    case let .perspectives(battleId, _, _, _, _):
+      BattleAPI.perspectives(battleId: battleId).description
     }
   }
 
@@ -52,21 +55,30 @@ extension BattleService: BaseTargetType {
       .get
     case .voteStats:
       .get
+    case .perspectives:
+      .get
     }
   }
 
   public var parameters: [String: Any]? {
     switch self {
     case .detail:
-      nil
+      return nil
     case let .preVote(_, body):
-      body.toDictionary
+      return body.toDictionary
     case let .postVote(_, body):
-      body.toDictionary
+      return body.toDictionary
     case .scenario:
-      nil
+      return nil
     case .voteStats:
-      nil
+      return nil
+    case let .perspectives(_, cursor, size, optionLabel, sort):
+      var query: [String: Any] = [:]
+      if let cursor { query["cursor"] = cursor }
+      if let size { query["size"] = size }
+      if let optionLabel { query["optionLabel"] = optionLabel }
+      if let sort { query["sort"] = sort }
+      return query.isEmpty ? nil : query
     }
   }
 

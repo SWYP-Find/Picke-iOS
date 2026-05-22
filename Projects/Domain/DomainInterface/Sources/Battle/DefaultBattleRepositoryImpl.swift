@@ -40,6 +40,16 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
     BattleVoteStats(options: [], totalCount: 0, updatedAt: nil)
   }
 
+  public func fetchPerspectives(
+    battleId _: Int,
+    cursor _: String?,
+    size _: Int?,
+    optionLabel _: String?,
+    sort _: BattlePerspectiveSort?
+  ) async throws -> BattlePerspectivePage {
+    BattlePerspectivePage(items: [], nextCursor: nil, hasNext: false)
+  }
+
   public func submitPreVote(battleId _: Int, optionId _: Int) async throws -> PreVoteResult {
     PreVoteResult(voteId: 0, status: .none)
   }

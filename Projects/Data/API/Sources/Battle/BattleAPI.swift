@@ -11,6 +11,7 @@ public enum BattleAPI {
   case postVote(battleId: Int)
   case scenario(battleId: Int)
   case voteStats(battleId: Int)
+  case perspectives(battleId: Int)
 
   public var description: String {
     switch self {
@@ -24,6 +25,8 @@ public enum BattleAPI {
       "\(battleId)/scenario"
     case let .voteStats(battleId):
       "\(battleId)/vote-stats"
+    case let .perspectives(battleId):
+      "\(battleId)/perspectives"
     }
   }
 }

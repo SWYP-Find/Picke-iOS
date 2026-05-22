@@ -13,6 +13,13 @@ public protocol BattleInterface: Sendable {
   func submitPostVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
   func fetchScenario(battleId: Int) async throws -> BattleScenario
   func fetchVoteStats(battleId: Int) async throws -> BattleVoteStats
+  func fetchPerspectives(
+    battleId: Int,
+    cursor: String?,
+    size: Int?,
+    optionLabel: String?,
+    sort: BattlePerspectiveSort?
+  ) async throws -> BattlePerspectivePage
 }
 
 public struct BattleRepositoryDependency: DependencyKey {
