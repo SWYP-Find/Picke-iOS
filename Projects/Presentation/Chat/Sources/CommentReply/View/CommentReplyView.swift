@@ -20,16 +20,16 @@ public struct CommentReplyView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      navigationBar
+      navigationBar()
       ScrollView(showsIndicators: false) {
         VStack(spacing: 0) {
-          parentCommentSection
-          replySection
+          parentCommentSection()
+          replySection()
         }
         .padding(.bottom, 16)
       }
       .scrollDismissesKeyboard(.interactively)
-      inputBar
+      inputBar()
     }
     .background(Color.beige200.ignoresSafeArea())
     .contentShape(Rectangle())
@@ -45,7 +45,8 @@ public struct CommentReplyView: View {
 // MARK: - Navigation
 
 private extension CommentReplyView {
-  var navigationBar: some View {
+  @ViewBuilder
+  func navigationBar() -> some View {
     HStack {
       Button { send(.backButtonTapped) } label: {
         Image(systemName: "chevron.left")
@@ -79,7 +80,8 @@ private extension CommentReplyView {
 // MARK: - Content
 
 private extension CommentReplyView {
-  var parentCommentSection: some View {
+  @ViewBuilder
+  func parentCommentSection() -> some View {
     VStack(spacing: 0) {
       commentCard(
         author: store.parentComment.author,
@@ -103,7 +105,8 @@ private extension CommentReplyView {
     }
   }
 
-  var replySection: some View {
+  @ViewBuilder
+  func replySection() -> some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("답글 \(store.replies.count)개")
         .pretendardFont(family: .SemiBold, size: 13)
@@ -243,7 +246,8 @@ private extension CommentReplyView {
 // MARK: - Input
 
 private extension CommentReplyView {
-  var inputBar: some View {
+  @ViewBuilder
+  func inputBar() -> some View {
     HStack(alignment: .bottom, spacing: 8) {
       VStack(alignment: .leading, spacing: 6) {
         TextField("내 의견은 어쩌구 저쩌구", text: $store.replyText, axis: .vertical)

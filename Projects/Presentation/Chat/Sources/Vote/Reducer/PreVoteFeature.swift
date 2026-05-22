@@ -30,8 +30,8 @@ public struct PreVoteFeature {
     public var isLoading: Bool = false
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
-    public var battleId: Int
-    public var voteMode: VoteMode
+    public var battleId: Int = 0
+    public var voteMode: VoteMode = .pre
 
     public var isPrimaryButtonEnabled: Bool {
       selectedOptionId != nil && !isSubmitting
@@ -46,11 +46,9 @@ public struct PreVoteFeature {
 
     public init(
       battleId: Int = 0,
-      battle: PreVoteBattle? = nil,
       voteMode: VoteMode = .pre
     ) {
       self.battleId = battleId
-      self.battle = battle
       self.voteMode = voteMode
     }
   }
@@ -309,7 +307,7 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .dismiss, .voteSubmitted:
-      return .none
+      .none
     }
   }
 }

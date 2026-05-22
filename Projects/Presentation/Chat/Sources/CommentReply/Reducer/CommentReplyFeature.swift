@@ -26,7 +26,7 @@ public struct CommentReplyFeature {
   public struct State: Equatable {
     public var perspectiveId: Int
     public var parentComment: CommentItem
-    public var replies: [CommentReplyItem]
+    public var replies: [CommentReplyItem] = []
     public var replyText: String = ""
     public var isLoadingDetail: Bool = false
     public var isLoadingReplies: Bool = false
@@ -40,12 +40,10 @@ public struct CommentReplyFeature {
 
     public init(
       perspectiveId: Int,
-      parentComment: CommentItem,
-      replies: [CommentReplyItem]? = nil
+      parentComment: CommentItem
     ) {
       self.perspectiveId = perspectiveId
       self.parentComment = parentComment
-      self.replies = replies ?? []
     }
   }
 

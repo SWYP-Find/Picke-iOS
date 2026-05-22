@@ -4,7 +4,7 @@
 //
 //  Created by Wonji Suh on 5/15/26.
 //
-//  Pencil .pen `Card/Quiz` — 단일 상태 (Property variant 없음).
+//  Pencil .pen `Card/Quiz` — 선택 전/후 (O 정답 · X 오답) 상태 미러.
 //
 
 import SwiftUI
@@ -12,9 +12,16 @@ import SwiftUI
 import DesignSystem
 import Entity
 
-/// "오늘의 Pické — 퀴즈" 카드. (선택/결과 상태 분리 없음 — .pen 디자인 단일)
+/// "오늘의 Pické — 퀴즈" 카드. 옵션 탭 → 정답 비교 → O/X 결과 라벨 노출.
 struct QuizCardView: View {
   let question: QuizQuestion
+
+  @State private var selectedOption: Choice?
+
+  enum Choice: Equatable {
+    case a
+    case b
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
@@ -59,26 +66,55 @@ struct QuizCardView: View {
   @ViewBuilder
   private func options() -> some View {
     HStack(spacing: 8) {
-      option(label: question.itemA, desc: question.itemADesc)
-      option(label: question.itemB, desc: question.itemBDesc)
+      optionButton(.a, label: question.itemA, desc: question.itemADesc, isCorrect: question.isCorrectA)
+      optionButton(.b, label: question.itemB, desc: question.itemBDesc, isCorrect: question.isCorrectB)
     }
   }
 
   @ViewBuilder
-  private func option(label: String, desc: String) -> some View {
-    VStack(spacing: 2) {
-      Text(label)
-        .pretendardFont(family: .SemiBold, size: 13)
-        .foregroundStyle(.neutral900)
-      Text(desc)
-        .pretendardFont(family: .Medium, size: 11)
-        .foregroundStyle(.neutral300)
+  private func optionButton(
+    _ choice: Choice,
+    label: String,
+    desc: String,
+    isCorrect: Bool
+  ) -> some View {
+    let isSelected = selectedOption == choice
+    let hasAnswered = selectedOption != nil
+    Button {
+      if selectedOption == nil { selectedOption = choice }
+    } label: {
+      VStack(spacing: 2) {
+        resultBadge(isSelected: isSelected, isCorrect: isCorrect)
+        Text(label)
+          .pretendardFont(family: .SemiBold, size: 13)
+          .foregroundStyle(.neutral900)
+        Text(desc)
+          .pretendardFont(family: .Medium, size: 10)
+          .foregroundStyle(.neutral300)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(12)
+      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .overlay(
+        RoundedRectangle(cornerRadius: 2).stroke(.beige500, lineWidth: 1)
+      )
+      .opacity(hasAnswered && !isSelected ? 0.5 : 1)
     }
-    .frame(maxWidth: .infinity)
-    .padding(12)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-    .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige500, lineWidth: 1)
-    )
+    .buttonStyle(.plain)
+    .disabled(hasAnswered)
+  }
+
+  @ViewBuilder
+  private func resultBadge(
+    isSelected: Bool,
+    isCorrect: Bool
+  ) -> some View {
+    if isSelected {
+      Text(isCorrect ? "O 정답" : "X 오답")
+        .pretendardFont(family: .SemiBold, size: 10)
+        .foregroundStyle(isCorrect ? .secondary500 : .primary500)
+    } else {
+      Color.clear.frame(height: 14)
+    }
   }
 }

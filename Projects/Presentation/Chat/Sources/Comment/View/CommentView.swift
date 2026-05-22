@@ -123,7 +123,10 @@ private extension CommentView {
   }
 
   @ViewBuilder
-  func voteSide(_ option: VoteOptionSummary, alignment: HorizontalAlignment) -> some View {
+  func voteSide(
+    _ option: VoteOptionSummary,
+    alignment: HorizontalAlignment
+  ) -> some View {
     VStack(alignment: alignment, spacing: 6) {
       avatarLabel(option.representative)
       Text(percentText(option.percentage))

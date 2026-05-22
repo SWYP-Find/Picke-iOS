@@ -20,10 +20,10 @@ public struct CommentFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var battleId: Int
+    public var battleId: Int = 0
     public var perspectiveId: Int?
-    public var title: String
-    public var voteSummary: VoteSummary
+    public var title: String = ""
+    public var voteSummary: VoteSummary = .mock
     public var isLoadingStats: Bool = false
     public var isLoadingComments: Bool = false
     public var isSubmitting: Bool = false
@@ -33,7 +33,7 @@ public struct CommentFeature {
     public var selectedSort: CommentSort = .popular
     public var reportTargetCommentID: UUID?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
-    public var comments: [CommentItem]
+    public var comments: [CommentItem] = []
     public var commentText: String = ""
 
     public var filteredComments: [CommentItem] {
@@ -53,18 +53,8 @@ public struct CommentFeature {
         && perspectiveId != nil
     }
 
-    public init(
-      battleId: Int = 0,
-      perspectiveId: Int? = nil,
-      title: String = "",
-      voteSummary: VoteSummary = .mock,
-      comments: [CommentItem] = []
-    ) {
+    public init(battleId: Int = 0) {
       self.battleId = battleId
-      self.perspectiveId = perspectiveId
-      self.title = title
-      self.voteSummary = voteSummary
-      self.comments = comments
     }
   }
 

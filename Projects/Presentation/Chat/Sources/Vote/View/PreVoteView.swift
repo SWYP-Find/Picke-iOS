@@ -25,7 +25,7 @@ public struct PreVoteView: View {
       if shouldShowSkeleton {
         PreVoteSkeletonView()
       } else {
-        loadedContent
+        loadedContent()
       }
     }
     .background(Color.beige50.ignoresSafeArea())
@@ -34,14 +34,14 @@ public struct PreVoteView: View {
     .toolbar(.hidden, for: .tabBar)
     .overlay(alignment: .bottom) {
       if !shouldShowSkeleton {
-        primaryButton
+        primaryButton()
           .padding(.horizontal, Self.ctaHorizontalPadding)
           .padding(.bottom, Self.ctaBottomSpacing)
       }
     }
     .overlay(alignment: .top) {
       if !shouldShowSkeleton {
-        navigationBar
+        navigationBar()
           .background(Color.clear)
           .padding(.top, 12)
           .frame(maxWidth: .infinity)
@@ -62,7 +62,7 @@ public struct PreVoteView: View {
   }
 
   @ViewBuilder
-  private var loadedContent: some View {
+  private func loadedContent() -> some View {
     if let battle = store.battle {
       GeometryReader { proxy in
         ZStack(alignment: .top) {
@@ -126,7 +126,7 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private var navigationBar: some View {
+  private func navigationBar() -> some View {
     HStack {
       Button { send(.backButtonTapped) } label: {
         Image(systemName: "chevron.left")
@@ -239,7 +239,7 @@ extension PreVoteView {
         optionCard(battle.rightOption)
       }
       .frame(maxWidth: .infinity)
-      vsBadge
+      vsBadge()
     }
   }
 
@@ -297,7 +297,7 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private var vsBadge: some View {
+  private func vsBadge() -> some View {
     Text("VS")
       .pretendardFont(family: .Bold, size: 11)
       .foregroundStyle(.neutral800)
@@ -311,7 +311,7 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private var primaryButton: some View {
+  private func primaryButton() -> some View {
     CustomButton(
       action: { send(.primaryButtonTapped) },
       title: store.primaryButtonTitle,
@@ -323,7 +323,7 @@ extension PreVoteView {
 
 #Preview {
   PreVoteView(
-    store: Store(initialState: PreVoteFeature.State(battle: .mock)) {
+    store: Store(initialState: PreVoteFeature.State()) {
       PreVoteFeature()
     }
   )

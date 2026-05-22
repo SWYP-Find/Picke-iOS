@@ -199,6 +199,45 @@ private var section: some View { VStack { ... } }
 - `body` 만 `var body: some View` 유지 (View 프로토콜 요구사항)
 - body 안에서 호출은 항상 `()` 가 붙은 함수 형태로 — 가독성 통일
 
+#### 📏 함수 시그니처 — 파라미터 2개 이상이면 멀티 라인 (필수)
+
+함수 파라미터가 **2개 이상이면 각 파라미터를 새 줄에** 풀어 쓴다. 인라인 한 줄 시그니처는 1-파라미터 이하에서만 허용.
+
+```swift
+// ✅ 파라미터 2개 이상 — 멀티 라인
+@ViewBuilder
+private func voteSide(
+  _ option: VoteOptionSummary,
+  alignment: HorizontalAlignment
+) -> some View {
+  VStack(alignment: alignment, spacing: 6) { ... }
+}
+
+@ViewBuilder
+private func optionButton(
+  _ choice: Choice,
+  label: String,
+  desc: String,
+  isCorrect: Bool
+) -> some View { ... }
+
+// ✅ 파라미터 0~1개 — 한 줄 OK
+@ViewBuilder
+private func navigationBar() -> some View { ... }
+
+@ViewBuilder
+private func filterButton(_ filter: CommentFilter) -> some View { ... }
+
+// ❌ 금지 — 파라미터 2개 이상을 한 줄로
+private func voteSide(_ option: VoteOptionSummary, alignment: HorizontalAlignment) -> some View
+private func resultBadge(isSelected: Bool, isCorrect: Bool) -> some View
+```
+
+규칙:
+- View 함수 / Reducer 헬퍼 / 일반 메서드 / init 모두 동일 — 파라미터 ≥ 2 → 멀티 라인
+- 호출부 (call site) 도 동일 — `.init(a: x, b: y, c: z)` 처럼 인자 ≥ 2 면 멀티 라인 권장 (이미 대다수 코드 이 패턴)
+- 닫는 `)` 와 `-> some View` 는 시그니처 끝줄에 함께
+
 #### 🔤 폰트 — `.font(.system(...))` 금지, Pretendard 토큰 사용
 
 ```swift
