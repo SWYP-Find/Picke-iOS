@@ -56,9 +56,9 @@ public struct CommentFeature {
     public init(
       battleId: Int = 0,
       perspectiveId: Int? = nil,
-      title: String = "원가 18만 원 명품은 사기다",
+      title: String = "",
       voteSummary: VoteSummary = .mock,
-      comments: [CommentItem] = CommentItem.mocks
+      comments: [CommentItem] = []
     ) {
       self.battleId = battleId
       self.perspectiveId = perspectiveId
@@ -94,6 +94,7 @@ public struct CommentFeature {
   }
 
   public enum AsyncAction: Equatable {
+    case fetchBattle
     case fetchVoteStats
     case fetchPerspectives(reset: Bool)
     case toggleLike(commentId: Int, currentlyLiked: Bool)
@@ -101,6 +102,7 @@ public struct CommentFeature {
   }
 
   public enum InnerAction: Equatable {
+    case battleResponse(Result<BattleDetail, BattleError>)
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
@@ -118,6 +120,7 @@ public struct CommentFeature {
   }
 
   nonisolated enum CancelID: Hashable {
+    case fetchBattle
     case fetchVoteStats
     case fetchPerspectives
     case toggleLike
@@ -171,6 +174,7 @@ extension CommentFeature {
     switch action {
     case .onAppear:
       return .merge(
+        .send(.async(.fetchBattle)),
         .send(.async(.fetchVoteStats)),
         .send(.async(.fetchPerspectives(reset: true)))
       )
@@ -268,6 +272,17 @@ extension CommentFeature {
     action: AsyncAction
   ) -> Effect<Action> {
     switch action {
+    case .fetchBattle:
+      let battleId = state.battleId
+      return .run { [repository = battleRepository] send in
+        let result = await Result {
+          try await repository.fetchBattle(battleId: battleId)
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.battleResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchBattle, cancelInFlight: true)
+
     case .fetchVoteStats:
       state.isLoadingStats = true
       let battleId = state.battleId
@@ -332,6 +347,15 @@ extension CommentFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .battleResponse(result):
+      switch result {
+      case let .success(detail):
+        state.title = detail.battleInfo.title
+      case let .failure(error):
+        Log.error("[CommentFeature] fetchBattle failed: \(error.localizedDescription)")
+      }
+      return .none
+
     case let .voteStatsResponse(result):
       state.isLoadingStats = false
       switch result {
@@ -466,6 +490,12 @@ public struct VoteSummary: Equatable {
     changeBadgeTitle: "생각이 바뀌었어요",
     optionA: .init(label: "A", title: "변기는 변기다", representative: "플라톤", percentage: 0.595),
     optionB: .init(label: "B", title: "예술이다", representative: "사르트르", percentage: 0.405)
+  )
+
+  public static let empty = VoteSummary(
+    changeBadgeTitle: "생각이 바뀌었어요",
+    optionA: .init(label: "A", title: "", representative: "", percentage: 0),
+    optionB: .init(label: "B", title: "", representative: "", percentage: 0)
   )
 }
 
