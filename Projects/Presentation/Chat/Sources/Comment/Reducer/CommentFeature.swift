@@ -21,10 +21,12 @@ public struct CommentFeature {
   @ObservableState
   public struct State: Equatable {
     public var battleId: Int
+    public var perspectiveId: Int?
     public var title: String
     public var voteSummary: VoteSummary
     public var isLoadingStats: Bool = false
     public var isLoadingComments: Bool = false
+    public var isSubmitting: Bool = false
     public var nextCursor: String?
     public var hasNext: Bool = false
     public var selectedFilter: CommentFilter = .all
@@ -47,15 +49,19 @@ public struct CommentFeature {
 
     public var isSendEnabled: Bool {
       !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        && !isSubmitting
+        && perspectiveId != nil
     }
 
     public init(
       battleId: Int = 0,
+      perspectiveId: Int? = nil,
       title: String = "원가 18만 원 명품은 사기다",
       voteSummary: VoteSummary = .mock,
       comments: [CommentItem] = CommentItem.mocks
     ) {
       self.battleId = battleId
+      self.perspectiveId = perspectiveId
       self.title = title
       self.voteSummary = voteSummary
       self.comments = comments
@@ -91,12 +97,14 @@ public struct CommentFeature {
     case fetchVoteStats
     case fetchPerspectives(reset: Bool)
     case toggleLike(commentId: Int, currentlyLiked: Bool)
+    case createComment(perspectiveId: Int, content: String)
   }
 
   public enum InnerAction: Equatable {
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
+    case createCommentResponse(Result<PerspectiveCommentMutationResult, CommentError>)
   }
 
   @CasePathable
@@ -113,10 +121,12 @@ public struct CommentFeature {
     case fetchVoteStats
     case fetchPerspectives
     case toggleLike
+    case createComment
   }
 
   @Dependency(\.battleRepository) private var battleRepository
   @Dependency(\.commentRepository) private var commentRepository
+  @Dependency(\.perspectiveRepository) private var perspectiveRepository
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -212,22 +222,13 @@ extension CommentFeature {
 
     case .sendTapped:
       let text = state.commentText.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !text.isEmpty else { return .none }
-      state.comments.insert(
-        CommentItem(
-          author: "나",
-          timeAgo: "방금 전",
-          option: .a,
-          content: text,
-          replyCount: 0,
-          likeCount: 0,
-          createdOrder: (state.comments.map(\.createdOrder).max() ?? 0) + 1
-        ),
-        at: 0
-      )
+      guard !text.isEmpty,
+            let pid = state.perspectiveId,
+            !state.isSubmitting
+      else { return .none }
+      state.isSubmitting = true
       state.commentText = ""
-      state.reportTargetCommentID = nil
-      return .none
+      return .send(.async(.createComment(perspectiveId: pid, content: text)))
     }
   }
 
@@ -313,6 +314,16 @@ extension CommentFeature {
         return await send(.inner(.likeResponse(result)))
       }
       .cancellable(id: CancelID.toggleLike, cancelInFlight: false)
+
+    case let .createComment(perspectiveId, content):
+      return .run { [repository = perspectiveRepository] send in
+        let result = await Result {
+          try await repository.createComment(perspectiveId: perspectiveId, content: content)
+        }
+        .mapError(CommentError.from)
+        return await send(.inner(.createCommentResponse(result)))
+      }
+      .cancellable(id: CancelID.createComment, cancelInFlight: false)
     }
   }
 
@@ -357,6 +368,16 @@ extension CommentFeature {
         Log.error("[CommentFeature] toggleLike failed: \(error.localizedDescription)")
       }
       return .none
+
+    case let .createCommentResponse(result):
+      state.isSubmitting = false
+      switch result {
+      case .success:
+        return .send(.async(.fetchPerspectives(reset: true)))
+      case let .failure(error):
+        Log.error("[CommentFeature] createComment failed: \(error.localizedDescription)")
+        return .none
+      }
     }
   }
 

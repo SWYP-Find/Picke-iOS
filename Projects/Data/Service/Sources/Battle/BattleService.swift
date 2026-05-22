@@ -10,6 +10,15 @@ import Foundations
 
 import AsyncMoya
 
+public struct CreatePerspectiveRequest: Encodable {
+  public let content: String
+  public let optionId: Int
+  public init(content: String, optionId: Int) {
+    self.content = content
+    self.optionId = optionId
+  }
+}
+
 public enum BattleService {
   case detail(battleId: Int)
   case preVote(battleId: Int, body: PreVoteRequest)
@@ -17,6 +26,7 @@ public enum BattleService {
   case scenario(battleId: Int)
   case voteStats(battleId: Int)
   case perspectives(battleId: Int, cursor: String?, size: Int?, optionLabel: String?, sort: String?)
+  case createPerspective(battleId: Int, body: CreatePerspectiveRequest)
 }
 
 extension BattleService: BaseTargetType {
@@ -38,6 +48,8 @@ extension BattleService: BaseTargetType {
       BattleAPI.voteStats(battleId: battleId).description
     case let .perspectives(battleId, _, _, _, _):
       BattleAPI.perspectives(battleId: battleId).description
+    case let .createPerspective(battleId, _):
+      BattleAPI.perspectives(battleId: battleId).description
     }
   }
 
@@ -57,6 +69,8 @@ extension BattleService: BaseTargetType {
       .get
     case .perspectives:
       .get
+    case .createPerspective:
+      .post
     }
   }
 
@@ -79,6 +93,8 @@ extension BattleService: BaseTargetType {
       if let optionLabel { query["optionLabel"] = optionLabel }
       if let sort { query["sort"] = sort }
       return query.isEmpty ? nil : query
+    case let .createPerspective(_, body):
+      return body.toDictionary
     }
   }
 

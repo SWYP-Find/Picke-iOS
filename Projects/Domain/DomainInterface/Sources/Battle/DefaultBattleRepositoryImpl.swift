@@ -66,4 +66,22 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
       nodes: []
     )
   }
+
+  public func createPerspective(
+    battleId _: Int,
+    content: String,
+    optionId: Int
+  ) async throws -> BattlePerspective {
+    BattlePerspective(
+      perspectiveId: 0,
+      user: BattlePerspectiveUser(userTag: "", nickname: "나", characterType: "", characterImageUrl: nil),
+      option: BattlePerspectiveOption(optionId: optionId, label: nil, title: "", stance: ""),
+      content: content,
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: true,
+      createdAt: Date()
+    )
+  }
 }

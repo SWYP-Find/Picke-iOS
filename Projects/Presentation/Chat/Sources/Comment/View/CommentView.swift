@@ -185,34 +185,49 @@ private extension CommentView {
 
   func filterButton(_ filter: CommentFilter) -> some View {
     let isSelected = store.selectedFilter == filter
+    let title: String = switch filter {
+    case .all: "전체"
+    case .optionA: store.voteSummary.optionA.title
+    case .optionB: store.voteSummary.optionB.title
+    }
     return Button {
       send(.filterTapped(filter))
     } label: {
-      Text(filter.title)
+      Text(title)
         .pretendardFont(family: .Medium, size: 14)
         .foregroundStyle(isSelected ? .primary500 : .neutral300)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
+        .overlay(alignment: .bottom) {
+          Rectangle()
+            .fill(isSelected ? Color.primary500 : Color.neutral200)
+            .frame(height: isSelected ? 2.5 : 1)
+        }
     }
     .buttonStyle(.plain)
   }
 
   func sortButton(_ sort: CommentSort) -> some View {
     let isSelected = store.selectedSort == sort
+    let selectedFill = Color.primary500
+    let unselectedFill = Color.primary50
     return Button {
       send(.sortTapped(sort))
     } label: {
       Text(sort.title)
         .pretendardFont(family: .Medium, size: 13)
         .foregroundStyle(isSelected ? .beige50 : .primary500)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 7)
-        .background(isSelected ? Color.primary400 : Color.beige50, in: RoundedRectangle(cornerRadius: 2))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+          isSelected ? selectedFill : unselectedFill,
+          in: RoundedRectangle(cornerRadius: 2)
+        )
         .overlay {
           RoundedRectangle(cornerRadius: 2)
-            .stroke(isSelected ? Color.primary400 : Color.primary50, lineWidth: 1)
+            .stroke(Color.primary500, lineWidth: isSelected ? 0 : 1)
         }
     }
     .buttonStyle(.plain)

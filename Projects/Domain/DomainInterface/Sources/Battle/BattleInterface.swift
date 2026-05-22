@@ -20,6 +20,11 @@ public protocol BattleInterface: Sendable {
     optionLabel: String?,
     sort: BattlePerspectiveSort?
   ) async throws -> BattlePerspectivePage
+  func createPerspective(
+    battleId: Int,
+    content: String,
+    optionId: Int
+  ) async throws -> BattlePerspective
 }
 
 public struct BattleRepositoryDependency: DependencyKey {
