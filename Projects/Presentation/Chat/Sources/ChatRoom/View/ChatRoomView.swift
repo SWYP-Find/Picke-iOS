@@ -180,7 +180,10 @@ extension ChatRoomView {
   }
 
   @ViewBuilder
-  private func bubbleColumn(speaker: ChatSpeaker, messages: [ChatMessage]) -> some View {
+  private func bubbleColumn(
+    speaker: ChatSpeaker,
+    messages: [ChatMessage]
+  ) -> some View {
     VStack(alignment: speaker.side == .left ? .leading : .trailing, spacing: 6) {
       Text(speaker.name)
         .pretendardFont(family: .SemiBold, size: 13)
@@ -197,7 +200,10 @@ extension ChatRoomView {
   }
 
   @ViewBuilder
-  private func bubble(text: String, side: ChatSpeakerSide) -> some View {
+  private func bubble(
+    text: String,
+    side: ChatSpeakerSide
+  ) -> some View {
     Text(text)
       .pretendardFont(family: .Regular, size: 13)
       .foregroundStyle(.neutral500)

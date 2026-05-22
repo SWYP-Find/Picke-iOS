@@ -13,7 +13,11 @@ public struct BattlePerspectivePage: Equatable {
   public let nextCursor: String?
   public let hasNext: Bool
 
-  public init(items: [BattlePerspective], nextCursor: String?, hasNext: Bool) {
+  public init(
+    items: [BattlePerspective],
+    nextCursor: String?,
+    hasNext: Bool
+  ) {
     self.items = items
     self.nextCursor = nextCursor
     self.hasNext = hasNext
@@ -83,7 +87,12 @@ public struct BattlePerspectiveOption: Equatable, Hashable, Identifiable {
 
   public var id: Int { optionId }
 
-  public init(optionId: Int, label: String?, title: String, stance: String) {
+  public init(
+    optionId: Int,
+    label: String?,
+    title: String,
+    stance: String
+  ) {
     self.optionId = optionId
     self.label = label
     self.title = title

@@ -50,7 +50,10 @@ public struct PerspectiveUseCaseImpl: PerspectiveInterface {
     )
   }
 
-  public func deleteComment(perspectiveId: Int, commentId: Int) async throws {
+  public func deleteComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws {
     return try await perspectiveRepository.deleteComment(perspectiveId: perspectiveId, commentId: commentId)
   }
 

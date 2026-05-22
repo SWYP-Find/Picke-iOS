@@ -14,7 +14,10 @@ public struct OnBoardingPageIndicator: View {
   private let pageCount: Int
   private let currentIndex: Int
 
-  public init(pageCount: Int, currentIndex: Int) {
+  public init(
+    pageCount: Int,
+    currentIndex: Int
+  ) {
     self.pageCount = pageCount
     self.currentIndex = currentIndex
   }

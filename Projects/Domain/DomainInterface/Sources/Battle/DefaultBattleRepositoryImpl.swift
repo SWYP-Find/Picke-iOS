@@ -32,7 +32,10 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
     )
   }
 
-  public func submitPostVote(battleId _: Int, optionId _: Int) async throws -> PreVoteResult {
+  public func submitPostVote(
+    battleId _: Int,
+    optionId _: Int
+  ) async throws -> PreVoteResult {
     PreVoteResult(voteId: 0, status: .none)
   }
 
@@ -50,7 +53,10 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
     BattlePerspectivePage(items: [], nextCursor: nil, hasNext: false)
   }
 
-  public func submitPreVote(battleId _: Int, optionId _: Int) async throws -> PreVoteResult {
+  public func submitPreVote(
+    battleId _: Int,
+    optionId _: Int
+  ) async throws -> PreVoteResult {
     PreVoteResult(voteId: 0, status: .none)
   }
 

@@ -62,7 +62,10 @@ public struct PreVoteFeature {
     public let id: UUID
     public let items: [Any]
 
-    public init(id: UUID = UUID(), items: [Any]) {
+    public init(
+      id: UUID = UUID(),
+      items: [Any]
+    ) {
       self.id = id
       self.items = items
     }

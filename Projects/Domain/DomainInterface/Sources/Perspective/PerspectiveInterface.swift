@@ -24,7 +24,10 @@ public protocol PerspectiveInterface: Sendable {
     commentId: Int,
     content: String
   ) async throws -> PerspectiveCommentMutationResult
-  func deleteComment(perspectiveId: Int, commentId: Int) async throws
+  func deleteComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws
   func deletePerspective(perspectiveId: Int) async throws
 }
 
@@ -68,7 +71,10 @@ public struct DefaultPerspectiveRepositoryImpl: PerspectiveInterface {
     PerspectiveCommentMutationResult(commentId: commentId, content: content, updatedAt: nil)
   }
 
-  public func deleteComment(perspectiveId _: Int, commentId _: Int) async throws {}
+  public func deleteComment(
+    perspectiveId _: Int,
+    commentId _: Int
+  ) async throws {}
 
   public func deletePerspective(perspectiveId _: Int) async throws {}
 }

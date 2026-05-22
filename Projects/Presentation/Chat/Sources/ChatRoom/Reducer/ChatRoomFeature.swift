@@ -92,7 +92,10 @@ public struct ChatRoomFeature {
 
     public var canScrub: Bool { hasFinishedListening }
 
-    private func speaker(for script: ScenarioScript, in scenario: BattleScenario) -> ChatSpeaker {
+    private func speaker(
+      for script: ScenarioScript,
+      in scenario: BattleScenario
+    ) -> ChatSpeaker {
       switch script.speakerType {
       case .a:
         return speaker(label: "A", side: .left, fallbackName: script.speakerName, in: scenario)
@@ -353,7 +356,10 @@ extension ChatRoomFeature {
     }
   }
 
-  private func handleAsyncAction(state: inout State, action: AsyncAction) -> Effect<Action> {
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
     switch action {
     case .fetchScenario:
       state.isLoadingScenario = true
@@ -390,7 +396,10 @@ extension ChatRoomFeature {
     }
   }
 
-  private func handleInnerAction(state: inout State, action: InnerAction) -> Effect<Action> {
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
     switch action {
     case let .scenarioResponse(result):
       state.isLoadingScenario = false
@@ -475,7 +484,10 @@ extension ChatRoomFeature {
     return .none
   }
 
-  private func handleScopeAction(state: inout State, action: ScopeAction) -> Effect<Action> {
+  private func handleScopeAction(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
     switch action {
     case let .customAlert(alertAction):
       switch alertAction {
@@ -504,7 +516,10 @@ extension ChatRoomFeature {
     }
   }
 
-  private func handleDelegateAction(state _: inout State, action: DelegateAction) -> Effect<Action> {
+  private func handleDelegateAction(
+    state _: inout State,
+    action: DelegateAction
+  ) -> Effect<Action> {
     switch action {
     case .dismiss, .requestFinalVote:
       .none

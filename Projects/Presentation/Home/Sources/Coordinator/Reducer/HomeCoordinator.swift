@@ -43,7 +43,10 @@ public struct HomeCoordinator {
   public enum InnerAction: Equatable {}
   public enum NavigationAction: Equatable {}
 
-  func handleRoute(state: inout State, action: Action) -> Effect<Action> {
+  func handleRoute(
+    state: inout State,
+    action: Action
+  ) -> Effect<Action> {
     switch action {
     case let .router(routeAction):
       routerAction(state: &state, action: routeAction)

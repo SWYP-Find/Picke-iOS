@@ -57,7 +57,10 @@ public struct AuthCoordinator {
     case presentMainTab
   }
 
-  func handleRoute(state: inout State, action: Action) -> Effect<Action> {
+  func handleRoute(
+    state: inout State,
+    action: Action
+  ) -> Effect<Action> {
     switch action {
     case let .router(routeAction):
       routerAction(state: &state, action: routeAction)

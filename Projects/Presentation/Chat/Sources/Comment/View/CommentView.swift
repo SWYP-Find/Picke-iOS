@@ -394,7 +394,10 @@ private extension CommentView {
   }
 
   @ViewBuilder
-  func actionLabel(systemName: String, text: String) -> some View {
+  func actionLabel(
+    systemName: String,
+    text: String
+  ) -> some View {
     HStack(spacing: 4) {
       Image(systemName: systemName)
         .font(.system(size: 14, weight: .medium))
@@ -405,7 +408,10 @@ private extension CommentView {
   }
 
   @ViewBuilder
-  func avatar(urlString: String?, fallback: String) -> some View {
+  func avatar(
+    urlString: String?,
+    fallback: String
+  ) -> some View {
     if let urlString, let url = URL(string: urlString) {
       KFImage(url)
         .placeholder { Color.beige600 }

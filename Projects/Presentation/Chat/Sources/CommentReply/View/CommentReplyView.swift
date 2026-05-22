@@ -231,7 +231,10 @@ private extension CommentReplyView {
       .background(option == .a ? Color.beige600 : Color.primary500, in: RoundedRectangle(cornerRadius: 2))
   }
 
-  func actionLabel(systemName: String, text: String) -> some View {
+  func actionLabel(
+    systemName: String,
+    text: String
+  ) -> some View {
     HStack(spacing: 4) {
       Image(systemName: systemName)
         .font(.system(size: 14, weight: .medium))

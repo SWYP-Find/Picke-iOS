@@ -130,7 +130,10 @@ struct VoteCardView: View {
   }
 
   @ViewBuilder
-  private func optionButton(index: Int, label: String) -> some View {
+  private func optionButton(
+    index: Int,
+    label: String
+  ) -> some View {
     let isSelected = selectedIndex == index
 
     Button {
@@ -176,7 +179,10 @@ struct VoteCardView: View {
   }
 
   @ViewBuilder
-  private func resultBarRow(label: String, percentage: Int) -> some View {
+  private func resultBarRow(
+    label: String,
+    percentage: Int
+  ) -> some View {
     HStack(spacing: 6) {
       Text(label)
         .pretendardFont(family: .Medium, size: 10)

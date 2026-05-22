@@ -95,7 +95,10 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
     return data.toDomain()
   }
 
-  public func deleteComment(perspectiveId: Int, commentId: Int) async throws {
+  public func deleteComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws {
     let dto: BaseResponseDTO<EmptyDTO> = try await provider.request(
       .deleteComment(perspectiveId: perspectiveId, commentId: commentId)
     )

@@ -243,7 +243,10 @@ final class OAuthWebViewController: UIViewController {
     }
   }
 
-  private func finish(_ result: Result<String, Error>, animated: Bool = true) {
+  private func finish(
+    _ result: Result<String, Error>,
+    animated: Bool = true
+  ) {
     guard !didFinish else { return }
     didFinish = true
     let completion = onComplete
@@ -292,19 +295,28 @@ private final class OAuthSheetDragHandleView: UIControl {
     fatalError("init(coder:) has not been implemented")
   }
 
-  override func beginTracking(_ touch: UITouch, with _: UIEvent?) -> Bool {
+  override func beginTracking(
+    _ touch: UITouch,
+    with _: UIEvent?
+  ) -> Bool {
     initialTouchY = touch.location(in: nil).y
     return true
   }
 
-  override func continueTracking(_ touch: UITouch, with _: UIEvent?) -> Bool {
+  override func continueTracking(
+    _ touch: UITouch,
+    with _: UIEvent?
+  ) -> Bool {
     guard let initialTouchY else { return false }
     let currentY = touch.location(in: nil).y
     events.send(.changed(currentY - initialTouchY))
     return true
   }
 
-  override func endTracking(_ touch: UITouch?, with _: UIEvent?) {
+  override func endTracking(
+    _ touch: UITouch?,
+    with _: UIEvent?
+  ) {
     defer { initialTouchY = nil }
     guard let touch,
           let initialTouchY

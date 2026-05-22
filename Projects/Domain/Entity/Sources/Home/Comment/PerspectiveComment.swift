@@ -12,7 +12,11 @@ public struct PerspectiveCommentPage: Equatable {
   public let nextCursor: String?
   public let hasNext: Bool
 
-  public init(items: [PerspectiveComment], nextCursor: String?, hasNext: Bool) {
+  public init(
+    items: [PerspectiveComment],
+    nextCursor: String?,
+    hasNext: Bool
+  ) {
     self.items = items
     self.nextCursor = nextCursor
     self.hasNext = hasNext
@@ -77,7 +81,11 @@ public struct PerspectiveCommentMutationResult: Equatable, Hashable {
   public let content: String
   public let updatedAt: Date?
 
-  public init(commentId: Int, content: String, updatedAt: Date?) {
+  public init(
+    commentId: Int,
+    content: String,
+    updatedAt: Date?
+  ) {
     self.commentId = commentId
     self.content = content
     self.updatedAt = updatedAt

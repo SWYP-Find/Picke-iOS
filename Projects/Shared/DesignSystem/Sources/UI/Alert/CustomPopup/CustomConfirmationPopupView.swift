@@ -271,7 +271,10 @@ struct CustomConfirmationPopup: View {
   }
 
   @ViewBuilder
-  private func reasonColumn(_ reasons: [ReportReason], fillSpacer: Bool = false) -> some View {
+  private func reasonColumn(
+    _ reasons: [ReportReason],
+    fillSpacer: Bool = false
+  ) -> some View {
     VStack(alignment: .leading, spacing: 16) {
       ForEach(reasons) { reason in
         reasonRow(reason)

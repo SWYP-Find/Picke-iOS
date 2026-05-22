@@ -19,11 +19,17 @@ public struct BattleUseCaseImpl: BattleInterface {
     return try await battleRepository.fetchBattle(battleId: battleId)
   }
 
-  public func submitPreVote(battleId: Int, optionId: Int) async throws -> PreVoteResult {
+  public func submitPreVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult {
     return try await battleRepository.submitPreVote(battleId: battleId, optionId: optionId)
   }
 
-  public func submitPostVote(battleId: Int, optionId: Int) async throws -> PreVoteResult {
+  public func submitPostVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult {
     return try await battleRepository.submitPostVote(battleId: battleId, optionId: optionId)
   }
 

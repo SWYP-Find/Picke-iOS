@@ -15,7 +15,10 @@ public extension TagDTO {
 }
 
 public extension EditorPickDTO {
-  func toDomain(position: Int, total: Int) -> HeroBattle {
+  func toDomain(
+    position: Int,
+    total: Int
+  ) -> HeroBattle {
     HeroBattle(
       battleId: battleId,
       badge: "EDITOR PICK",

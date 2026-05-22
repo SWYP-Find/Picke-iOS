@@ -38,7 +38,10 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     return data.toDomain()
   }
 
-  public func submitPreVote(battleId: Int, optionId: Int) async throws -> PreVoteResult {
+  public func submitPreVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult {
     let dto: PreVoteResponseDTO = try await provider.request(
       .preVote(battleId: battleId, body: PreVoteRequest(optionId: optionId))
     )
@@ -66,7 +69,10 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     return data.toDomain()
   }
 
-  public func submitPostVote(battleId: Int, optionId: Int) async throws -> PreVoteResult {
+  public func submitPostVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult {
     let dto: PreVoteResponseDTO = try await provider.request(
       .postVote(battleId: battleId, body: PreVoteRequest(optionId: optionId))
     )

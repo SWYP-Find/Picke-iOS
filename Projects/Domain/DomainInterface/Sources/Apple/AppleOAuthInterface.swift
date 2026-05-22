@@ -14,7 +14,10 @@ import WeaveDI
 
 public protocol AppleOAuthInterface: Sendable {
   func signIn() async throws -> AppleOAuthPayload
-  func signInWithCredential(_ credential: ASAuthorizationAppleIDCredential, nonce: String) async throws -> AppleOAuthPayload
+  func signInWithCredential(
+    _ credential: ASAuthorizationAppleIDCredential,
+    nonce: String
+  ) async throws -> AppleOAuthPayload
 }
 
 // MARK: - Dependencies

@@ -14,7 +14,10 @@ public struct CreatePerspectiveRequest: Encodable {
   public let content: String
   public let optionId: Int
 
-  public init(content: String, optionId: Int) {
+  public init(
+    content: String,
+    optionId: Int
+  ) {
     self.content = content
     self.optionId = optionId
   }

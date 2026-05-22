@@ -398,7 +398,10 @@ extension CommentFeature {
 
   /// API 응답(BattleVoteStats) 을 화면 모델 VoteSummary 로 매핑.
   /// 옵션이 2개 이상이라 가정 — 부족하거나 매핑 실패 시 fallback 유지.
-  private func makeSummary(from stats: BattleVoteStats, fallback: VoteSummary) -> VoteSummary {
+  private func makeSummary(
+    from stats: BattleVoteStats,
+    fallback: VoteSummary
+  ) -> VoteSummary {
     guard stats.options.count >= 2 else { return fallback }
     let a = stats.options[0]
     let b = stats.options[1]

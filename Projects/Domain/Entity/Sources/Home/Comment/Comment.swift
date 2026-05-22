@@ -24,7 +24,11 @@ public struct CommentAuthor: Equatable, Hashable {
   public let imageURL: String?
   public let optionLabel: String?
 
-  public init(name: String, imageURL: String? = nil, optionLabel: String? = nil) {
+  public init(
+    name: String,
+    imageURL: String? = nil,
+    optionLabel: String? = nil
+  ) {
     self.name = name
     self.imageURL = imageURL
     self.optionLabel = optionLabel
@@ -93,7 +97,11 @@ public struct CommentReplyItem: Equatable, Identifiable {
   }
 
   /// 서버 PerspectiveComment 응답을 화면 모델로 변환.
-  public init(item: PerspectiveComment, parentOption: CommentOption, order: Int) {
+  public init(
+    item: PerspectiveComment,
+    parentOption: CommentOption,
+    order: Int
+  ) {
     let id = UUID(uuidString: Self.deterministicUUID(commentId: item.commentId)) ?? UUID()
     self.init(
       id: id,
@@ -229,7 +237,10 @@ public struct CommentItem: Equatable, Identifiable {
   }
 
   /// API 응답 BattlePerspective 를 화면 모델로 변환.
-  public init(item: BattlePerspective, order: Int) {
+  public init(
+    item: BattlePerspective,
+    order: Int
+  ) {
     let optionFallback: CommentOption = item.option.label == "B" ? .b : .a
     self.init(
       id: UUID(uuidString: Self.deterministicUUID(perspectiveId: item.perspectiveId)) ?? UUID(),
