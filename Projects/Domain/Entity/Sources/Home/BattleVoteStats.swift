@@ -32,6 +32,7 @@ public struct BattleVoteStatsOption: Equatable, Identifiable, Hashable {
   public let voteCount: Int
   public let ratio: Double
   public let stance: String
+  public let imageUrl: String?
 
   public var id: Int { optionId }
 
@@ -42,7 +43,8 @@ public struct BattleVoteStatsOption: Equatable, Identifiable, Hashable {
     isCorrect: Bool,
     voteCount: Int,
     ratio: Double,
-    stance: String
+    stance: String,
+    imageUrl: String?
   ) {
     self.optionId = optionId
     self.label = label
@@ -51,5 +53,6 @@ public struct BattleVoteStatsOption: Equatable, Identifiable, Hashable {
     self.voteCount = voteCount
     self.ratio = ratio
     self.stance = stance
+    self.imageUrl = imageUrl
   }
 }

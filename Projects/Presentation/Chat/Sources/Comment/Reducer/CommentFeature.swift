@@ -82,7 +82,7 @@ public struct CommentFeature {
   }
 
   public enum InnerAction: Equatable {
-    case voteStatsResponse(Result<BattleVoteStats, AuthError>)
+    case voteStatsResponse(Result<BattleVoteStats, BattleError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -192,7 +192,7 @@ extension CommentFeature {
         let result = await Result {
           try await repository.fetchVoteStats(battleId: battleId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.voteStatsResponse(result)))
       }
       .cancellable(id: CancelID.fetchVoteStats, cancelInFlight: true)

@@ -95,10 +95,10 @@ public struct PreVoteFeature {
   }
 
   public enum InnerAction: Equatable {
-    case battleDetailResponse(Result<BattleDetail, AuthError>)
-    case preVoteResponse(Result<PreVoteResult, AuthError>)
+    case battleDetailResponse(Result<BattleDetail, BattleError>)
+    case preVoteResponse(Result<PreVoteResult, BattleError>)
     case sharePrepared(ShareItem)
-    case postVoteResponse(Result<PreVoteResult, AuthError>)
+    case postVoteResponse(Result<PreVoteResult, BattleError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -188,7 +188,7 @@ extension PreVoteFeature {
         let result = await Result {
           try await repository.fetchBattle(battleId: battleId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.battleDetailResponse(result)))
       }
       .cancellable(id: CancelID.fetchBattleDetail, cancelInFlight: true)
@@ -213,7 +213,7 @@ extension PreVoteFeature {
         let result = await Result {
           try await repository.submitPreVote(battleId: battleId, optionId: optionId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.preVoteResponse(result)))
       }
       .cancellable(id: CancelID.submitPreVote, cancelInFlight: true)
@@ -223,7 +223,7 @@ extension PreVoteFeature {
         let result = await Result {
           try await repository.submitPostVote(battleId: battleId, optionId: optionId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.postVoteResponse(result)))
       }
       .cancellable(id: CancelID.submitPostVote, cancelInFlight: true)

@@ -32,7 +32,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     guard let data = dto.data else {
       let message = dto.error?.message ?? "배틀 상세 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty battleDetail payload: \(message)")
-      throw AuthError.backendError(message)
+      throw BattleError.backendError(message)
     }
 
     return data.toDomain()
@@ -46,7 +46,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     guard let data = dto.data else {
       let message = dto.error?.message ?? "사전 투표 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty preVote payload: \(message)")
-      throw AuthError.backendError(message)
+      throw BattleError.backendError(message)
     }
 
     return data.toDomain()
@@ -60,7 +60,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     guard let data = dto.data else {
       let message = dto.error?.message ?? "투표 통계 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty voteStats payload: \(message)")
-      throw AuthError.backendError(message)
+      throw BattleError.backendError(message)
     }
 
     return data.toDomain()
@@ -74,7 +74,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     guard let data = dto.data else {
       let message = dto.error?.message ?? "최종 투표 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty postVote payload: \(message)")
-      throw AuthError.backendError(message)
+      throw BattleError.backendError(message)
     }
 
     return data.toDomain()
@@ -88,7 +88,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     guard let data = dto.data else {
       let message = dto.error?.message ?? "시나리오 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty scenario payload: \(message)")
-      throw AuthError.backendError(message)
+      throw BattleError.backendError(message)
     }
 
     return data.toDomain()

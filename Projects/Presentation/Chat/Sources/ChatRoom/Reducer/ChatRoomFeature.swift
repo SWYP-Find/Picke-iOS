@@ -212,7 +212,7 @@ public struct ChatRoomFeature {
   }
 
   public enum InnerAction: Equatable {
-    case scenarioResponse(Result<BattleScenario, AuthError>)
+    case scenarioResponse(Result<BattleScenario, BattleError>)
     case playerTimeUpdated(TimeInterval)
     case playerDurationUpdated(TimeInterval)
   }
@@ -361,7 +361,7 @@ extension ChatRoomFeature {
         let result = await Result {
           try await repository.fetchScenario(battleId: battleId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.scenarioResponse(result)))
       }
       .cancellable(id: CancelID.fetchScenario, cancelInFlight: true)

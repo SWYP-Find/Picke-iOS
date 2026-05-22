@@ -30,11 +30,12 @@ public extension BattleVoteStatsOptionDTO {
     BattleVoteStatsOption(
       optionId: optionId,
       label: label,
-      title: title,
+      title: title ?? "",
       isCorrect: isCorrect ?? false,
       voteCount: voteCount,
-      ratio: ratio,
-      stance: stance ?? ""
+      ratio: ratio > 1 ? ratio / 100.0 : ratio,
+      stance: stance ?? "",
+      imageUrl: imageUrl
     )
   }
 }
