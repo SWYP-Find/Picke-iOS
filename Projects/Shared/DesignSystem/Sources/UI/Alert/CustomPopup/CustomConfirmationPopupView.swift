@@ -177,21 +177,112 @@ struct CustomConfirmationPopup: View {
     .onTapGesture {}
   }
 
-  private var reportContent: some View {
-    Button(action: onConfirm) {
-      HStack(spacing: 4) {
-        Image(systemName: "light.beacon.max")
-          .font(.system(size: 15, weight: .regular))
-          .frame(width: 24, height: 24)
+  @State private var selectedReason: ReportReason?
 
-        Text(confirmTitle)
-          .pretendardFont(family: .Medium, size: 13)
+  private var reportContent: some View {
+    VStack(spacing: 16) {
+      Text("신고사유")
+        .pretendardFont(family: .SemiBold, size: 16)
+        .foregroundStyle(.primary800)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+
+      HStack(alignment: .top, spacing: 0) {
+        VStack(alignment: .leading, spacing: 16) {
+          ForEach(ReportReason.leftColumn) { reason in
+            reasonRow(reason)
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+
+        VStack(alignment: .leading, spacing: 16) {
+          ForEach(ReportReason.rightColumn) { reason in
+            reasonRow(reason)
+          }
+          Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
-      .foregroundStyle(.beige50)
-      .frame(width: 70, height: 34)
-      .background(.primary500, in: Capsule())
+      .padding(.horizontal, 20)
+
+      HStack(spacing: 10) {
+        Button(action: onConfirm) {
+          Text(confirmTitle.isEmpty ? "신고하기" : confirmTitle)
+            .pretendardFont(family: .Medium, size: 14)
+            .foregroundStyle(.primary800)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.secondary50, in: Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(selectedReason == nil)
+        .opacity(selectedReason == nil ? 0.5 : 1)
+
+        Button(action: onCancel) {
+          Text(cancelTitle.isEmpty ? "뒤로가기" : cancelTitle)
+            .pretendardFont(family: .Medium, size: 14)
+            .foregroundStyle(.secondary50)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.primary500, in: Rectangle())
+        }
+        .buttonStyle(.plain)
+      }
     }
-    .buttonStyle(.plain)
+    .padding(.top, 20)
+    .frame(width: 343)
+    .background(.beige500, in: RoundedRectangle(cornerRadius: 6))
+    .overlay(
+      RoundedRectangle(cornerRadius: 6)
+        .stroke(.primary500, lineWidth: 1.5)
+    )
     .onTapGesture {}
   }
+
+  @ViewBuilder
+  private func reasonRow(_ reason: ReportReason) -> some View {
+    Button {
+      selectedReason = reason
+    } label: {
+      HStack(spacing: 6) {
+        ZStack {
+          Circle()
+            .stroke(.gray200, lineWidth: 3)
+            .frame(width: 20, height: 20)
+          if selectedReason == reason {
+            Circle()
+              .fill(.primary500)
+              .frame(width: 10, height: 10)
+          }
+        }
+        Text(reason.title)
+          .pretendardFont(family: .Medium, size: 14)
+          .foregroundStyle(.neutral900)
+      }
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+public enum ReportReason: String, CaseIterable, Identifiable, Equatable {
+  case commercial
+  case repeat_
+  case explicit
+  case insult
+  case other
+
+  public var id: String { rawValue }
+
+  public var title: String {
+    switch self {
+    case .commercial: "영리목적/홍보성"
+    case .repeat_: "같은 내용 반복 게시"
+    case .explicit: "음란성/선정성"
+    case .insult: "욕설/인신공격"
+    case .other: "기타"
+    }
+  }
+
+  static let leftColumn: [ReportReason] = [.commercial, .explicit, .other]
+  static let rightColumn: [ReportReason] = [.repeat_, .insult]
 }

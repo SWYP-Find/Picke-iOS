@@ -173,7 +173,7 @@ private extension CommentView {
       }
       .frame(maxWidth: .infinity)
 
-      HStack(spacing: 0) {
+      HStack(spacing: 8) {
         sortButton(.popular)
         sortButton(.latest)
         Spacer()
