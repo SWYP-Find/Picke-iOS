@@ -294,16 +294,3 @@ private extension CommentReplyView {
     return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
   }
 }
-
-#Preview {
-  CommentReplyView(
-    store: Store(
-      initialState: CommentReplyFeature.State(
-        perspectiveId: CommentItem.mocks[0].perspectiveId ?? 0,
-        parentComment: CommentItem.mocks[0]
-      )
-    ) {
-      CommentReplyFeature()
-    }
-  )
-}

@@ -148,12 +148,14 @@ public var body: some View {
 - 한 메서드 안에서 다시 큰 블록이 생기면 더 작게 쪼개기 (재귀 적용)
 - 공통 컴포넌트는 별도 파일 (`Components/*.swift`) 로 추출
 
-#### 🧱 `@ViewBuilder` 함수 vs `var` — 자식 개수 / 분기 유무로 결정
+#### 🧱 `@ViewBuilder` + `private func` — 모든 sub-view 는 함수 형태 (필수)
 
-분리한 sub-view 의 선언 형태는 **자식 개수와 분기 유무** 로만 정한다.
+분리한 sub-view 는 **자식 개수 / 분기 유무와 상관없이 무조건 `@ViewBuilder` + `private func` 형태** 로 통일한다.
+
+`private var ...: some View` 형태는 **금지** — 모든 sub-view 는 호출부에서 일관되게 `()` 호출이 보이도록 함수 형태로만 작성한다.
 
 ```swift
-// ✅ 다중 자식을 감싸거나 if/else · switch 분기가 있으면 `@ViewBuilder` + 함수
+// ✅ 다중 자식 / 분기 / 반복
 @ViewBuilder
 private func hotBattlesSection() -> some View {
   VStack(alignment: .leading, spacing: 12) {
@@ -175,8 +177,9 @@ private func thumbnail(url: URL?) -> some View {
   }
 }
 
-// ✅ 단일 뷰만 반환하면 `private var` 형태
-private var primaryButton: some View {
+// ✅ 단일 뷰여도 함수 형태로
+@ViewBuilder
+private func primaryButton() -> some View {
   CustomButton(
     action: { send(.primaryButtonTapped) },
     title: "사전 투표하기",
@@ -185,17 +188,16 @@ private var primaryButton: some View {
   )
 }
 
-// ❌ 금지 — VStack 으로 자식 여러 개 감싸는데 var 만 쓰는 경우 (분기 / 동적 children 추가 시 깨짐)
-private var section: some View {
-  VStack { ... }  // → @ViewBuilder + func 으로 가야 안전
-}
+// ❌ 금지 — sub-view 를 var 로 선언
+private var primaryButton: some View { ... }
+private var section: some View { VStack { ... } }
 ```
 
 규칙:
-- **`@ViewBuilder` + `private func`** : VStack/HStack/ZStack 등으로 **자식 ≥ 2개** 를 감싸거나 `if` / `switch` / `ForEach` 같은 분기·반복이 있을 때
-- **`private var ...: some View`** : **단일 뷰** 1개만 반환할 때 (단순 wrapping · CTA 버튼 · 단일 Image 등)
-- body 안에서 호출하는 sub-view 가 인자가 필요하면 함수, 없으면 var 가 우선 — 기준은 "자식 수 / 분기 유무" 가 먼저
-- 레퍼런스: `HomeView.hotBattlesSection`, `PreVoteView.primaryButton`, `HeroCardView.thumbnail`
+- **모든 sub-view = `@ViewBuilder private func name() -> some View`** (단일 뷰 / 다중 자식 / 분기 무관)
+- `private var ...: some View` 패턴 금지 — 호출부에서 `name` vs `name()` 형태 혼재되는 것을 방지
+- `body` 만 `var body: some View` 유지 (View 프로토콜 요구사항)
+- body 안에서 호출은 항상 `()` 가 붙은 함수 형태로 — 가독성 통일
 
 #### 🔤 폰트 — `.font(.system(...))` 금지, Pretendard 토큰 사용
 
@@ -367,6 +369,48 @@ public init(
 - Shared / Presents / AppStorage 도 동일하게 inline 으로 선언 (`@Shared(...) var foo: Foo = .empty`)
 
 레퍼런스: `HomeFeature.State`, attendance `ProfileFeature.State`
+
+#### 📦 Feature 화면 모델 / Item / Filter / Sort 는 Entity 모듈에 정의 (필수)
+
+`XxxFeature.swift` 안에 `XxxItem` · `XxxSummary` · `XxxFilter` · `XxxSort` 같은 **화면용 모델 / 분기 enum** 을 직접 선언하지 않는다. 모두 `Domain/Entity` 모듈에 정의하고 Feature/View 에서는 `import Entity` 로 가져다 쓴다.
+
+```swift
+// ✅ 올바른 패턴 — 화면 모델은 Entity 모듈에 정의
+// Projects/Domain/Entity/Sources/Home/Comment.swift
+public struct CommentItem: Equatable, Identifiable { ... }
+public enum CommentFilter: String, CaseIterable, Equatable { ... }
+public enum CommentSort: String, CaseIterable, Equatable { ... }
+public struct VoteSummary: Equatable { ... }
+
+// Projects/Presentation/Chat/Sources/Comment/Reducer/CommentFeature.swift
+import Entity
+
+@Reducer
+public struct CommentFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public var comments: [CommentItem] = []
+    public var selectedFilter: CommentFilter = .all
+    public var selectedSort: CommentSort = .popular
+    public var voteSummary: VoteSummary = .empty
+  }
+}
+
+// ❌ 금지 — Feature 파일 안에 모델을 같이 선언
+// CommentFeature.swift
+public struct CommentItem: Equatable, Identifiable { ... }   // ← Entity 로 이동
+public enum CommentFilter: ... { ... }                       // ← Entity 로 이동
+public struct VoteSummary: Equatable { ... }                 // ← Entity 로 이동
+```
+
+규칙:
+- **모든 화면 모델 (struct/enum)** 은 `Projects/Domain/Entity/Sources/<도메인>/` 아래에 둔다 (`Home/Comment.swift`, `Home/Battle.swift` 등)
+- Feature 안에는 `State` / `Action` / `Reducer` / `CancelID` 같은 **TCA 컴포넌트만** 둔다
+- UI 분기용 enum (`CommentFilter`, `CommentSort`) 도 도메인 모델로 취급해 Entity 에 둔다 — 같은 도메인의 여러 화면에서 재사용 가능
+- 서버 응답 매핑 init (`init(item: BattlePerspective, order: Int)`) · 정적 mocks · `.empty` 팩토리도 모두 Entity 쪽에서 정의
+- 의존성 방향 유지: `Presentation → Domain ← Data` — Entity 는 SwiftUI/TCA/Network 비의존 (Foundation 만)
+
+레퍼런스: `Entity/Sources/Home/Comment.swift` (CommentItem, CommentFilter, CommentSort, CommentReplyItem, VoteSummary)
 
 #### ⚡ AsyncAction — `Result { try await }` + `mapError` + 단일 `Response` Inner 액션
 

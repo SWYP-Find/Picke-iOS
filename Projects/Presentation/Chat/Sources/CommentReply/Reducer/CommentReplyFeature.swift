@@ -45,7 +45,7 @@ public struct CommentReplyFeature {
     ) {
       self.perspectiveId = perspectiveId
       self.parentComment = parentComment
-      self.replies = replies ?? CommentReplyItem.mocks(for: parentComment.option)
+      self.replies = replies ?? []
     }
   }
 
