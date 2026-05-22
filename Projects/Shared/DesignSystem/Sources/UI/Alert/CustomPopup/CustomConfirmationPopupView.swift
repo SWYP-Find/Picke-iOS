@@ -142,7 +142,7 @@ struct CustomConfirmationPopup: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 20)
 
-      HStack(spacing: 10) {
+      HStack(spacing: 0) {
         Button(action: onCancel) {
           Text(cancelTitle)
             .pretendardFont(family: .Medium, size: 14)
