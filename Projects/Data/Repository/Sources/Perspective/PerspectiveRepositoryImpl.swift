@@ -30,9 +30,9 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
     )
 
     guard let data = dto.data else {
-      let message = dto.error?.message ?? "댓글 상세 응답이 비어 있습니다"
+      let message = dto.error?.message ?? "perspective 상세 응답이 비어 있습니다"
       Log.error("[PerspectiveRepositoryImpl] empty detail payload: \(message)")
-      throw CommentError.backendError(message)
+      throw PerspectiveError.backendError(message)
     }
 
     return data.toDomain()
@@ -116,7 +116,7 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
 
     if dto.statusCode >= 400 {
       let message = dto.error?.message ?? "perspective 삭제 실패"
-      throw BattleError.backendError(message)
+      throw PerspectiveError.backendError(message)
     }
   }
 }

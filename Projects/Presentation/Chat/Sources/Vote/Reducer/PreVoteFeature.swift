@@ -11,9 +11,9 @@ import UIKit
 import ComposableArchitecture
 import DesignSystem
 import DomainInterface
-import UseCase
 import Entity
 import LogMacro
+import UseCase
 
 @Reducer
 public struct PreVoteFeature {
@@ -105,7 +105,7 @@ public struct PreVoteFeature {
   public enum InnerAction: Equatable {
     case battleDetailResponse(Result<BattleDetail, BattleError>)
     case myPerspectiveResponse(Result<BattlePerspective?, BattleError>)
-    case deleteMyPerspectiveResponse(Result<EmptyResult, BattleError>)
+    case deleteMyPerspectiveResponse(Result<EmptyResult, PerspectiveError>)
     case preVoteResponse(Result<PreVoteResult, BattleError>)
     case sharePrepared(ShareItem)
     case postVoteResponse(Result<PreVoteResult, BattleError>)
@@ -241,7 +241,7 @@ extension PreVoteFeature {
           try await repository.deletePerspective(perspectiveId: perspectiveId)
           return EmptyResult()
         }
-        .mapError(BattleError.from)
+        .mapError(PerspectiveError.from)
         return await send(.inner(.deleteMyPerspectiveResponse(result)))
       }
       .cancellable(id: CancelID.deleteMyPerspective, cancelInFlight: true)

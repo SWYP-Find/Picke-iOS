@@ -15,9 +15,9 @@ import Foundation
 
 import ComposableArchitecture
 import DomainInterface
-import UseCase
 import Entity
 import LogMacro
+import UseCase
 
 @Reducer
 public struct CommentReplyFeature {
@@ -79,7 +79,7 @@ public struct CommentReplyFeature {
   }
 
   public enum InnerAction: Equatable {
-    case parentResponse(Result<BattlePerspective, CommentError>)
+    case parentResponse(Result<BattlePerspective, PerspectiveError>)
     case repliesResponse(Result<PerspectiveCommentPage, CommentError>, reset: Bool)
     case createResponse(Result<PerspectiveCommentMutationResult, CommentError>)
     case updateResponse(Result<PerspectiveCommentMutationResult, CommentError>, commentId: Int)
@@ -204,7 +204,7 @@ extension CommentReplyFeature {
         let result = await Result {
           try await repository.fetchPerspective(perspectiveId: pid)
         }
-        .mapError(CommentError.from)
+        .mapError(PerspectiveError.from)
         return await send(.inner(.parentResponse(result)))
       }
       .cancellable(id: CancelID.fetchParent, cancelInFlight: true)
