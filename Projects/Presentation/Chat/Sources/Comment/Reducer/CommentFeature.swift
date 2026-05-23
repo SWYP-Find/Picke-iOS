@@ -11,9 +11,9 @@ import Foundation
 import ComposableArchitecture
 import DesignSystem
 import DomainInterface
-import UseCase
 import Entity
 import LogMacro
+import UseCase
 
 @Reducer
 public struct CommentFeature {
@@ -86,6 +86,7 @@ public struct CommentFeature {
 
   public enum AsyncAction: Equatable {
     case fetchBattle
+    case fetchMyPerspective
     case fetchVoteStats
     case fetchPerspectives(reset: Bool)
     case toggleLike(commentId: Int, currentlyLiked: Bool)
@@ -94,6 +95,7 @@ public struct CommentFeature {
 
   public enum InnerAction: Equatable {
     case battleResponse(Result<BattleDetail, BattleError>)
+    case myPerspectiveResponse(Result<BattlePerspective?, BattleError>)
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
@@ -112,6 +114,7 @@ public struct CommentFeature {
 
   nonisolated enum CancelID: Hashable {
     case fetchBattle
+    case fetchMyPerspective
     case fetchVoteStats
     case fetchPerspectives
     case toggleLike
@@ -166,6 +169,7 @@ extension CommentFeature {
     case .onAppear:
       return .merge(
         .send(.async(.fetchBattle)),
+        .send(.async(.fetchMyPerspective)),
         .send(.async(.fetchVoteStats)),
         .send(.async(.fetchPerspectives(reset: true)))
       )
@@ -274,6 +278,17 @@ extension CommentFeature {
       }
       .cancellable(id: CancelID.fetchBattle, cancelInFlight: true)
 
+    case .fetchMyPerspective:
+      let battleId = state.battleId
+      return .run { [repository = battleUseCase] send in
+        let result = await Result {
+          try await repository.fetchMyPerspective(battleId: battleId)
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.myPerspectiveResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchMyPerspective, cancelInFlight: true)
+
     case .fetchVoteStats:
       state.isLoadingStats = true
       let battleId = state.battleId
@@ -344,6 +359,15 @@ extension CommentFeature {
         state.title = detail.battleInfo.title
       case let .failure(error):
         Log.error("[CommentFeature] fetchBattle failed: \(error.localizedDescription)")
+      }
+      return .none
+
+    case let .myPerspectiveResponse(result):
+      switch result {
+      case let .success(perspective):
+        state.perspectiveId = perspective?.perspectiveId
+      case let .failure(error):
+        Log.error("[CommentFeature] fetchMyPerspective failed: \(error.localizedDescription)")
       }
       return .none
 
