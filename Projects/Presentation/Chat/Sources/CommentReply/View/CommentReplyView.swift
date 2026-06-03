@@ -8,7 +8,6 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
-import Kingfisher
 
 @ViewAction(for: CommentReplyFeature.self)
 public struct CommentReplyView: View {
@@ -218,21 +217,11 @@ private extension CommentReplyView {
     moreAction _: (() -> Void)?
   ) -> some View {
     HStack(alignment: .top, spacing: 8) {
-      Circle()
-        .fill(.beige600)
-        .frame(width: 36, height: 36)
-        .overlay {
-          if let imageURL, let url = URL(string: imageURL) {
-            KFImage(url)
-              .resizable()
-              .scaledToFill()
-          } else {
-            Text(String(author.prefix(1)))
-              .pretendardFont(family: .SemiBold, size: 13)
-              .foregroundStyle(.primary500)
-          }
-        }
-        .clipShape(Circle())
+      CommentAvatarView(
+        imageURL: imageURL,
+        fallback: author,
+        size: 36
+      )
 
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 6) {

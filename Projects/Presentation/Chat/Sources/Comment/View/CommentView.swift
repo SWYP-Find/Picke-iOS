@@ -10,7 +10,6 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
-import Kingfisher
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {
@@ -215,21 +214,11 @@ private extension CommentView {
 
   @ViewBuilder
   func avatarCircle(imageUrl: String?, name: String) -> some View {
-    Circle()
-      .fill(.beige600)
-      .frame(width: 40, height: 40)
-      .overlay {
-        if let imageUrl, let url = URL(string: imageUrl) {
-          KFImage(url)
-            .resizable()
-            .scaledToFill()
-        } else {
-          Text(String(name.prefix(1)))
-            .pretendardFont(family: .SemiBold, size: 14)
-            .foregroundStyle(.primary500)
-        }
-      }
-      .clipShape(Circle())
+    CommentAvatarView(
+      imageURL: imageUrl,
+      fallback: name,
+      size: 40
+    )
   }
 }
 
@@ -509,24 +498,11 @@ private extension CommentView {
     urlString: String?,
     fallback: String
   ) -> some View {
-    if let urlString, let url = URL(string: urlString) {
-      KFImage(url)
-        .placeholder { Color.beige600 }
-        .resizable()
-        .scaledToFill()
-        .frame(width: 36, height: 36)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(.beige600, lineWidth: 1))
-    } else {
-      Circle()
-        .fill(.beige600)
-        .frame(width: 36, height: 36)
-        .overlay {
-          Text(String(fallback.prefix(1)))
-            .pretendardFont(family: .SemiBold, size: 13)
-            .foregroundStyle(.primary500)
-        }
-    }
+    CommentAvatarView(
+      imageURL: urlString,
+      fallback: fallback,
+      size: 36
+    )
   }
 }
 
