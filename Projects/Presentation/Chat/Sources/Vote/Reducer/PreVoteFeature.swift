@@ -57,24 +57,6 @@ public struct PreVoteFeature {
     }
   }
 
-  /// 공유 시트 트리거. `.sheet(item:)` 에 바로 바인딩.
-  public struct ShareItem: Equatable, Identifiable {
-    public let id: UUID
-    public let items: [Any]
-
-    public init(
-      id: UUID = UUID(),
-      items: [Any]
-    ) {
-      self.id = id
-      self.items = items
-    }
-
-    public static func == (lhs: ShareItem, rhs: ShareItem) -> Bool {
-      lhs.id == rhs.id
-    }
-  }
-
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
@@ -88,7 +70,7 @@ public struct PreVoteFeature {
   public enum View {
     case onAppear
     case backButtonTapped
-    case shareTapped
+    case shareTapped(snapshot: Data?)
     case optionTapped(optionId: Int)
     case primaryButtonTapped
   }
@@ -97,7 +79,7 @@ public struct PreVoteFeature {
     case fetchBattleDetail
     case fetchMyPerspective
     case deleteMyPerspective(perspectiveId: Int)
-    case prepareShare(title: String, url: String, imageURL: String?)
+    case prepareShare(ShareContent)
     case submitPreVote(battleId: Int, optionId: Int)
     case submitPostVote(battleId: Int, optionId: Int)
   }
@@ -123,6 +105,8 @@ public struct PreVoteFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult)
+    /// 이미 최종 투표(POST_VOTE)까지 마친 상태 — 댓글 화면으로 바로 이동.
+    case alreadyFinalVoted(battleId: Int)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -176,7 +160,9 @@ extension PreVoteFeature {
       if state.battleDetail == nil, state.battle == nil, !state.isLoading {
         effects.append(.send(.async(.fetchBattleDetail)))
       }
-      if state.voteMode == .pre, state.myPerspective == nil {
+      // pre/post 모두 진입 시 내 참여(perspective) 여부를 조회한다.
+      // 이미 참여했으면 "다시 투표" 알럿 → 삭제 후 재투표.
+      if state.myPerspective == nil {
         effects.append(.send(.async(.fetchMyPerspective)))
       }
       return effects.isEmpty ? .none : .merge(effects)
@@ -184,12 +170,39 @@ extension PreVoteFeature {
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
-    case .shareTapped:
-      let title = state.battleDetail?.battleInfo.title ?? state.battle?.titleLine1 ?? ""
-      let url = state.battleDetail?.shareUrl
-        ?? "https://picke.store/battles/\(state.battleId)"
-      let imageURL = state.battleDetail?.battleInfo.thumbnailUrl ?? state.battle?.backgroundImageURL
-      return .send(.async(.prepareShare(title: title, url: url, imageURL: imageURL)))
+    case let .shareTapped(snapshot):
+      let detail = state.battleDetail
+      let battle = state.battle
+      let title = detail?.battleInfo.title ?? battle?.titleLine1 ?? ""
+      let url = detail?.shareUrl ?? "https://picke.store/battles/\(state.battleId)"
+      let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
+      let summary = {
+        if let description = detail?.description, !description.isEmpty { return description }
+        if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty { return infoSummary }
+        return battle?.summary ?? ""
+      }()
+      let hashtags: [String] = {
+        if let tags = detail?.categoryTags, !tags.isEmpty {
+          return tags.map { "#\($0.name)" }
+        }
+        return battle?.tags ?? []
+      }()
+      let optionLine: String? = {
+        guard let left = battle?.leftOption.stance,
+              let right = battle?.rightOption.stance
+        else { return nil }
+        return "🆚 A: \(left)  vs  B: \(right)"
+      }()
+      let content = ShareContent(
+        title: title,
+        summary: summary,
+        hashtags: hashtags,
+        optionLine: optionLine,
+        url: url,
+        thumbnailURL: thumbnailURL,
+        snapshotData: snapshot
+      )
+      return .send(.async(.prepareShare(content)))
 
     case let .optionTapped(optionId):
       state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
@@ -197,11 +210,12 @@ extension PreVoteFeature {
 
     case .primaryButtonTapped:
       guard let optionId = state.selectedOptionId else { return .none }
-      state.isSubmitting = true
       switch state.voteMode {
       case .pre:
+        state.isSubmitting = true
         return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
       case .post:
+        state.isSubmitting = true
         return .send(.async(.submitPostVote(battleId: state.battleId, optionId: optionId)))
       }
     }
@@ -246,14 +260,22 @@ extension PreVoteFeature {
       }
       .cancellable(id: CancelID.deleteMyPerspective, cancelInFlight: true)
 
-    case let .prepareShare(title, url, imageURL):
+    case let .prepareShare(content):
       return .run { send in
-        var items: [Any] = [title, url]
+        var items: [Any] = [content.displayText]
 
-        if let imageURL,
-           let remoteURL = URL(string: imageURL),
-           let (data, _) = try? await URLSession.shared.data(from: remoteURL),
-           let image = UIImage(data: data)
+        if let url = URL(string: content.url) {
+          items.append(url)
+        } else {
+          items.append(content.url)
+        }
+
+        if let data = content.snapshotData, let image = UIImage(data: data) {
+          items.append(image)
+        } else if let thumbnailURL = content.thumbnailURL,
+                  let remoteURL = URL(string: thumbnailURL),
+                  let (data, _) = try? await URLSession.shared.data(from: remoteURL),
+                  let image = UIImage(data: data)
         {
           items.append(image)
         }
@@ -340,8 +362,10 @@ extension PreVoteFeature {
       case let .success(voteResult):
         return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .post, result: voteResult)))
       case let .failure(error):
+        // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.
+        // 재투표가 불가하므로 결과(댓글) 화면으로 이동한다.
         Log.error("[PreVoteFeature] submitPostVote failed: \(error.localizedDescription)")
-        return .none
+        return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
       }
     }
   }
@@ -382,7 +406,7 @@ extension PreVoteFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .dismiss, .voteSubmitted:
+    case .dismiss, .voteSubmitted, .alreadyFinalVoted:
       return .none
     }
   }

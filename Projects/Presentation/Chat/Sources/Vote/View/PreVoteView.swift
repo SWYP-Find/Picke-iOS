@@ -139,7 +139,9 @@ extension PreVoteView {
 
       Spacer()
 
-      Button { send(.shareTapped) } label: {
+      Button {
+        send(.shareTapped(snapshot: captureCardSnapshot()))
+      } label: {
         Image(systemName: "square.and.arrow.up")
           .font(.system(size: 24, weight: .regular))
           .frame(width: 24, height: 24)
@@ -319,6 +321,31 @@ extension PreVoteView {
       config: CustomButtonConfig.primary(.large, height: Self.ctaHeight),
       isEnable: store.isPrimaryButtonEnabled
     )
+  }
+}
+
+// MARK: - Share snapshot
+
+extension PreVoteView {
+  private static let snapshotWidth: CGFloat = 360
+
+  @MainActor
+  private func captureCardSnapshot() -> Data? {
+    guard let battle = store.battle else { return nil }
+    let renderer = ImageRenderer(content: shareSnapshotCard(battle))
+    renderer.scale = UIScreen.main.scale
+    return renderer.uiImage?.pngData()
+  }
+
+  @ViewBuilder
+  private func shareSnapshotCard(_ battle: PreVoteBattle) -> some View {
+    VStack(spacing: Self.contentToOptionSpacing) {
+      contentSection(battle)
+      optionSection(battle)
+    }
+    .padding(16)
+    .frame(width: Self.snapshotWidth)
+    .background(Color.beige50)
   }
 }
 
