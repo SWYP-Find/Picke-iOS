@@ -37,4 +37,11 @@ public struct BattlePerspectiveOptionDTO: Decodable {
   public let stance: String?
 }
 
+public struct CreatePerspectiveDataDTO: Decodable {
+  public let perspectiveId: Int
+  public let status: String?
+  public let createdAt: String?
+}
+
 public typealias BattlePerspectivePageResponseDTO = BaseResponseDTO<BattlePerspectivePageDataDTO>
+public typealias CreatePerspectiveResponseDTO = BaseResponseDTO<CreatePerspectiveDataDTO>
