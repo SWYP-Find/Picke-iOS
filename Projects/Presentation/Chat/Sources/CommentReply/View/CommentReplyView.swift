@@ -8,6 +8,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Kingfisher
 
 @ViewAction(for: CommentReplyFeature.self)
 public struct CommentReplyView: View {
@@ -22,11 +23,15 @@ public struct CommentReplyView: View {
     VStack(spacing: 0) {
       navigationBar()
       ScrollView(showsIndicators: false) {
-        VStack(spacing: 0) {
-          parentCommentSection()
-          replySection()
+        if store.isLoadingReplies, store.replies.isEmpty {
+          CommentReplySkeletonView()
+        } else {
+          VStack(spacing: 0) {
+            parentCommentSection()
+            replySection()
+          }
+          .padding(.bottom, 16)
         }
-        .padding(.bottom, 16)
       }
       .scrollDismissesKeyboard(.interactively)
       inputBar()
@@ -39,6 +44,7 @@ public struct CommentReplyView: View {
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
+    .onAppear { send(.onAppear) }
   }
 }
 
@@ -85,8 +91,10 @@ private extension CommentReplyView {
     VStack(spacing: 0) {
       commentCard(
         author: store.parentComment.author,
+        imageURL: store.parentComment.authorImageURL,
         timeAgo: store.parentComment.timeAgo,
         option: store.parentComment.option,
+        optionLabel: store.parentComment.optionLabel ?? "",
         content: store.parentComment.content,
         replyCount: store.parentComment.replyCount,
         likeCount: store.parentComment.likeCount,
@@ -118,14 +126,17 @@ private extension CommentReplyView {
       ForEach(store.replies) { reply in
         commentCard(
           author: reply.author,
+          imageURL: reply.authorImageURL,
           timeAgo: reply.timeAgo,
           option: reply.option,
+          optionLabel: store.parentComment.optionLabel ?? "",
           content: reply.content,
           replyCount: nil,
           likeCount: reply.likeCount,
           isLiked: reply.isLiked,
           background: .beige50,
           showsReplyCount: false,
+          moreAction: { send(.replyMoreTapped(reply.id)) },
           likeAction: { send(.replyLikeTapped(reply.id)) }
         )
       }
@@ -136,18 +147,28 @@ private extension CommentReplyView {
 
   func commentCard(
     author: String,
+    imageURL: String?,
     timeAgo: String,
     option: CommentOption,
+    optionLabel: String,
     content: String,
     replyCount: Int?,
     likeCount: Int,
     isLiked: Bool,
     background: Color,
     showsReplyCount: Bool,
+    moreAction: (() -> Void)? = nil,
     likeAction: @escaping () -> Void
   ) -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      commentHeader(author: author, timeAgo: timeAgo, option: option)
+      commentHeader(
+        author: author,
+        imageURL: imageURL,
+        timeAgo: timeAgo,
+        option: option,
+        optionLabel: optionLabel,
+        moreAction: moreAction
+      )
 
       Text(content)
         .pretendardFont(family: .Regular, size: 13)
@@ -185,18 +206,28 @@ private extension CommentReplyView {
 
   func commentHeader(
     author: String,
+    imageURL: String?,
     timeAgo: String,
-    option: CommentOption
+    option: CommentOption,
+    optionLabel: String,
+    moreAction _: (() -> Void)?
   ) -> some View {
     HStack(alignment: .top, spacing: 8) {
       Circle()
         .fill(.beige600)
         .frame(width: 36, height: 36)
         .overlay {
-          Text(String(author.prefix(1)))
-            .pretendardFont(family: .SemiBold, size: 13)
-            .foregroundStyle(.primary500)
+          if let imageURL, let url = URL(string: imageURL) {
+            KFImage(url)
+              .resizable()
+              .scaledToFill()
+          } else {
+            Text(String(author.prefix(1)))
+              .pretendardFont(family: .SemiBold, size: 13)
+              .foregroundStyle(.primary500)
+          }
         }
+        .clipShape(Circle())
 
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 6) {
@@ -210,7 +241,7 @@ private extension CommentReplyView {
             .foregroundStyle(.neutral300)
         }
 
-        optionBadge(option)
+        optionBadge(label: optionLabel, option: option)
       }
 
       Spacer()
@@ -222,13 +253,13 @@ private extension CommentReplyView {
     }
   }
 
-  func optionBadge(_ option: CommentOption) -> some View {
-    Text(option.label == "A" ? "변기는 변기다" : "예술이다")
+  func optionBadge(label: String, option: CommentOption) -> some View {
+    Text(label)
       .pretendardFont(family: .Medium, size: 12)
       .foregroundStyle(option == .a ? .primary500 : .beige50)
       .padding(.horizontal, option == .a ? 4 : 6)
       .padding(.vertical, 2)
-      .background(option == .a ? Color.beige600 : Color.primary500, in: RoundedRectangle(cornerRadius: 2))
+      .background(option == .a ? .beige600 : .primary500, in: RoundedRectangle(cornerRadius: 2))
   }
 
   func actionLabel(

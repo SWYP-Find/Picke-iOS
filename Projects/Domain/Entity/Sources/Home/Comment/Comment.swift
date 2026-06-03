@@ -67,32 +67,38 @@ public struct CommentReplyItem: Equatable, Identifiable {
   public let id: UUID
   public var commentId: Int?
   public var author: String
+  public var authorImageURL: String?
   public var timeAgo: String
   public var option: CommentOption
   public var content: String
   public var likeCount: Int
   public var isLiked: Bool
+  public var isMine: Bool
   public var createdOrder: Int
 
   public init(
     id: UUID = UUID(),
     commentId: Int? = nil,
     author: String,
+    authorImageURL: String? = nil,
     timeAgo: String,
     option: CommentOption,
     content: String,
     likeCount: Int,
     isLiked: Bool = false,
+    isMine: Bool = false,
     createdOrder: Int
   ) {
     self.id = id
     self.commentId = commentId
     self.author = author
+    self.authorImageURL = authorImageURL
     self.timeAgo = timeAgo
     self.option = option
     self.content = content
     self.likeCount = likeCount
     self.isLiked = isLiked
+    self.isMine = isMine
     self.createdOrder = createdOrder
   }
 
@@ -107,11 +113,13 @@ public struct CommentReplyItem: Equatable, Identifiable {
       id: id,
       commentId: item.commentId,
       author: item.user.nickname,
+      authorImageURL: item.user.characterImageUrl,
       timeAgo: Self.relativeTimeString(from: item.createdAt),
       option: parentOption,
       content: item.content,
       likeCount: item.likeCount,
       isLiked: item.isLiked,
+      isMine: item.isMine,
       createdOrder: order
     )
   }
@@ -206,6 +214,7 @@ public struct CommentItem: Equatable, Identifiable {
   public var replyCount: Int
   public var likeCount: Int
   public var isLiked: Bool
+  public var isMine: Bool
   public var createdOrder: Int
 
   public init(
@@ -220,6 +229,7 @@ public struct CommentItem: Equatable, Identifiable {
     replyCount: Int,
     likeCount: Int,
     isLiked: Bool = false,
+    isMine: Bool = false,
     createdOrder: Int
   ) {
     self.id = id
@@ -233,6 +243,7 @@ public struct CommentItem: Equatable, Identifiable {
     self.replyCount = replyCount
     self.likeCount = likeCount
     self.isLiked = isLiked
+    self.isMine = isMine
     self.createdOrder = createdOrder
   }
 
@@ -254,6 +265,7 @@ public struct CommentItem: Equatable, Identifiable {
       replyCount: item.commentCount,
       likeCount: item.likeCount,
       isLiked: item.isLiked,
+      isMine: item.isMyPerspective,
       createdOrder: order
     )
   }

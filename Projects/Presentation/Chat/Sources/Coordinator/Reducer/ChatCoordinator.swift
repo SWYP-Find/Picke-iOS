@@ -83,6 +83,10 @@ extension ChatCoordinator {
       }
       return .none
 
+    case let .routeAction(_, action: .preVote(.delegate(.alreadyFinalVoted(battleId)))):
+      state.routes.push(.comment(.init(battleId: battleId)))
+      return .none
+
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
       return .send(.view(.backAction))
 

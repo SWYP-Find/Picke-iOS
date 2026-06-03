@@ -18,6 +18,7 @@ import DomainInterface
 import Entity
 import LogMacro
 import UseCase
+import DesignSystem
 
 @Reducer
 public struct CommentReplyFeature {
@@ -34,6 +35,16 @@ public struct CommentReplyFeature {
     public var nextCursor: String?
     public var hasNext: Bool = false
     public var editingCommentId: Int?
+    /// "…" 메뉴를 띄울 대상 답글 id.
+    public var menuTargetReplyId: UUID?
+    /// 삭제 확인 알럿 대상 commentId.
+    public var deleteTargetCommentId: Int?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
+
+    public var menuTargetReply: CommentReplyItem? {
+      guard let id = menuTargetReplyId else { return nil }
+      return replies.first { $0.id == id }
+    }
 
     public var isSendEnabled: Bool {
       !replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -53,6 +64,7 @@ public struct CommentReplyFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
+    case scope(ScopeAction)
     case delegate(DelegateAction)
   }
 
@@ -66,6 +78,16 @@ public struct CommentReplyFeature {
     case beginEditing(commentId: Int, content: String)
     case cancelEditing
     case deleteTapped(commentId: Int)
+    case replyMoreTapped(UUID)
+    case menuDismissed
+    case replyEditTapped(UUID)
+    case replyDeleteTapped(UUID)
+    case replyReportTapped(UUID)
+  }
+
+  @CasePathable
+  public enum ScopeAction: Equatable {
+    case customAlert(PresentationAction<CustomAlertAction>)
   }
 
   public enum AsyncAction: Equatable {
@@ -76,6 +98,7 @@ public struct CommentReplyFeature {
     case deleteReply(commentId: Int)
     case toggleParentLike(currentlyLiked: Bool)
     case toggleReplyLike(commentId: Int, currentlyLiked: Bool)
+    case fetchParentLikes
   }
 
   public enum InnerAction: Equatable {
@@ -86,6 +109,7 @@ public struct CommentReplyFeature {
     case deleteResponse(Result<Int, CommentError>)
     case parentLikeResponse(Result<CommentLikeResult, CommentError>)
     case replyLikeResponse(Result<CommentLikeResult, CommentError>)
+    case parentLikesResponse(Result<CommentLikeResult, CommentError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -124,7 +148,40 @@ public struct CommentReplyFeature {
       case let .inner(innerAction):
         return handleInnerAction(state: &state, action: innerAction)
 
+      case let .scope(scopeAction):
+        return handleScopeAction(state: &state, action: scopeAction)
+
       case .delegate:
+        return .none
+      }
+    }
+    .ifLet(\.$customAlert, action: \.scope.customAlert) {
+      CustomConfirmAlert()
+    }
+  }
+
+  private func handleScopeAction(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .customAlert(alertAction):
+      switch alertAction {
+      case let .presented(customAlertAction):
+        switch customAlertAction {
+        case .confirmTapped:
+          state.customAlert = nil
+          guard let commentId = state.deleteTargetCommentId else { return .none }
+          state.deleteTargetCommentId = nil
+          return .send(.async(.deleteReply(commentId: commentId)))
+        case .cancelTapped:
+          state.deleteTargetCommentId = nil
+          state.customAlert = nil
+          return .none
+        }
+      case .dismiss:
+        state.deleteTargetCommentId = nil
+        state.customAlert = nil
         return .none
       }
     }
@@ -142,6 +199,7 @@ extension CommentReplyFeature {
     case .onAppear:
       return .merge(
         .send(.async(.fetchParent)),
+        .send(.async(.fetchParentLikes)),
         .send(.async(.fetchReplies(reset: true)))
       )
 
@@ -185,6 +243,37 @@ extension CommentReplyFeature {
 
     case let .deleteTapped(commentId):
       return .send(.async(.deleteReply(commentId: commentId)))
+
+    case let .replyMoreTapped(id):
+      state.menuTargetReplyId = id
+      return .none
+
+    case .menuDismissed:
+      state.menuTargetReplyId = nil
+      return .none
+
+    case let .replyEditTapped(id):
+      state.menuTargetReplyId = nil
+      guard let reply = state.replies.first(where: { $0.id == id }),
+            let commentId = reply.commentId
+      else { return .none }
+      state.editingCommentId = commentId
+      state.replyText = reply.content
+      return .none
+
+    case let .replyDeleteTapped(id):
+      state.menuTargetReplyId = nil
+      guard let reply = state.replies.first(where: { $0.id == id }),
+            let commentId = reply.commentId
+      else { return .none }
+      state.deleteTargetCommentId = commentId
+      state.customAlert = .deleteComment()
+      return .none
+
+    case let .replyReportTapped(id):
+      state.menuTargetReplyId = nil
+      Log.debug("[CommentReplyFeature] report reply tapped: \(id)")
+      return .none
     }
   }
 }
@@ -257,13 +346,14 @@ extension CommentReplyFeature {
       .cancellable(id: CancelID.mutate, cancelInFlight: false)
 
     case let .toggleParentLike(currentlyLiked):
-      let commentId = state.perspectiveId
-      return .run { [repository = commentUseCase] send in
+      // 부모는 관점(perspective) → perspectives/{id}/likes 사용.
+      let perspectiveId = state.perspectiveId
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           if currentlyLiked {
-            try await repository.unlikeComment(commentId: commentId)
+            try await repository.unlikePerspective(perspectiveId: perspectiveId)
           } else {
-            try await repository.likeComment(commentId: commentId)
+            try await repository.likePerspective(perspectiveId: perspectiveId)
           }
         }
         .mapError(CommentError.from)
@@ -284,6 +374,16 @@ extension CommentReplyFeature {
         return await send(.inner(.replyLikeResponse(result)))
       }
       .cancellable(id: CancelID.like, cancelInFlight: false)
+
+    case .fetchParentLikes:
+      let perspectiveId = state.perspectiveId
+      return .run { [repository = perspectiveUseCase] send in
+        let result = await Result {
+          try await repository.fetchPerspectiveLikes(perspectiveId: perspectiveId)
+        }
+        .mapError(CommentError.from)
+        return await send(.inner(.parentLikesResponse(result)))
+      }
     }
   }
 }
@@ -370,6 +470,15 @@ extension CommentReplyFeature {
         }
       case let .failure(error):
         Log.error("[CommentReplyFeature] toggleReplyLike failed: \(error.localizedDescription)")
+      }
+      return .none
+
+    case let .parentLikesResponse(result):
+      switch result {
+      case let .success(payload):
+        state.parentComment.likeCount = payload.likeCount
+      case let .failure(error):
+        Log.error("[CommentReplyFeature] fetchParentLikes failed: \(error.localizedDescription)")
       }
       return .none
     }

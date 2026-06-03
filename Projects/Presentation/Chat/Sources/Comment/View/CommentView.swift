@@ -34,6 +34,19 @@ public struct CommentView: View {
         .padding(.bottom, 16)
       }
       .scrollDismissesKeyboard(.interactively)
+      .simultaneousGesture(
+        DragGesture(minimumDistance: 24)
+          .onEnded { value in
+            // 좌우 스와이프로 필터 탭(전체/옵션A/옵션B) 전환
+            guard abs(value.translation.width) > abs(value.translation.height),
+                  abs(value.translation.width) > 50,
+                  let next = adjacentFilter(forward: value.translation.width < 0)
+            else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+              send(.filterTapped(next))
+            }
+          }
+      )
       inputBar()
     }
     .background(Color.beige200.ignoresSafeArea())
@@ -51,6 +64,40 @@ public struct CommentView: View {
       }
     }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
+    .overlay {
+      if let comment = store.menuTargetComment {
+        BottomActionSheet(
+          items: menuItems(for: comment),
+          onDismiss: { send(.menuDismissed) }
+        )
+      }
+    }
+    .animation(.easeInOut(duration: 0.2), value: store.menuTargetCommentID)
+  }
+
+  /// "…" 메뉴 항목 — 내 글: 수정/삭제, 남 글: 신고.
+  private func menuItems(for comment: CommentItem) -> [BottomActionItem] {
+    if comment.isMine {
+      return [
+        BottomActionItem(title: "수정", systemImage: "pencil") { send(.editTapped(comment.id)) },
+        BottomActionItem(title: "삭제", systemImage: "trash", isDestructive: true) { send(.deleteTapped(comment.id)) },
+      ]
+    } else {
+      return [
+        BottomActionItem(title: "신고", systemImage: "exclamationmark.bubble", isDestructive: true) {
+          send(.reportTapped(comment.id))
+        },
+      ]
+    }
+  }
+
+  /// 현재 선택된 필터 기준 인접 필터(스와이프 방향). 범위를 벗어나면 nil.
+  private func adjacentFilter(forward: Bool) -> CommentFilter? {
+    let all = CommentFilter.allCases
+    guard let idx = all.firstIndex(of: store.selectedFilter) else { return nil }
+    let nextIdx = forward ? idx + 1 : idx - 1
+    guard all.indices.contains(nextIdx) else { return nil }
+    return all[nextIdx]
   }
 }
 
@@ -76,7 +123,12 @@ private extension CommentView {
 
       Spacer()
 
-      Color.clear.frame(width: 24, height: 24)
+      Button { send(.forwardTapped) } label: {
+        Image(systemName: "chevron.right")
+          .font(.system(size: 18, weight: .regular))
+          .frame(width: 24, height: 24)
+      }
+      .buttonStyle(.plain)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
@@ -99,9 +151,27 @@ private extension CommentView {
       changeBadge()
 
       HStack(alignment: .center, spacing: 12) {
-        voteSide(store.voteSummary.optionA, alignment: .leading)
+        HStack(spacing: 4) {
+          avatarCircle(
+            imageUrl: store.voteSummary.optionA.imageUrl,
+            name: store.voteSummary.optionA.representative
+          )
+          Text(percentText(store.voteSummary.optionA.percentage))
+            .pretendardFont(family: .Medium, size: 12)
+            .foregroundStyle(.neutral500)
+            .fixedSize()
+        }
         voteProgress()
-        voteSide(store.voteSummary.optionB, alignment: .trailing)
+        HStack(spacing: 4) {
+          Text(percentText(store.voteSummary.optionB.percentage))
+            .pretendardFont(family: .Medium, size: 12)
+            .foregroundStyle(.neutral500)
+            .fixedSize()
+          avatarCircle(
+            imageUrl: store.voteSummary.optionB.imageUrl,
+            name: store.voteSummary.optionB.representative
+          )
+        }
       }
     }
     .padding(.horizontal, 16)
@@ -111,29 +181,18 @@ private extension CommentView {
 
   @ViewBuilder
   func changeBadge() -> some View {
-    HStack {
+    HStack(spacing: 4) {
+      Image(systemName: "lightbulb")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.primary500)
       Text(store.voteSummary.changeBadgeTitle)
         .pretendardFont(family: .SemiBold, size: 11)
         .foregroundStyle(.primary500)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
-      Spacer()
     }
-  }
-
-  @ViewBuilder
-  func voteSide(
-    _ option: VoteOptionSummary,
-    alignment: HorizontalAlignment
-  ) -> some View {
-    VStack(alignment: alignment, spacing: 6) {
-      avatarLabel(option.representative)
-      Text(percentText(option.percentage))
-        .pretendardFont(family: .Medium, size: 12)
-        .foregroundStyle(.neutral500)
-    }
-    .frame(width: 52, alignment: alignment == .leading ? .leading : .trailing)
+    .padding(.horizontal, 4)
+    .padding(.vertical, 2)
+    .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+    .frame(maxWidth: .infinity, alignment: .center)
   }
 
   @ViewBuilder
@@ -155,22 +214,22 @@ private extension CommentView {
   }
 
   @ViewBuilder
-  func avatarLabel(_ name: String) -> some View {
-    VStack(spacing: 4) {
-      Circle()
-        .fill(.beige600)
-        .frame(width: 40, height: 40)
-        .overlay {
+  func avatarCircle(imageUrl: String?, name: String) -> some View {
+    Circle()
+      .fill(.beige600)
+      .frame(width: 40, height: 40)
+      .overlay {
+        if let imageUrl, let url = URL(string: imageUrl) {
+          KFImage(url)
+            .resizable()
+            .scaledToFill()
+        } else {
           Text(String(name.prefix(1)))
             .pretendardFont(family: .SemiBold, size: 14)
             .foregroundStyle(.primary500)
         }
-
-      Text(name)
-        .pretendardFont(family: .Medium, size: 12)
-        .foregroundStyle(.neutral500)
-        .lineLimit(1)
-    }
+      }
+      .clipShape(Circle())
   }
 }
 
@@ -221,6 +280,8 @@ private extension CommentView {
       Text(title)
         .pretendardFont(family: .Medium, size: 14)
         .foregroundStyle(isSelected ? .primary500 : .neutral300)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -263,13 +324,35 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func commentList() -> some View {
-    VStack(spacing: 12) {
-      ForEach(store.filteredComments) { comment in
-        commentCard(comment)
+    Group {
+      if store.isLoadingComments, store.comments.isEmpty {
+        CommentSkeletonView()
+      } else if store.comments.isEmpty {
+        emptyState()
+      } else {
+        VStack(spacing: 12) {
+          ForEach(store.comments) { comment in
+            commentCard(comment)
+          }
+        }
       }
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 24)
+  }
+
+  @ViewBuilder
+  func emptyState() -> some View {
+    VStack(spacing: 8) {
+      Image(systemName: "bubble.left.and.bubble.right")
+        .font(.system(size: 32, weight: .light))
+        .foregroundStyle(.neutral300)
+      Text("아직 등록된 의견이 없어요")
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(.neutral400)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 60)
   }
 
   @ViewBuilder

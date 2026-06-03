@@ -23,6 +23,8 @@ public struct CommentFeature {
   public struct State: Equatable {
     public var battleId: Int = 0
     public var perspectiveId: Int?
+    /// 관점 등록 시 사용할 내 옵션(투표한 진영) optionId.
+    public var myOptionId: Int?
     public var title: String = ""
     public var voteSummary: VoteSummary = .mock
     public var isLoadingStats: Bool = false
@@ -33,7 +35,20 @@ public struct CommentFeature {
     public var selectedFilter: CommentFilter = .all
     public var selectedSort: CommentSort = .popular
     public var reportTargetCommentID: UUID?
+    /// "…" 메뉴(수정/삭제 또는 신고)를 띄울 대상 댓글 id.
+    public var menuTargetCommentID: UUID?
+    /// 수정 중인 관점 perspectiveId (입력창이 수정 모드).
+    public var editingPerspectiveId: Int?
+    /// 삭제 확인 알럿의 대상 perspectiveId.
+    public var deleteTargetPerspectiveId: Int?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
+
+    /// 메뉴 대상 댓글(있으면 confirmationDialog 표시).
+    public var menuTargetComment: CommentItem? {
+      guard let id = menuTargetCommentID else { return nil }
+      return comments.first { $0.id == id }
+    }
+
     public var comments: [CommentItem] = []
     public var commentText: String = ""
 
@@ -51,7 +66,6 @@ public struct CommentFeature {
     public var isSendEnabled: Bool {
       !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         && !isSubmitting
-        && perspectiveId != nil
     }
 
     public init(battleId: Int = 0) {
@@ -72,6 +86,7 @@ public struct CommentFeature {
   public enum View {
     case onAppear
     case backButtonTapped
+    case forwardTapped
     case shareTapped
     case filterTapped(CommentFilter)
     case sortTapped(CommentSort)
@@ -80,6 +95,10 @@ public struct CommentFeature {
     case reportButtonTapped(UUID)
     case reportConfirmTapped(UUID)
     case reportPopupDismissed
+    case menuDismissed
+    case editTapped(UUID)
+    case deleteTapped(UUID)
+    case reportTapped(UUID)
     case likeTapped(UUID)
     case sendTapped
   }
@@ -90,7 +109,10 @@ public struct CommentFeature {
     case fetchVoteStats
     case fetchPerspectives(reset: Bool)
     case toggleLike(commentId: Int, currentlyLiked: Bool)
-    case createComment(perspectiveId: Int, content: String)
+    case createComment(content: String)
+    case updatePerspective(perspectiveId: Int, content: String)
+    case deletePerspective(perspectiveId: Int)
+    case fetchPerspectiveLikes(perspectiveId: Int)
   }
 
   public enum InnerAction: Equatable {
@@ -99,7 +121,9 @@ public struct CommentFeature {
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
-    case createCommentResponse(Result<PerspectiveCommentMutationResult, CommentError>)
+    case createCommentResponse(Result<BattlePerspective, BattleError>)
+    case mutationFinished
+    case perspectiveLikesResponse(Result<CommentLikeResult, CommentError>)
   }
 
   @CasePathable
@@ -177,6 +201,11 @@ extension CommentFeature {
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
+    case .forwardTapped:
+      // 앱바 우측 > : 첫 댓글의 대댓글(CommentReplyView) 화면으로 이동
+      guard let comment = state.comments.first else { return .none }
+      return .send(.delegate(.openReply(comment)))
+
     case .shareTapped:
       return .none
 
@@ -186,6 +215,34 @@ extension CommentFeature {
       return .send(.delegate(.openReply(comment)))
 
     case let .reportButtonTapped(id):
+      // "…" 탭 → 메뉴 표시 (내 글: 수정/삭제, 남 글: 신고)
+      state.menuTargetCommentID = id
+      return .none
+
+    case .menuDismissed:
+      state.menuTargetCommentID = nil
+      return .none
+
+    case let .editTapped(id):
+      state.menuTargetCommentID = nil
+      guard let comment = state.comments.first(where: { $0.id == id }),
+            let pid = comment.perspectiveId
+      else { return .none }
+      state.editingPerspectiveId = pid
+      state.commentText = comment.content
+      return .none
+
+    case let .deleteTapped(id):
+      state.menuTargetCommentID = nil
+      guard let comment = state.comments.first(where: { $0.id == id }),
+            let pid = comment.perspectiveId
+      else { return .none }
+      state.deleteTargetPerspectiveId = pid
+      state.customAlert = .deletePerspective()
+      return .none
+
+    case let .reportTapped(id):
+      state.menuTargetCommentID = nil
       state.reportTargetCommentID = id
       state.customAlert = .report()
       return .none
@@ -221,13 +278,14 @@ extension CommentFeature {
 
     case .sendTapped:
       let text = state.commentText.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !text.isEmpty,
-            let pid = state.perspectiveId,
-            !state.isSubmitting
-      else { return .none }
+      guard !text.isEmpty, !state.isSubmitting else { return .none }
       state.isSubmitting = true
       state.commentText = ""
-      return .send(.async(.createComment(perspectiveId: pid, content: text)))
+      if let editId = state.editingPerspectiveId {
+        state.editingPerspectiveId = nil
+        return .send(.async(.updatePerspective(perspectiveId: editId, content: text)))
+      }
+      return .send(.async(.createComment(content: text)))
     }
   }
 
@@ -241,21 +299,26 @@ extension CommentFeature {
       case let .presented(customAlertAction):
         switch customAlertAction {
         case .confirmTapped:
-          guard let id = state.reportTargetCommentID else {
-            state.customAlert = nil
-            return .none
-          }
           state.customAlert = nil
-          return .send(.view(.reportConfirmTapped(id)))
+          if let pid = state.deleteTargetPerspectiveId {
+            state.deleteTargetPerspectiveId = nil
+            return .send(.async(.deletePerspective(perspectiveId: pid)))
+          }
+          if let id = state.reportTargetCommentID {
+            return .send(.view(.reportConfirmTapped(id)))
+          }
+          return .none
 
         case .cancelTapped:
           state.reportTargetCommentID = nil
+          state.deleteTargetPerspectiveId = nil
           state.customAlert = nil
           return .none
         }
 
       case .dismiss:
         state.reportTargetCommentID = nil
+        state.deleteTargetPerspectiveId = nil
         state.customAlert = nil
         return .none
       }
@@ -303,9 +366,17 @@ extension CommentFeature {
 
     case let .fetchPerspectives(reset):
       state.isLoadingComments = true
+      // 초기/정렬/필터/등록 후 reset 시 리스트를 비워 스켈레톤이 노출되도록 한다.
+      if reset { state.comments = [] }
       let battleId = state.battleId
       let cursor = reset ? nil : state.nextCursor
-      let optionLabel = state.selectedFilter.queryLabel
+      let optionId: Int? = {
+        switch state.selectedFilter {
+        case .all: return nil
+        case .optionA: return state.voteSummary.optionA.optionId > 0 ? state.voteSummary.optionA.optionId : nil
+        case .optionB: return state.voteSummary.optionB.optionId > 0 ? state.voteSummary.optionB.optionId : nil
+        }
+      }()
       let sort = state.selectedSort.perspectiveSort
       return .run { [repository = battleUseCase] send in
         let result = await Result {
@@ -313,7 +384,7 @@ extension CommentFeature {
             battleId: battleId,
             cursor: cursor,
             size: 20,
-            optionLabel: optionLabel,
+            optionId: optionId,
             sort: sort
           )
         }
@@ -323,12 +394,13 @@ extension CommentFeature {
       .cancellable(id: CancelID.fetchPerspectives, cancelInFlight: true)
 
     case let .toggleLike(commentId, currentlyLiked):
-      return .run { [repository = commentUseCase] send in
+      // commentId 는 관점(perspective) id. 관점 좋아요는 perspectives/{id}/likes 사용.
+      return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
           if currentlyLiked {
-            try await repository.unlikeComment(commentId: commentId)
+            try await repository.unlikePerspective(perspectiveId: commentId)
           } else {
-            try await repository.likeComment(commentId: commentId)
+            try await repository.likePerspective(perspectiveId: commentId)
           }
         }
         .mapError(CommentError.from)
@@ -336,15 +408,39 @@ extension CommentFeature {
       }
       .cancellable(id: CancelID.toggleLike, cancelInFlight: false)
 
-    case let .createComment(perspectiveId, content):
-      return .run { [repository = perspectiveUseCase] send in
+    case let .createComment(content):
+      let battleId = state.battleId
+      // 관점 등록 optionId: 내 관점/투표 진영 > 첫 옵션 순으로 결정.
+      let optionId = state.myOptionId ?? state.voteSummary.optionA.optionId
+      return .run { [battle = battleUseCase] send in
         let result = await Result {
-          try await repository.createComment(perspectiveId: perspectiveId, content: content)
+          try await battle.createPerspective(battleId: battleId, content: content, optionId: optionId)
         }
-        .mapError(CommentError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.createCommentResponse(result)))
       }
       .cancellable(id: CancelID.createComment, cancelInFlight: false)
+
+    case let .updatePerspective(perspectiveId, content):
+      return .run { [repository = perspectiveUseCase] send in
+        try? await repository.updatePerspective(perspectiveId: perspectiveId, content: content)
+        await send(.inner(.mutationFinished))
+      }
+
+    case let .deletePerspective(perspectiveId):
+      return .run { [repository = perspectiveUseCase] send in
+        try? await repository.deletePerspective(perspectiveId: perspectiveId)
+        await send(.inner(.mutationFinished))
+      }
+
+    case let .fetchPerspectiveLikes(perspectiveId):
+      return .run { [repository = perspectiveUseCase] send in
+        let result = await Result {
+          try await repository.fetchPerspectiveLikes(perspectiveId: perspectiveId)
+        }
+        .mapError(CommentError.from)
+        return await send(.inner(.perspectiveLikesResponse(result)))
+      }
     }
   }
 
@@ -357,6 +453,27 @@ extension CommentFeature {
       switch result {
       case let .success(detail):
         state.title = detail.battleInfo.title
+        // 필터 탭/아바타에 쓸 옵션 title·대표를 배틀 상세에서 채운다.
+        // (vote-stats 가 비어 있어도 실제 A/B title 이 노출되도록)
+        let options = detail.battleInfo.options
+        if options.count >= 2 {
+          state.voteSummary.optionA.optionId = options[0].optionId
+          state.voteSummary.optionA.title = options[0].title
+          state.voteSummary.optionA.representative = options[0].representative
+          state.voteSummary.optionA.imageUrl = options[0].imageUrl
+          state.voteSummary.optionB.optionId = options[1].optionId
+          state.voteSummary.optionB.title = options[1].title
+          state.voteSummary.optionB.representative = options[1].representative
+          state.voteSummary.optionB.imageUrl = options[1].imageUrl
+        }
+        // 내 관점이 아직 없으면 투표 진영(userVoteStatus)으로 등록 optionId 결정.
+        if state.myOptionId == nil, options.count >= 2 {
+          switch detail.userVoteStatus {
+          case .pro: state.myOptionId = options[0].optionId
+          case .con: state.myOptionId = options[1].optionId
+          default: break
+          }
+        }
       case let .failure(error):
         Log.error("[CommentFeature] fetchBattle failed: \(error.localizedDescription)")
       }
@@ -366,6 +483,7 @@ extension CommentFeature {
       switch result {
       case let .success(perspective):
         state.perspectiveId = perspective?.perspectiveId
+        if let optionId = perspective?.option.optionId { state.myOptionId = optionId }
       case let .failure(error):
         Log.error("[CommentFeature] fetchMyPerspective failed: \(error.localizedDescription)")
       }
@@ -391,6 +509,11 @@ extension CommentFeature {
         state.comments = reset ? mapped : state.comments + mapped
         state.nextCursor = page.nextCursor
         state.hasNext = page.hasNext
+        // 표시되는 각 관점의 좋아요 수를 GET /perspectives/{id}/likes 로 조회.
+        let likeEffects: [Effect<Action>] = mapped.compactMap { item in
+          item.perspectiveId.map { .send(.async(.fetchPerspectiveLikes(perspectiveId: $0))) }
+        }
+        return likeEffects.isEmpty ? .none : .merge(likeEffects)
       case let .failure(error):
         Log.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)")
       }
@@ -417,6 +540,20 @@ extension CommentFeature {
         Log.error("[CommentFeature] createComment failed: \(error.localizedDescription)")
         return .none
       }
+
+    case .mutationFinished:
+      // 관점 수정/삭제 완료 → 입력 상태 복구 + 목록 갱신
+      state.isSubmitting = false
+      return .send(.async(.fetchPerspectives(reset: true)))
+
+    case let .perspectiveLikesResponse(result):
+      if case let .success(payload) = result,
+         let index = state.comments.firstIndex(where: { $0.perspectiveId == payload.perspectiveId })
+      {
+        // GET 은 좋아요 "수" 조회 용도. isLiked 는 목록 응답 값을 신뢰하고 덮어쓰지 않는다.
+        state.comments[index].likeCount = payload.likeCount
+      }
+      return .none
     }
   }
 
@@ -432,15 +569,19 @@ extension CommentFeature {
     return VoteSummary(
       changeBadgeTitle: fallback.changeBadgeTitle,
       optionA: VoteOptionSummary(
-        label: a.label ?? "A",
-        title: a.title,
-        representative: a.stance.isEmpty ? fallback.optionA.representative : a.stance,
+        optionId: a.optionId,
+        label: a.label ?? fallback.optionA.label,
+        title: a.title.isEmpty ? fallback.optionA.title : a.title,
+        representative: fallback.optionA.representative,
+        imageUrl: a.imageUrl ?? fallback.optionA.imageUrl,
         percentage: a.ratio
       ),
       optionB: VoteOptionSummary(
-        label: b.label ?? "B",
-        title: b.title,
-        representative: b.stance.isEmpty ? fallback.optionB.representative : b.stance,
+        optionId: b.optionId,
+        label: b.label ?? fallback.optionB.label,
+        title: b.title.isEmpty ? fallback.optionB.title : b.title,
+        representative: fallback.optionB.representative,
+        imageUrl: b.imageUrl ?? fallback.optionB.imageUrl,
         percentage: b.ratio
       )
     )

@@ -81,6 +81,26 @@ public extension CustomAlertState where Action == CustomAlertAction {
     )
   }
 
+  static func deletePerspective() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "관점을 삭제하시겠습니까?",
+      confirmTitle: "삭제하기",
+      cancelTitle: "뒤로가기",
+      isDestructive: true,
+      style: .confirmation
+    )
+  }
+
+  static func deleteComment() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "댓글을 삭제하시겠습니까?",
+      confirmTitle: "삭제하기",
+      cancelTitle: "뒤로가기",
+      isDestructive: true,
+      style: .confirmation
+    )
+  }
+
   static func report() -> CustomAlertState<CustomAlertAction> {
     CustomAlertState(
       title: "",
