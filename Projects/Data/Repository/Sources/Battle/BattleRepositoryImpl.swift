@@ -119,20 +119,26 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     content: String,
     optionId: Int
   ) async throws -> BattlePerspective {
-    let dto: BaseResponseDTO<BattlePerspectiveDTO> = try await provider.request(
+    let dto: CreatePerspectiveResponseDTO = try await provider.request(
       .createPerspective(
         battleId: battleId,
         body: CreatePerspectiveRequest(content: content, optionId: optionId)
       )
     )
 
-    guard let data = dto.data else {
+    guard dto.data != nil else {
       let message = dto.error?.message ?? "댓글 작성 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty createPerspective payload: \(message)")
       throw BattleError.backendError(message)
     }
 
-    return data.toDomain()
+    guard let perspective = try await fetchMyPerspective(battleId: battleId) else {
+      let message = "작성한 댓글을 다시 조회할 수 없습니다"
+      Log.error("[BattleRepositoryImpl] empty created perspective payload: \(message)")
+      throw BattleError.backendError(message)
+    }
+
+    return perspective
   }
 
   public func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective? {
