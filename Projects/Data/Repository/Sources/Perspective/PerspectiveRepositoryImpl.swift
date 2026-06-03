@@ -109,6 +109,17 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
     }
   }
 
+  public func updatePerspective(perspectiveId: Int, content: String) async throws {
+    let dto: BaseResponseDTO<EmptyDTO> = try await provider.request(
+      .updatePerspective(perspectiveId: perspectiveId, body: PerspectiveCommentBody(content: content))
+    )
+
+    if dto.statusCode >= 400 {
+      let message = dto.error?.message ?? "perspective 수정 실패"
+      throw PerspectiveError.backendError(message)
+    }
+  }
+
   public func deletePerspective(perspectiveId: Int) async throws {
     let dto: BaseResponseDTO<String> = try await provider.request(
       .deletePerspective(perspectiveId: perspectiveId)
@@ -118,6 +129,48 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
       let message = dto.error?.message ?? "perspective 삭제 실패"
       throw PerspectiveError.backendError(message)
     }
+  }
+
+  public func likePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    let dto: CommentLikeResponseDTO = try await provider.request(
+      .likePerspective(perspectiveId: perspectiveId)
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "관점 좋아요 응답이 비어 있습니다"
+      Log.error("[PerspectiveRepositoryImpl] empty like payload: \(message)")
+      throw CommentError.backendError(message)
+    }
+
+    return CommentLikeResult(perspectiveId: data.perspectiveId, likeCount: data.likeCount, isLiked: true)
+  }
+
+  public func unlikePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    let dto: CommentLikeResponseDTO = try await provider.request(
+      .unlikePerspective(perspectiveId: perspectiveId)
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "관점 좋아요 취소 응답이 비어 있습니다"
+      Log.error("[PerspectiveRepositoryImpl] empty unlike payload: \(message)")
+      throw CommentError.backendError(message)
+    }
+
+    return CommentLikeResult(perspectiveId: data.perspectiveId, likeCount: data.likeCount, isLiked: false)
+  }
+
+  public func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult {
+    let dto: CommentLikeResponseDTO = try await provider.request(
+      .fetchPerspectiveLikes(perspectiveId: perspectiveId)
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "관점 좋아요 수 응답이 비어 있습니다"
+      Log.error("[PerspectiveRepositoryImpl] empty like payload: \(message)")
+      throw CommentError.backendError(message)
+    }
+
+    return data.toDomain()
   }
 }
 

@@ -47,7 +47,7 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
     battleId _: Int,
     cursor _: String?,
     size _: Int?,
-    optionLabel _: String?,
+    optionId _: Int?,
     sort _: BattlePerspectiveSort?
   ) async throws -> BattlePerspectivePage {
     BattlePerspectivePage(items: [], nextCursor: nil, hasNext: false)

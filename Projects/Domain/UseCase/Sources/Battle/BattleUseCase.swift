@@ -45,14 +45,14 @@ public struct BattleUseCaseImpl: BattleInterface {
     battleId: Int,
     cursor: String?,
     size: Int?,
-    optionLabel: String?,
+    optionId: Int?,
     sort: BattlePerspectiveSort?
   ) async throws -> BattlePerspectivePage {
     return try await battleRepository.fetchPerspectives(
       battleId: battleId,
       cursor: cursor,
       size: size,
-      optionLabel: optionLabel,
+      optionId: optionId,
       sort: sort
     )
   }

@@ -23,7 +23,7 @@ public protocol BattleInterface: Sendable {
     battleId: Int,
     cursor: String?,
     size: Int?,
-    optionLabel: String?,
+    optionId: Int?,
     sort: BattlePerspectiveSort?
   ) async throws -> BattlePerspectivePage
   func createPerspective(

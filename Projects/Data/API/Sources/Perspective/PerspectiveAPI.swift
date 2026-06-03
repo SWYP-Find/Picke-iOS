@@ -11,11 +11,14 @@ public enum PerspectiveAPI {
   case createComment(perspectiveId: Int)
   case updateComment(perspectiveId: Int, commentId: Int)
   case deleteComment(perspectiveId: Int, commentId: Int)
+  case likes(perspectiveId: Int)
 
   public var description: String {
     switch self {
     case let .detail(perspectiveId):
       return "\(perspectiveId)"
+    case let .likes(perspectiveId):
+      return "\(perspectiveId)/likes"
     case let .listLabeledComments(perspectiveId):
       return "\(perspectiveId)/comments/labeled"
     case let .createComment(perspectiveId):

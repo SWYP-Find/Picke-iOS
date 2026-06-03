@@ -21,7 +21,11 @@ public enum PerspectiveService {
   case createComment(perspectiveId: Int, body: PerspectiveCommentBody)
   case updateComment(perspectiveId: Int, commentId: Int, body: PerspectiveCommentBody)
   case deleteComment(perspectiveId: Int, commentId: Int)
+  case updatePerspective(perspectiveId: Int, body: PerspectiveCommentBody)
   case deletePerspective(perspectiveId: Int)
+  case likePerspective(perspectiveId: Int)
+  case unlikePerspective(perspectiveId: Int)
+  case fetchPerspectiveLikes(perspectiveId: Int)
 }
 
 extension PerspectiveService: BaseTargetType {
@@ -41,8 +45,16 @@ extension PerspectiveService: BaseTargetType {
       return PerspectiveAPI.updateComment(perspectiveId: perspectiveId, commentId: commentId).description
     case let .deleteComment(perspectiveId, commentId):
       return PerspectiveAPI.deleteComment(perspectiveId: perspectiveId, commentId: commentId).description
+    case let .updatePerspective(perspectiveId, _):
+      return PerspectiveAPI.detail(perspectiveId: perspectiveId).description
     case let .deletePerspective(perspectiveId):
       return PerspectiveAPI.detail(perspectiveId: perspectiveId).description
+    case let .likePerspective(perspectiveId):
+      return PerspectiveAPI.likes(perspectiveId: perspectiveId).description
+    case let .unlikePerspective(perspectiveId):
+      return PerspectiveAPI.likes(perspectiveId: perspectiveId).description
+    case let .fetchPerspectiveLikes(perspectiveId):
+      return PerspectiveAPI.likes(perspectiveId: perspectiveId).description
     }
   }
 
@@ -50,14 +62,16 @@ extension PerspectiveService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
-    case .detail, .listLabeledComments:
-      .get
-    case .createComment:
-      .post
+    case .detail, .listLabeledComments, .fetchPerspectiveLikes:
+      return .get
+    case .createComment, .likePerspective:
+      return .post
     case .updateComment:
-      .put
-    case .deleteComment, .deletePerspective:
-      .delete
+      return .put
+    case .updatePerspective:
+      return .patch
+    case .deleteComment, .deletePerspective, .unlikePerspective:
+      return .delete
     }
   }
 
@@ -74,9 +88,13 @@ extension PerspectiveService: BaseTargetType {
       return body.toDictionary
     case let .updateComment(_, _, body):
       return body.toDictionary
+    case let .updatePerspective(_, body):
+      return body.toDictionary
     case .deleteComment:
       return nil
     case .deletePerspective:
+      return nil
+    case .likePerspective, .unlikePerspective, .fetchPerspectiveLikes:
       return nil
     }
   }

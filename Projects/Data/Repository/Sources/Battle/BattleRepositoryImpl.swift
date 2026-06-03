@@ -90,7 +90,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     battleId: Int,
     cursor: String?,
     size: Int?,
-    optionLabel: String?,
+    optionId: Int?,
     sort: BattlePerspectiveSort?
   ) async throws -> BattlePerspectivePage {
     let dto: BattlePerspectivePageResponseDTO = try await provider.request(
@@ -99,7 +99,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
         query: PerspectivesQueryRequest(
           cursor: cursor,
           size: size,
-          optionLabel: optionLabel,
+          optionId: optionId,
           sort: sort?.queryValue
         )
       )

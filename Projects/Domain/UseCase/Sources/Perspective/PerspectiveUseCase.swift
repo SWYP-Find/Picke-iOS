@@ -57,8 +57,24 @@ public struct PerspectiveUseCaseImpl: PerspectiveInterface {
     return try await perspectiveRepository.deleteComment(perspectiveId: perspectiveId, commentId: commentId)
   }
 
+  public func updatePerspective(perspectiveId: Int, content: String) async throws {
+    return try await perspectiveRepository.updatePerspective(perspectiveId: perspectiveId, content: content)
+  }
+
   public func deletePerspective(perspectiveId: Int) async throws {
     return try await perspectiveRepository.deletePerspective(perspectiveId: perspectiveId)
+  }
+
+  public func likePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    return try await perspectiveRepository.likePerspective(perspectiveId: perspectiveId)
+  }
+
+  public func unlikePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    return try await perspectiveRepository.unlikePerspective(perspectiveId: perspectiveId)
+  }
+
+  public func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult {
+    return try await perspectiveRepository.fetchPerspectiveLikes(perspectiveId: perspectiveId)
   }
 }
 

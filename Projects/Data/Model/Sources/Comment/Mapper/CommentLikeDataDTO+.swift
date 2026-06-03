@@ -11,7 +11,7 @@ public extension CommentLikeDataDTO {
     CommentLikeResult(
       perspectiveId: perspectiveId,
       likeCount: likeCount,
-      isLiked: isLiked
+      isLiked: isLiked ?? false
     )
   }
 }

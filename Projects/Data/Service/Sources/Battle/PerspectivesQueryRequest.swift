@@ -10,18 +10,18 @@ import Foundation
 public struct PerspectivesQueryRequest: Encodable {
   public let cursor: String?
   public let size: Int?
-  public let optionLabel: String?
+  public let optionId: Int?
   public let sort: String?
 
   public init(
     cursor: String? = nil,
     size: Int? = nil,
-    optionLabel: String? = nil,
+    optionId: Int? = nil,
     sort: String? = nil
   ) {
     self.cursor = cursor
     self.size = size
-    self.optionLabel = optionLabel
+    self.optionId = optionId
     self.sort = sort
   }
 }

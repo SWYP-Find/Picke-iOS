@@ -10,19 +10,6 @@ import Foundations
 
 import AsyncMoya
 
-public struct CreatePerspectiveRequest: Encodable {
-  public let content: String
-  public let optionId: Int
-
-  public init(
-    content: String,
-    optionId: Int
-  ) {
-    self.content = content
-    self.optionId = optionId
-  }
-}
-
 public enum BattleService {
   case detail(battleId: Int)
   case preVote(battleId: Int, body: PreVoteRequest)
