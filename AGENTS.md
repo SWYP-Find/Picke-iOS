@@ -451,6 +451,53 @@ public struct VoteSummary: Equatable { ... }                 // ← Entity 로 �
 
 레퍼런스: `Entity/Sources/Home/Comment.swift` (CommentItem, CommentFilter, CommentSort, CommentReplyItem, VoteSummary)
 
+#### 🗂️ Feature 파일 — Reducer 관련 코드만 (필수)
+
+`XxxFeature.swift` 안에는 **TCA Reducer 구성 요소만** 둔다. presentation 전용 helper 라도 모델/타입은 nested 로 두지 말고 **같은 모듈의 `Model/` 폴더에 별도 파일**로 분리한다.
+
+```swift
+// ✅ Feature 파일은 reducer 구성 요소만
+@Reducer
+public struct PreVoteFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public var shareItem: ShareItem?     // ← top-level 타입 참조
+    // …
+  }
+
+  public enum Action: ViewAction, BindableAction { … }
+  public enum View { case shareTapped(snapshot: Data?) … }
+  public enum AsyncAction: Equatable { case prepareShare(ShareContent) … }
+  public enum InnerAction: Equatable { case sharePrepared(ShareItem) … }
+  nonisolated enum CancelID: Hashable { … }
+
+  @Dependency(\.battleUseCase) private var battleUseCase
+  public var body: some Reducer<State, Action> { … }
+}
+
+// Projects/Presentation/Chat/Sources/Vote/Model/ShareItem.swift
+public struct ShareItem: Equatable, Identifiable { … }
+
+// Projects/Presentation/Chat/Sources/Vote/Model/ShareContent.swift
+public struct ShareContent: Equatable { … }
+
+// ❌ 금지 — Feature 안에 nested 로 같이 선언
+@Reducer
+public struct PreVoteFeature {
+  public struct ShareItem: Equatable, Identifiable { … }    // ← Model/ 로 분리
+  public struct ShareContent: Equatable { … }                // ← Model/ 로 분리
+}
+```
+
+규칙:
+- Feature 파일 (`XxxFeature.swift`) 에는 **`State` / `Action` / `View` / `AsyncAction` / `InnerAction` / `ScopeAction` / `DelegateAction` / `CancelID` / `body` / `@Dependency` 만** 둔다
+- presentation 전용 모델 (`ShareItem`, `ShareContent`, sheet item 등) 은 **같은 모듈의 `Model/` 폴더에 top-level public struct/enum** 으로 분리
+- 도메인 모델은 [위 규칙](#-feature-화면-모델--item--filter--sort-는-entity-모듈에-정의-필수) 대로 `Domain/Entity` 모듈로
+- presentation 모델에 포함되는 헬퍼 (텍스트 빌드 같은 표현 로직) 는 모델 파일 안에 computed property / method 로 함께 둔다 — reducer 가 책임지지 않는다
+- Reducer 안의 helper 함수 (`makeBattle(from:)`, `handleViewAction(state:action:)` 등) 는 Feature 파일에 그대로 둬도 OK — reducer 관련이라는 점이 명확하면 분리 강제하지 않음
+- 파일 위치: `Projects/Presentation/<모듈>/Sources/<도메인>/Model/<TypeName>.swift`
+- 레퍼런스: `Projects/Presentation/Chat/Sources/Vote/Model/ShareItem.swift`, `Projects/Presentation/Chat/Sources/Vote/Model/ShareContent.swift`
+
 #### ⚡ AsyncAction — `Result { try await }` + `mapError` + 단일 `Response` Inner 액션
 
 `do/catch + 별도 Loaded / Failed 액션` 분리하지 말고, `Result` 로 감싸서 단일 `xxxResponse(Result<Success, AuthError>)` Inner 액션으로 보낸다. State 캡쳐는 `[키 = state.xxx]` 형태.
