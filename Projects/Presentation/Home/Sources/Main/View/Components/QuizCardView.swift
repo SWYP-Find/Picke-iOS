@@ -81,7 +81,7 @@ struct QuizCardView: View {
     let isSelected = selectedOption == choice
     let hasAnswered = selectedOption != nil
     Button {
-      if selectedOption == nil { selectedOption = choice }
+      selectedOption = isSelected ? nil : choice
     } label: {
       VStack(spacing: 2) {
         resultBadge(isSelected: isSelected, isCorrect: isCorrect)
@@ -101,7 +101,6 @@ struct QuizCardView: View {
       .opacity(hasAnswered && !isSelected ? 0.5 : 1)
     }
     .buttonStyle(.plain)
-    .disabled(hasAnswered)
   }
 
   @ViewBuilder
