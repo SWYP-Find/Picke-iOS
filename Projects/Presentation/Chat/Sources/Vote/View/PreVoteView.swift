@@ -75,6 +75,9 @@ public struct PreVoteView: View {
               Color.clear
                 .frame(height: Self.contentOverlapTopOffset)
 
+              Spacer()
+                .frame(height: 100)
+
               contentArea(battle)
             }
             .frame(width: proxy.size.width)
@@ -89,6 +92,8 @@ public struct PreVoteView: View {
   }
 
   private static let contentOverlapTopOffset: CGFloat = 280
+  private static let backgroundImageHeight: CGFloat = 512
+  private static let imageToContentGradientHeight: CGFloat = 260
   private static let rootContentSpacing: CGFloat = 40
   private static let contentToOptionSpacing: CGFloat = 32
   private static let optionCardHeight: CGFloat = 106
@@ -116,10 +121,29 @@ extension PreVoteView {
       }
 
       Color.black.opacity(0.4)
+
+      VStack {
+        Spacer()
+        imageToContentGradient()
+      }
     }
     .frame(maxWidth: .infinity)
-    .frame(height: 512)
+    .frame(height: Self.backgroundImageHeight)
     .clipped()
+  }
+
+  @ViewBuilder
+  private func imageToContentGradient() -> some View {
+    LinearGradient(
+      stops: [
+        .init(color: Color.beige50.opacity(0), location: 0),
+        .init(color: Color.beige50.opacity(0.55), location: 0.55),
+        .init(color: .beige50, location: 1),
+      ],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+    .frame(height: Self.imageToContentGradientHeight)
   }
 }
 
@@ -171,7 +195,8 @@ extension PreVoteView {
       LinearGradient(
         stops: [
           .init(color: Color.beige50.opacity(0), location: 0),
-          .init(color: .beige50, location: 0.35),
+          .init(color: Color.beige50.opacity(0.72), location: 0.42),
+          .init(color: .beige50, location: 0.7),
           .init(color: .beige50, location: 1),
         ],
         startPoint: .top,
