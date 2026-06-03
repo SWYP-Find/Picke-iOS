@@ -35,8 +35,8 @@ public struct PreVoteView: View {
     .overlay(alignment: .bottom) {
       if !shouldShowSkeleton {
         primaryButton()
-          .padding(.horizontal, Self.ctaHorizontalPadding)
-          .padding(.bottom, Self.ctaBottomSpacing)
+          .padding(.horizontal, PreVoteLayout.ctaHorizontalPadding)
+          .padding(.bottom, PreVoteLayout.ctaBottomSpacing)
       }
     }
     .overlay(alignment: .top) {
@@ -73,16 +73,17 @@ public struct PreVoteView: View {
           ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
               Color.clear
-                .frame(height: Self.contentOverlapTopOffset)
+                .frame(height: PreVoteLayout.contentOverlapTopOffset)
 
               Spacer()
-                .frame(height: 100)
+                .frame(height: PreVoteLayout.contentGradientSpacerHeight)
 
               contentArea(battle)
             }
             .frame(width: proxy.size.width)
           }
           .scrollBounceBehavior(.basedOnSize)
+          .scrollDisabled(true)
         }
         .ignoresSafeArea(edges: .top)
       }
@@ -91,16 +92,6 @@ public struct PreVoteView: View {
     }
   }
 
-  private static let contentOverlapTopOffset: CGFloat = 280
-  private static let backgroundImageHeight: CGFloat = 512
-  private static let imageToContentGradientHeight: CGFloat = 260
-  private static let rootContentSpacing: CGFloat = 40
-  private static let contentToOptionSpacing: CGFloat = 32
-  private static let optionCardHeight: CGFloat = 106
-  private static let ctaHeight: CGFloat = 52
-  private static let ctaBottomSpacing: CGFloat = 40
-  private static let ctaHorizontalPadding: CGFloat = 16
-  private static let contentBottomSpacing: CGFloat = ctaHeight + ctaBottomSpacing + rootContentSpacing
 }
 
 // MARK: - Background
@@ -128,7 +119,7 @@ extension PreVoteView {
       }
     }
     .frame(maxWidth: .infinity)
-    .frame(height: Self.backgroundImageHeight)
+    .frame(height: PreVoteLayout.backgroundImageHeight)
     .clipped()
   }
 
@@ -136,14 +127,14 @@ extension PreVoteView {
   private func imageToContentGradient() -> some View {
     LinearGradient(
       stops: [
-        .init(color: Color.beige50.opacity(0), location: 0),
-        .init(color: Color.beige50.opacity(0.55), location: 0.55),
+        .init(color: .beige50.opacity(0), location: 0),
+        .init(color: .beige50.opacity(0.55), location: 0.55),
         .init(color: .beige50, location: 1),
       ],
       startPoint: .top,
       endPoint: .bottom
     )
-    .frame(height: Self.imageToContentGradientHeight)
+    .frame(height: PreVoteLayout.imageToContentGradientHeight)
   }
 }
 
@@ -183,19 +174,19 @@ extension PreVoteView {
 extension PreVoteView {
   @ViewBuilder
   private func contentArea(_ battle: PreVoteBattle) -> some View {
-    VStack(spacing: Self.contentToOptionSpacing) {
+    VStack(spacing: PreVoteLayout.contentToOptionSpacing) {
       contentSection(battle)
       optionSection(battle)
     }
-    .padding(.horizontal, 16)
-    .padding(.top, 80)
-    .padding(.bottom, Self.contentBottomSpacing)
+    .padding(.horizontal, PreVoteLayout.contentHorizontalPadding)
+    .padding(.top, PreVoteLayout.contentTopPadding)
+    .padding(.bottom, PreVoteLayout.contentBottomSpacing)
     .frame(maxWidth: .infinity)
     .background(
       LinearGradient(
         stops: [
-          .init(color: Color.beige50.opacity(0), location: 0),
-          .init(color: Color.beige50.opacity(0.72), location: 0.42),
+          .init(color: .beige50.opacity(0), location: 0),
+          .init(color: .beige50.opacity(0.72), location: 0.42),
           .init(color: .beige50, location: 0.7),
           .init(color: .beige50, location: 1),
         ],
@@ -300,7 +291,7 @@ extension PreVoteView {
       }
       .padding(8)
       .frame(maxWidth: .infinity)
-      .frame(height: Self.optionCardHeight)
+      .frame(height: PreVoteLayout.optionCardHeight)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
@@ -343,7 +334,7 @@ extension PreVoteView {
     CustomButton(
       action: { send(.primaryButtonTapped) },
       title: store.primaryButtonTitle,
-      config: CustomButtonConfig.primary(.large, height: Self.ctaHeight),
+      config: CustomButtonConfig.primary(.large, height: PreVoteLayout.ctaHeight),
       isEnable: store.isPrimaryButtonEnabled
     )
   }
@@ -352,8 +343,6 @@ extension PreVoteView {
 // MARK: - Share snapshot
 
 extension PreVoteView {
-  private static let snapshotWidth: CGFloat = 360
-
   @MainActor
   private func captureCardSnapshot() -> Data? {
     guard let battle = store.battle else { return nil }
@@ -364,12 +353,12 @@ extension PreVoteView {
 
   @ViewBuilder
   private func shareSnapshotCard(_ battle: PreVoteBattle) -> some View {
-    VStack(spacing: Self.contentToOptionSpacing) {
+    VStack(spacing: PreVoteLayout.contentToOptionSpacing) {
       contentSection(battle)
       optionSection(battle)
     }
     .padding(16)
-    .frame(width: Self.snapshotWidth)
+    .frame(width: PreVoteLayout.snapshotWidth)
     .background(Color.beige50)
   }
 }
