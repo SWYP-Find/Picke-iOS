@@ -99,6 +99,7 @@ private extension CommentReplyView {
         replyCount: store.parentComment.replyCount,
         likeCount: store.parentComment.likeCount,
         isLiked: store.parentComment.isLiked,
+        isMine: store.parentComment.isMine,
         background: .beige50,
         showsReplyCount: true,
         likeAction: { send(.parentLikeTapped) }
@@ -134,6 +135,7 @@ private extension CommentReplyView {
           replyCount: nil,
           likeCount: reply.likeCount,
           isLiked: reply.isLiked,
+          isMine: reply.isMine,
           background: .beige50,
           showsReplyCount: false,
           moreAction: { send(.replyMoreTapped(reply.id)) },
@@ -155,6 +157,7 @@ private extension CommentReplyView {
     replyCount: Int?,
     likeCount: Int,
     isLiked: Bool,
+    isMine: Bool,
     background: Color,
     showsReplyCount: Bool,
     moreAction: (() -> Void)? = nil,
@@ -167,6 +170,7 @@ private extension CommentReplyView {
         timeAgo: timeAgo,
         option: option,
         optionLabel: optionLabel,
+        isMine: isMine,
         moreAction: moreAction
       )
 
@@ -210,6 +214,7 @@ private extension CommentReplyView {
     timeAgo: String,
     option: CommentOption,
     optionLabel: String,
+    isMine: Bool,
     moreAction _: (() -> Void)?
   ) -> some View {
     HStack(alignment: .top, spacing: 8) {
@@ -236,6 +241,10 @@ private extension CommentReplyView {
             .foregroundStyle(.neutral500)
             .lineLimit(1)
 
+          if isMine {
+            myBadge()
+          }
+
           Text(timeAgo)
             .pretendardFont(family: .SemiBold, size: 10)
             .foregroundStyle(.neutral300)
@@ -251,6 +260,16 @@ private extension CommentReplyView {
         .frame(width: 24, height: 24)
         .foregroundStyle(.neutral300)
     }
+  }
+
+  @ViewBuilder
+  func myBadge() -> some View {
+    Text("나")
+      .pretendardFont(family: .SemiBold, size: 10)
+      .foregroundStyle(.beige50)
+      .padding(.horizontal, 5)
+      .padding(.vertical, 2)
+      .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
   }
 
   func optionBadge(label: String, option: CommentOption) -> some View {

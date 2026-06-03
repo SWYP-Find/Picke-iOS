@@ -404,6 +404,10 @@ private extension CommentView {
           .foregroundStyle(.neutral500)
           .lineLimit(1)
 
+        if comment.isMine {
+          myBadge()
+        }
+
         Text(comment.timeAgo)
           .pretendardFont(family: .Medium, size: 12)
           .foregroundStyle(.neutral300)
@@ -411,6 +415,16 @@ private extension CommentView {
 
       optionBadge(comment)
     }
+  }
+
+  @ViewBuilder
+  func myBadge() -> some View {
+    Text("나")
+      .pretendardFont(family: .SemiBold, size: 10)
+      .foregroundStyle(.beige50)
+      .padding(.horizontal, 5)
+      .padding(.vertical, 2)
+      .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
   }
 
   @ViewBuilder
