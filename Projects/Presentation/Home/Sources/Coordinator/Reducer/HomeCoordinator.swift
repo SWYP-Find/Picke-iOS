@@ -71,6 +71,10 @@ extension HomeCoordinator {
     case .routeAction(_, action: .chat(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
+      // 큐레이팅 X — 홈 루트로 복귀
+      return .send(.view(.backToRootAction))
+
     default:
       return .none
     }

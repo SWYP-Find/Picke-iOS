@@ -47,6 +47,8 @@ public struct ChatCoordinator {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    /// 큐레이팅 X — 채팅 디투어 전체를 빠져나가 부모 스택 최상위(root)로 복귀.
+    case popToRoot
   }
 
   func handleRoute(
@@ -125,8 +127,8 @@ extension ChatCoordinator {
       return .send(.view(.backAction))
 
     case .routeAction(_, action: .curation(.delegate(.close))):
-      // X : 채팅 플로우 전체를 빠져나가 앱 루트(홈)로 이동
-      return .send(.delegate(.dismiss))
+      // X : 채팅 디투어 전체를 빠져나가 부모 스택 최상위(root)로 복귀
+      return .send(.delegate(.popToRoot))
 
     case let .routeAction(_, action: .curation(.delegate(.openBattle(battleId)))):
       state.routes.push(.preVote(.init(battleId: battleId)))
@@ -156,7 +158,7 @@ extension ChatCoordinator {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .dismiss:
+    case .dismiss, .popToRoot:
       .none
     }
   }
