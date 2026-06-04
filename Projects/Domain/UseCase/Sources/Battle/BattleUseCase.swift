@@ -60,7 +60,7 @@ public struct BattleUseCaseImpl: BattleInterface {
   public func createPerspective(
     battleId: Int,
     content: String,
-    optionId: Int
+    optionId: Int?
   ) async throws -> BattlePerspective {
     return try await battleRepository.createPerspective(
       battleId: battleId,
@@ -71,6 +71,10 @@ public struct BattleUseCaseImpl: BattleInterface {
 
   public func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective? {
     return try await battleRepository.fetchMyPerspective(battleId: battleId)
+  }
+
+  public func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage {
+    return try await battleRepository.fetchRecommendedBattles(battleId: battleId)
   }
 }
 

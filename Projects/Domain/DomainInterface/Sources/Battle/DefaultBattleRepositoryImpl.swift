@@ -76,12 +76,12 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
   public func createPerspective(
     battleId _: Int,
     content: String,
-    optionId: Int
+    optionId _: Int?
   ) async throws -> BattlePerspective {
     BattlePerspective(
       perspectiveId: 0,
       user: BattlePerspectiveUser(userTag: "", nickname: "나", characterType: "", characterImageUrl: nil),
-      option: BattlePerspectiveOption(optionId: optionId, label: nil, title: "", stance: ""),
+      option: BattlePerspectiveOption(optionId: 0, label: nil, title: "", stance: ""),
       content: content,
       likeCount: 0,
       commentCount: 0,
@@ -93,5 +93,9 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
 
   public func fetchMyPerspective(battleId _: Int) async throws -> BattlePerspective? {
     nil
+  }
+
+  public func fetchRecommendedBattles(battleId _: Int) async throws -> RecommendedBattlePage {
+    RecommendedBattlePage(items: [], nextCursor: nil, hasNext: false)
   }
 }

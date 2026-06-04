@@ -117,7 +117,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
   public func createPerspective(
     battleId: Int,
     content: String,
-    optionId: Int
+    optionId: Int?
   ) async throws -> BattlePerspective {
     let dto: CreatePerspectiveResponseDTO = try await provider.request(
       .createPerspective(
@@ -164,6 +164,20 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     guard let data = dto.data else {
       let message = dto.error?.message ?? "시나리오 응답이 비어 있습니다"
       Log.error("[BattleRepositoryImpl] empty scenario payload: \(message)")
+      throw BattleError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
+
+  public func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage {
+    let dto: RecommendedBattlePageResponseDTO = try await provider.request(
+      .recommendations(battleId: battleId)
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "추천 배틀 응답이 비어 있습니다"
+      Log.error("[BattleRepositoryImpl] empty recommendations payload: \(message)")
       throw BattleError.backendError(message)
     }
 

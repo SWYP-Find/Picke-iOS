@@ -19,6 +19,7 @@ public enum BattleService {
   case perspectives(battleId: Int, query: PerspectivesQueryRequest)
   case createPerspective(battleId: Int, body: CreatePerspectiveRequest)
   case myPerspective(battleId: Int)
+  case recommendations(battleId: Int)
 }
 
 extension BattleService: BaseTargetType {
@@ -44,6 +45,8 @@ extension BattleService: BaseTargetType {
       return BattleAPI.perspectives(battleId: battleId).description
     case let .myPerspective(battleId):
       return BattleAPI.myPerspective(battleId: battleId).description
+    case let .recommendations(battleId):
+      return BattleAPI.recommendations(battleId: battleId).description
     }
   }
 
@@ -51,7 +54,7 @@ extension BattleService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
-    case .detail, .scenario, .voteStats, .perspectives, .myPerspective:
+    case .detail, .scenario, .voteStats, .perspectives, .myPerspective, .recommendations:
       return .get
     case .preVote, .postVote, .createPerspective:
       return .post
@@ -77,10 +80,12 @@ extension BattleService: BaseTargetType {
       return body.toDictionary
     case .myPerspective:
       return nil
+    case .recommendations:
+      return nil
     }
   }
 
   public var headers: [String: String]? {
-     return APIHeader.baseHeader
+    return APIHeader.baseHeader
   }
 }
