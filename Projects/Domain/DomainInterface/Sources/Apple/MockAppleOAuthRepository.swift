@@ -98,7 +98,10 @@ public actor MockAppleOAuthRepository: AppleOAuthInterface {
   
   // MARK: - AppleOAuthRepositoryProtocol Implementation
 
-  public func signInWithCredential(_ credential: ASAuthorizationAppleIDCredential, nonce: String) async throws -> AppleOAuthPayload {
+  public func signInWithCredential(
+    _ credential: ASAuthorizationAppleIDCredential,
+    nonce: String
+  ) async throws -> AppleOAuthPayload {
     // Track call
     signInCallCount += 1
     lastSignInCall = Date()

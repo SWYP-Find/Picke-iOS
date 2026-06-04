@@ -13,10 +13,10 @@ import DesignSystem
 struct PreVoteSkeletonView: View {
   var body: some View {
     VStack(spacing: 0) {
-      hero
-      contentSection
+      hero()
+      contentSection()
       Spacer(minLength: 0)
-      ctaButton
+      ctaButton()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(Color.beige50.ignoresSafeArea())
@@ -27,7 +27,7 @@ struct PreVoteSkeletonView: View {
 
 private extension PreVoteSkeletonView {
   @ViewBuilder
-  var hero: some View {
+  func hero() -> some View {
     SkeletonView(cornerRadius: 6)
       .frame(height: 329)
       .overlay(alignment: .top) {
@@ -42,19 +42,19 @@ private extension PreVoteSkeletonView {
 
 private extension PreVoteSkeletonView {
   @ViewBuilder
-  var contentSection: some View {
+  func contentSection() -> some View {
     VStack(alignment: .leading, spacing: 16) {
-      tagsRow
-      titleBlock
-      summaryBlock
-      optionsRow
+      tagsRow()
+      titleBlock()
+      summaryBlock()
+      optionsRow()
     }
     .padding(.horizontal, 16)
     .padding(.top, 24)
   }
 
   @ViewBuilder
-  var tagsRow: some View {
+  func tagsRow() -> some View {
     HStack(spacing: 8) {
       SkeletonView(cornerRadius: 6)
         .frame(width: 29, height: 17)
@@ -64,19 +64,19 @@ private extension PreVoteSkeletonView {
   }
 
   @ViewBuilder
-  var titleBlock: some View {
+  func titleBlock() -> some View {
     SkeletonView(cornerRadius: 6)
       .frame(width: 167, height: 68)
   }
 
   @ViewBuilder
-  var summaryBlock: some View {
+  func summaryBlock() -> some View {
     SkeletonView(cornerRadius: 6)
       .frame(width: 235.5, height: 61.43)
   }
 
   @ViewBuilder
-  var optionsRow: some View {
+  func optionsRow() -> some View {
     ZStack {
       HStack(spacing: 8) {
         SkeletonView(cornerRadius: 6)
@@ -94,7 +94,7 @@ private extension PreVoteSkeletonView {
 
 private extension PreVoteSkeletonView {
   @ViewBuilder
-  var ctaButton: some View {
+  func ctaButton() -> some View {
     SkeletonView(cornerRadius: 6)
       .frame(width: 87, height: 24)
       .padding(.bottom, 40)

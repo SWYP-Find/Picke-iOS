@@ -11,7 +11,9 @@ public extension BattleScenarioDataDTO {
     BattleScenario(
       battleId: battleId,
       title: title,
-      philosophers: philosophers.map { $0.toDomain() },
+      philosophers: philosophers.enumerated().map { idx, dto in
+        dto.toDomain(fallbackLabel: Self.fallbackLabel(for: idx))
+      },
       isInteractive: isInteractive,
       startNodeId: startNodeId,
       recommendedPathKey: RecommendedPathKey(rawValue: recommendedPathKey),
@@ -19,11 +21,22 @@ public extension BattleScenarioDataDTO {
       nodes: nodes.map { $0.toDomain() }
     )
   }
+
+  /// 응답에서 label 이 누락된 경우 사용할 인덱스 기반 폴백 (A/B/C/D…).
+  private static func fallbackLabel(for index: Int) -> String {
+    guard let scalar = Unicode.Scalar(0x41 + index) else { return "" }
+    return String(Character(scalar))
+  }
 }
 
 public extension ScenarioPhilosopherDTO {
-  func toDomain() -> ScenarioPhilosopher {
-    ScenarioPhilosopher(label: label, name: name, stance: stance, imageUrl: imageUrl)
+  func toDomain(fallbackLabel: String) -> ScenarioPhilosopher {
+    ScenarioPhilosopher(
+      label: label ?? fallbackLabel,
+      name: name,
+      stance: stance,
+      imageUrl: imageUrl
+    )
   }
 }
 

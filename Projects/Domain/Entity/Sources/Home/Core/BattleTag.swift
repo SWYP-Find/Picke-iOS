@@ -15,7 +15,11 @@ public struct BattleTag: Equatable, Identifiable, Hashable {
 
   public var id: Int { tagId }
 
-  public init(tagId: Int, name: String, type: TagType) {
+  public init(
+    tagId: Int,
+    name: String,
+    type: TagType
+  ) {
     self.tagId = tagId
     self.name = name
     self.type = type

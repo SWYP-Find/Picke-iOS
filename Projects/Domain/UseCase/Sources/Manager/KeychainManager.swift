@@ -24,7 +24,10 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
     self.service = service
   }
 
-  public func save(accessToken: String, refreshToken: String) {
+  public func save(
+    accessToken: String,
+    refreshToken: String
+  ) {
     saveAccessToken(accessToken)
     saveRefreshToken(refreshToken)
   }
@@ -54,7 +57,10 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
     delete(for: Key.refreshToken)
   }
 
-  private func save(_ value: String, for key: String) {
+  private func save(
+    _ value: String,
+    for key: String
+  ) {
     let data = Data(value.utf8)
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,

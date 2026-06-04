@@ -13,7 +13,10 @@ public final class InMemoryKeychainManager: KeychainManaging, @unchecked Sendabl
 
   public init() {}
 
-  public func save(accessToken: String, refreshToken: String) {
+  public func save(
+    accessToken: String,
+    refreshToken: String
+  ) {
     accessTokenStorage = accessToken
     refreshTokenStorage = refreshToken
   }

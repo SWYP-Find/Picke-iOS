@@ -55,7 +55,10 @@ public final class MockKeychainManager: KeychainManaging, @unchecked Sendable {
 
     // MARK: - KeychainManaging Implementation
 
-    public func save(accessToken: String, refreshToken: String) {
+    public func save(
+      accessToken: String,
+      refreshToken: String
+    ) {
         saveCallCount += 1
 
         switch configuration {

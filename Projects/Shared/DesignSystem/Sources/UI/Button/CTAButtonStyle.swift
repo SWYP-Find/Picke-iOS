@@ -15,7 +15,10 @@ public enum CTAButtonVariant: Sendable {
 }
 
 public extension CTAButtonVariant {
-  func backgroundColor(isEnabled: Bool, isPressed: Bool = false) -> Color {
+  func backgroundColor(
+    isEnabled: Bool,
+    isPressed: Bool = false
+  ) -> Color {
     switch self {
     case .primary:
       guard isEnabled else { return ComponentToken.Button.Primary.Background.disabled }

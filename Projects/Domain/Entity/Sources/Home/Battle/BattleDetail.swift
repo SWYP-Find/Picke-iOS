@@ -123,6 +123,7 @@ public enum BattleStep: String, Equatable, Hashable, CaseIterable {
   case listening = "LISTENING"
   case postVote = "POST_VOTE"
   case finished = "FINISHED"
+  case completed = "COMPLETED"
   case unknown
 
   public init(rawValue: String) {

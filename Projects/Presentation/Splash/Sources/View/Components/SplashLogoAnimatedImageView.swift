@@ -23,7 +23,10 @@ struct SplashLogoAnimatedImageView: UIViewRepresentable {
     return imageView
   }
   
-  func updateUIView(_ imageView: SDAnimatedImageView, context: Context) {
+  func updateUIView(
+    _ imageView: SDAnimatedImageView,
+    context: Context
+  ) {
     guard imageView.image !== Self.image else { return }
     imageView.image = Self.image
     imageView.startAnimating()

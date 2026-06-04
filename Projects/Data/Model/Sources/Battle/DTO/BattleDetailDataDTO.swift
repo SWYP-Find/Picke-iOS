@@ -30,7 +30,7 @@ public struct BattleInfoDTO: Decodable {
 
 public struct BattleOptionDTO: Decodable {
   public let optionId: Int
-  public let label: String
+  public let label: String?
   public let title: String
   public let stance: String
   public let representative: String

@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import DomainInterface
+import UseCase
 import Entity
 import Foundation
 import LogMacro
@@ -77,7 +78,7 @@ public struct HomeFeature {
     case fetchHome
   }
 
-  @Dependency(\.homeRepository) private var homeRepository
+  @Dependency(\.homeUseCase) private var homeUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -139,7 +140,7 @@ extension HomeFeature {
     switch action {
     case .fetchHome:
       state.isLoading = true
-      return .run { [repository = homeRepository] send in
+      return .run { [repository = homeUseCase] send in
         let result = await Result {
           try await repository.fetchHome()
         }

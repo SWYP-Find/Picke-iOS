@@ -41,7 +41,7 @@ public extension BattleOptionDTO {
   func toDomain() -> BattleOption {
     BattleOption(
       optionId: optionId,
-      label: label,
+      label: label ?? "",
       title: title,
       stance: stance,
       representative: representative,

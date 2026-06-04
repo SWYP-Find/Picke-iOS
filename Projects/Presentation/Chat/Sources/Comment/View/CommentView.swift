@@ -1,0 +1,613 @@
+//
+//  CommentView.swift
+//  Chat
+//
+//  .pen `댓글화면` 기준 mock 댓글 UI.
+//
+
+import SwiftUI
+
+import ComposableArchitecture
+import DesignSystem
+import Entity
+
+@ViewAction(for: CommentFeature.self)
+public struct CommentView: View {
+  @Bindable public var store: StoreOf<CommentFeature>
+  @FocusState private var isCommentFocused: Bool
+  @State private var hasAnimatedVoteProgress = false
+
+  public init(store: StoreOf<CommentFeature>) {
+    self.store = store
+  }
+
+  public var body: some View {
+    VStack(spacing: 0) {
+      navigationBar()
+      ScrollView(showsIndicators: false) {
+        VStack(spacing: 0) {
+          summarySection()
+          filterSection()
+          commentList()
+        }
+        .padding(.bottom, 16)
+      }
+      .scrollDismissesKeyboard(.interactively)
+      .simultaneousGesture(
+        DragGesture(minimumDistance: 24)
+          .onEnded { value in
+            // 좌우 스와이프로 필터 탭(전체/옵션A/옵션B) 전환
+            guard abs(value.translation.width) > abs(value.translation.height),
+                  abs(value.translation.width) > 50,
+                  let next = adjacentFilter(forward: value.translation.width < 0)
+            else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+              send(.filterTapped(next))
+            }
+          }
+      )
+      inputBar()
+    }
+    .background(Color.beige200.ignoresSafeArea())
+    .contentShape(Rectangle())
+    .onTapGesture {
+      isCommentFocused = false
+    }
+    .navigationBarHidden(true)
+    .toolbar(.hidden, for: .navigationBar)
+    .toolbar(.hidden, for: .tabBar)
+    .onAppear {
+      send(.onAppear)
+      withAnimation(.easeOut(duration: 0.75).delay(0.15)) {
+        hasAnimatedVoteProgress = true
+      }
+    }
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
+  }
+
+  /// 댓글 카드 바로 아래에 뜨는 인라인 메뉴 (pill 형태).
+  @ViewBuilder
+  private func inlineMenu(for comment: CommentItem) -> some View {
+    VStack(alignment: .trailing, spacing: 8) {
+      ForEach(menuItems(for: comment)) { item in
+        Button { item.action() } label: {
+          HStack(spacing: 4) {
+            Image(systemName: item.systemImage)
+              .font(.system(size: 13, weight: .medium))
+            Text(item.title)
+              .pretendardFont(family: .Medium, size: 13)
+          }
+          .foregroundStyle(Color.beige50)
+          .padding(.horizontal, 14)
+          .padding(.vertical, 7)
+          .background(Color.primary500, in: Capsule())
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(.trailing, 4)
+  }
+
+  /// "…" 메뉴 항목 — 내 글: 수정/삭제, 남 글: 신고.
+  private func menuItems(for comment: CommentItem) -> [BottomActionItem] {
+    if comment.isMine {
+      return [
+        BottomActionItem(title: "수정", systemImage: "pencil") { send(.commentMenu(id: comment.id, action: .edit)) },
+        BottomActionItem(title: "삭제", systemImage: "trash", isDestructive: true) { send(.commentMenu(
+          id: comment.id,
+          action: .delete
+        )) },
+      ]
+    } else {
+      return [
+        BottomActionItem(title: "신고", systemImage: "light.beacon.max.fill", isDestructive: true) {
+          send(.commentMenu(id: comment.id, action: .report))
+        },
+      ]
+    }
+  }
+
+  /// 현재 선택된 필터 기준 인접 필터(스와이프 방향). 범위를 벗어나면 nil.
+  private func adjacentFilter(forward: Bool) -> CommentFilter? {
+    let all = CommentFilter.allCases
+    guard let idx = all.firstIndex(of: store.selectedFilter) else { return nil }
+    let nextIdx = forward ? idx + 1 : idx - 1
+    guard all.indices.contains(nextIdx) else { return nil }
+    return all[nextIdx]
+  }
+}
+
+// MARK: - Navigation
+
+private extension CommentView {
+  @ViewBuilder
+  func navigationBar() -> some View {
+    HStack {
+      Button { send(.backButtonTapped) } label: {
+        Image(systemName: "chevron.left")
+          .font(.system(size: 18, weight: .regular))
+          .frame(width: 24, height: 24)
+      }
+      .buttonStyle(.plain)
+
+      Spacer()
+
+      Text(store.title)
+        .pretendardFont(family: .SemiBold, size: 16)
+        .foregroundStyle(.neutral500)
+        .lineLimit(1)
+
+      Spacer()
+
+      Button { send(.forwardTapped) } label: {
+        Image(systemName: "chevron.right")
+          .font(.system(size: 18, weight: .regular))
+          .frame(width: 24, height: 24)
+      }
+      .buttonStyle(.plain)
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .foregroundStyle(.neutral500)
+    .background(.beige50)
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(.beige600)
+        .frame(height: 1)
+    }
+  }
+}
+
+// MARK: - Summary
+
+private extension CommentView {
+  @ViewBuilder
+  func summarySection() -> some View {
+    VStack(spacing: 12) {
+      changeBadge()
+
+      HStack(alignment: .center, spacing: 12) {
+        HStack(spacing: 4) {
+          avatarCircle(
+            imageUrl: store.voteSummary.optionA.imageUrl,
+            name: store.voteSummary.optionA.representative
+          )
+          Text(percentText(store.voteSummary.optionA.percentage))
+            .pretendardFont(family: .Medium, size: 12)
+            .foregroundStyle(.neutral500)
+            .fixedSize()
+        }
+        voteProgress()
+        HStack(spacing: 4) {
+          Text(percentText(store.voteSummary.optionB.percentage))
+            .pretendardFont(family: .Medium, size: 12)
+            .foregroundStyle(.neutral500)
+            .fixedSize()
+          avatarCircle(
+            imageUrl: store.voteSummary.optionB.imageUrl,
+            name: store.voteSummary.optionB.representative
+          )
+        }
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 16)
+    .background(.beige50)
+  }
+
+  @ViewBuilder
+  func changeBadge() -> some View {
+    HStack(spacing: 4) {
+      Image(systemName: "lightbulb")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundStyle(.primary500)
+      Text(store.voteSummary.changeBadgeTitle)
+        .pretendardFont(family: .SemiBold, size: 11)
+        .foregroundStyle(.primary500)
+    }
+    .padding(.horizontal, 4)
+    .padding(.vertical, 2)
+    .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+    .frame(maxWidth: .infinity, alignment: .center)
+  }
+
+  @ViewBuilder
+  func voteProgress() -> some View {
+    GeometryReader { proxy in
+      let leftWidth = proxy.size.width * store.voteSummary.optionA.percentage
+      ZStack(alignment: .leading) {
+        Capsule()
+          .fill(.beige600)
+          .frame(height: 6)
+        Capsule()
+          .fill(.primary500)
+          .frame(width: hasAnimatedVoteProgress ? max(0, leftWidth) : 0, height: 6)
+      }
+      .frame(maxHeight: .infinity)
+      .animation(.easeOut(duration: 0.75), value: store.voteSummary.optionA.percentage)
+    }
+    .frame(height: 6)
+  }
+
+  @ViewBuilder
+  func avatarCircle(imageUrl: String?, name: String) -> some View {
+    CommentAvatarView(
+      imageURL: imageUrl,
+      fallback: name,
+      size: 40
+    )
+  }
+}
+
+// MARK: - Filters
+
+private extension CommentView {
+  @ViewBuilder
+  func filterSection() -> some View {
+    VStack(spacing: 12) {
+      filterTabs()
+      sortRow()
+    }
+    .padding(.top, 14)
+    .padding(.bottom, 12)
+  }
+
+  @ViewBuilder
+  func filterTabs() -> some View {
+    HStack(spacing: 0) {
+      ForEach(CommentFilter.allCases, id: \.self) { filter in
+        filterButton(filter)
+      }
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  @ViewBuilder
+  func sortRow() -> some View {
+    HStack(spacing: 8) {
+      sortButton(.popular)
+      sortButton(.latest)
+      Spacer()
+    }
+    .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  func filterButton(_ filter: CommentFilter) -> some View {
+    let isSelected = store.selectedFilter == filter
+    let title: String = switch filter {
+    case .all: "전체"
+    case .optionA: store.voteSummary.optionA.title
+    case .optionB: store.voteSummary.optionB.title
+    }
+    Button {
+      send(.filterTapped(filter))
+    } label: {
+      Text(title)
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(isSelected ? .primary500 : .neutral300)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .overlay(alignment: .bottom) {
+          Rectangle()
+            .fill(isSelected ? Color.primary500 : Color.neutral200)
+            .frame(height: isSelected ? 2.5 : 1)
+        }
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func sortButton(_ sort: CommentSort) -> some View {
+    let isSelected = store.selectedSort == sort
+    Button {
+      send(.sortTapped(sort))
+    } label: {
+      Text(sort.title)
+        .pretendardFont(family: .Medium, size: 13)
+        .foregroundStyle(isSelected ? .beige50 : .primary500)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+          isSelected ? Color.primary500 : Color.primary50,
+          in: RoundedRectangle(cornerRadius: 2)
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: 2)
+            .stroke(Color.primary500, lineWidth: isSelected ? 0 : 1)
+        }
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+// MARK: - Comment List
+
+private extension CommentView {
+  @ViewBuilder
+  func commentList() -> some View {
+    Group {
+      if store.isLoadingComments, store.comments.isEmpty {
+        CommentSkeletonView()
+      } else if store.comments.isEmpty {
+        emptyState()
+      } else {
+        VStack(spacing: 12) {
+          ForEach(store.comments) { comment in
+            commentCard(comment)
+              .overlay(alignment: .topTrailing) {
+                if store.menuTargetCommentID == comment.id {
+                  inlineMenu(for: comment)
+                    .padding(.trailing, 12)
+                    .offset(y: 46)
+                    .zIndex(1)
+                }
+              }
+              .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
+          }
+        }
+        .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.bottom, 24)
+  }
+
+  @ViewBuilder
+  func emptyState() -> some View {
+    VStack(spacing: 8) {
+      Image(systemName: "bubble.left.and.bubble.right")
+        .font(.system(size: 32, weight: .light))
+        .foregroundStyle(.neutral300)
+      Text("아직 등록된 의견이 없어요")
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(.neutral400)
+    }
+    .frame(maxWidth: .infinity)
+    .padding(.vertical, 60)
+  }
+
+  @ViewBuilder
+  func commentCard(_ comment: CommentItem) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      commentHeader(comment)
+      commentBody(comment)
+      commentActions(comment)
+    }
+    .padding(12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .overlay {
+      RoundedRectangle(cornerRadius: 2)
+        .stroke(.beige600, lineWidth: 1)
+    }
+  }
+
+  @ViewBuilder
+  func commentBody(_ comment: CommentItem) -> some View {
+    Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
+      Text(comment.content)
+        .pretendardFont(family: .Regular, size: 13)
+        .foregroundStyle(.neutral400)
+        .lineSpacing(13 * 0.4)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func commentHeader(_ comment: CommentItem) -> some View {
+    HStack(alignment: .top, spacing: 6) {
+      avatar(urlString: comment.authorImageURL, fallback: comment.author)
+      commentAuthorBlock(comment)
+      Spacer()
+      reportButton(commentId: comment.id)
+    }
+  }
+
+  @ViewBuilder
+  func commentAuthorBlock(_ comment: CommentItem) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      HStack(spacing: 6) {
+        Text(comment.isMine ? "나" : comment.author)
+          .pretendardFont(family: .Medium, size: 14)
+          .foregroundStyle(.neutral500)
+          .lineLimit(1)
+
+        if comment.isMine {
+          myBadge()
+        }
+
+        Text(comment.timeAgo)
+          .pretendardFont(family: .Medium, size: 12)
+          .foregroundStyle(.neutral300)
+      }
+
+      optionBadge(comment)
+    }
+  }
+
+  @ViewBuilder
+  func myBadge() -> some View {
+    Text("나")
+      .pretendardFont(family: .SemiBold, size: 10)
+      .foregroundStyle(.beige50)
+      .padding(.horizontal, 5)
+      .padding(.vertical, 2)
+      .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
+  }
+
+  @ViewBuilder
+  func reportButton(commentId: UUID) -> some View {
+    Button { send(.commentMenu(id: commentId, action: .more)) } label: {
+      Image(systemName: "ellipsis")
+        .font(.system(size: 18, weight: .regular))
+        .frame(width: 24, height: 24)
+    }
+    .buttonStyle(.plain)
+    .foregroundStyle(.neutral300)
+  }
+
+  @ViewBuilder
+  func optionBadge(_ comment: CommentItem) -> some View {
+    let summary = comment.option == .a ? store.voteSummary.optionA : store.voteSummary.optionB
+    let label = comment.optionLabel ?? summary.title
+    Text(label)
+      .pretendardFont(family: .Medium, size: 12)
+      .foregroundStyle(.primary500)
+      .padding(.horizontal, 4)
+      .padding(.vertical, 2)
+      .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+  }
+
+  @ViewBuilder
+  func commentActions(_ comment: CommentItem) -> some View {
+    HStack(spacing: 12) {
+      moreButton(commentId: comment.id)
+      Spacer()
+      replyCountButton(comment)
+      likeButton(comment)
+    }
+    .foregroundStyle(.neutral300)
+  }
+
+  @ViewBuilder
+  func moreButton(commentId: UUID) -> some View {
+    Button { send(.commentRow(id: commentId, action: .openReply)) } label: {
+      Text("더보기")
+        .pretendardFont(family: .Medium, size: 12)
+        .foregroundStyle(.neutral300)
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func replyCountButton(_ comment: CommentItem) -> some View {
+    Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
+      actionLabel(systemName: "message", text: "\(comment.replyCount)")
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func likeButton(_ comment: CommentItem) -> some View {
+    Button { send(.commentRow(id: comment.id, action: .like)) } label: {
+      actionLabel(
+        systemName: comment.isLiked ? "heart.fill" : "heart",
+        text: formattedCount(comment.likeCount)
+      )
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func actionLabel(
+    systemName: String,
+    text: String
+  ) -> some View {
+    HStack(spacing: 4) {
+      Image(systemName: systemName)
+        .font(.system(size: 14, weight: .medium))
+        .frame(width: 16, height: 16)
+      Text(text)
+        .pretendardFont(family: .Medium, size: 12)
+    }
+  }
+
+  @ViewBuilder
+  func avatar(
+    urlString: String?,
+    fallback: String
+  ) -> some View {
+    CommentAvatarView(
+      imageURL: urlString,
+      fallback: fallback,
+      size: 36
+    )
+  }
+}
+
+// MARK: - Input
+
+private extension CommentView {
+  @ViewBuilder
+  func inputBar() -> some View {
+    VStack(spacing: 8) {
+      HStack(alignment: .bottom, spacing: 8) {
+        inputTextBox()
+        sendButton()
+      }
+    }
+    .padding(.top, 12)
+    .padding(.horizontal, 16)
+    .padding(.bottom, 24)
+    .frame(height: 128)
+    .background(.beige400)
+    .overlay(alignment: .top) {
+      Rectangle()
+        .fill(.beige800)
+        .frame(height: 1)
+    }
+  }
+
+  @ViewBuilder
+  func inputTextBox() -> some View {
+    VStack(alignment: .leading, spacing: 6) {
+      TextField("댓글을 입력해주세요", text: $store.commentText, axis: .vertical)
+        .pretendardFont(family: .Regular, size: 13)
+        .foregroundStyle(.neutral400)
+        .lineLimit(1 ... 3)
+        .focused($isCommentFocused)
+
+      Text("\(store.commentText.count)/200")
+        .pretendardFont(family: .SemiBold, size: 10)
+        .foregroundStyle(.neutral400)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+    .padding(.horizontal, 12)
+    .padding(.vertical, 8)
+    .frame(maxWidth: .infinity)
+    .background(.beige50)
+  }
+
+  @ViewBuilder
+  func sendButton() -> some View {
+    Button { send(.sendTapped) } label: {
+      Image(systemName: "paperplane.fill")
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(.beige50)
+        .frame(width: 36, height: 36)
+        .background(store.isSendEnabled ? Color.primary500 : Color.primary200, in: Circle())
+    }
+    .buttonStyle(.plain)
+    .disabled(!store.isSendEnabled)
+  }
+}
+
+// MARK: - Format
+
+private extension CommentView {
+  func percentText(_ percentage: Double) -> String {
+    "\(String(format: "%.1f", percentage * 100))%"
+  }
+
+  func formattedCount(_ count: Int) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
+  }
+}
+
+#Preview {
+  CommentView(
+    store: Store(initialState: CommentFeature.State()) {
+      CommentFeature()
+    }
+  )
+}

@@ -8,7 +8,10 @@
 import UIKit
 
 public extension UIColor {
-  convenience init(hex: String, alpha: Double = 1.0) {
+  convenience init(
+    hex: String,
+    alpha: Double = 1.0
+  ) {
     let scanner = Scanner(string: hex)
     _ = scanner.scanString("#")
 

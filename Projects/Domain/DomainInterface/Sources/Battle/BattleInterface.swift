@@ -9,8 +9,30 @@ import WeaveDI
 
 public protocol BattleInterface: Sendable {
   func fetchBattle(battleId: Int) async throws -> BattleDetail
-  func submitPreVote(battleId: Int, optionId: Int) async throws -> PreVoteResult
+  func submitPreVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult
+  func submitPostVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult
   func fetchScenario(battleId: Int) async throws -> BattleScenario
+  func fetchVoteStats(battleId: Int) async throws -> BattleVoteStats
+  func fetchPerspectives(
+    battleId: Int,
+    cursor: String?,
+    size: Int?,
+    optionId: Int?,
+    sort: BattlePerspectiveSort?
+  ) async throws -> BattlePerspectivePage
+  func createPerspective(
+    battleId: Int,
+    content: String,
+    optionId: Int?
+  ) async throws -> BattlePerspective
+  func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective?
+  func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage
 }
 
 public struct BattleRepositoryDependency: DependencyKey {

@@ -48,7 +48,12 @@ public struct ScenarioPhilosopher: Equatable, Hashable, Identifiable {
 
   public var id: String { label }
 
-  public init(label: String, name: String, stance: String, imageUrl: String) {
+  public init(
+    label: String,
+    name: String,
+    stance: String,
+    imageUrl: String
+  ) {
     self.label = label
     self.name = name
     self.stance = stance
@@ -113,7 +118,10 @@ public struct ScenarioInteractiveOption: Equatable, Hashable, Identifiable {
 
   public var id: String { "\(label)-\(nextNodeId)" }
 
-  public init(label: String, nextNodeId: Int) {
+  public init(
+    label: String,
+    nextNodeId: Int
+  ) {
     self.label = label
     self.nextNodeId = nextNodeId
   }

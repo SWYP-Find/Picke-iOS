@@ -207,7 +207,10 @@ public struct AppReducer: Sendable {
   }
   
   // 🎯 PFW 철학: 단순하고 조합 가능한 상태 검증
-  private func isValidAction(_ action: ScopeAction, for state: State) -> Bool {
+  private func isValidAction(
+    _ action: ScopeAction,
+    for state: State
+  ) -> Bool {
     switch (action, state) {
     case (.auth, .auth), (.splash, .splash), (.mainTab, .mainTab):
       return true

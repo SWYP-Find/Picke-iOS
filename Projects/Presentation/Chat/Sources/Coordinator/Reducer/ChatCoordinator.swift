@@ -48,7 +48,10 @@ public struct ChatCoordinator {
     case dismiss
   }
 
-  func handleRoute(state: inout State, action: Action) -> Effect<Action> {
+  func handleRoute(
+    state: inout State,
+    action: Action
+  ) -> Effect<Action> {
     switch action {
     case let .router(routeAction):
       routerAction(state: &state, action: routeAction)
@@ -71,12 +74,57 @@ extension ChatCoordinator {
     case .routeAction(_, action: .preVote(.delegate(.dismiss))):
       return .send(.delegate(.dismiss))
 
-    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, _)))):
-      state.routes.push(.chatRoom(.init(battleId: battleId)))
+    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _)))):
+      switch voteMode {
+      case .pre:
+        state.routes.push(.chatRoom(.init(battleId: battleId)))
+      case .post:
+        state.routes.push(.comment(.init(battleId: battleId)))
+      }
+      return .none
+
+    case let .routeAction(_, action: .preVote(.delegate(.alreadyFinalVoted(battleId)))):
+      state.routes.push(.comment(.init(battleId: battleId)))
       return .none
 
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
       return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
+      state.routes.push(.preVote(.init(battleId: battleId, voteMode: .post)))
+      return .none
+
+    case .routeAction(_, action: .comment(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .comment(.delegate(.openReply(comment)))):
+      state.routes.push(
+        .commentReply(
+          .init(
+            perspectiveId: comment.perspectiveId ?? 0,
+            parentComment: comment
+          )
+        )
+      )
+      return .none
+
+    case .routeAction(_, action: .commentReply(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .comment(.delegate(.openCuration(battleId)))):
+      state.routes.push(.curation(.init(battleId: battleId)))
+      return .none
+
+    case .routeAction(_, action: .curation(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .curation(.delegate(.close))):
+      // X : 채팅 플로우 전체를 빠져나가 앱 루트(홈)로 이동
+      return .send(.delegate(.dismiss))
+
+    case let .routeAction(_, action: .curation(.delegate(.openBattle(battleId)))):
+      state.routes.push(.preVote(.init(battleId: battleId)))
+      return .none
 
     default:
       return .none
@@ -103,7 +151,7 @@ extension ChatCoordinator {
   ) -> Effect<Action> {
     switch action {
     case .dismiss:
-      return  .none
+      .none
     }
   }
 }
@@ -114,6 +162,9 @@ extension ChatCoordinator {
   public enum ChatScreen {
     case preVote(PreVoteFeature)
     case chatRoom(ChatRoomFeature)
+    case comment(CommentFeature)
+    case commentReply(CommentReplyFeature)
+    case curation(CurationFeature)
   }
 }
 

@@ -17,7 +17,10 @@ public struct PretendardFont: ViewModifier {
 }
 
 public extension View {
-  func pretendardFont(family: PretendardFontFamily, size: CGFloat) -> some View {
+  func pretendardFont(
+    family: PretendardFontFamily,
+    size: CGFloat
+  ) -> some View {
     return self.modifier(PretendardFont(family: family, size: size))
   }
   
@@ -27,14 +30,20 @@ public extension View {
 }
 
 public extension UIFont {
-  static func pretendardFontFamily(family: PretendardFontFamily, size: CGFloat) -> UIFont {
+  static func pretendardFontFamily(
+    family: PretendardFontFamily,
+    size: CGFloat
+  ) -> UIFont {
     let fontName = "PretendardVariable-\(family)"
     return UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size, weight: .regular)
   }
 }
 
 public extension Font {
-  static func pretendardFontFamily(family: PretendardFontFamily, size: CGFloat) -> Font{
+  static func pretendardFontFamily(
+    family: PretendardFontFamily,
+    size: CGFloat
+  ) -> Font{
     let font = Font.custom("PretendardVariable-\(family)", size: size)
     return font
   }

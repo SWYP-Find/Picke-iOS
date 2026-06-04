@@ -45,7 +45,10 @@ public struct VoteOption: Equatable, Identifiable, Hashable {
 
   public var id: String { label }
 
-  public init(label: String, title: String) {
+  public init(
+    label: String,
+    title: String
+  ) {
     self.label = label
     self.title = title
   }

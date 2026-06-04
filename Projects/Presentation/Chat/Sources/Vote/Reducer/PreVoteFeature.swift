@@ -6,15 +6,23 @@
 //
 
 import Foundation
+import UIKit
 
 import ComposableArchitecture
+import DesignSystem
 import DomainInterface
 import Entity
 import LogMacro
+import UseCase
 
 @Reducer
 public struct PreVoteFeature {
   public init() {}
+
+  public enum VoteMode: Equatable {
+    case pre
+    case post
+  }
 
   @ObservableState
   public struct State: Equatable {
@@ -24,26 +32,28 @@ public struct PreVoteFeature {
     public var isLoading: Bool = false
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
-    public var battleId: Int
+    public var battleId: Int = 0
+    public var voteMode: VoteMode = .pre
+    public var myPerspective: BattlePerspective?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public var isPrimaryButtonEnabled: Bool {
       selectedOptionId != nil && !isSubmitting
     }
 
-    public init(battleId: Int = 0, battle: PreVoteBattle? = nil) {
-      self.battleId = battleId
-      self.battle = battle
+    public var primaryButtonTitle: String {
+      switch voteMode {
+      case .pre: "사전 투표하기"
+      case .post: "최종 투표하기"
+      }
     }
-  }
 
-  /// 공유 시트 트리거. `.sheet(item:)` 에 바로 바인딩.
-  public struct ShareItem: Equatable, Identifiable {
-    public let id: UUID
-    public let items: [String]
-
-    public init(id: UUID = UUID(), items: [String]) {
-      self.id = id
-      self.items = items
+    public init(
+      battleId: Int = 0,
+      voteMode: VoteMode = .pre
+    ) {
+      self.battleId = battleId
+      self.voteMode = voteMode
     }
   }
 
@@ -52,6 +62,7 @@ public struct PreVoteFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
+    case scope(ScopeAction)
     case delegate(DelegateAction)
   }
 
@@ -59,52 +70,81 @@ public struct PreVoteFeature {
   public enum View {
     case onAppear
     case backButtonTapped
-    case shareTapped
+    case shareTapped(snapshot: Data?)
     case optionTapped(optionId: Int)
     case primaryButtonTapped
   }
 
   public enum AsyncAction: Equatable {
     case fetchBattleDetail
+    case fetchMyPerspective
+    case deleteMyPerspective(perspectiveId: Int)
+    case prepareShare(ShareContent)
     case submitPreVote(battleId: Int, optionId: Int)
+    case submitPostVote(battleId: Int, optionId: Int)
   }
 
   public enum InnerAction: Equatable {
-    case battleDetailResponse(Result<BattleDetail, AuthError>)
-    case preVoteResponse(Result<PreVoteResult, AuthError>)
+    case battleDetailResponse(Result<BattleDetail, BattleError>)
+    case myPerspectiveResponse(Result<BattlePerspective?, BattleError>)
+    case deleteMyPerspectiveResponse(Result<EmptyResult, PerspectiveError>)
+    case preVoteResponse(Result<PreVoteResult, BattleError>)
+    case sharePrepared(ShareItem)
+    case postVoteResponse(Result<PreVoteResult, BattleError>)
+  }
+
+  public struct EmptyResult: Equatable {
+    public init() {}
+  }
+
+  @CasePathable
+  public enum ScopeAction: Equatable {
+    case customAlert(PresentationAction<CustomAlertAction>)
   }
 
   public enum DelegateAction: Equatable {
     case dismiss
-    case voteSubmitted(battleId: Int, result: PreVoteResult)
+    case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult)
+    /// 이미 최종 투표(POST_VOTE)까지 마친 상태 — 댓글 화면으로 바로 이동.
+    case alreadyFinalVoted(battleId: Int)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetchBattleDetail
+    case fetchMyPerspective
+    case deleteMyPerspective
     case submitPreVote
+    case submitPostVote
   }
 
-  @Dependency(\.battleRepository) private var battleRepository
+  @Dependency(\.battleUseCase) private var battleUseCase
+  @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
     Reduce { state, action in
       switch action {
       case .binding:
-        .none
+        return .none
 
       case let .view(viewAction):
-        handleViewAction(state: &state, action: viewAction)
+        return handleViewAction(state: &state, action: viewAction)
 
       case let .async(asyncAction):
-        handleAsyncAction(state: &state, action: asyncAction)
+        return handleAsyncAction(state: &state, action: asyncAction)
 
       case let .inner(innerAction):
-        handleInnerAction(state: &state, action: innerAction)
+        return handleInnerAction(state: &state, action: innerAction)
+
+      case let .scope(scopeAction):
+        return handleScopeAction(state: &state, action: scopeAction)
 
       case let .delegate(delegateAction):
-        handleDelegateAction(state: &state, action: delegateAction)
+        return handleDelegateAction(state: &state, action: delegateAction)
       }
+    }
+    .ifLet(\.$customAlert, action: \.scope.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -116,21 +156,53 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      guard state.battleDetail == nil,
-            state.battle == nil,
-            !state.isLoading
-      else { return .none }
-      return .send(.async(.fetchBattleDetail))
+      var effects: [Effect<Action>] = []
+      if state.battleDetail == nil, state.battle == nil, !state.isLoading {
+        effects.append(.send(.async(.fetchBattleDetail)))
+      }
+      // pre/post 모두 진입 시 내 참여(perspective) 여부를 조회한다.
+      // 이미 참여했으면 "다시 투표" 알럿 → 삭제 후 재투표.
+      if state.myPerspective == nil {
+        effects.append(.send(.async(.fetchMyPerspective)))
+      }
+      return effects.isEmpty ? .none : .merge(effects)
 
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
-    case .shareTapped:
-      let title = state.battleDetail?.battleInfo.title ?? state.battle?.titleLine1 ?? ""
-      let url = state.battleDetail?.shareUrl
-        ?? "https://picke.store/battles/\(state.battleId)"
-      state.shareItem = ShareItem(items: [title, url])
-      return .none
+    case let .shareTapped(snapshot):
+      let detail = state.battleDetail
+      let battle = state.battle
+      let title = detail?.battleInfo.title ?? battle?.titleLine1 ?? ""
+      let url = detail?.shareUrl ?? "https://picke.store/battles/\(state.battleId)"
+      let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
+      let summary = {
+        if let description = detail?.description, !description.isEmpty { return description }
+        if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty { return infoSummary }
+        return battle?.summary ?? ""
+      }()
+      let hashtags: [String] = {
+        if let tags = detail?.categoryTags, !tags.isEmpty {
+          return tags.map { "#\($0.name)" }
+        }
+        return battle?.tags ?? []
+      }()
+      let optionLine: String? = {
+        guard let left = battle?.leftOption.stance,
+              let right = battle?.rightOption.stance
+        else { return nil }
+        return "🆚 A: \(left)  vs  B: \(right)"
+      }()
+      let content = ShareContent(
+        title: title,
+        summary: summary,
+        hashtags: hashtags,
+        optionLine: optionLine,
+        url: url,
+        thumbnailURL: thumbnailURL,
+        snapshotData: snapshot
+      )
+      return .send(.async(.prepareShare(content)))
 
     case let .optionTapped(optionId):
       state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
@@ -138,8 +210,14 @@ extension PreVoteFeature {
 
     case .primaryButtonTapped:
       guard let optionId = state.selectedOptionId else { return .none }
-      state.isSubmitting = true
-      return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
+      switch state.voteMode {
+      case .pre:
+        state.isSubmitting = true
+        return .send(.async(.submitPreVote(battleId: state.battleId, optionId: optionId)))
+      case .post:
+        state.isSubmitting = true
+        return .send(.async(.submitPostVote(battleId: state.battleId, optionId: optionId)))
+      }
     }
   }
 
@@ -151,24 +229,79 @@ extension PreVoteFeature {
     case .fetchBattleDetail:
       state.isLoading = true
       let battleId = state.battleId
-      return .run { [repository = battleRepository] send in
+      return .run { [repository = battleUseCase] send in
         let result = await Result {
           try await repository.fetchBattle(battleId: battleId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.battleDetailResponse(result)))
       }
       .cancellable(id: CancelID.fetchBattleDetail, cancelInFlight: true)
 
+    case .fetchMyPerspective:
+      let battleId = state.battleId
+      return .run { [repository = battleUseCase] send in
+        let result = await Result {
+          try await repository.fetchMyPerspective(battleId: battleId)
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.myPerspectiveResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchMyPerspective, cancelInFlight: true)
+
+    case let .deleteMyPerspective(perspectiveId):
+      return .run { [repository = perspectiveUseCase] send in
+        let result = await Result {
+          try await repository.deletePerspective(perspectiveId: perspectiveId)
+          return EmptyResult()
+        }
+        .mapError(PerspectiveError.from)
+        return await send(.inner(.deleteMyPerspectiveResponse(result)))
+      }
+      .cancellable(id: CancelID.deleteMyPerspective, cancelInFlight: true)
+
+    case let .prepareShare(content):
+      return .run { send in
+        var items: [Any] = [content.displayText]
+
+        if let url = URL(string: content.url) {
+          items.append(url)
+        } else {
+          items.append(content.url)
+        }
+
+        if let data = content.snapshotData, let image = UIImage(data: data) {
+          items.append(image)
+        } else if let thumbnailURL = content.thumbnailURL,
+                  let remoteURL = URL(string: thumbnailURL),
+                  let (data, _) = try? await URLSession.shared.data(from: remoteURL),
+                  let image = UIImage(data: data)
+        {
+          items.append(image)
+        }
+
+        await send(.inner(.sharePrepared(ShareItem(items: items))))
+      }
+
     case let .submitPreVote(battleId, optionId):
-      return .run { [repository = battleRepository] send in
+      return .run { [repository = battleUseCase] send in
         let result = await Result {
           try await repository.submitPreVote(battleId: battleId, optionId: optionId)
         }
-        .mapError(AuthError.from)
+        .mapError(BattleError.from)
         return await send(.inner(.preVoteResponse(result)))
       }
       .cancellable(id: CancelID.submitPreVote, cancelInFlight: true)
+
+    case let .submitPostVote(battleId, optionId):
+      return .run { [repository = battleUseCase] send in
+        let result = await Result {
+          try await repository.submitPostVote(battleId: battleId, optionId: optionId)
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.postVoteResponse(result)))
+      }
+      .cancellable(id: CancelID.submitPostVote, cancelInFlight: true)
     }
   }
 
@@ -188,14 +321,51 @@ extension PreVoteFeature {
       }
       return .none
 
+    case let .myPerspectiveResponse(result):
+      switch result {
+      case let .success(perspective):
+        state.myPerspective = perspective
+        if perspective != nil {
+          state.customAlert = .alreadyWatched()
+        }
+      case let .failure(error):
+        Log.error("[PreVoteFeature] fetchMyPerspective failed: \(error.localizedDescription)")
+      }
+      return .none
+
+    case let .deleteMyPerspectiveResponse(result):
+      switch result {
+      case .success:
+        state.myPerspective = nil
+      case let .failure(error):
+        Log.error("[PreVoteFeature] deleteMyPerspective failed: \(error.localizedDescription)")
+      }
+      return .none
+
     case let .preVoteResponse(result):
       state.isSubmitting = false
       switch result {
       case let .success(voteResult):
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: voteResult)))
+        return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .pre, result: voteResult)))
       case let .failure(error):
         Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, result: .init(voteId: 0, status: .created))))
+        return .none
+      }
+
+    case let .sharePrepared(item):
+      state.shareItem = item
+      return .none
+
+    case let .postVoteResponse(result):
+      state.isSubmitting = false
+      switch result {
+      case let .success(voteResult):
+        return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .post, result: voteResult)))
+      case let .failure(error):
+        // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.
+        // 재투표가 불가하므로 결과(댓글) 화면으로 이동한다.
+        Log.error("[PreVoteFeature] submitPostVote failed: \(error.localizedDescription)")
+        return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
       }
     }
   }
@@ -236,8 +406,35 @@ extension PreVoteFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .dismiss, .voteSubmitted:
-      .none
+    case .dismiss, .voteSubmitted, .alreadyFinalVoted:
+      return .none
+    }
+  }
+
+  private func handleScopeAction(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .customAlert(alertAction):
+      switch alertAction {
+      case let .presented(customAlertAction):
+        switch customAlertAction {
+        case .confirmTapped:
+          let perspectiveId = state.myPerspective?.perspectiveId
+          state.customAlert = nil
+          guard let perspectiveId else { return .none }
+          return .send(.async(.deleteMyPerspective(perspectiveId: perspectiveId)))
+
+        case .cancelTapped:
+          state.customAlert = nil
+          return .send(.delegate(.dismiss))
+        }
+
+      case .dismiss:
+        state.customAlert = nil
+        return .none
+      }
     }
   }
 }

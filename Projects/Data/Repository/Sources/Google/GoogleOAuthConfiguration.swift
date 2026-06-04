@@ -22,7 +22,10 @@ public struct GoogleOAuthConfiguration {
         !serverClientID.contains("GOOGLE_CLIENT_ID")
     }
 
-    public init(clientID: String, serverClientID: String) {
+    public init(
+      clientID: String,
+      serverClientID: String
+    ) {
         self.clientID = clientID
         self.serverClientID = serverClientID
     }

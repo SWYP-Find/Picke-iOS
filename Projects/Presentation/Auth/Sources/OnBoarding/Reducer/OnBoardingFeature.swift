@@ -20,7 +20,12 @@ public struct OnBoardingFeature {
     public let subtitle: String
     public let imageAsset: ImageAsset
 
-    public init(id: Int, title: String, subtitle: String, imageAsset: ImageAsset) {
+    public init(
+      id: Int,
+      title: String,
+      subtitle: String,
+      imageAsset: ImageAsset
+    ) {
       self.id = id
       self.title = title
       self.subtitle = subtitle

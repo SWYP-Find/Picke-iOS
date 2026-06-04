@@ -148,12 +148,14 @@ public var body: some View {
 - 한 메서드 안에서 다시 큰 블록이 생기면 더 작게 쪼개기 (재귀 적용)
 - 공통 컴포넌트는 별도 파일 (`Components/*.swift`) 로 추출
 
-#### 🧱 `@ViewBuilder` 함수 vs `var` — 자식 개수 / 분기 유무로 결정
+#### 🧱 `@ViewBuilder` + `private func` — 모든 sub-view 는 함수 형태 (필수)
 
-분리한 sub-view 의 선언 형태는 **자식 개수와 분기 유무** 로만 정한다.
+분리한 sub-view 는 **자식 개수 / 분기 유무와 상관없이 무조건 `@ViewBuilder` + `private func` 형태** 로 통일한다.
+
+`private var ...: some View` 형태는 **금지** — 모든 sub-view 는 호출부에서 일관되게 `()` 호출이 보이도록 함수 형태로만 작성한다.
 
 ```swift
-// ✅ 다중 자식을 감싸거나 if/else · switch 분기가 있으면 `@ViewBuilder` + 함수
+// ✅ 다중 자식 / 분기 / 반복
 @ViewBuilder
 private func hotBattlesSection() -> some View {
   VStack(alignment: .leading, spacing: 12) {
@@ -175,8 +177,9 @@ private func thumbnail(url: URL?) -> some View {
   }
 }
 
-// ✅ 단일 뷰만 반환하면 `private var` 형태
-private var primaryButton: some View {
+// ✅ 단일 뷰여도 함수 형태로
+@ViewBuilder
+private func primaryButton() -> some View {
   CustomButton(
     action: { send(.primaryButtonTapped) },
     title: "사전 투표하기",
@@ -185,17 +188,55 @@ private var primaryButton: some View {
   )
 }
 
-// ❌ 금지 — VStack 으로 자식 여러 개 감싸는데 var 만 쓰는 경우 (분기 / 동적 children 추가 시 깨짐)
-private var section: some View {
-  VStack { ... }  // → @ViewBuilder + func 으로 가야 안전
-}
+// ❌ 금지 — sub-view 를 var 로 선언
+private var primaryButton: some View { ... }
+private var section: some View { VStack { ... } }
 ```
 
 규칙:
-- **`@ViewBuilder` + `private func`** : VStack/HStack/ZStack 등으로 **자식 ≥ 2개** 를 감싸거나 `if` / `switch` / `ForEach` 같은 분기·반복이 있을 때
-- **`private var ...: some View`** : **단일 뷰** 1개만 반환할 때 (단순 wrapping · CTA 버튼 · 단일 Image 등)
-- body 안에서 호출하는 sub-view 가 인자가 필요하면 함수, 없으면 var 가 우선 — 기준은 "자식 수 / 분기 유무" 가 먼저
-- 레퍼런스: `HomeView.hotBattlesSection`, `PreVoteView.primaryButton`, `HeroCardView.thumbnail`
+- **모든 sub-view = `@ViewBuilder private func name() -> some View`** (단일 뷰 / 다중 자식 / 분기 무관)
+- `private var ...: some View` 패턴 금지 — 호출부에서 `name` vs `name()` 형태 혼재되는 것을 방지
+- `body` 만 `var body: some View` 유지 (View 프로토콜 요구사항)
+- body 안에서 호출은 항상 `()` 가 붙은 함수 형태로 — 가독성 통일
+
+#### 📏 함수 시그니처 — 파라미터 2개 이상이면 멀티 라인 (필수)
+
+함수 파라미터가 **2개 이상이면 각 파라미터를 새 줄에** 풀어 쓴다. 인라인 한 줄 시그니처는 1-파라미터 이하에서만 허용.
+
+```swift
+// ✅ 파라미터 2개 이상 — 멀티 라인
+@ViewBuilder
+private func voteSide(
+  _ option: VoteOptionSummary,
+  alignment: HorizontalAlignment
+) -> some View {
+  VStack(alignment: alignment, spacing: 6) { ... }
+}
+
+@ViewBuilder
+private func optionButton(
+  _ choice: Choice,
+  label: String,
+  desc: String,
+  isCorrect: Bool
+) -> some View { ... }
+
+// ✅ 파라미터 0~1개 — 한 줄 OK
+@ViewBuilder
+private func navigationBar() -> some View { ... }
+
+@ViewBuilder
+private func filterButton(_ filter: CommentFilter) -> some View { ... }
+
+// ❌ 금지 — 파라미터 2개 이상을 한 줄로
+private func voteSide(_ option: VoteOptionSummary, alignment: HorizontalAlignment) -> some View
+private func resultBadge(isSelected: Bool, isCorrect: Bool) -> some View
+```
+
+규칙:
+- View 함수 / Reducer 헬퍼 / 일반 메서드 / init 모두 동일 — 파라미터 ≥ 2 → 멀티 라인
+- 호출부 (call site) 도 동일 — `.init(a: x, b: y, c: z)` 처럼 인자 ≥ 2 면 멀티 라인 권장 (이미 대다수 코드 이 패턴)
+- 닫는 `)` 와 `-> some View` 는 시그니처 끝줄에 함께
 
 #### 🔤 폰트 — `.font(.system(...))` 금지, Pretendard 토큰 사용
 
@@ -368,6 +409,95 @@ public init(
 
 레퍼런스: `HomeFeature.State`, attendance `ProfileFeature.State`
 
+#### 📦 Feature 화면 모델 / Item / Filter / Sort 는 Entity 모듈에 정의 (필수)
+
+`XxxFeature.swift` 안에 `XxxItem` · `XxxSummary` · `XxxFilter` · `XxxSort` 같은 **화면용 모델 / 분기 enum** 을 직접 선언하지 않는다. 모두 `Domain/Entity` 모듈에 정의하고 Feature/View 에서는 `import Entity` 로 가져다 쓴다.
+
+```swift
+// ✅ 올바른 패턴 — 화면 모델은 Entity 모듈에 정의
+// Projects/Domain/Entity/Sources/Home/Comment.swift
+public struct CommentItem: Equatable, Identifiable { ... }
+public enum CommentFilter: String, CaseIterable, Equatable { ... }
+public enum CommentSort: String, CaseIterable, Equatable { ... }
+public struct VoteSummary: Equatable { ... }
+
+// Projects/Presentation/Chat/Sources/Comment/Reducer/CommentFeature.swift
+import Entity
+
+@Reducer
+public struct CommentFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public var comments: [CommentItem] = []
+    public var selectedFilter: CommentFilter = .all
+    public var selectedSort: CommentSort = .popular
+    public var voteSummary: VoteSummary = .empty
+  }
+}
+
+// ❌ 금지 — Feature 파일 안에 모델을 같이 선언
+// CommentFeature.swift
+public struct CommentItem: Equatable, Identifiable { ... }   // ← Entity 로 이동
+public enum CommentFilter: ... { ... }                       // ← Entity 로 이동
+public struct VoteSummary: Equatable { ... }                 // ← Entity 로 이동
+```
+
+규칙:
+- **모든 화면 모델 (struct/enum)** 은 `Projects/Domain/Entity/Sources/<도메인>/` 아래에 둔다 (`Home/Comment.swift`, `Home/Battle.swift` 등)
+- Feature 안에는 `State` / `Action` / `Reducer` / `CancelID` 같은 **TCA 컴포넌트만** 둔다
+- UI 분기용 enum (`CommentFilter`, `CommentSort`) 도 도메인 모델로 취급해 Entity 에 둔다 — 같은 도메인의 여러 화면에서 재사용 가능
+- 서버 응답 매핑 init (`init(item: BattlePerspective, order: Int)`) · 정적 mocks · `.empty` 팩토리도 모두 Entity 쪽에서 정의
+- 의존성 방향 유지: `Presentation → Domain ← Data` — Entity 는 SwiftUI/TCA/Network 비의존 (Foundation 만)
+
+레퍼런스: `Entity/Sources/Home/Comment.swift` (CommentItem, CommentFilter, CommentSort, CommentReplyItem, VoteSummary)
+
+#### 🗂️ Feature 파일 — Reducer 관련 코드만 (필수)
+
+`XxxFeature.swift` 안에는 **TCA Reducer 구성 요소만** 둔다. presentation 전용 helper 라도 모델/타입은 nested 로 두지 말고 **같은 모듈의 `Model/` 폴더에 별도 파일**로 분리한다.
+
+```swift
+// ✅ Feature 파일은 reducer 구성 요소만
+@Reducer
+public struct PreVoteFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public var shareItem: ShareItem?     // ← top-level 타입 참조
+    // …
+  }
+
+  public enum Action: ViewAction, BindableAction { … }
+  public enum View { case shareTapped(snapshot: Data?) … }
+  public enum AsyncAction: Equatable { case prepareShare(ShareContent) … }
+  public enum InnerAction: Equatable { case sharePrepared(ShareItem) … }
+  nonisolated enum CancelID: Hashable { … }
+
+  @Dependency(\.battleUseCase) private var battleUseCase
+  public var body: some Reducer<State, Action> { … }
+}
+
+// Projects/Presentation/Chat/Sources/Vote/Model/ShareItem.swift
+public struct ShareItem: Equatable, Identifiable { … }
+
+// Projects/Presentation/Chat/Sources/Vote/Model/ShareContent.swift
+public struct ShareContent: Equatable { … }
+
+// ❌ 금지 — Feature 안에 nested 로 같이 선언
+@Reducer
+public struct PreVoteFeature {
+  public struct ShareItem: Equatable, Identifiable { … }    // ← Model/ 로 분리
+  public struct ShareContent: Equatable { … }                // ← Model/ 로 분리
+}
+```
+
+규칙:
+- Feature 파일 (`XxxFeature.swift`) 에는 **`State` / `Action` / `View` / `AsyncAction` / `InnerAction` / `ScopeAction` / `DelegateAction` / `CancelID` / `body` / `@Dependency` 만** 둔다
+- presentation 전용 모델 (`ShareItem`, `ShareContent`, sheet item 등) 은 **같은 모듈의 `Model/` 폴더에 top-level public struct/enum** 으로 분리
+- 도메인 모델은 [위 규칙](#-feature-화면-모델--item--filter--sort-는-entity-모듈에-정의-필수) 대로 `Domain/Entity` 모듈로
+- presentation 모델에 포함되는 헬퍼 (텍스트 빌드 같은 표현 로직) 는 모델 파일 안에 computed property / method 로 함께 둔다 — reducer 가 책임지지 않는다
+- Reducer 안의 helper 함수 (`makeBattle(from:)`, `handleViewAction(state:action:)` 등) 는 Feature 파일에 그대로 둬도 OK — reducer 관련이라는 점이 명확하면 분리 강제하지 않음
+- 파일 위치: `Projects/Presentation/<모듈>/Sources/<도메인>/Model/<TypeName>.swift`
+- 레퍼런스: `Projects/Presentation/Chat/Sources/Vote/Model/ShareItem.swift`, `Projects/Presentation/Chat/Sources/Vote/Model/ShareContent.swift`
+
 #### ⚡ AsyncAction — `Result { try await }` + `mapError` + 단일 `Response` Inner 액션
 
 `do/catch + 별도 Loaded / Failed 액션` 분리하지 말고, `Result` 로 감싸서 단일 `xxxResponse(Result<Success, AuthError>)` Inner 액션으로 보낸다. State 캡쳐는 `[키 = state.xxx]` 형태.
@@ -415,6 +545,73 @@ return .run { send in
 - 캡쳐는 `[repository = self.repository, userSession = state.userSession]` 처럼 명시
 - `.cancellable(id: CancelID.xxx, cancelInFlight: true)` 로 중복 호출 방지
 - 레퍼런스: `AuthUseCaseImpl.withDraw` / `HomeFeature.fetchHome`
+
+#### 🧩 UseCase 강제 — Feature 는 Repository 직접 의존 금지 (필수)
+
+Clean Architecture 의존 방향(`Presentation → Domain ← Data`) 을 지키기 위해 **Feature/Reducer 는 절대로 `@Dependency(\.xxxRepository)` 를 직접 잡지 않는다**. 모든 외부 IO 는 `XxxUseCase` 프로토콜을 통해서만 호출한다.
+
+```swift
+// ✅ 올바른 패턴 — Feature 는 UseCase 만 의존
+@Reducer
+public struct PreVoteFeature {
+  @Dependency(\.battleUseCase) private var battleUseCase
+  @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
+
+  // ... .run { [useCase = battleUseCase] send in
+  //       try await useCase.fetchBattle(battleId: battleId)
+  //     }
+}
+
+// UseCase Impl — Projects/Domain/UseCase/Sources/<도메인>/<Domain>UseCase.swift
+// 별도 protocol 만들지 않고 기존 Interface 를 그대로 채택한다 (Attendance_iOS 패턴).
+public struct BattleUseCaseImpl: BattleInterface {
+  @Dependency(\.battleRepository) private var battleRepository
+
+  public init() {}
+
+  public func fetchBattle(battleId: Int) async throws -> BattleDetail {
+    try await battleRepository.fetchBattle(battleId: battleId)
+  }
+  // ... 나머지 메서드도 동일하게 repository 로 단순 위임
+}
+
+extension BattleUseCaseImpl: DependencyKey {
+  public static var liveValue = BattleUseCaseImpl()
+  public static var testValue = BattleUseCaseImpl()
+  public static var previewValue = BattleUseCaseImpl()
+}
+
+public extension DependencyValues {
+  var battleUseCase: BattleUseCaseImpl {
+    get { self[BattleUseCaseImpl.self] }
+    set { self[BattleUseCaseImpl.self] = newValue }
+  }
+}
+
+// ❌ 금지 — Feature 가 Repository 를 직접 잡음
+@Reducer
+public struct PreVoteFeature {
+  @Dependency(\.battleRepository) private var battleRepository   // ← UseCase 거치게
+  @Dependency(\.perspectiveRepository) private var perspectiveRepository
+}
+
+// ❌ 금지 — UseCase 용 새 protocol 을 별도로 만들기 (Interface 중복 정의)
+public protocol BattleUseCase: Sendable { ... }
+public struct BattleUseCaseImpl: BattleUseCase { ... }
+```
+
+규칙:
+- **Feature/Reducer**: `@Dependency(\.<domain>UseCase)` 만 사용 — Repository 키 사용 금지
+- **UseCase Impl**: 기존 `XxxInterface` 를 **그대로 채택** (별도 `XxxUseCase` protocol 만들지 않음 — Attendance_iOS `AuthUseCaseImpl: AuthInterface` 패턴)
+- **Repository 잡는 방식**: Impl 안에서 `@Dependency(\.xxxRepository) private var xxxRepository` 로 직접 잡고, `public init() {}` 만 노출 (Attendance 패턴)
+- **DependencyKey 채택**: Impl 자체에 `extension XxxUseCaseImpl: DependencyKey { liveValue / testValue / previewValue }` 를 모두 정의 — 별도 `enum XxxUseCaseKey` 만들지 않음
+- **liveValue / testValue / previewValue 모두 명시**: 세 값 모두 `XxxUseCaseImpl()` 로 동일하게 둠 (Attendance 패턴 — 테스트/프리뷰에서 별도 mock 이 필요해지면 그때 교체)
+- **DependencyValues 키 이름**: `<domain>UseCase` (`battleUseCase`, `homeUseCase`, `commentUseCase`, `perspectiveUseCase`) — 키 타입은 `XxxUseCaseImpl` (Interface 가 아닌 Impl)
+- **Repository 키 (`battleRepository`, `homeRepository`, …)** 는 UseCase Impl 안에서만 사용. Presentation 에서는 호출 금지
+- 동일 도메인의 모든 IO 를 하나의 UseCase 파일에 모음 (multi-method UseCase). 액션 1개짜리 도메인이면 Attendance `FetchMyAttendancesUseCase` 처럼 별도 protocol 1개 + Impl 1개 형태도 OK
+- 새 IO 가 추가되면: 1) Repository 메서드 추가 → 2) UseCase Impl 에 위임 메서드 추가 → 3) Feature 에서 UseCase 호출
+
+레퍼런스: `BattleUseCaseImpl`, `HomeUseCaseImpl`, `CommentUseCaseImpl`, `PerspectiveUseCaseImpl`, Attendance_iOS `AuthUseCaseImpl`
 
 #### 🔌 RepositoryImpl — Provider 선언 패턴
 
@@ -624,6 +821,22 @@ public var method: Moya.Method {
 - 별도 요청이 없는 한 영어 커밋 메시지는 사용하지 않음
 - 커밋 메시지에 `Co-Authored-By: Claude ...` 등의 자동 서명 라인을 절대 추가하지 않음
 - OMX 훅 검증을 위해 커밋 명령에는 `Co-authored-by: OmX <omx@oh-my-codex.dev>` trailer를 포함하되, 최종 커밋 메시지에서는 제거
+
+### 📦 커밋 단위 / 크기 규칙 — 30 파일 이상이면 끊어서 (필수)
+
+한 번에 너무 많은 파일을 묶으면 리뷰가 불가능하고 회귀 발생 시 bisect 가 어렵다. 변경된 파일 수가 많으면 **의미 단위로 끊어서 여러 커밋**으로 나눈다.
+
+규칙:
+- 한 커밋의 **변경 파일 수가 30개를 초과하면 반드시 분할**
+- 분할 기준은 **모듈 / 도메인 / 변경 종류** 가 우선:
+  - 예) `API + Service + RepositoryImpl` 같이 도메인 레이어 한 줄기 → 1 커밋
+  - 예) `UseCase 신규 정의` → 1 커밋
+  - 예) `Feature 들의 @Dependency 교체` → 1 커밋
+  - 예) `View / Reducer UI 변경` → 1 커밋
+  - 예) `AGENTS.md / .swiftformat 같은 규칙 / 설정` → 1 커밋
+- 분할 후 각 커밋은 **단독으로 빌드 가능**해야 함 (의존하는 다른 커밋이 같은 PR 안에 있으면 OK, 다른 PR 에 있으면 분할 순서 조정)
+- 작업 시작 전에 변경 범위를 보고 **30 파일이 넘을 것 같으면 미리 단계로 쪼개기**
+- 단순 포맷터 / 자동 변환 (예: 전역 시그니처 멀티라인) 은 30 파일 넘어도 1 커밋 OK — 단 커밋 메시지에 "전역 자동 변환" 명시
 
 ### 🧭 TCAFlow 네비게이션 (`docs/agent/tcaflow-navigation.md`)
 - @FlowCoordinator 패턴

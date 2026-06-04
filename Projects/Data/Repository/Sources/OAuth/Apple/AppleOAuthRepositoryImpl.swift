@@ -31,7 +31,10 @@ public final class AppleOAuthRepositoryImpl: NSObject, AppleOAuthInterface, @unc
   public override init() {
 
   }
-  public func signInWithCredential(_ credential: ASAuthorizationAppleIDCredential, nonce: String) async throws -> AppleOAuthPayload {
+  public func signInWithCredential(
+    _ credential: ASAuthorizationAppleIDCredential,
+    nonce: String
+  ) async throws -> AppleOAuthPayload {
     // 받은 credential으로 직접 payload 생성
     guard let identityTokenData = credential.identityToken,
           let identityToken = String(data: identityTokenData, encoding: .utf8)
@@ -92,7 +95,10 @@ public final class AppleOAuthRepositoryImpl: NSObject, AppleOAuthInterface, @unc
 
 // MARK: - ASAuthorizationControllerDelegate
 extension AppleOAuthRepositoryImpl: ASAuthorizationControllerDelegate {
-  public func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+  public func authorizationController(
+    controller: ASAuthorizationController,
+    didCompleteWithAuthorization authorization: ASAuthorization
+  ) {
     guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
       finishSignIn(with: .failure(AuthError.invalidCredential("Invalid credential type")))
       return

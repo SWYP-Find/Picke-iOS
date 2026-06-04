@@ -9,7 +9,10 @@ import Foundation
 import WeaveDI
 
 public protocol KeychainManaging: Sendable {
-  func save(accessToken: String, refreshToken: String)
+  func save(
+    accessToken: String,
+    refreshToken: String
+  )
   func saveAccessToken(_ token: String)
   func clearAccessToken()
   func saveRefreshToken(_ token: String)
