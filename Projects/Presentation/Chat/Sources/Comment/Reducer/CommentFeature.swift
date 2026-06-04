@@ -541,11 +541,9 @@ extension CommentFeature {
         state.comments = reset ? mapped : state.comments + mapped
         state.nextCursor = page.nextCursor
         state.hasNext = page.hasNext
-        // 표시되는 각 관점의 좋아요 수를 GET /perspectives/{id}/likes 로 조회.
-        let likeEffects: [Effect<Action>] = mapped.compactMap { item in
-          item.perspectiveId.map { .send(.async(.fetchPerspectiveLikes(perspectiveId: $0))) }
-        }
-        return likeEffects.isEmpty ? .none : .merge(likeEffects)
+        // 좋아요 수/상태(likeCount·isLiked)는 목록 응답 값을 그대로 신뢰한다.
+        // (이전엔 댓글마다 GET /perspectives/{id}/likes 로 덮어써 수치가 로드 후 바뀌는 문제가 있었음)
+        return .none
       case let .failure(error):
         Log.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)")
       }
