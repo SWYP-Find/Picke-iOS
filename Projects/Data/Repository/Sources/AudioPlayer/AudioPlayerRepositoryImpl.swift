@@ -82,7 +82,7 @@ final class AudioPlayerService {
   func load(url: URL) async -> Bool {
     let item = AVPlayerItem(url: url)
     player.replaceCurrentItem(with: item)
-    player.seek(to: .zero)
+    await player.seek(to: .zero)
     // 자산이 실제 재생 가능한지 확인 → 실패 시 오류 배너 노출 트리거.
     do {
       return try await item.asset.load(.isPlayable)
