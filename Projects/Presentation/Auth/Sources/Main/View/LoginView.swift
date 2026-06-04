@@ -34,6 +34,9 @@ public struct LoginView: View {
       }
       .toastOverlay()
     }
+    .pickeModal($store.scope(state: \.termsAgreement, action: \.termsAgreement)) { termsStore in
+      TermsAgreementView(store: termsStore)
+    }
   }
 }
 
