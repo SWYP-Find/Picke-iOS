@@ -37,6 +37,7 @@ public enum CustomAlertStyle: Equatable {
   case finalVote
   case report
   case alreadyWatched
+  case deleteConfirm
 }
 
 @CasePathable
@@ -87,7 +88,7 @@ public extension CustomAlertState where Action == CustomAlertAction {
       confirmTitle: "삭제하기",
       cancelTitle: "뒤로가기",
       isDestructive: true,
-      style: .confirmation
+      style: .deleteConfirm
     )
   }
 
@@ -97,7 +98,7 @@ public extension CustomAlertState where Action == CustomAlertAction {
       confirmTitle: "삭제하기",
       cancelTitle: "뒤로가기",
       isDestructive: true,
-      style: .confirmation
+      style: .deleteConfirm
     )
   }
 

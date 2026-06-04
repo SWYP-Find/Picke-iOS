@@ -60,7 +60,7 @@ struct CustomConfirmationPopup: View {
     switch style {
     case .confirmation:
       return 20
-    case .finalVote, .report, .alreadyWatched:
+    case .finalVote, .report, .alreadyWatched, .deleteConfirm:
       return 0
     }
   }
@@ -76,7 +76,57 @@ struct CustomConfirmationPopup: View {
       reportContent
     case .alreadyWatched:
       alreadyWatchedContent
+    case .deleteConfirm:
+      deleteConfirmContent
     }
+  }
+
+  private var deleteConfirmContent: some View {
+    VStack(spacing: 16) {
+      Text(title)
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(.neutral900)
+        .lineSpacing(14 * 0.4)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+
+      HStack(spacing: 0) {
+        // 삭제하기 (왼쪽·밝은 버튼) = 확정(삭제)
+        Button(action: onConfirm) {
+          Text(confirmTitle)
+            .pretendardFont(family: .Medium, size: 14)
+            .foregroundStyle(.primary500)
+            .lineSpacing(14 * 0.4)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.secondary50, in: Rectangle())
+        }
+        .buttonStyle(.plain)
+
+        // 뒤로가기 (오른쪽·어두운 버튼) = 취소
+        Button(action: onCancel) {
+          Text(cancelTitle)
+            .pretendardFont(family: .Medium, size: 14)
+            .foregroundStyle(.secondary50)
+            .lineSpacing(14 * 0.4)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(.primary500, in: Rectangle())
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(.top, 20)
+    .frame(width: 313)
+    .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
+    .overlay(
+      RoundedRectangle(cornerRadius: 2)
+        .stroke(.primary500, lineWidth: 1.5)
+    )
+    .opacity(0.9)
+    .clipShape(RoundedRectangle(cornerRadius: 2))
+    .onTapGesture {}
   }
 
   @ViewBuilder
@@ -241,8 +291,9 @@ struct CustomConfirmationPopup: View {
       reportButtons
     }
     .padding(.top, 20)
-    .frame(width: 343, height: 236)
+    .frame(width: 343)
     .background(.beige500, in: RoundedRectangle(cornerRadius: 6))
+    .clipShape(RoundedRectangle(cornerRadius: 6))
     .overlay(
       RoundedRectangle(cornerRadius: 6)
         .stroke(.primary500, lineWidth: 1.5)
