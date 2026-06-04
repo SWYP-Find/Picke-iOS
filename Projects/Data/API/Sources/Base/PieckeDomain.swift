@@ -17,6 +17,7 @@ public enum PieckeDomain {
   case battle
   case comment
   case perspective
+  case search
 }
 
 extension PieckeDomain: DomainType {
@@ -27,19 +28,21 @@ extension PieckeDomain: DomainType {
   public var url: String {
     switch self {
     case .auth:
-      "api/v1/auth/"
+      return "api/v1/auth/"
     case .profile:
-      "api/v1/me/"
+      return "api/v1/me/"
     case .home:
-      "api/v1/home"
+      return "api/v1/home"
     case .poll:
-      "api/v1/poll"
+      return "api/v1/poll"
     case .battle:
-      "api/v1/battles/"
+      return "api/v1/battles/"
     case .comment:
-      "api/v1/comments/"
+      return "api/v1/comments/"
     case .perspective:
-      "api/v1/perspectives/"
+      return "api/v1/perspectives/"
+    case .search:
+      return "api/v1/search/"
     }
   }
 }
