@@ -100,16 +100,21 @@ platform :ios do
         scheme: "Picke-Stage",
         configuration: "Release",
         export_method: "app-store",
-        output_directory: File.expand_path("../#{OUTPUT_DIR}"),
+        output_directory: File.expand_path(OUTPUT_DIR),
         output_name: IPA_FILENAME,
         clean: false,
-        silent: true,
+        silent: false,
+        build_timing_summary: true,
+        disable_package_automatic_updates: true,
+        skip_package_dependencies_resolution: true,
+        skip_package_repository_fetches: true,
+        use_system_scm: true,
         xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                 "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
-                "SWIFT_COMPILATION_MODE=wholemodule -parallelizeTargets " +
+                "SWIFT_COMPILATION_MODE=incremental -parallelizeTargets " +
                 "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
                 "FRAMEWORK_SEARCH_PATHS='$(inherited)' LIBRARY_SEARCH_PATHS='$(inherited)' " +
-                "-allowProvisioningUpdates -quiet",
+                "-allowProvisioningUpdates",
         export_options: {
           signingStyle: "manual",
           uploadBitcode: false,
@@ -257,16 +262,21 @@ platform :ios do
           scheme: "Picke-Prod",
           configuration: "Release",
           export_method: "app-store",
-          output_directory: File.expand_path("../#{OUTPUT_DIR}"),
+          output_directory: File.expand_path(OUTPUT_DIR),
           output_name: IPA_FILENAME,
           clean: false,
-          silent: true,
+          silent: false,
+          build_timing_summary: true,
+          disable_package_automatic_updates: true,
+          skip_package_dependencies_resolution: true,
+          skip_package_repository_fetches: true,
+          use_system_scm: true,
           xcargs: "CODE_SIGN_IDENTITY='Apple Distribution: Wonji Suh (N94CS4N6VR)' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                   "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
-                  "SWIFT_COMPILATION_MODE=wholemodule -parallelizeTargets " +
+                  "SWIFT_COMPILATION_MODE=incremental -parallelizeTargets " +
                   "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
                   "FRAMEWORK_SEARCH_PATHS='$(inherited)' LIBRARY_SEARCH_PATHS='$(inherited)' " +
-                  "-allowProvisioningUpdates -quiet",
+                  "-allowProvisioningUpdates",
           export_options: {
             signingStyle: "manual",
             uploadBitcode: false,
@@ -355,5 +365,3 @@ platform :ios do
     end
   end
 end
-
-
