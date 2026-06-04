@@ -10,6 +10,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Utill
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {
@@ -500,7 +501,7 @@ private extension CommentView {
     Button { send(.commentRow(id: comment.id, action: .like)) } label: {
       actionLabel(
         systemName: comment.isLiked ? "heart.fill" : "heart",
-        text: formattedCount(comment.likeCount)
+        text: comment.likeCount.decimalFormatted
       )
     }
     .buttonStyle(.plain)
@@ -595,12 +596,6 @@ private extension CommentView {
 private extension CommentView {
   func percentText(_ percentage: Double) -> String {
     "\(String(format: "%.1f", percentage * 100))%"
-  }
-
-  func formattedCount(_ count: Int) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
   }
 }
 
