@@ -1,5 +1,4 @@
 # Fastlane 기본 설정
-update_fastlane
 default_platform(:ios)
 
 ENV["FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT"] = "600"
@@ -356,6 +355,5 @@ platform :ios do
     end
   end
 end
-
 
 
