@@ -26,6 +26,8 @@ public enum PerspectiveService {
   case likePerspective(perspectiveId: Int)
   case unlikePerspective(perspectiveId: Int)
   case fetchPerspectiveLikes(perspectiveId: Int)
+  case reportPerspective(perspectiveId: Int)
+  case reportComment(perspectiveId: Int, commentId: Int)
 }
 
 extension PerspectiveService: BaseTargetType {
@@ -55,6 +57,10 @@ extension PerspectiveService: BaseTargetType {
       return PerspectiveAPI.likes(perspectiveId: perspectiveId).description
     case let .fetchPerspectiveLikes(perspectiveId):
       return PerspectiveAPI.likes(perspectiveId: perspectiveId).description
+    case let .reportPerspective(perspectiveId):
+      return PerspectiveAPI.reports(perspectiveId: perspectiveId).description
+    case let .reportComment(perspectiveId, commentId):
+      return PerspectiveAPI.reportComment(perspectiveId: perspectiveId, commentId: commentId).description
     }
   }
 
@@ -64,11 +70,9 @@ extension PerspectiveService: BaseTargetType {
     switch self {
     case .detail, .listLabeledComments, .fetchPerspectiveLikes:
       return .get
-    case .createComment, .likePerspective:
+    case .createComment, .likePerspective, .reportPerspective, .reportComment:
       return .post
-    case .updateComment:
-      return .put
-    case .updatePerspective:
+    case .updateComment, .updatePerspective:
       return .patch
     case .deleteComment, .deletePerspective, .unlikePerspective:
       return .delete
@@ -95,6 +99,8 @@ extension PerspectiveService: BaseTargetType {
     case .deletePerspective:
       return nil
     case .likePerspective, .unlikePerspective, .fetchPerspectiveLikes:
+      return nil
+    case .reportPerspective, .reportComment:
       return nil
     }
   }
