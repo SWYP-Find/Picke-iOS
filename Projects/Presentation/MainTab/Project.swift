@@ -14,7 +14,8 @@ let project = Project.makeAppModule(
     .SPM.tcaFlow,
     .Domain(implements: .UseCase),
     .Shared(implements: .DesignSystem),
-    .Presentation(implements: .Home)
+    .Presentation(implements: .Home),
+    .Presentation(implements: .Hifi)
   ],
   sources: ["Sources/**"]
 )

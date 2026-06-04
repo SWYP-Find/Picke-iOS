@@ -2,11 +2,16 @@
 //  HifiView.swift
 //  Hifi
 //
+//  .pen `탐색 hifi 이미지` 기준 탐색 화면 UI.
+//
 
 import SwiftUI
 
 import ComposableArchitecture
 import DesignSystem
+import Entity
+import Kingfisher
+import Utill
 
 @ViewAction(for: HifiFeature.self)
 public struct HifiView: View {
@@ -17,17 +22,242 @@ public struct HifiView: View {
   }
 
   public var body: some View {
-    VStack(spacing: 12) {
-      Image(systemName: "waveform")
-        .font(.system(size: 40, weight: .regular))
-        .foregroundStyle(.primary500)
-      Text("Hi-Fi")
-        .pretendardFont(family: .SemiBold, size: 18)
-        .foregroundStyle(.neutral800)
+    VStack(spacing: 0) {
+      HifiHeaderView {}
+
+      categoryTabs()
+
+      sortRow()
+
+      Group {
+        if store.isLoading, store.items.isEmpty {
+          ScrollView {
+            ExploreSkeletonView()
+          }
+        } else if store.items.isEmpty {
+          emptyState()
+        } else {
+          exploreList()
+        }
+      }
+      .scrollIndicators(.hidden)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .contentShape(Rectangle())
+      .simultaneousGesture(categorySwipe)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color.beige200.ignoresSafeArea())
     .navigationBarHidden(true)
+    .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
+  }
+}
+
+// MARK: - Empty
+
+private extension HifiView {
+  @ViewBuilder
+  func emptyState() -> some View {
+    VStack(spacing: 8) {
+      Image(asset: .noDataLogo)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 135, height: 90)
+
+      Text("새로운 콘텐츠가 없습니다")
+        .pretendardCustomFont(textStyle: .bodyMedium)
+        .foregroundStyle(.beige800)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+// MARK: - List
+
+private extension HifiView {
+  @ViewBuilder
+  func exploreList() -> some View {
+    ScrollView {
+      LazyVStack(spacing: 0) {
+        ForEach(store.items) { item in
+          exploreRow(item)
+            .onAppear {
+              // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
+              if item.id == store.items.last?.id {
+                send(.reachedBottom)
+              }
+            }
+        }
+      }
+    }
+  }
+
+  /// 좌우 스와이프로 카테고리 전환 (빈 상태/스켈레톤 포함 콘텐츠 영역 전체에 적용).
+  /// 인접 카테고리 계산은 Feature 가 담당.
+  var categorySwipe: some Gesture {
+    DragGesture(minimumDistance: 24)
+      .onEnded { value in
+        guard abs(value.translation.width) > abs(value.translation.height),
+              abs(value.translation.width) > 50
+        else { return }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+          send(.swipedCategory(forward: value.translation.width < 0))
+        }
+      }
+  }
+}
+
+// MARK: - Category Tabs
+
+private extension HifiView {
+  @ViewBuilder
+  func categoryTabs() -> some View {
+    ScrollView(.horizontal) {
+      HStack(spacing: 2) {
+        ForEach(store.categories, id: \.self) { category in
+          categoryTab(category)
+        }
+      }
+      .padding(.horizontal, 16)
+    }
+    .scrollIndicators(.hidden)
+    .background(.beige200)
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(.beige600)
+        .frame(height: 1.5)
+    }
+  }
+
+  @ViewBuilder
+  func categoryTab(_ category: ExploreCategory) -> some View {
+    let isSelected = store.selectedCategory == category
+    Button { send(.categoryTapped(category)) } label: {
+      Text(category.title)
+        .pretendardFont(family: isSelected ? .Medium : .Regular, size: 14)
+        .foregroundStyle(isSelected ? Color.primary500 : Color.neutral300)
+        .frame(width: 50)
+        .padding(.vertical, 8)
+        .overlay(alignment: .bottom) {
+          if isSelected {
+            Rectangle()
+              .fill(.primary500)
+              .frame(height: 4)
+          }
+        }
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+// MARK: - Sort
+
+private extension HifiView {
+  @ViewBuilder
+  func sortRow() -> some View {
+    HStack(spacing: 12) {
+      ForEach(ExploreSort.allCases, id: \.self) { sort in
+        let isSelected = store.selectedSort == sort
+        Button { send(.sortTapped(sort)) } label: {
+          Text(sort.title)
+            .pretendardFont(family: isSelected ? .SemiBold : .Medium, size: 12)
+            .foregroundStyle(isSelected ? Color.neutral800 : Color.neutral300)
+        }
+        .buttonStyle(.plain)
+      }
+      Spacer()
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .background(.beige200)
+  }
+}
+
+// MARK: - List Row
+
+private extension HifiView {
+  @ViewBuilder
+  func exploreRow(_ item: ExploreItem) -> some View {
+    Button { send(.itemTapped(id: item.id)) } label: {
+      HStack(alignment: .center, spacing: 8) {
+        thumbnail(item.imageURL)
+
+        VStack(alignment: .leading, spacing: 24) {
+          VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 6) {
+              Text("#\(item.category)")
+                .pretendardFont(family: .SemiBold, size: 12)
+                .foregroundStyle(.primary500)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+
+              Text(item.title)
+                .pretendardFont(family: .SemiBold, size: 14)
+                .foregroundStyle(.neutral500)
+                .kerning(-0.35)
+                .lineSpacing(14 * 0.28)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text(item.summary)
+              .pretendardFont(family: .Regular, size: 13)
+              .foregroundStyle(.neutral400)
+              .lineSpacing(13 * 0.4)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .fixedSize(horizontal: false, vertical: true)
+              .padding(.horizontal, 2)
+          }
+
+          footer(item)
+        }
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+      .background(.beige50)
+      .overlay(alignment: .bottom) {
+        Rectangle().fill(.beige600).frame(height: 1)
+      }
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func thumbnail(_ url: String?) -> some View {
+    Group {
+      if let url, let imageURL = URL(string: url) {
+        KFImage(imageURL)
+          .placeholder { Color.beige600 }
+          .resizable()
+          .scaledToFill()
+      } else {
+        Color.beige600
+      }
+    }
+    .frame(width: 76)
+    .frame(maxHeight: .infinity)
+    .clipShape(RoundedRectangle(cornerRadius: 2))
+  }
+
+  @ViewBuilder
+  func footer(_ item: ExploreItem) -> some View {
+    HStack(spacing: 6) {
+      Spacer()
+      HStack(spacing: 2) {
+        Image(systemName: "clock")
+          .font(.system(size: 11, weight: .regular))
+        Text("\(item.minutes)분")
+          .pretendardFont(family: .Medium, size: 12)
+      }
+      .foregroundStyle(.neutral300)
+
+      HStack(spacing: 2) {
+        Image(systemName: "eye")
+          .font(.system(size: 11, weight: .regular))
+        Text(item.viewCount.decimalFormatted)
+          .pretendardFont(family: .Medium, size: 12)
+      }
+      .foregroundStyle(.neutral300)
+    }
   }
 }

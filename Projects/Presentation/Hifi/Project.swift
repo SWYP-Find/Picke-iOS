@@ -11,7 +11,8 @@ let project = Project.makeAppModule(
   settings: .settings(),
   dependencies: [
     .Presentation(implements: .Chat),
-    .Shared(implements: .DesignSystem),
+    .Shared(implements: .Shared),
+    .Domain(implements: .UseCase),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,
