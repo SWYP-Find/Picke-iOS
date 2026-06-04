@@ -12,7 +12,7 @@ let project = Project.makeAppModule(
   dependencies: [
     .SPM.composableArchitecture,
     .Domain(implements: .UseCase),
-    .Shared(implements: .DesignSystem)
+    .Shared(implements: .Shared),
   ],
   sources: ["Sources/**"]
 )

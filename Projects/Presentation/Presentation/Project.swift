@@ -12,7 +12,8 @@ let project = Project.makeModule(
   dependencies: [
     .Presentation(implements: .Splash),
     .Presentation(implements: .Auth),
-    .Presentation(implements: .MainTab)
+    .Presentation(implements: .MainTab),
+    .Presentation(implements: .Web)
   ],
   sources: ["Sources/**"]
 )
