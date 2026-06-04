@@ -49,14 +49,17 @@ ln -s AGENTS.md CLAUDE.md
 - **사전 투표 → 1:1 채팅 토론 → 사후 투표** 의 한 흐름
 - **재투표** 로 가치관이 바뀌었는지 추적
 - **리캡 카드** 자동 생성 + 공유
+- **채팅방 오디오 재생** + 로딩 실패 시 상단 floating 오류 배너(`FloatingErrorView`)
 
-### 💬 토론 / 댓글
-- 채팅방형 1:1 토론
-- 콘텐츠별 댓글·대댓글
-- 신고·차단
+### 💬 토론 / 관점(댓글)
+- 채팅방형 1:1 음성 토론
+- 관점(=댓글) 등록·수정·삭제 + 대댓글, 좋아요, 신고
+- 투표 진영(optionId)별 관점 등록 / 진영 탭 필터
+- 본인 글 "나" 표시 + 수정·삭제 메뉴, 등록·갱신 시 스켈레톤
 
-### 🧭 탐색 / 홈
+### 🧭 탐색 / 큐레이팅 / 홈
 - 큐레이팅된 홈 피드
+- **흥미 기반 배틀 추천**(큐레이팅 화면) — `GET /battles/{id}/recommendations/interesting`
 - 카테고리·태그 탐색
 - 토픽 검색
 
@@ -83,6 +86,8 @@ Picke-iOS/
 │   ├── Presentation/              # 🎨 UI Layer
 │   │   ├── Auth/                  # 로그인 / 코디네이터 / Toast
 │   │   ├── Home/                  # 홈 피드 / 큐레이팅 / 스켈레톤
+│   │   ├── Chat/                  # 사전·사후 투표 / 채팅방 / 관점·대댓글 / 큐레이팅 (ChatCoordinator)
+│   │   ├── Hifi/                  # Hi-Fi 프로토타입 모듈
 │   │   ├── MainTab/               # 탭 라우팅 / GNB
 │   │   ├── Splash/                # 스플래시
 │   │   └── Presentation/          # 공통 프레젠테이션 유틸
@@ -106,7 +111,7 @@ Picke-iOS/
 │   │   └── ThirdPartys/           # AsyncMoya / WeaveDI 등 SPM 재노출
 │   │
 │   └── Shared/                    # 🔧 Shared Layer
-│       ├── DesignSystem/          # 공통 UI / 컬러 / 이미지 / Toast
+│       ├── DesignSystem/          # 공통 UI / 컬러 토큰 / 이미지 / Toast / Floating 배너 / AudioPlayer / 팝업
 │       ├── Shared/                # 공유 모델·확장
 │       ├── ThirdParty/            # 써드파티 래퍼
 │       └── Utill/                 # 공통 유틸리티
