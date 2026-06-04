@@ -68,4 +68,8 @@ public struct DefaultPerspectiveRepositoryImpl: PerspectiveInterface {
   public func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult {
     CommentLikeResult(perspectiveId: perspectiveId, likeCount: 0, isLiked: false)
   }
+
+  public func reportPerspective(perspectiveId _: Int) async throws {}
+
+  public func reportComment(perspectiveId _: Int, commentId _: Int) async throws {}
 }

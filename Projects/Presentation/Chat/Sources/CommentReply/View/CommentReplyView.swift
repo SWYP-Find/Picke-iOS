@@ -44,6 +44,55 @@ public struct CommentReplyView: View {
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
+    .animation(.easeInOut(duration: 0.18), value: store.menuTargetReplyId)
+  }
+
+  /// 답글 "…" 메뉴 (내 글: 수정/삭제, 남 글: 신고) — pill 형태.
+  @ViewBuilder
+  private func replyMenu(for reply: CommentReplyItem) -> some View {
+    VStack(alignment: .trailing, spacing: 8) {
+      if reply.isMine {
+        menuPill(title: "수정", systemImage: "pencil") { send(.replyMenu(id: reply.id, action: .edit)) }
+        menuPill(title: "삭제", systemImage: "trash") { send(.replyMenu(id: reply.id, action: .delete)) }
+      } else {
+        menuPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.replyMenu(id: reply.id, action: .report)) }
+      }
+    }
+  }
+
+  /// 부모(관점) "…" 메뉴 (내 글: 수정/삭제, 남 글: 신고).
+  @ViewBuilder
+  private func parentMenuView() -> some View {
+    VStack(alignment: .trailing, spacing: 8) {
+      if store.parentComment.isMine {
+        menuPill(title: "수정", systemImage: "pencil") { send(.parentMenu(.edit)) }
+        menuPill(title: "삭제", systemImage: "trash") { send(.parentMenu(.delete)) }
+      } else {
+        menuPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.parentMenu(.report)) }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func menuPill(
+    title: String,
+    systemImage: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: 4) {
+        Image(systemName: systemImage)
+          .font(.system(size: 13, weight: .medium))
+        Text(title)
+          .pretendardFont(family: .Medium, size: 13)
+      }
+      .foregroundStyle(Color.beige50)
+      .padding(.horizontal, 14)
+      .padding(.vertical, 7)
+      .background(Color.primary500, in: Capsule())
+    }
+    .buttonStyle(.plain)
   }
 }
 
@@ -89,7 +138,7 @@ private extension CommentReplyView {
   func parentCommentSection() -> some View {
     VStack(spacing: 0) {
       commentCard(
-        author: store.parentComment.author,
+        author: store.parentComment.isMine ? "나" : store.parentComment.author,
         imageURL: store.parentComment.authorImageURL,
         timeAgo: store.parentComment.timeAgo,
         option: store.parentComment.option,
@@ -101,11 +150,21 @@ private extension CommentReplyView {
         isMine: store.parentComment.isMine,
         background: .beige50,
         showsReplyCount: true,
+        moreAction: { send(.parentMenu(.more)) },
         likeAction: { send(.parentLikeTapped) }
       )
+      .overlay(alignment: .topTrailing) {
+        if store.parentMenuOpen {
+          parentMenuView()
+            .padding(.trailing, 12)
+            .offset(y: 46)
+            .zIndex(1)
+        }
+      }
     }
     .padding(12)
     .background(.beige50)
+    .zIndex(store.parentMenuOpen ? 1 : 0)
     .overlay(alignment: .bottom) {
       Rectangle()
         .fill(.beige600)
@@ -125,7 +184,7 @@ private extension CommentReplyView {
 
       ForEach(store.replies) { reply in
         commentCard(
-          author: reply.author,
+          author: reply.isMine ? "나" : reply.author,
           imageURL: reply.authorImageURL,
           timeAgo: reply.timeAgo,
           option: reply.option,
@@ -137,9 +196,18 @@ private extension CommentReplyView {
           isMine: reply.isMine,
           background: .beige50,
           showsReplyCount: false,
-          moreAction: { send(.replyMoreTapped(reply.id)) },
+          moreAction: { send(.replyMenu(id: reply.id, action: .more)) },
           likeAction: { send(.replyLikeTapped(reply.id)) }
         )
+        .overlay(alignment: .topTrailing) {
+          if store.menuTargetReplyId == reply.id {
+            replyMenu(for: reply)
+              .padding(.trailing, 24)
+              .offset(y: 46)
+              .zIndex(1)
+          }
+        }
+        .zIndex(store.menuTargetReplyId == reply.id ? 1 : 0)
       }
     }
     .padding(.bottom, 24)
@@ -214,7 +282,7 @@ private extension CommentReplyView {
     option: CommentOption,
     optionLabel: String,
     isMine: Bool,
-    moreAction _: (() -> Void)?
+    moreAction: (() -> Void)?
   ) -> some View {
     HStack(alignment: .top, spacing: 8) {
       CommentAvatarView(
@@ -244,10 +312,14 @@ private extension CommentReplyView {
 
       Spacer()
 
-      Image(systemName: "ellipsis")
-        .font(.system(size: 18, weight: .regular))
-        .frame(width: 24, height: 24)
-        .foregroundStyle(.neutral300)
+      Button { moreAction?() } label: {
+        Image(systemName: "ellipsis")
+          .font(.system(size: 18, weight: .regular))
+          .foregroundStyle(.neutral300)
+          .frame(width: 44, height: 44)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
     }
   }
 

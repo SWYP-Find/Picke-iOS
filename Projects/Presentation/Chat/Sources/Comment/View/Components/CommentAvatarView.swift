@@ -49,7 +49,7 @@ private extension CommentAvatarView {
         .placeholder { Color.beige600 }
         .resizable()
         .scaledToFill()
-        .frame(width: size, height: size)
+        .frame(width: 24, height: 24)
         .scaleEffect(imageScale)
     } else {
       Text(String(fallback.prefix(1)))

@@ -76,6 +76,14 @@ public struct PerspectiveUseCaseImpl: PerspectiveInterface {
   public func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult {
     return try await perspectiveRepository.fetchPerspectiveLikes(perspectiveId: perspectiveId)
   }
+
+  public func reportPerspective(perspectiveId: Int) async throws {
+    return try await perspectiveRepository.reportPerspective(perspectiveId: perspectiveId)
+  }
+
+  public func reportComment(perspectiveId: Int, commentId: Int) async throws {
+    return try await perspectiveRepository.reportComment(perspectiveId: perspectiveId, commentId: commentId)
+  }
 }
 
 extension PerspectiveUseCaseImpl: DependencyKey {

@@ -3,22 +3,17 @@
 //  Chat
 //
 //  대댓글 화면.
-//  - GET    /api/v1/perspectives/{pid}                       (부모 댓글 상세)
-//  - GET    /api/v1/perspectives/{pid}/comments/labeled      (답글 페이지)
-//  - POST   /api/v1/perspectives/{pid}/comments              (답글 작성)
-//  - PUT    /api/v1/perspectives/{pid}/comments/{cid}        (답글 수정)
-//  - DELETE /api/v1/perspectives/{pid}/comments/{cid}        (답글 삭제)
-//  - POST/DELETE /api/v1/comments/{cid}/likes                (좋아요 토글)
+
 //
 
 import Foundation
 
 import ComposableArchitecture
+import DesignSystem
 import DomainInterface
 import Entity
 import LogMacro
 import UseCase
-import DesignSystem
 
 @Reducer
 public struct CommentReplyFeature {
@@ -37,8 +32,17 @@ public struct CommentReplyFeature {
     public var editingCommentId: Int?
     /// "…" 메뉴를 띄울 대상 답글 id.
     public var menuTargetReplyId: UUID?
+    /// 부모(관점) "…" 메뉴 열림.
+    public var parentMenuOpen: Bool = false
+    /// 입력창이 부모 관점 수정 모드.
+    public var editingParent: Bool = false
     /// 삭제 확인 알럿 대상 commentId.
     public var deleteTargetCommentId: Int?
+    /// 신고 확인 알럿 대상 commentId.
+    public var reportTargetCommentId: Int?
+    /// 삭제/신고 알럿이 부모(관점) 대상.
+    public var deleteParentPending: Bool = false
+    public var reportParentPending: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public var menuTargetReply: CommentReplyItem? {
@@ -78,11 +82,16 @@ public struct CommentReplyFeature {
     case beginEditing(commentId: Int, content: String)
     case cancelEditing
     case deleteTapped(commentId: Int)
-    case replyMoreTapped(UUID)
     case menuDismissed
-    case replyEditTapped(UUID)
-    case replyDeleteTapped(UUID)
-    case replyReportTapped(UUID)
+    case replyMenu(id: UUID, action: MenuAction)
+    case parentMenu(MenuAction)
+  }
+
+  public enum MenuAction: Equatable {
+    case more
+    case edit
+    case delete
+    case report
   }
 
   @CasePathable
@@ -99,6 +108,10 @@ public struct CommentReplyFeature {
     case toggleParentLike(currentlyLiked: Bool)
     case toggleReplyLike(commentId: Int, currentlyLiked: Bool)
     case fetchParentLikes
+    case reportComment(commentId: Int)
+    case updateParent(content: String)
+    case deleteParent
+    case reportParent
   }
 
   public enum InnerAction: Equatable {
@@ -171,16 +184,36 @@ public struct CommentReplyFeature {
         switch customAlertAction {
         case .confirmTapped:
           state.customAlert = nil
-          guard let commentId = state.deleteTargetCommentId else { return .none }
-          state.deleteTargetCommentId = nil
-          return .send(.async(.deleteReply(commentId: commentId)))
+          if state.deleteParentPending {
+            state.deleteParentPending = false
+            return .send(.async(.deleteParent))
+          }
+          if state.reportParentPending {
+            state.reportParentPending = false
+            return .send(.async(.reportParent))
+          }
+          if let commentId = state.deleteTargetCommentId {
+            state.deleteTargetCommentId = nil
+            return .send(.async(.deleteReply(commentId: commentId)))
+          }
+          if let commentId = state.reportTargetCommentId {
+            state.reportTargetCommentId = nil
+            return .send(.async(.reportComment(commentId: commentId)))
+          }
+          return .none
         case .cancelTapped:
           state.deleteTargetCommentId = nil
+          state.reportTargetCommentId = nil
+          state.deleteParentPending = false
+          state.reportParentPending = false
           state.customAlert = nil
           return .none
         }
       case .dismiss:
         state.deleteTargetCommentId = nil
+        state.reportTargetCommentId = nil
+        state.deleteParentPending = false
+        state.reportParentPending = false
         state.customAlert = nil
         return .none
       }
@@ -225,6 +258,10 @@ extension CommentReplyFeature {
       let text = state.replyText.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !text.isEmpty else { return .none }
       state.replyText = ""
+      if state.editingParent {
+        state.editingParent = false
+        return .send(.async(.updateParent(content: text)))
+      }
       if let editingId = state.editingCommentId {
         state.editingCommentId = nil
         return .send(.async(.updateReply(commentId: editingId, content: text)))
@@ -244,35 +281,59 @@ extension CommentReplyFeature {
     case let .deleteTapped(commentId):
       return .send(.async(.deleteReply(commentId: commentId)))
 
-    case let .replyMoreTapped(id):
-      state.menuTargetReplyId = id
-      return .none
-
     case .menuDismissed:
       state.menuTargetReplyId = nil
       return .none
 
-    case let .replyEditTapped(id):
-      state.menuTargetReplyId = nil
-      guard let reply = state.replies.first(where: { $0.id == id }),
-            let commentId = reply.commentId
-      else { return .none }
-      state.editingCommentId = commentId
-      state.replyText = reply.content
-      return .none
+    case let .replyMenu(id, action):
+      switch action {
+      case .more:
+        state.menuTargetReplyId = (state.menuTargetReplyId == id) ? nil : id
+        return .none
+      case .edit:
+        state.menuTargetReplyId = nil
+        guard let reply = state.replies.first(where: { $0.id == id }),
+              let commentId = reply.commentId
+        else { return .none }
+        state.editingCommentId = commentId
+        state.replyText = reply.content
+        return .none
+      case .delete:
+        state.menuTargetReplyId = nil
+        guard let reply = state.replies.first(where: { $0.id == id }),
+              let commentId = reply.commentId
+        else { return .none }
+        state.deleteTargetCommentId = commentId
+        state.customAlert = .deleteComment()
+        return .none
+      case .report:
+        state.menuTargetReplyId = nil
+        guard let reply = state.replies.first(where: { $0.id == id }),
+              let commentId = reply.commentId
+        else { return .none }
+        state.reportTargetCommentId = commentId
+        state.customAlert = .report()
+        return .none
+      }
 
-    case let .replyDeleteTapped(id):
-      state.menuTargetReplyId = nil
-      guard let reply = state.replies.first(where: { $0.id == id }),
-            let commentId = reply.commentId
-      else { return .none }
-      state.deleteTargetCommentId = commentId
-      state.customAlert = .deleteComment()
-      return .none
-
-    case let .replyReportTapped(id):
-      state.menuTargetReplyId = nil
-      Log.debug("[CommentReplyFeature] report reply tapped: \(id)")
+    case let .parentMenu(action):
+      switch action {
+      case .more:
+        state.parentMenuOpen.toggle()
+      case .edit:
+        state.parentMenuOpen = false
+        state.editingCommentId = nil
+        state.editingParent = true
+        state.replyText = state.parentComment.content
+      case .delete:
+        state.parentMenuOpen = false
+        state.deleteParentPending = true
+        state.customAlert = .deletePerspective()
+      case .report:
+        state.parentMenuOpen = false
+        state.reportParentPending = true
+        state.customAlert = .report()
+      }
       return .none
     }
   }
@@ -300,6 +361,8 @@ extension CommentReplyFeature {
 
     case let .fetchReplies(reset):
       state.isLoadingReplies = true
+      // 갱신(reset) 시 리스트를 비워 스켈레톤이 노출되도록 한다.
+      if reset { state.replies = [] }
       let pid = state.perspectiveId
       let cursor = reset ? nil : state.nextCursor
       return .run { [repository = perspectiveUseCase] send in
@@ -384,6 +447,32 @@ extension CommentReplyFeature {
         .mapError(CommentError.from)
         return await send(.inner(.parentLikesResponse(result)))
       }
+
+    case let .reportComment(commentId):
+      let perspectiveId = state.perspectiveId
+      return .run { [repository = perspectiveUseCase] _ in
+        try? await repository.reportComment(perspectiveId: perspectiveId, commentId: commentId)
+      }
+
+    case let .updateParent(content):
+      let perspectiveId = state.perspectiveId
+      return .run { [repository = perspectiveUseCase] send in
+        try? await repository.updatePerspective(perspectiveId: perspectiveId, content: content)
+        await send(.async(.fetchParent))
+      }
+
+    case .deleteParent:
+      let perspectiveId = state.perspectiveId
+      return .run { [repository = perspectiveUseCase] send in
+        try? await repository.deletePerspective(perspectiveId: perspectiveId)
+        await send(.delegate(.dismiss))
+      }
+
+    case .reportParent:
+      let perspectiveId = state.perspectiveId
+      return .run { [repository = perspectiveUseCase] _ in
+        try? await repository.reportPerspective(perspectiveId: perspectiveId)
+      }
     }
   }
 }
@@ -432,14 +521,13 @@ extension CommentReplyFeature {
 
     case let .updateResponse(result, _):
       switch result {
-      case let .success(payload):
-        if let index = state.replies.firstIndex(where: { $0.commentId == payload.commentId }) {
-          state.replies[index].content = payload.content
-        }
+      case .success:
+        // 수정 후 리스트 reset 갱신 → 스켈레톤 노출
+        return .send(.async(.fetchReplies(reset: true)))
       case let .failure(error):
         Log.error("[CommentReplyFeature] updateReply failed: \(error.localizedDescription)")
+        return .none
       }
-      return .none
 
     case let .deleteResponse(result):
       switch result {

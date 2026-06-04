@@ -2,8 +2,6 @@
 //  CommentFeature.swift
 //  Chat
 //
-//  댓글 화면. vote-stats API 로 상단 통계만 실데이터 사용,
-//  댓글 리스트는 아직 mock.
 //
 
 import Foundation
@@ -90,17 +88,24 @@ public struct CommentFeature {
     case shareTapped
     case filterTapped(CommentFilter)
     case sortTapped(CommentSort)
-    case moreTapped(UUID)
-    case replyTapped(UUID)
-    case reportButtonTapped(UUID)
-    case reportConfirmTapped(UUID)
     case reportPopupDismissed
     case menuDismissed
-    case editTapped(UUID)
-    case deleteTapped(UUID)
-    case reportTapped(UUID)
-    case likeTapped(UUID)
+    case commentMenu(id: UUID, action: CommentMenuAction)
+    case commentRow(id: UUID, action: CommentRowAction)
     case sendTapped
+  }
+
+  public enum CommentMenuAction: Equatable {
+    case more
+    case edit
+    case delete
+    case report
+  }
+
+  public enum CommentRowAction: Equatable {
+    case openReply
+    case reportConfirm
+    case like
   }
 
   public enum AsyncAction: Equatable {
@@ -112,6 +117,7 @@ public struct CommentFeature {
     case createComment(content: String)
     case updatePerspective(perspectiveId: Int, content: String)
     case deletePerspective(perspectiveId: Int)
+    case reportPerspective(perspectiveId: Int)
     case fetchPerspectiveLikes(perspectiveId: Int)
   }
 
@@ -134,6 +140,7 @@ public struct CommentFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case openReply(CommentItem)
+    case openCuration(battleId: Int)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -202,59 +209,67 @@ extension CommentFeature {
       return .send(.delegate(.dismiss))
 
     case .forwardTapped:
-      // 앱바 우측 > : 첫 댓글의 대댓글(CommentReplyView) 화면으로 이동
-      guard let comment = state.comments.first else { return .none }
-      return .send(.delegate(.openReply(comment)))
+      // 앱바 우측 > : 큐레이팅(흥미 기반 추천 배틀) 화면으로 이동
+      return .send(.delegate(.openCuration(battleId: state.battleId)))
 
     case .shareTapped:
       return .none
 
-    case let .moreTapped(id), let .replyTapped(id):
-      guard let comment = state.comments.first(where: { $0.id == id }) else { return .none }
-      state.reportTargetCommentID = nil
-      return .send(.delegate(.openReply(comment)))
-
-    case let .reportButtonTapped(id):
-      // "…" 탭 → 메뉴 표시 (내 글: 수정/삭제, 남 글: 신고)
-      state.menuTargetCommentID = id
-      return .none
+    case let .commentRow(id, action):
+      switch action {
+      case .openReply:
+        guard let comment = state.comments.first(where: { $0.id == id }) else { return .none }
+        state.reportTargetCommentID = nil
+        return .send(.delegate(.openReply(comment)))
+      case .reportConfirm:
+        state.reportTargetCommentID = nil
+        guard let comment = state.comments.first(where: { $0.id == id }),
+              let pid = comment.perspectiveId
+        else { return .none }
+        return .send(.async(.reportPerspective(perspectiveId: pid)))
+      case .like:
+        guard let index = state.comments.firstIndex(where: { $0.id == id }),
+              let commentId = state.comments[index].perspectiveId
+        else { return .none }
+        let wasLiked = state.comments[index].isLiked
+        state.comments[index].isLiked.toggle()
+        state.comments[index].likeCount += state.comments[index].isLiked ? 1 : -1
+        return .send(.async(.toggleLike(commentId: commentId, currentlyLiked: wasLiked)))
+      }
 
     case .menuDismissed:
       state.menuTargetCommentID = nil
       return .none
 
-    case let .editTapped(id):
-      state.menuTargetCommentID = nil
-      guard let comment = state.comments.first(where: { $0.id == id }),
-            let pid = comment.perspectiveId
-      else { return .none }
-      state.editingPerspectiveId = pid
-      state.commentText = comment.content
-      return .none
-
-    case let .deleteTapped(id):
-      state.menuTargetCommentID = nil
-      guard let comment = state.comments.first(where: { $0.id == id }),
-            let pid = comment.perspectiveId
-      else { return .none }
-      state.deleteTargetPerspectiveId = pid
-      state.customAlert = .deletePerspective()
-      return .none
-
-    case let .reportTapped(id):
-      state.menuTargetCommentID = nil
-      state.reportTargetCommentID = id
-      state.customAlert = .report()
+    case let .commentMenu(id, action):
+      switch action {
+      case .more:
+        // "…" 탭 → 해당 댓글 바로 아래 메뉴 토글 (내 글: 수정/삭제, 남 글: 신고)
+        state.menuTargetCommentID = (state.menuTargetCommentID == id) ? nil : id
+      case .edit:
+        state.menuTargetCommentID = nil
+        guard let comment = state.comments.first(where: { $0.id == id }),
+              let pid = comment.perspectiveId
+        else { return .none }
+        state.editingPerspectiveId = pid
+        state.commentText = comment.content
+      case .delete:
+        state.menuTargetCommentID = nil
+        guard let comment = state.comments.first(where: { $0.id == id }),
+              let pid = comment.perspectiveId
+        else { return .none }
+        state.deleteTargetPerspectiveId = pid
+        state.customAlert = .deletePerspective()
+      case .report:
+        state.menuTargetCommentID = nil
+        state.reportTargetCommentID = id
+        state.customAlert = .report()
+      }
       return .none
 
     case .reportPopupDismissed:
       state.reportTargetCommentID = nil
       state.customAlert = nil
-      return .none
-
-    case let .reportConfirmTapped(id):
-      state.reportTargetCommentID = nil
-      Log.debug("[CommentFeature] report comment tapped: \(id)")
       return .none
 
     case let .filterTapped(filter):
@@ -266,15 +281,6 @@ extension CommentFeature {
       state.selectedSort = sort
       state.reportTargetCommentID = nil
       return .send(.async(.fetchPerspectives(reset: true)))
-
-    case let .likeTapped(id):
-      guard let index = state.comments.firstIndex(where: { $0.id == id }),
-            let commentId = state.comments[index].perspectiveId
-      else { return .none }
-      let wasLiked = state.comments[index].isLiked
-      state.comments[index].isLiked.toggle()
-      state.comments[index].likeCount += state.comments[index].isLiked ? 1 : -1
-      return .send(.async(.toggleLike(commentId: commentId, currentlyLiked: wasLiked)))
 
     case .sendTapped:
       let text = state.commentText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -305,7 +311,7 @@ extension CommentFeature {
             return .send(.async(.deletePerspective(perspectiveId: pid)))
           }
           if let id = state.reportTargetCommentID {
-            return .send(.view(.reportConfirmTapped(id)))
+            return .send(.view(.commentRow(id: id, action: .reportConfirm)))
           }
           return .none
 
@@ -410,8 +416,17 @@ extension CommentFeature {
 
     case let .createComment(content):
       let battleId = state.battleId
-      // 관점 등록 optionId: 내 관점/투표 진영 > 첫 옵션 순으로 결정.
-      let optionId = state.myOptionId ?? state.voteSummary.optionA.optionId
+      // 등록 진영: 현재 선택된 필터 탭의 옵션. 전체 탭이면 내 투표 진영(myOptionId).
+      let optionId: Int? = {
+        switch state.selectedFilter {
+        case .all: return state.myOptionId
+        case .optionA: return state.voteSummary.optionA.optionId > 0 ? state.voteSummary.optionA.optionId : state
+          .myOptionId
+        case .optionB: return state.voteSummary.optionB.optionId > 0 ? state.voteSummary.optionB.optionId : state
+          .myOptionId
+        }
+      }()
+      // 관점 등록: POST /battles/{id}/perspectives, body {content, optionId}
       return .run { [battle = battleUseCase] send in
         let result = await Result {
           try await battle.createPerspective(battleId: battleId, content: content, optionId: optionId)
@@ -431,6 +446,11 @@ extension CommentFeature {
       return .run { [repository = perspectiveUseCase] send in
         try? await repository.deletePerspective(perspectiveId: perspectiveId)
         await send(.inner(.mutationFinished))
+      }
+
+    case let .reportPerspective(perspectiveId):
+      return .run { [repository = perspectiveUseCase] _ in
+        try? await repository.reportPerspective(perspectiveId: perspectiveId)
       }
 
     case let .fetchPerspectiveLikes(perspectiveId):
@@ -484,6 +504,12 @@ extension CommentFeature {
       case let .success(perspective):
         state.perspectiveId = perspective?.perspectiveId
         if let optionId = perspective?.option.optionId { state.myOptionId = optionId }
+        // 내 perspectiveId 가 늦게 로드돼도 기존 목록에서 내 글을 표시.
+        if let myPid = perspective?.perspectiveId {
+          for index in state.comments.indices where state.comments[index].perspectiveId == myPid {
+            state.comments[index].isMine = true
+          }
+        }
       case let .failure(error):
         Log.error("[CommentFeature] fetchMyPerspective failed: \(error.localizedDescription)")
       }
@@ -503,8 +529,14 @@ extension CommentFeature {
       state.isLoadingComments = false
       switch result {
       case let .success(page):
-        let mapped = page.items.enumerated().map { idx, item in
-          CommentItem(item: item, order: idx)
+        let myPid = state.perspectiveId
+        let mapped = page.items.enumerated().map { idx, item -> CommentItem in
+          var comment = CommentItem(item: item, order: idx)
+          // 서버 isMyPerspective 가 누락/false 여도 내 perspectiveId 와 일치하면 내 글로 판정.
+          if let myPid, comment.perspectiveId == myPid {
+            comment.isMine = true
+          }
+          return comment
         }
         state.comments = reset ? mapped : state.comments + mapped
         state.nextCursor = page.nextCursor

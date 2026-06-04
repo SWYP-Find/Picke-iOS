@@ -172,6 +172,28 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
 
     return data.toDomain()
   }
+
+  public func reportPerspective(perspectiveId: Int) async throws {
+    let dto: BaseResponseDTO<String> = try await provider.request(
+      .reportPerspective(perspectiveId: perspectiveId)
+    )
+
+    if dto.statusCode >= 400 {
+      let message = dto.error?.message ?? "관점 신고 실패"
+      throw CommentError.backendError(message)
+    }
+  }
+
+  public func reportComment(perspectiveId: Int, commentId: Int) async throws {
+    let dto: BaseResponseDTO<String> = try await provider.request(
+      .reportComment(perspectiveId: perspectiveId, commentId: commentId)
+    )
+
+    if dto.statusCode >= 400 {
+      let message = dto.error?.message ?? "댓글 신고 실패"
+      throw CommentError.backendError(message)
+    }
+  }
 }
 
 public struct EmptyDTO: Decodable {}

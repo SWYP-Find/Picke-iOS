@@ -63,28 +63,45 @@ public struct CommentView: View {
       }
     }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
-    .overlay {
-      if let comment = store.menuTargetComment {
-        BottomActionSheet(
-          items: menuItems(for: comment),
-          onDismiss: { send(.menuDismissed) }
-        )
+  }
+
+  /// 댓글 카드 바로 아래에 뜨는 인라인 메뉴 (pill 형태).
+  @ViewBuilder
+  private func inlineMenu(for comment: CommentItem) -> some View {
+    VStack(alignment: .trailing, spacing: 8) {
+      ForEach(menuItems(for: comment)) { item in
+        Button { item.action() } label: {
+          HStack(spacing: 4) {
+            Image(systemName: item.systemImage)
+              .font(.system(size: 13, weight: .medium))
+            Text(item.title)
+              .pretendardFont(family: .Medium, size: 13)
+          }
+          .foregroundStyle(Color.beige50)
+          .padding(.horizontal, 14)
+          .padding(.vertical, 7)
+          .background(Color.primary500, in: Capsule())
+        }
+        .buttonStyle(.plain)
       }
     }
-    .animation(.easeInOut(duration: 0.2), value: store.menuTargetCommentID)
+    .padding(.trailing, 4)
   }
 
   /// "…" 메뉴 항목 — 내 글: 수정/삭제, 남 글: 신고.
   private func menuItems(for comment: CommentItem) -> [BottomActionItem] {
     if comment.isMine {
       return [
-        BottomActionItem(title: "수정", systemImage: "pencil") { send(.editTapped(comment.id)) },
-        BottomActionItem(title: "삭제", systemImage: "trash", isDestructive: true) { send(.deleteTapped(comment.id)) },
+        BottomActionItem(title: "수정", systemImage: "pencil") { send(.commentMenu(id: comment.id, action: .edit)) },
+        BottomActionItem(title: "삭제", systemImage: "trash", isDestructive: true) { send(.commentMenu(
+          id: comment.id,
+          action: .delete
+        )) },
       ]
     } else {
       return [
-        BottomActionItem(title: "신고", systemImage: "exclamationmark.bubble", isDestructive: true) {
-          send(.reportTapped(comment.id))
+        BottomActionItem(title: "신고", systemImage: "light.beacon.max.fill", isDestructive: true) {
+          send(.commentMenu(id: comment.id, action: .report))
         },
       ]
     }
@@ -322,8 +339,18 @@ private extension CommentView {
         VStack(spacing: 12) {
           ForEach(store.comments) { comment in
             commentCard(comment)
+              .overlay(alignment: .topTrailing) {
+                if store.menuTargetCommentID == comment.id {
+                  inlineMenu(for: comment)
+                    .padding(.trailing, 12)
+                    .offset(y: 46)
+                    .zIndex(1)
+                }
+              }
+              .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
           }
         }
+        .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
       }
     }
     .padding(.horizontal, 16)
@@ -362,7 +389,7 @@ private extension CommentView {
 
   @ViewBuilder
   func commentBody(_ comment: CommentItem) -> some View {
-    Button { send(.replyTapped(comment.id)) } label: {
+    Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       Text(comment.content)
         .pretendardFont(family: .Regular, size: 13)
         .foregroundStyle(.neutral400)
@@ -388,7 +415,7 @@ private extension CommentView {
   func commentAuthorBlock(_ comment: CommentItem) -> some View {
     VStack(alignment: .leading, spacing: 4) {
       HStack(spacing: 6) {
-        Text(comment.author)
+        Text(comment.isMine ? "나" : comment.author)
           .pretendardFont(family: .Medium, size: 14)
           .foregroundStyle(.neutral500)
           .lineLimit(1)
@@ -418,7 +445,7 @@ private extension CommentView {
 
   @ViewBuilder
   func reportButton(commentId: UUID) -> some View {
-    Button { send(.reportButtonTapped(commentId)) } label: {
+    Button { send(.commentMenu(id: commentId, action: .more)) } label: {
       Image(systemName: "ellipsis")
         .font(.system(size: 18, weight: .regular))
         .frame(width: 24, height: 24)
@@ -452,7 +479,7 @@ private extension CommentView {
 
   @ViewBuilder
   func moreButton(commentId: UUID) -> some View {
-    Button { send(.moreTapped(commentId)) } label: {
+    Button { send(.commentRow(id: commentId, action: .openReply)) } label: {
       Text("더보기")
         .pretendardFont(family: .Medium, size: 12)
         .foregroundStyle(.neutral300)
@@ -462,7 +489,7 @@ private extension CommentView {
 
   @ViewBuilder
   func replyCountButton(_ comment: CommentItem) -> some View {
-    Button { send(.replyTapped(comment.id)) } label: {
+    Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       actionLabel(systemName: "message", text: "\(comment.replyCount)")
     }
     .buttonStyle(.plain)
@@ -470,7 +497,7 @@ private extension CommentView {
 
   @ViewBuilder
   func likeButton(_ comment: CommentItem) -> some View {
-    Button { send(.likeTapped(comment.id)) } label: {
+    Button { send(.commentRow(id: comment.id, action: .like)) } label: {
       actionLabel(
         systemName: comment.isLiked ? "heart.fill" : "heart",
         text: formattedCount(comment.likeCount)

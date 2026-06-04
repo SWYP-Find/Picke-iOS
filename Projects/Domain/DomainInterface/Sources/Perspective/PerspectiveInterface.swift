@@ -33,6 +33,8 @@ public protocol PerspectiveInterface: Sendable {
   func likePerspective(perspectiveId: Int) async throws -> CommentLikeResult
   func unlikePerspective(perspectiveId: Int) async throws -> CommentLikeResult
   func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult
+  func reportPerspective(perspectiveId: Int) async throws
+  func reportComment(perspectiveId: Int, commentId: Int) async throws
 }
 
 public struct PerspectiveRepositoryDependency: DependencyKey {
