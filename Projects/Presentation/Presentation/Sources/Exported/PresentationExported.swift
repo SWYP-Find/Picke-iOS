@@ -10,3 +10,4 @@
 @_exported import Splash
 @_exported import Auth
 @_exported import MainTab
+@_exported import Web
