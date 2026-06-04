@@ -48,7 +48,7 @@ public struct HifiFeature {
   }
 
   public enum AsyncAction: Equatable {
-    case search(reset: Bool)
+    case searchRequested(reset: Bool)
   }
 
   public enum InnerAction: Equatable {
@@ -91,21 +91,21 @@ extension HifiFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      return .send(.async(.search(reset: true)))
+      return .send(.async(.searchRequested(reset: true)))
 
     case let .categoryTapped(category):
       state.selectedCategory = category
-      return .send(.async(.search(reset: true)))
+      return .send(.async(.searchRequested(reset: true)))
 
     case let .swipedCategory(forward):
       // 좌우 스와이프 → 인접 카테고리로 전환 (범위 벗어나면 무시)
       guard let next = adjacentCategory(in: state, forward: forward) else { return .none }
       state.selectedCategory = next
-      return .send(.async(.search(reset: true)))
+      return .send(.async(.searchRequested(reset: true)))
 
     case let .sortTapped(sort):
       state.selectedSort = sort
-      return .send(.async(.search(reset: true)))
+      return .send(.async(.searchRequested(reset: true)))
 
     case let .itemTapped(id):
       return .send(.delegate(.openBattle(battleId: id)))
@@ -113,7 +113,7 @@ extension HifiFeature {
     case .reachedBottom:
       // 무한 스크롤: 다음 페이지가 있고 로딩 중이 아니면 추가 로드.
       guard state.hasNext, !state.isLoading else { return .none }
-      return .send(.async(.search(reset: false)))
+      return .send(.async(.searchRequested(reset: false)))
     }
   }
 
@@ -131,7 +131,7 @@ extension HifiFeature {
     action: AsyncAction
   ) -> Effect<Action> {
     switch action {
-    case let .search(reset):
+    case let .searchRequested(reset):
       state.isLoading = true
       if reset { state.items = [] }
       let category = state.selectedCategory.queryValue
