@@ -71,6 +71,7 @@ public extension ShapeStyle where Self == Color {
 
   // MARK: - Primitive / Status
 
+  static var basicBlack: Color { .init(hex: "1A1A1A") }
   static var errorAlpha: Color { .init(hex: "C92D33", alpha: 0.4) }
   static var errorDefault: Color { .init(hex: "C92D33") }
   static var errorStrong: Color { .init(hex: "D7110C") }

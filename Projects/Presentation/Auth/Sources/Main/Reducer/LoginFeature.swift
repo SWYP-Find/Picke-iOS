@@ -28,6 +28,9 @@ public struct LoginFeature {
     @Shared var userSession: UserSession
     var loginEntity: LoginEntity?
 
+    /// Apple/Google 신규 가입자 약관 동의 바텀시트. nil 이면 미표시.
+    @Presents var termsAgreement: TermsAgreementFeature.State?
+
     public init(
       userSession: UserSession = .empty
     ) {
@@ -41,6 +44,7 @@ public struct LoginFeature {
     case async(AsyncAction)
     case inner(InnerAction)
     case delegate(DelegateAction)
+    case termsAgreement(PresentationAction<TermsAgreementFeature.Action>)
   }
 
   // MARK: - ViewAction
@@ -70,6 +74,8 @@ public struct LoginFeature {
     /// 로그인이 성공해 토큰을 모두 확보한 시점. 코디네이터에서 다음 화면으로 전환.
     case presentOnboarding
     case presentMainTab
+    /// 약관 상세 WebView 화면으로 이동 (코디네이터에서 처리).
+    case presentTermsWeb(urlString: String)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -100,7 +106,13 @@ public struct LoginFeature {
 
       case let .delegate(delegateAction):
         handleDelegateAction(state: &state, action: delegateAction)
+
+      case let .termsAgreement(presentationAction):
+        handleTermsAgreement(state: &state, action: presentationAction)
       }
+    }
+    .ifLet(\.$termsAgreement, action: \.termsAgreement) {
+      TermsAgreementFeature()
     }
   }
 }
@@ -112,7 +124,7 @@ extension LoginFeature {
   ) -> Effect<Action> {
     switch action {
     case let .signInWithSocial(social):
-      .send(.async(.login(socialType: social)))
+      return .send(.async(.login(socialType: social)))
     }
   }
 
@@ -185,12 +197,16 @@ extension LoginFeature {
       switch result {
       case let .success(loginEntity):
         state.loginEntity = loginEntity
-        
-        if loginEntity.isNewUser {
-          return .send(.delegate(.presentOnboarding))
-        } else {
+
+        guard loginEntity.isNewUser else {
           return .send(.delegate(.presentMainTab))
         }
+        // 신규 가입자 중 Apple/Google 만 약관 동의 바텀시트 노출, 그 외(카카오)는 바로 온보딩.
+        if state.currentSocialType == .apple || state.currentSocialType == .google {
+          state.termsAgreement = TermsAgreementFeature.State()
+          return .none
+        }
+        return .send(.delegate(.presentOnboarding))
 
       case let .failure(error):
         #logNetwork("로그인 실패", error.localizedDescription)
@@ -223,6 +239,33 @@ extension LoginFeature {
       return .none
 
     case .presentMainTab:
+      return .none
+
+    case .presentTermsWeb:
+      // 코디네이터가 라우팅 처리. 리듀서에서는 부수효과 없음.
+      return .none
+    }
+  }
+
+  private func handleTermsAgreement(
+    state: inout State,
+    action: PresentationAction<TermsAgreementFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.delegate(.confirmed)):
+      // 약관 동의 완료 → 바텀시트 닫고 온보딩 진행.
+      state.termsAgreement = nil
+      return .send(.delegate(.presentOnboarding))
+
+    case .presented(.delegate(.dismissed)), .dismiss:
+      state.termsAgreement = nil
+      return .none
+
+    case let .presented(.delegate(.openDocument(document))):
+      // 약관 상세 보기 → 코디네이터가 WebView 화면으로 라우팅.
+      return .send(.delegate(.presentTermsWeb(urlString: document.urlString)))
+
+    case .presented:
       return .none
     }
   }

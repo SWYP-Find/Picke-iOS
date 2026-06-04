@@ -12,6 +12,8 @@ import SwiftUI
 import ComposableArchitecture
 import TCAFlow
 
+import Web
+
 public struct AuthCoordinatorView: View {
   @Bindable private var store: StoreOf<AuthCoordinator>
 
@@ -30,6 +32,10 @@ public struct AuthCoordinatorView: View {
 
       case let .onboarding(onboardingStore):
         OnBoardingView(store: onboardingStore)
+          .navigationBarBackButtonHidden()
+
+      case let .web(webStore):
+        WebView(store: webStore)
           .navigationBarBackButtonHidden()
       }
     }
