@@ -8,6 +8,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Utill
 
 @ViewAction(for: CommentReplyFeature.self)
 public struct CommentReplyView: View {
@@ -258,7 +259,7 @@ private extension CommentReplyView {
         Button(action: likeAction) {
           actionLabel(
             systemName: isLiked ? "heart.fill" : "heart",
-            text: formattedCount(likeCount)
+            text: likeCount.decimalFormatted
           )
         }
         .buttonStyle(.plain)
@@ -400,15 +401,5 @@ private extension CommentReplyView {
         .fill(.beige800)
         .frame(height: 1)
     }
-  }
-}
-
-// MARK: - Format
-
-private extension CommentReplyView {
-  func formattedCount(_ count: Int) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    return formatter.string(from: NSNumber(value: count)) ?? "\(count)"
   }
 }
