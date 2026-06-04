@@ -32,6 +32,9 @@ public struct ChatCoordinatorView: View {
       case let .commentReply(commentReplyStore):
         CommentReplyView(store: commentReplyStore)
           .toolbar(.hidden, for: .tabBar)
+      case let .curation(curationStore):
+        CurationView(store: curationStore)
+          .toolbar(.hidden, for: .tabBar)
       }
     }
   }

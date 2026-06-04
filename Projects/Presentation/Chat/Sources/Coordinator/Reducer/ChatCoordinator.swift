@@ -111,6 +111,21 @@ extension ChatCoordinator {
     case .routeAction(_, action: .commentReply(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .comment(.delegate(.openCuration(battleId)))):
+      state.routes.push(.curation(.init(battleId: battleId)))
+      return .none
+
+    case .routeAction(_, action: .curation(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .curation(.delegate(.close))):
+      // X : 채팅 플로우 전체를 빠져나가 앱 루트(홈)로 이동
+      return .send(.delegate(.dismiss))
+
+    case let .routeAction(_, action: .curation(.delegate(.openBattle(battleId)))):
+      state.routes.push(.preVote(.init(battleId: battleId)))
+      return .none
+
     default:
       return .none
     }
@@ -149,6 +164,7 @@ extension ChatCoordinator {
     case chatRoom(ChatRoomFeature)
     case comment(CommentFeature)
     case commentReply(CommentReplyFeature)
+    case curation(CurationFeature)
   }
 }
 
