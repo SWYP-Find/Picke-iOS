@@ -7,6 +7,7 @@ import Foundation
 
 import SwiftUI
 
+import Chat
 import ComposableArchitecture
 import TCAFlow
 
@@ -22,6 +23,8 @@ public struct HifiCoordinatorView: View {
       switch screen.case {
       case let .hifi(hifiStore):
         HifiView(store: hifiStore)
+      case let .chat(chatStore):
+        ChatCoordinatorView(store: chatStore)
       }
     }
   }

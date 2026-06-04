@@ -7,6 +7,7 @@
 
 import Foundation
 
+import Chat
 import ComposableArchitecture
 import TCAFlow
 
@@ -59,10 +60,24 @@ public struct HifiCoordinator {
 
 extension HifiCoordinator {
   private func routerAction(
-    state _: inout State,
-    action _: IndexedRouterActionOf<HifiScreen>
+    state: inout State,
+    action: IndexedRouterActionOf<HifiScreen>
   ) -> Effect<Action> {
-    .none
+    switch action {
+    case let .routeAction(_, action: .hifi(.delegate(.openBattle(battleId)))):
+      state.routes.push(.chat(.init(battleId: battleId)))
+      return .none
+
+    case .routeAction(_, action: .chat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
+      // 큐레이팅 X — 탐색 루트로 복귀
+      return .send(.view(.backToRootAction))
+
+    default:
+      return .none
+    }
   }
 
   private func handleViewAction(
@@ -85,6 +100,7 @@ extension HifiCoordinator {
   @Reducer
   public enum HifiScreen {
     case hifi(HifiFeature)
+    case chat(ChatCoordinator)
   }
 }
 
