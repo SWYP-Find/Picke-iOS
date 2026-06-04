@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
   name: "Hifi",
@@ -11,8 +11,10 @@ let project = Project.makeAppModule(
   settings: .settings(),
   dependencies: [
     .Presentation(implements: .Chat),
+    .Shared(implements: .DesignSystem),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
+    .SPM.kingfisher,
   ],
   sources: ["Sources/**"]
 )
