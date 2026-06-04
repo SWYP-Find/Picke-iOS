@@ -45,6 +45,15 @@ public struct ChatRoomView: View {
       }
     }
     .background(Color.beige200.ignoresSafeArea())
+    .overlay(alignment: .top) {
+      if store.hasAudioError {
+        FloatingErrorView(message: "오디오를 불러오는 중 문제가 발생했어요")
+          .padding(.top, 64)
+          .transition(.move(edge: .top).combined(with: .opacity))
+          .zIndex(1)
+      }
+    }
+    .animation(.easeInOut(duration: 0.25), value: store.hasAudioError)
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)

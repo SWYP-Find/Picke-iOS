@@ -18,7 +18,8 @@ public final class AudioPlayerRepositoryImpl: AudioPlayerInterface, @unchecked S
     service = AudioPlayerService.shared
   }
 
-  public func load(url: URL) async {
+  @discardableResult
+  public func load(url: URL) async -> Bool {
     await service.load(url: url)
   }
 
@@ -78,10 +79,16 @@ final class AudioPlayerService {
     }
   }
 
-  func load(url: URL) {
+  func load(url: URL) async -> Bool {
     let item = AVPlayerItem(url: url)
     player.replaceCurrentItem(with: item)
     player.seek(to: .zero)
+    // 자산이 실제 재생 가능한지 확인 → 실패 시 오류 배너 노출 트리거.
+    do {
+      return try await item.asset.load(.isPlayable)
+    } catch {
+      return false
+    }
   }
 
   func play() { player.play() }

@@ -10,9 +10,9 @@ import Foundation
 import ComposableArchitecture
 import DesignSystem
 import DomainInterface
-import UseCase
 import Entity
 import LogMacro
+import UseCase
 
 @Reducer
 public struct ChatRoomFeature {
@@ -27,6 +27,8 @@ public struct ChatRoomFeature {
     public var playerDuration: TimeInterval = 0
     public var battleId: Int = 0
     public var isLoadingScenario: Bool = false
+    /// 오디오 로딩 실패 시 상단 floating 오류 배너 노출 여부.
+    public var hasAudioError: Bool = false
     /// 한 번 끝까지 재생된 콘텐츠는 이후 재진입 시 시킹/건너뛰기를 허용한다.
     public var hasFinishedListening: Bool = false
     public var hasPresentedFinalVoteAlert: Bool = false
@@ -177,11 +179,11 @@ public struct ChatRoomFeature {
 
     public func nodeStartTime(for nodeId: Int) -> TimeInterval {
       guard let node = scenario?.nodes.first(where: { $0.nodeId == nodeId }) else { return 0 }
-      return TimeInterval((node.scripts.map(\.startTimeMs).min() ?? 0)) / 1000
+      return TimeInterval(node.scripts.map(\.startTimeMs).min() ?? 0) / 1000
     }
 
     public func nodeEndTime(for node: ScenarioNode) -> TimeInterval {
-      let start = TimeInterval((node.scripts.map(\.startTimeMs).min() ?? 0)) / 1000
+      let start = TimeInterval(node.scripts.map(\.startTimeMs).min() ?? 0) / 1000
       return start + TimeInterval(node.audioDuration)
     }
   }
@@ -219,6 +221,8 @@ public struct ChatRoomFeature {
     case scenarioResponse(Result<BattleScenario, BattleError>)
     case playerTimeUpdated(TimeInterval)
     case playerDurationUpdated(TimeInterval)
+    case audioLoadFailed
+    case dismissAudioError
   }
 
   @CasePathable
@@ -234,6 +238,7 @@ public struct ChatRoomFeature {
   nonisolated enum CancelID: Hashable {
     case fetchScenario
     case audioObserver
+    case audioErrorDismiss
   }
 
   @Dependency(\.battleUseCase) private var battleUseCase
@@ -377,8 +382,13 @@ extension ChatRoomFeature {
       state.currentTime = 0
       state.playerDuration = 0
       state.isPlaying = true
+      state.hasAudioError = false
       return .run { [player = audioPlayer] send in
-        await player.load(url: url)
+        let isPlayable = await player.load(url: url)
+        guard isPlayable else {
+          await send(.inner(.audioLoadFailed))
+          return
+        }
         let duration = await player.duration()
         if duration > 0 {
           await send(.inner(.playerDurationUpdated(duration)))
@@ -448,6 +458,20 @@ extension ChatRoomFeature {
 
     case let .playerDurationUpdated(duration):
       state.playerDuration = duration
+      return .none
+
+    case .audioLoadFailed:
+      state.isPlaying = false
+      state.hasAudioError = true
+      // 3초 후 자동으로 배너 숨김.
+      return .run { send in
+        try? await Task.sleep(for: .seconds(3))
+        await send(.inner(.dismissAudioError))
+      }
+      .cancellable(id: CancelID.audioErrorDismiss, cancelInFlight: true)
+
+    case .dismissAudioError:
+      state.hasAudioError = false
       return .none
     }
   }

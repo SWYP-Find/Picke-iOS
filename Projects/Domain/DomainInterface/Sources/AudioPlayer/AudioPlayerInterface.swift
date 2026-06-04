@@ -10,7 +10,9 @@ import Foundation
 import WeaveDI
 
 public protocol AudioPlayerInterface: Sendable {
-  func load(url: URL) async
+  /// 음원을 로드하고 재생 가능 여부를 반환한다. (false = 오디오 로딩 실패)
+  @discardableResult
+  func load(url: URL) async -> Bool
   func play() async
   func pause() async
   func seek(to time: TimeInterval) async
@@ -20,7 +22,7 @@ public protocol AudioPlayerInterface: Sendable {
 
 public struct DefaultAudioPlayerImpl: AudioPlayerInterface {
   public init() {}
-  public func load(url _: URL) async {}
+  public func load(url _: URL) async -> Bool { true }
   public func play() async {}
   public func pause() async {}
   public func seek(to _: TimeInterval) async {}
