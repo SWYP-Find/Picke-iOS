@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 import DesignSystem
+import Hifi
 import Home
 import TCAFlow
 
@@ -115,7 +116,7 @@ extension MainTabView {
       )
 
     case .explore:
-      HomeCoordinatorView(
+      HifiCoordinatorView(
         store: store.scope(state: \.exploreState, action: \.explore)
       )
 

@@ -11,6 +11,7 @@ import ComposableArchitecture
 import TCAFlow
 
 import DesignSystem
+import Hifi
 import Home
 
 /// 픽케 메인 탭 코디네이터.
@@ -50,7 +51,7 @@ public struct MainTabCoordinator {
   public struct State: Equatable {
     public var selectedTab: Int
     public var homeState: HomeCoordinator.State
-    public var exploreState: HomeCoordinator.State
+    public var exploreState: HifiCoordinator.State
     public var quickBattleState: HomeCoordinator.State
     public var myPageState: HomeCoordinator.State
 
@@ -68,7 +69,7 @@ public struct MainTabCoordinator {
     case selectTab(Int)
     case tabReselected(Int)
     case home(HomeCoordinator.Action)
-    case explore(HomeCoordinator.Action)
+    case explore(HifiCoordinator.Action)
     case quickBattle(HomeCoordinator.Action)
     case myPage(HomeCoordinator.Action)
   }
@@ -78,7 +79,7 @@ public struct MainTabCoordinator {
       HomeCoordinator()
     }
     Scope(state: \.exploreState, action: \.explore) {
-      HomeCoordinator()
+      HifiCoordinator()
     }
     Scope(state: \.quickBattleState, action: \.quickBattle) {
       HomeCoordinator()
