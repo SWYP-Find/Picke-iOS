@@ -39,6 +39,8 @@ public struct MainTabView: View {
     ) {
       tabContent(for: $0)
     }
+    // 기본(미선택) 색은 라벨 foregroundStyle(gray200), 선택 탭은 tint 로 제어.
+    .tint(.neutral900)
   }
 }
 
@@ -90,10 +92,11 @@ extension MainTabView {
     Label {
       Text(tab.title)
         .pretendardFont(family: .Medium, size: 12)
-        .foregroundStyle(store.selectedTab == tab.tag ? Color.neutral900 : Color.gray200)
+        .foregroundStyle(.gray200)
     } icon: {
       tabIcon(for: tab)
     }
+    .foregroundStyle(.gray200)
   }
 
   @ViewBuilder
