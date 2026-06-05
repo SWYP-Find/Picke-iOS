@@ -153,11 +153,9 @@ extension NewBattleCardView {
 
   @ViewBuilder
   private var vsBadge: some View {
-    Text("VS")
-      .pretendardFont(family: .Bold, size: 8)
-      .foregroundStyle(.neutral800)
-      .frame(width: 24, height: 24)
-      .background(.secondary200, in: Circle())
-      .overlay(Circle().stroke(.beige50, lineWidth: 1.5))
+    Image(asset: .vs)
+      .resizable()
+      .scaledToFit()
+      .frame(width: 18, height: 32)
   }
 }
