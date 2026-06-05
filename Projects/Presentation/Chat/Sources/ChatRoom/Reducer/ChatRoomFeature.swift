@@ -76,12 +76,12 @@ public struct ChatRoomFeature {
           guard currentMs >= scriptStart else { return [] }
           let scriptEnd = index + 1 < count ? revealStart(index + 1) : nodeStartMs + nodeDurationMs
           let windowMs = max(1, scriptEnd - scriptStart)
-          let messageSpeaker = speaker(for: script, in: scenario)
+          let messageSpeaker = scenario.chatSpeaker(for: script)
 
           // 인트로/나레이터(center)는 한 말풍선으로 전체 노출.
           if messageSpeaker.side == .center {
             return [ChatMessage(
-              messageId: Self.scriptUUID(scriptId: script.scriptId, sentenceIndex: 0),
+              messageId: UUID.deterministic(script.scriptId, 0),
               speaker: messageSpeaker,
               text: script.text,
               startTimeMs: scriptStart
@@ -94,7 +94,7 @@ public struct ChatRoomFeature {
             .filter { !$0.isEmpty }
           guard sentences.count > 1 else {
             return [ChatMessage(
-              messageId: Self.scriptUUID(scriptId: script.scriptId, sentenceIndex: 0),
+              messageId: UUID.deterministic(script.scriptId, 0),
               speaker: messageSpeaker,
               text: script.text,
               startTimeMs: scriptStart
@@ -108,7 +108,7 @@ public struct ChatRoomFeature {
             charsBefore += sentence.count
             guard currentMs >= sentenceStart else { break }
             result.append(ChatMessage(
-              messageId: Self.scriptUUID(scriptId: script.scriptId, sentenceIndex: sentenceIndex),
+              messageId: UUID.deterministic(script.scriptId, sentenceIndex),
               speaker: messageSpeaker,
               text: sentence,
               startTimeMs: sentenceStart
@@ -117,13 +117,6 @@ public struct ChatRoomFeature {
           return result
         }
       }
-    }
-
-    /// 같은 scriptId 면 동일한 UUID 를 반환해 ForEach 의 id 가 매 렌더링마다
-    /// 흔들리지 않도록 한다 (자동 스크롤 target 안정화).
-    private static func scriptUUID(scriptId: Int, sentenceIndex: Int = 0) -> UUID {
-      let hex = String(format: "%08X%04X", scriptId & 0xFFFF_FFFF, sentenceIndex & 0xFFFF)
-      return UUID(uuidString: "00000000-0000-0000-0000-\(hex)") ?? UUID()
     }
 
     /// 현재 재생 중(가장 최근 노출된) 메시지 id. 문장 단위 노출이라 마지막 노출 버블이 활성.
@@ -138,48 +131,6 @@ public struct ChatRoomFeature {
     }
 
     public var canScrub: Bool { hasFinishedListening }
-
-    private func speaker(
-      for script: ScenarioScript,
-      in scenario: BattleScenario
-    ) -> ChatSpeaker {
-      switch script.speakerType {
-      case .a:
-        return speaker(label: "A", side: .left, fallbackName: script.speakerName, in: scenario)
-      case .b:
-        return speaker(label: "B", side: .right, fallbackName: script.speakerName, in: scenario)
-      case .narrator:
-        return ChatSpeaker(name: script.speakerName, side: .center)
-      case .philosopher, .unknown:
-        if let philosopher = scenario.philosophers.first(where: { $0.name == script.speakerName }) {
-          let side: ChatSpeakerSide = philosopher.label == "B" ? .right : .left
-          return ChatSpeaker(
-            label: philosopher.label,
-            name: philosopher.name,
-            imageURL: philosopher.imageUrl,
-            side: side
-          )
-        }
-        return ChatSpeaker(name: script.speakerName, side: .center)
-      }
-    }
-
-    private func speaker(
-      label: String,
-      side: ChatSpeakerSide,
-      fallbackName: String,
-      in scenario: BattleScenario
-    ) -> ChatSpeaker {
-      guard let philosopher = scenario.philosophers.first(where: { $0.label == label }) else {
-        return ChatSpeaker(label: label, name: fallbackName, side: side)
-      }
-      return ChatSpeaker(
-        label: philosopher.label,
-        name: philosopher.name,
-        imageURL: philosopher.imageUrl,
-        side: side
-      )
-    }
 
     public var currentNode: ScenarioNode? {
       guard let scenario else { return nil }
@@ -216,20 +167,15 @@ public struct ChatRoomFeature {
     }
 
     public func visibleNodes(in scenario: BattleScenario) -> [ScenarioNode] {
-      let ids = visibleNodeIds.isEmpty ? [currentNodeId ?? scenario.startNodeId] : visibleNodeIds
-      return ids.compactMap { id in
-        scenario.nodes.first { $0.nodeId == id }
-      }
+      scenario.chatVisibleNodes(visibleNodeIds: visibleNodeIds, currentNodeId: currentNodeId)
     }
 
     public func nodeStartTime(for nodeId: Int) -> TimeInterval {
-      guard let node = scenario?.nodes.first(where: { $0.nodeId == nodeId }) else { return 0 }
-      return TimeInterval(node.scripts.map(\.startTimeMs).min() ?? 0) / 1000
+      scenario?.nodeStartTime(for: nodeId) ?? 0
     }
 
     public func nodeEndTime(for node: ScenarioNode) -> TimeInterval {
-      let start = TimeInterval(node.scripts.map(\.startTimeMs).min() ?? 0) / 1000
-      return start + TimeInterval(node.audioDuration)
+      scenario?.nodeEndTime(for: node) ?? 0
     }
   }
 
