@@ -55,9 +55,13 @@ public struct ChatRoomFeature {
     public var messages: [ChatMessage] {
       guard let scenario else { return bundle.messages }
       let nodes = visibleNodes(in: scenario)
+      let currentMs = Int(currentTime * 1000)
       return nodes.flatMap { node in
-        node.scripts.map { script in
-          ChatMessage(
+        node.scripts.compactMap { script -> ChatMessage? in
+          // 오디오가 해당 대사 시작 시점에 도달한 것만 노출 → 목소리 나올 때 대화창 한 줄씩.
+          // (재진입/완청 후에도 동일하게 현재 재생 위치 기준으로 싱크)
+          guard script.startTimeMs <= currentMs else { return nil }
+          return ChatMessage(
             messageId: Self.scriptUUID(scriptId: script.scriptId),
             speaker: speaker(for: script, in: scenario),
             text: script.text,
