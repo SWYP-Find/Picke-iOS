@@ -13,6 +13,7 @@ import DomainInterface
 import Entity
 import LogMacro
 import UseCase
+import Utill
 
 @Reducer
 public struct ChatRoomFeature {
@@ -88,7 +89,7 @@ public struct ChatRoomFeature {
           }
 
           // 발언자(좌/우): 문장마다 개별 말풍선. 문장 시작 시점은 글자수 비례로 분배(긴 문장=더 긴 시간) → 싱크.
-          let sentences = Self.splitSentences(script.text)
+          let sentences = script.text.splitIntoSentences()
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
           guard sentences.count > 1 else {
@@ -116,25 +117,6 @@ public struct ChatRoomFeature {
           return result
         }
       }
-    }
-
-    /// 문장 끝(. ? ! 줄바꿈) 기준으로 분할 (구분자 포함 유지).
-    private static func splitSentences(_ text: String) -> [String] {
-      var result: [String] = []
-      var current = ""
-      for character in text {
-        current.append(character)
-        if character == "." || character == "?" || character == "!" || character == "\n" {
-          if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            result.append(current)
-          }
-          current = ""
-        }
-      }
-      if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-        result.append(current)
-      }
-      return result.isEmpty ? [text] : result
     }
 
     /// 같은 scriptId 면 동일한 UUID 를 반환해 ForEach 의 id 가 매 렌더링마다
