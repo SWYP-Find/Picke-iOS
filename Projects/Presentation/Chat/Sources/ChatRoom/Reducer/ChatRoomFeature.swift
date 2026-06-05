@@ -78,17 +78,8 @@ public struct ChatRoomFeature {
           let windowMs = max(1, scriptEnd - scriptStart)
           let messageSpeaker = scenario.chatSpeaker(for: script)
 
-          // 인트로/나레이터(center)는 한 말풍선으로 전체 노출.
-          if messageSpeaker.side == .center {
-            return [ChatMessage(
-              messageId: UUID.deterministic(script.scriptId, 0),
-              speaker: messageSpeaker,
-              text: script.text,
-              startTimeMs: scriptStart
-            )]
-          }
-
-          // 발언자(좌/우): 문장마다 개별 말풍선. 문장 시작 시점은 글자수 비례로 분배(긴 문장=더 긴 시간) → 싱크.
+          // 나레이션/클로징(center)·발언자(좌/우) 모두 문장마다 개별 말풍선.
+          // 문장 시작 시점은 글자수 비례로 분배(긴 문장=더 긴 시간) → 싱크.
           let sentences = script.text.splitIntoSentences()
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }

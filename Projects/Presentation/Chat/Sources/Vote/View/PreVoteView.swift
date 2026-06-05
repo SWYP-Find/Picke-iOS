@@ -76,11 +76,15 @@ public struct PreVoteView: View {
                 .frame(height: PreVoteLayout.contentOverlapTopOffset)
 
               Spacer()
-                .frame(height: PreVoteLayout.contentGradientSpacerHeight)
+                .frame(height: PreVoteLayout.contentGradientSpacerHeight(
+                  titleLength: battle.titleLine1.count + battle.titleLine2.count,
+                  summaryLength: battle.summary.count
+                ))
 
               contentArea(battle)
             }
             .frame(width: proxy.size.width)
+            .frame(minHeight: proxy.size.height, alignment: .top)
           }
           .scrollBounceBehavior(.basedOnSize)
           .scrollDisabled(true)
@@ -91,7 +95,6 @@ public struct PreVoteView: View {
       PreVoteSkeletonView()
     }
   }
-
 }
 
 // MARK: - Background
@@ -174,14 +177,16 @@ extension PreVoteView {
 extension PreVoteView {
   @ViewBuilder
   private func contentArea(_ battle: PreVoteBattle) -> some View {
-    VStack(spacing: PreVoteLayout.contentToOptionSpacing) {
+    VStack(spacing: 0) {
       contentSection(battle)
+      // 유연 간격: 콘텐츠는 위(상단 spacer)에 고정, 옵션은 아래로 당겨 CTA 위 40 유지.
+      Spacer(minLength: PreVoteLayout.contentToOptionSpacing)
       optionSection(battle)
     }
     .padding(.horizontal, PreVoteLayout.contentHorizontalPadding)
     .padding(.top, PreVoteLayout.contentTopPadding)
     .padding(.bottom, PreVoteLayout.contentBottomSpacing)
-    .frame(maxWidth: .infinity)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background(
       LinearGradient(
         stops: [

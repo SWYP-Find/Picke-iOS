@@ -231,9 +231,10 @@ extension ChatRoomView {
       .pretendardFont(family: .Regular, size: 13)
       .foregroundStyle(isActive ? .neutral800 : .neutral500)
       .lineSpacing(13 * 0.4)
+      .multilineTextAlignment(.leading)
+      .fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
-      .frame(maxWidth: Metric.bubbleMaxWidth, alignment: .leading)
       .background(background, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
@@ -250,21 +251,18 @@ extension ChatRoomView {
       .frame(width: 24, height: 24)
   }
 
+  /// 나레이션/클로징: 박스·테두리 없이 가운데 정렬 + 살짝 기울인 이탤릭.
   @ViewBuilder
   private func narratorBubble(text: String) -> some View {
     Text(text)
       .pretendardFont(family: .Regular, size: 12)
+      .italic()
       .foregroundStyle(.neutral400)
       .lineSpacing(12 * 0.4)
       .multilineTextAlignment(.center)
       .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.vertical, 4)
       .frame(maxWidth: 280)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-      .overlay(
-        RoundedRectangle(cornerRadius: 2)
-          .stroke(.beige600, lineWidth: 1)
-      )
   }
 
   private struct SpeakerGroup: Equatable, Identifiable {
