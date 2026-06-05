@@ -56,38 +56,97 @@ public struct ChatRoomFeature {
       guard let scenario else { return bundle.messages }
       let nodes = visibleNodes(in: scenario)
       let currentMs = Int(currentTime * 1000)
-      return nodes.flatMap { node in
-        node.scripts.compactMap { script -> ChatMessage? in
-          // 오디오가 해당 대사 시작 시점에 도달한 것만 노출 → 목소리 나올 때 대화창 한 줄씩.
-          // (재진입/완청 후에도 동일하게 현재 재생 위치 기준으로 싱크)
-          guard script.startTimeMs <= currentMs else { return nil }
-          return ChatMessage(
-            messageId: Self.scriptUUID(scriptId: script.scriptId),
-            speaker: speaker(for: script, in: scenario),
-            text: script.text,
-            startTimeMs: script.startTimeMs
-          )
+      return nodes.flatMap { node -> [ChatMessage] in
+        let scripts = node.scripts
+        // 대사별 startTimeMs 가 구분되면 그 값을, 모두 같거나(0) 평평하면 노드 오디오 구간에 균등 분배.
+        let distinctStarts = Set(scripts.map(\.startTimeMs)).count
+        let nodeStartMs = scripts.map(\.startTimeMs).min() ?? 0
+        let nodeDurationMs = node.audioDuration * 1000
+        let count = scripts.count
+
+        func revealStart(_ index: Int) -> Int {
+          if distinctStarts > 1 { return scripts[index].startTimeMs }
+          if count > 1 { return nodeStartMs + nodeDurationMs * index / count }
+          return nodeStartMs
+        }
+
+        return scripts.enumerated().flatMap { index, script -> [ChatMessage] in
+          let scriptStart = revealStart(index)
+          guard currentMs >= scriptStart else { return [] }
+          let scriptEnd = index + 1 < count ? revealStart(index + 1) : nodeStartMs + nodeDurationMs
+          let windowMs = max(1, scriptEnd - scriptStart)
+          let messageSpeaker = speaker(for: script, in: scenario)
+
+          // 인트로/나레이터(center)는 한 말풍선으로 전체 노출.
+          if messageSpeaker.side == .center {
+            return [ChatMessage(
+              messageId: Self.scriptUUID(scriptId: script.scriptId, sentenceIndex: 0),
+              speaker: messageSpeaker,
+              text: script.text,
+              startTimeMs: scriptStart
+            )]
+          }
+
+          // 발언자(좌/우): 문장마다 개별 말풍선. 문장 시작 시점은 글자수 비례로 분배(긴 문장=더 긴 시간) → 싱크.
+          let sentences = Self.splitSentences(script.text)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+          guard sentences.count > 1 else {
+            return [ChatMessage(
+              messageId: Self.scriptUUID(scriptId: script.scriptId, sentenceIndex: 0),
+              speaker: messageSpeaker,
+              text: script.text,
+              startTimeMs: scriptStart
+            )]
+          }
+          let totalChars = max(1, sentences.reduce(0) { $0 + $1.count })
+          var charsBefore = 0
+          var result: [ChatMessage] = []
+          for (sentenceIndex, sentence) in sentences.enumerated() {
+            let sentenceStart = scriptStart + windowMs * charsBefore / totalChars
+            charsBefore += sentence.count
+            guard currentMs >= sentenceStart else { break }
+            result.append(ChatMessage(
+              messageId: Self.scriptUUID(scriptId: script.scriptId, sentenceIndex: sentenceIndex),
+              speaker: messageSpeaker,
+              text: sentence,
+              startTimeMs: sentenceStart
+            ))
+          }
+          return result
         }
       }
     }
 
+    /// 문장 끝(. ? ! 줄바꿈) 기준으로 분할 (구분자 포함 유지).
+    private static func splitSentences(_ text: String) -> [String] {
+      var result: [String] = []
+      var current = ""
+      for character in text {
+        current.append(character)
+        if character == "." || character == "?" || character == "!" || character == "\n" {
+          if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            result.append(current)
+          }
+          current = ""
+        }
+      }
+      if !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        result.append(current)
+      }
+      return result.isEmpty ? [text] : result
+    }
+
     /// 같은 scriptId 면 동일한 UUID 를 반환해 ForEach 의 id 가 매 렌더링마다
     /// 흔들리지 않도록 한다 (자동 스크롤 target 안정화).
-    private static func scriptUUID(scriptId: Int) -> UUID {
-      let hex = String(format: "%012X", scriptId)
+    private static func scriptUUID(scriptId: Int, sentenceIndex: Int = 0) -> UUID {
+      let hex = String(format: "%08X%04X", scriptId & 0xFFFF_FFFF, sentenceIndex & 0xFFFF)
       return UUID(uuidString: "00000000-0000-0000-0000-\(hex)") ?? UUID()
     }
 
-    /// 현재 재생 시점에 해당하는 메시지 id. `currentTime` 이상의 startTimeMs 를
-    /// 가지지 않은 마지막 메시지를 활성으로 본다.
+    /// 현재 재생 중(가장 최근 노출된) 메시지 id. 문장 단위 노출이라 마지막 노출 버블이 활성.
     public var activeMessageId: UUID? {
-      let currentMs = Int(currentTime * 1000)
-      var active: ChatMessage?
-      for message in messages {
-        guard let start = message.startTimeMs else { continue }
-        if start <= currentMs { active = message } else { break }
-      }
-      return active?.id ?? messages.first?.id
+      messages.last?.id
     }
 
     public var audioUrl: String? {
