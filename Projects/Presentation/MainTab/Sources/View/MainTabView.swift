@@ -45,7 +45,7 @@ public struct MainTabView: View {
 extension MainTabView {
   private static func configureTabBarAppearance() {
     let selectedColor = UIColor.neutral900
-    let normalColor = UIColor.neutral900.withAlphaComponent(0.4)
+    let normalColor = UIColor.gray200
     let backgroundColor = UIColor.bgDefault
     let borderColor = UIColor.borderDefault.withAlphaComponent(0.4)
     let font = UIFont.pretendardFontFamily(family: .Medium, size: 12)
@@ -90,6 +90,7 @@ extension MainTabView {
     Label {
       Text(tab.title)
         .pretendardFont(family: .Medium, size: 12)
+        .foregroundStyle(store.selectedTab == tab.tag ? Color.neutral900 : Color.gray200)
     } icon: {
       tabIcon(for: tab)
     }
@@ -102,7 +103,7 @@ extension MainTabView {
       .iconAsset(isSelected: isSelected) ?? .none
 
     Image(asset: asset)
-      .renderingMode(.original)
+      .renderingMode(.template)
       .resizable()
       .scaledToFit()
       .frame(width: 24, height: 24)
