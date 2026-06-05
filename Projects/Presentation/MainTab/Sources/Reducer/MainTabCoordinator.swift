@@ -10,6 +10,7 @@ import Foundation
 import ComposableArchitecture
 import TCAFlow
 
+import Battle
 import DesignSystem
 import Hifi
 import Home
@@ -52,7 +53,7 @@ public struct MainTabCoordinator {
     public var selectedTab: Int
     public var homeState: HomeCoordinator.State
     public var exploreState: HifiCoordinator.State
-    public var quickBattleState: HomeCoordinator.State
+    public var quickBattleState: BattleCoordinator.State
     public var myPageState: HomeCoordinator.State
 
     public init(selectedTab: Int = Tab.home.rawValue) {
@@ -70,7 +71,7 @@ public struct MainTabCoordinator {
     case tabReselected(Int)
     case home(HomeCoordinator.Action)
     case explore(HifiCoordinator.Action)
-    case quickBattle(HomeCoordinator.Action)
+    case quickBattle(BattleCoordinator.Action)
     case myPage(HomeCoordinator.Action)
   }
 
@@ -82,7 +83,7 @@ public struct MainTabCoordinator {
       HifiCoordinator()
     }
     Scope(state: \.quickBattleState, action: \.quickBattle) {
-      HomeCoordinator()
+      BattleCoordinator()
     }
     Scope(state: \.myPageState, action: \.myPage) {
       HomeCoordinator()

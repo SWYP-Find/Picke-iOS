@@ -8,6 +8,7 @@
 import SwiftUI
 import UIKit
 
+import Battle
 import DesignSystem
 import Hifi
 import Home
@@ -121,7 +122,7 @@ extension MainTabView {
       )
 
     case .quickBattle:
-      HomeCoordinatorView(
+      BattleCoordinatorView(
         store: store.scope(state: \.quickBattleState, action: \.quickBattle)
       )
 
