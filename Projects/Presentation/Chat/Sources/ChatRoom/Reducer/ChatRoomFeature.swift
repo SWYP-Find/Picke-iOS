@@ -524,12 +524,15 @@ extension ChatRoomFeature {
     else { return nil }
 
     let nodeEndTime = state.nodeEndTime(for: currentNode)
-    guard time >= nodeEndTime - 0.25 else { return nil }
+    guard time >= nodeEndTime else { return nil }
 
     if !currentNode.interactiveOptions.isEmpty {
       guard !state.isWaitingForNodeSelection else { return nil }
       state.isWaitingForNodeSelection = true
       state.isPlaying = false
+      // 선택지 노출 시점에 이 노드의 대사가 전부 드러나도록 currentTime 을 노드 끝으로 고정
+      // (음성이 끝나기 전 일찍 멈춰 글이 튀어 보이던 문제 방지).
+      state.currentTime = max(state.currentTime, nodeEndTime)
       return .run { [player = audioPlayer] _ in
         await player.pause()
       }
