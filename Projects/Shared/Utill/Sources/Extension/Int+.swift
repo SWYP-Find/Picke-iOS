@@ -26,7 +26,8 @@ public extension Int {
 
   /// 재생시간 초 → 반올림한 분 단위 텍스트. 1분 미만은 "1분".
   var roundedMinuteText: String {
-    let minutes = max(1, Int((Double(self) / 60).rounded()))
+    let roundedMinutes = Int((Double(self) / 60).rounded())
+    let minutes = roundedMinutes < 1 ? 1 : roundedMinutes
     return "\(minutes)분"
   }
 }
