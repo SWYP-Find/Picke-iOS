@@ -8,6 +8,7 @@ import Foundation
 import WeaveDI
 
 public protocol BattleInterface: Sendable {
+  func fetchTodayBattles() async throws -> TodayBattlePage
   func fetchBattle(battleId: Int) async throws -> BattleDetail
   func submitPreVote(
     battleId: Int,

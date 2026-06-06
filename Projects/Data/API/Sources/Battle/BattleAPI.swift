@@ -6,6 +6,7 @@
 import Foundation
 
 public enum BattleAPI {
+  case today
   case detail(battleId: Int)
   case preVote(battleId: Int)
   case postVote(battleId: Int)
@@ -17,6 +18,8 @@ public enum BattleAPI {
 
   public var description: String {
     switch self {
+    case .today:
+      return "today"
     case let .detail(battleId):
       return "\(battleId)"
     case let .preVote(battleId):

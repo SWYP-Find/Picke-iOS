@@ -9,6 +9,10 @@ import Foundation
 public struct DefaultBattleRepositoryImpl: BattleInterface {
   public init() {}
 
+  public func fetchTodayBattles() async throws -> TodayBattlePage {
+    TodayBattlePage(items: [], totalCount: 0)
+  }
+
   public func fetchBattle(battleId _: Int) async throws -> BattleDetail {
     BattleDetail(
       battleInfo: BattleInfo(

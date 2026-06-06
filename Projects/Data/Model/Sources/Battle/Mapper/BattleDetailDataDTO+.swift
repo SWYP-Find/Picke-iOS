@@ -46,7 +46,7 @@ public extension BattleOptionDTO {
       stance: stance,
       representative: representative,
       imageUrl: imageUrl,
-      tags: tags.map { $0.toDomain() }
+      tags: (tags ?? []).map { $0.toDomain() }
     )
   }
 }
