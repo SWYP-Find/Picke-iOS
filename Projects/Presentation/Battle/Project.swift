@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
   name: "Battle",
@@ -12,6 +12,7 @@ let project = Project.makeAppModule(
   dependencies: [
     .Presentation(implements: .Chat),
     .Shared(implements: .Shared),
+    .Domain(implements: .UseCase),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
   ],

@@ -64,7 +64,16 @@ extension BattleCoordinator {
     action: IndexedRouterActionOf<BattleScreen>
   ) -> Effect<Action> {
     switch action {
+    // 오늘의 배틀에서 선택 후 입장 → ChatRoom(채팅방) 직접 진입.
     case let .routeAction(_, action: .battle(.delegate(.openBattle(battleId)))):
+      state.routes.push(.chatRoom(.init(battleId: battleId)))
+      return .none
+
+    case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    // 채팅방 다 들으면 → ChatCoordinator(초기 PreVote) 흐름으로 연결.
+    case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
       state.routes.push(.chat(.init(battleId: battleId)))
       return .none
 
@@ -99,6 +108,7 @@ extension BattleCoordinator {
   @Reducer
   public enum BattleScreen {
     case battle(BattleFeature)
+    case chatRoom(ChatRoomFeature)
     case chat(ChatCoordinator)
   }
 }
