@@ -52,7 +52,7 @@ public struct PreVoteView: View {
     .onAppear { send(.onAppear) }
     .sheet(item: $store.shareItem) { item in
       ShareSheet(items: item.items)
-        .presentationDetents([.fraction(0.6)])
+        .presentationDetents([.fraction(0.5)])
         .toolbar(.hidden, for: .navigationBar)
     }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
