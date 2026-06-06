@@ -158,21 +158,24 @@ graph TD
 ### 🔄 의존성 방향 원칙
 
 ```
-Presentation → Domain/UseCase + Domain/Entity
-Domain/UseCase → DomainInterface + Domain/Entity
-Data/Repository → DomainInterface + Domain/Entity + Data/Model + Data/Service
+Presentation → Domain (UseCase Protocol)
+       ↓
+Domain/UseCase → Domain (Repository Protocol)
+       ↓
+Data/Repository → Domain (Entity + Repository Protocol)
+       ↓
+Data/Model → Domain (Entity 변환)
+       ↓
 Data/Service → Data/API + Network/Foundations
-Network/Foundations → Network/ThirdPartys
-Shared/DesignSystem · Shared/Utill → 필요한 상위 모듈에서만 참조
 ```
 
 **핵심 설계 원칙**
-- ✅ **Presentation** 은 Repository 를 직접 잡지 않고 UseCase / Entity 를 통해 동작합니다.
-- ✅ **Domain/Entity** 는 SwiftUI / TCA / Network 에 의존하지 않는 순수 모델만 둡니다.
-- ✅ 화면 전용 모델은 해당 Presentation 모듈의 `Model/` 에 두고, 도메인 공용 모델만 Entity 로 올립니다.
-- ✅ **DomainInterface** 는 Repository 계약을 정의하고, **Data/Repository** 가 이를 구현합니다.
-- ✅ **Data/Model** 은 DTO 와 Entity 매핑을 담당하고, **Data/Service** 는 endpoint / method / parameter 만 담당합니다.
-- ✅ 공통 표시 포맷은 `Shared/Utill`, 공통 UI 와 디자인 토큰은 `Shared/DesignSystem` 에 둡니다.
+- ✅ **Presentation** 은 Domain 의 UseCase 만 의존합니다.
+- ✅ **Domain/UseCase** 는 Repository Protocol 을 통해 외부 IO 를 호출합니다.
+- ✅ **Data/Repository** 는 Domain 의 Repository Protocol 을 구현하고 Entity 를 반환합니다.
+- ✅ **Data/Model** 은 DTO 와 Entity 변환을 담당합니다.
+- ✅ **Data/Service** 는 endpoint / method / parameter 정의만 담당합니다.
+- ✅ 모든 데이터 흐름은 **Domain 을 중심**으로 진행합니다.
 
 ## 🔐 OAuth 인증 플로우
 
