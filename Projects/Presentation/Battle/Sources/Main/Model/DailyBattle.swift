@@ -1,11 +1,14 @@
 //
 //  DailyBattle.swift
-//  Entity
+//  Battle
 //
 //  오늘의 배틀 화면 모델 — picke.pen `오늘의 배틀`. `BattleInfo` 에서 매핑.
 //
 
 import Foundation
+
+import Entity
+import Utill
 
 public struct DailyBattle: Equatable, Identifiable {
   public var battleId: Int
@@ -64,20 +67,11 @@ public struct DailyBattle: Equatable, Identifiable {
       tags: info.tags.map(\.name),
       title: info.title,
       question: info.summary,
-      durationText: durationText(info.audioDuration),
+      durationText: info.audioDuration.durationText,
       options: info.options.prefix(2).map {
         // API title = 짧은 입장 라벨("선하다"), API stance = 설명 문장(긴 인용구).
         Option(id: $0.optionId, representative: $0.representative, stance: $0.title, quote: $0.stance)
       }
     )
-  }
-
-  /// 재생시간 초 → "X분 Y초".
-  private static func durationText(_ seconds: Int) -> String {
-    let minutes = seconds / 60
-    let secs = seconds % 60
-    if minutes > 0, secs > 0 { return "\(minutes)분 \(secs)초" }
-    if minutes > 0 { return "\(minutes)분" }
-    return "\(secs)초"
   }
 }

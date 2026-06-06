@@ -76,7 +76,7 @@ public struct ChatRoomFeature {
           guard currentMs >= scriptStart else { return [] }
           let scriptEnd = index + 1 < count ? revealStart(index + 1) : nodeStartMs + nodeDurationMs
           let windowMs = max(1, scriptEnd - scriptStart)
-          let messageSpeaker = scenario.chatSpeaker(for: script)
+          let messageSpeaker = speaker(for: script, in: scenario)
 
           // 나레이션/클로징(center)·발언자(좌/우) 모두 문장마다 개별 말풍선.
           // 문장 시작 시점은 글자수 비례로 분배(긴 문장=더 긴 시간) → 싱크.
@@ -155,10 +155,6 @@ public struct ChatRoomFeature {
 
     fileprivate static func listenedKey(battleId: Int) -> String {
       "picke.chatRoom.hasFinishedListening.\(battleId)"
-    }
-
-    public func visibleNodes(in scenario: BattleScenario) -> [ScenarioNode] {
-      scenario.chatVisibleNodes(visibleNodeIds: visibleNodeIds, currentNodeId: currentNodeId)
     }
 
     public func nodeStartTime(for nodeId: Int) -> TimeInterval {
@@ -247,6 +243,67 @@ public struct ChatRoomFeature {
     .ifLet(\.$customAlert, action: \.scope.customAlert) {
       CustomConfirmAlert()
     }
+  }
+}
+
+private extension ChatRoomFeature.State {
+  func visibleNodes(in scenario: BattleScenario) -> [ScenarioNode] {
+    let ids = visibleNodeIds.isEmpty ? [currentNodeId ?? scenario.startNodeId] : visibleNodeIds
+    return ids.compactMap { id in
+      scenario.nodes.first { $0.nodeId == id }
+    }
+  }
+
+  func speaker(
+    for script: ScenarioScript,
+    in scenario: BattleScenario
+  ) -> ChatSpeaker {
+    switch script.speakerType {
+    case .a:
+      return speaker(
+        label: "A",
+        side: .left,
+        fallbackName: script.speakerName,
+        in: scenario
+      )
+    case .b:
+      return speaker(
+        label: "B",
+        side: .right,
+        fallbackName: script.speakerName,
+        in: scenario
+      )
+    case .narrator:
+      return ChatSpeaker(name: script.speakerName, side: .center)
+    case .philosopher, .unknown:
+      if let philosopher = scenario.philosophers.first(where: { $0.name == script.speakerName }) {
+        let side: ChatSpeakerSide = philosopher.label == "B" ? .right : .left
+        return ChatSpeaker(
+          label: philosopher.label,
+          name: philosopher.name,
+          imageURL: philosopher.imageUrl,
+          side: side
+        )
+      }
+      return ChatSpeaker(name: script.speakerName, side: .center)
+    }
+  }
+
+  func speaker(
+    label: String,
+    side: ChatSpeakerSide,
+    fallbackName: String,
+    in scenario: BattleScenario
+  ) -> ChatSpeaker {
+    guard let philosopher = scenario.philosophers.first(where: { $0.label == label }) else {
+      return ChatSpeaker(label: label, name: fallbackName, side: side)
+    }
+    return ChatSpeaker(
+      label: philosopher.label,
+      name: philosopher.name,
+      imageURL: philosopher.imageUrl,
+      side: side
+    )
   }
 }
 
