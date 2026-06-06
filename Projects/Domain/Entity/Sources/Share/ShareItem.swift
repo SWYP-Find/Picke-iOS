@@ -1,8 +1,8 @@
 //
 //  ShareItem.swift
-//  Chat
+//  Entity
 //
-//  공유 시트 트리거. `.sheet(item:)` 에 바로 바인딩한다.
+//  공유 시트 트리거. `.sheet(item:)` 에 바로 바인딩한다. (PreVote / 오늘의 배틀 등 공용)
 //
 
 import Foundation

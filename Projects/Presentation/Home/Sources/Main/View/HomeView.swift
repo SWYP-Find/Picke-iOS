@@ -100,11 +100,16 @@ extension HomeView {
       HomeSectionHeader(title: "Best 배틀") {
         send(.seeMoreTapped(.bestBattles))
       }
-      VStack(spacing: 12) {
-        ForEach(store.bestBattles) { battle in
+      VStack(spacing: 0) {
+        ForEach(Array(store.bestBattles.enumerated()), id: \.element.id) { index, battle in
           BestBattleCardView(battle: battle)
             .contentShape(Rectangle())
             .onTapGesture { send(.bestBattleTapped(battle)) }
+          if index < store.bestBattles.count - 1 {
+            Rectangle()
+              .fill(.beige600)
+              .frame(height: 1)
+          }
         }
       }
       .padding(.horizontal, 16)

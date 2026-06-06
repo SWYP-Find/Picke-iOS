@@ -530,8 +530,13 @@ extension CommentFeature {
       switch result {
       case let .success(page):
         let myPid = state.perspectiveId
+        // 진영(.a/.b) 은 옵션 label 문자열이 아니라 optionId 로 판별(서버 label 이 "A"/"B" 가 아닐 수 있음).
+        let optionAId = state.voteSummary.optionA.optionId
         let mapped = page.items.enumerated().map { idx, item -> CommentItem in
           var comment = CommentItem(item: item, order: idx)
+          if optionAId > 0 {
+            comment.option = item.option.optionId == optionAId ? .a : .b
+          }
           // 서버 isMyPerspective 가 누락/false 여도 내 perspectiveId 와 일치하면 내 글로 판정.
           if let myPid, comment.perspectiveId == myPid {
             comment.isMine = true
@@ -594,26 +599,48 @@ extension CommentFeature {
     fallback: VoteSummary
   ) -> VoteSummary {
     guard stats.options.count >= 2 else { return fallback }
-    let a = stats.options[0]
-    let b = stats.options[1]
+    let optionA = matchedStatsOption(
+      in: stats.options,
+      fallbackOptionId: fallback.optionA.optionId,
+      fallbackIndex: 0
+    )
+    let optionB = matchedStatsOption(
+      in: stats.options,
+      fallbackOptionId: fallback.optionB.optionId,
+      fallbackIndex: 1
+    )
     return VoteSummary(
       changeBadgeTitle: fallback.changeBadgeTitle,
-      optionA: VoteOptionSummary(
-        optionId: a.optionId,
-        label: a.label ?? fallback.optionA.label,
-        title: a.title.isEmpty ? fallback.optionA.title : a.title,
-        representative: fallback.optionA.representative,
-        imageUrl: a.imageUrl ?? fallback.optionA.imageUrl,
-        percentage: a.ratio
-      ),
-      optionB: VoteOptionSummary(
-        optionId: b.optionId,
-        label: b.label ?? fallback.optionB.label,
-        title: b.title.isEmpty ? fallback.optionB.title : b.title,
-        representative: fallback.optionB.representative,
-        imageUrl: b.imageUrl ?? fallback.optionB.imageUrl,
-        percentage: b.ratio
-      )
+      optionA: makeOptionSummary(optionA, fallback: fallback.optionA),
+      optionB: makeOptionSummary(optionB, fallback: fallback.optionB)
+    )
+  }
+
+  private func matchedStatsOption(
+    in options: [BattleVoteStatsOption],
+    fallbackOptionId: Int,
+    fallbackIndex: Int
+  ) -> BattleVoteStatsOption {
+    if fallbackOptionId > 0,
+       let matched = options.first(where: { $0.optionId == fallbackOptionId })
+    {
+      return matched
+    }
+    return options[fallbackIndex]
+  }
+
+  private func makeOptionSummary(
+    _ option: BattleVoteStatsOption,
+    fallback: VoteOptionSummary
+  ) -> VoteOptionSummary {
+    VoteOptionSummary(
+      // vote-stats 응답 순서가 배틀 상세와 달라도 fallback optionId 로 A/B 진영을 유지한다.
+      optionId: option.optionId > 0 ? option.optionId : fallback.optionId,
+      label: option.label ?? fallback.label,
+      title: option.title.isEmpty ? fallback.title : option.title,
+      representative: fallback.representative,
+      imageUrl: option.imageUrl ?? fallback.imageUrl,
+      percentage: option.ratio
     )
   }
 }

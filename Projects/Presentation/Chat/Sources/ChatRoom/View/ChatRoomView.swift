@@ -109,17 +109,19 @@ extension ChatRoomView {
         VStack(alignment: .leading, spacing: 20) {
           ForEach(groupedMessages, id: \.id) { group in
             messageGroup(group)
-              .id(group.messages.last?.id ?? group.id)
+              .transition(.opacity)
           }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
+        // 대사가 한 줄씩 추가될 때 슬라이드/페이드인.
+        .animation(.easeInOut(duration: 0.25), value: store.messages)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .onChange(of: store.activeMessageId) { _, activeMessageId in
         guard let target = scrollTargetId(for: activeMessageId) else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
-          proxy.scrollTo(target, anchor: .center)
+          proxy.scrollTo(target, anchor: .bottom)
         }
       }
     }
@@ -169,6 +171,7 @@ extension ChatRoomView {
       VStack(spacing: 6) {
         ForEach(group.messages) { message in
           narratorBubble(text: message.text)
+            .id(message.id)
         }
       }
       .frame(maxWidth: .infinity)
@@ -201,7 +204,14 @@ extension ChatRoomView {
 
       VStack(alignment: .leading, spacing: 6) {
         ForEach(messages) { message in
-          bubble(text: message.text, side: speaker.side)
+          let isActive = store.isPlaying && message.id == store.activeMessageId
+          HStack(alignment: .center, spacing: 6) {
+            if speaker.side == .right, isActive { waveformIcon() }
+            bubble(text: message.text, side: speaker.side, isActive: isActive)
+              .id(message.id)
+            if speaker.side == .left, isActive { waveformIcon() }
+          }
+          .transition(.opacity)
         }
       }
     }
@@ -211,40 +221,48 @@ extension ChatRoomView {
   @ViewBuilder
   private func bubble(
     text: String,
-    side: ChatSpeakerSide
+    side: ChatSpeakerSide,
+    isActive: Bool = false
   ) -> some View {
+    // 재생 중인 말풍선은 흰 배경으로 강조 (테두리는 동일 유지).
+    let background: Color = isActive ? .beige50 : (side == .left ? .beige300 : .beige400)
+    let border: Color = side == .left ? .beige600 : .beige700
     Text(text)
       .pretendardFont(family: .Regular, size: 13)
-      .foregroundStyle(.neutral500)
+      .foregroundStyle(isActive ? .neutral800 : .neutral500)
       .lineSpacing(13 * 0.4)
+      .multilineTextAlignment(.leading)
+      .fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
-      .frame(maxWidth: Metric.bubbleMaxWidth, alignment: .leading)
-      .background(
-        side == .left ? Color.beige50 : Color.beige400,
-        in: RoundedRectangle(cornerRadius: 2)
-      )
+      .background(background, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
-          .stroke(side == .left ? Color.beige600 : Color.beige700, lineWidth: 1)
+          .stroke(border, lineWidth: 1)
       )
   }
 
+  /// 재생 중 말풍선 옆 음성 파형 아이콘.
+  @ViewBuilder
+  private func waveformIcon() -> some View {
+    Image(systemName: "waveform")
+      .font(.system(size: 18, weight: .semibold))
+      .foregroundStyle(.primary500)
+      .frame(width: 24, height: 24)
+  }
+
+  /// 나레이션/클로징: 박스·테두리 없이 가운데 정렬 + 살짝 기울인 이탤릭.
   @ViewBuilder
   private func narratorBubble(text: String) -> some View {
     Text(text)
       .pretendardFont(family: .Regular, size: 12)
+      .italic()
       .foregroundStyle(.neutral400)
       .lineSpacing(12 * 0.4)
       .multilineTextAlignment(.center)
       .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.vertical, 4)
       .frame(maxWidth: 280)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-      .overlay(
-        RoundedRectangle(cornerRadius: 2)
-          .stroke(.beige600, lineWidth: 1)
-      )
   }
 
   private struct SpeakerGroup: Equatable, Identifiable {

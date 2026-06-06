@@ -498,6 +498,39 @@ public struct PreVoteFeature {
 - 파일 위치: `Projects/Presentation/<모듈>/Sources/<도메인>/Model/<TypeName>.swift`
 - 레퍼런스: `Projects/Presentation/Chat/Sources/Vote/Model/ShareItem.swift`, `Projects/Presentation/Chat/Sources/Vote/Model/ShareContent.swift`
 
+#### 🧰 공통 유틸 — `Utill` 모듈 + `Type+.swift` 네이밍 (필수)
+
+도메인/화면에 종속되지 않는 **순수 유틸** (숫자 포맷, 문자열 분할, 날짜 변환 등) 은 Feature 안에 private helper 로 두지 말고 **`Shared/Utill` 모듈에 타입 확장**으로 분리한다. 여러 모듈(Chat / Home / Auth / Hifi 등)에서 공용으로 쓴다.
+
+```swift
+// ✅ 올바른 패턴 — Utill 모듈의 타입 확장. 파일명은 `Type+.swift` (기능 접미사 없음, 한 타입당 한 파일)
+// Projects/Shared/Utill/Sources/Extension/Int+.swift
+public extension Int {
+  var decimalFormatted: String { ... }   // 1340 → "1,340"
+}
+
+// Projects/Shared/Utill/Sources/Extension/String+.swift
+public extension String {
+  func splitIntoSentences() -> [String] { ... }
+}
+
+// 사용처: import Utill 후 그대로
+import Utill
+let count = likeCount.decimalFormatted
+let lines = script.text.splitIntoSentences()
+
+// ❌ 금지 — Feature/View 안에 private static helper 로 중복 선언
+private static func formattedCount(_ n: Int) -> String { ... }   // ← Utill 로 이동
+private static func splitSentences(_ t: String) -> [String] { ... } // ← Utill 로 이동
+```
+
+규칙:
+- **Extension 파일 네이밍은 항상 `Type+.swift`** — 확장 대상 타입 + `+` 만 (기능 접미사 없음). 한 타입 확장은 한 파일에 모은다 (`Int+.swift`, `String+.swift`, `UUID+.swift`, `Color+.swift`, `View+.swift`). 기존 `ShapeStyle+.swift`, `UIColor+.swift` 와 동일 규칙.
+- 순수 유틸 (Foundation 만 의존, UI/도메인 무관) → `Projects/Shared/Utill/Sources/Extension/` 에 둔다
+- 쓰는 모듈은 `.Shared(implements: .Utill)` 의존성 추가 후 `import Utill`
+- DesignSystem 전용 확장(컬러/폰트/모디파이어)은 DesignSystem 모듈에 두되 파일명은 동일하게 `Type+.swift`
+- 레퍼런스: `Projects/Shared/Utill/Sources/Extension/Int+.swift`, `String+.swift`, `UUID+.swift`
+
 #### ⚡ AsyncAction — `Result { try await }` + `mapError` + 단일 `Response` Inner 액션
 
 `do/catch + 별도 Loaded / Failed 액션` 분리하지 말고, `Result` 로 감싸서 단일 `xxxResponse(Result<Success, AuthError>)` Inner 액션으로 보낸다. State 캡쳐는 `[키 = state.xxx]` 형태.

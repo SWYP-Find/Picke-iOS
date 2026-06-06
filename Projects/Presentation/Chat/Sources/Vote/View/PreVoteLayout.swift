@@ -9,11 +9,10 @@ import CoreGraphics
 
 enum PreVoteLayout {
   static let contentOverlapTopOffset: CGFloat = 280
-  static let contentGradientSpacerHeight: CGFloat = 100
   static let backgroundImageHeight: CGFloat = 512
   static let imageToContentGradientHeight: CGFloat = 260
   static let rootContentSpacing: CGFloat = 40
-  static let contentToOptionSpacing: CGFloat = 32
+  static let contentToOptionSpacing: CGFloat = 40
   static let optionCardHeight: CGFloat = 106
   static let contentHorizontalPadding: CGFloat = 16
   static let contentTopPadding: CGFloat = 80
@@ -22,4 +21,17 @@ enum PreVoteLayout {
   static let ctaHorizontalPadding: CGFloat = 16
   static let contentBottomSpacing: CGFloat = ctaHeight + ctaBottomSpacing + rootContentSpacing
   static let snapshotWidth: CGFloat = 360
+
+  /// 제목·요약 길이에 따라 그라데이션 여백을 동적으로 결정(3단계).
+  /// 텍스트가 짧을수록 여백을 키워 콘텐츠를 아래로, 길수록 줄여 위로 끌어올린다.
+  static func contentGradientSpacerHeight(
+    titleLength: Int,
+    summaryLength: Int
+  ) -> CGFloat {
+    switch titleLength + summaryLength {
+    case ...60: 76
+    case 61 ... 90: 60
+    default: 52
+    }
+  }
 }

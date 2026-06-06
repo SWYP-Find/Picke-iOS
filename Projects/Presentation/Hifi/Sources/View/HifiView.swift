@@ -45,7 +45,6 @@ public struct HifiView: View {
       .contentShape(Rectangle())
       .simultaneousGesture(categorySwipe)
     }
-    .background(Color.beige200.ignoresSafeArea())
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
@@ -120,11 +119,9 @@ private extension HifiView {
       .padding(.horizontal, 16)
     }
     .scrollIndicators(.hidden)
-    .background(.beige200)
+    .background(.white)
     .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1.5)
+      Rectangle().fill(.beige600).frame(height: 1.5)
     }
   }
 
@@ -132,9 +129,10 @@ private extension HifiView {
   func categoryTab(_ category: ExploreCategory) -> some View {
     let isSelected = store.selectedCategory == category
     Button { send(.categoryTapped(category)) } label: {
+      // picke.pen `뷰전환`: 탭 폭 50 고정, 선택 시 하단 4px primary500 풀폭 밑줄.
       Text(category.title)
         .pretendardFont(family: isSelected ? .Medium : .Regular, size: 14)
-        .foregroundStyle(isSelected ? Color.primary500 : Color.neutral300)
+        .foregroundStyle(isSelected ? Color.primary500 : Color.gray300)
         .frame(width: 50)
         .padding(.vertical, 8)
         .overlay(alignment: .bottom) {
@@ -160,7 +158,14 @@ private extension HifiView {
         Button { send(.sortTapped(sort)) } label: {
           Text(sort.title)
             .pretendardFont(family: isSelected ? .SemiBold : .Medium, size: 12)
-            .foregroundStyle(isSelected ? Color.neutral800 : Color.neutral300)
+            .foregroundStyle(isSelected ? Color.beige50 : Color.primary500)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isSelected ? .primary500 : .bgDefault, in: RoundedRectangle(cornerRadius: 4))
+            .overlay(
+              RoundedRectangle(cornerRadius: 4)
+                .stroke(.primary500, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
       }
@@ -168,7 +173,7 @@ private extension HifiView {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
-    .background(.beige200)
+    .background(.white)
   }
 }
 
@@ -196,16 +201,18 @@ private extension HifiView {
                 .foregroundStyle(.neutral500)
                 .kerning(-0.35)
                 .lineSpacing(14 * 0.28)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
             }
 
             Text(item.summary)
               .pretendardFont(family: .Regular, size: 13)
               .foregroundStyle(.neutral400)
               .lineSpacing(13 * 0.4)
+              .lineLimit(1)
+              .truncationMode(.tail)
               .frame(maxWidth: .infinity, alignment: .leading)
-              .fixedSize(horizontal: false, vertical: true)
               .padding(.horizontal, 2)
           }
 

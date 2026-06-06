@@ -25,6 +25,7 @@ public enum ImageAsset: String {
   case onboarding2
   case onboarding3
   case onboarding4
+  case vs
 
   // MARK: - GNB 탭 아이콘 (비선택 / 선택)
 

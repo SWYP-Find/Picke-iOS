@@ -10,6 +10,7 @@ import Foundation
 import ComposableArchitecture
 import TCAFlow
 
+import Battle
 import DesignSystem
 import Hifi
 import Home
@@ -50,9 +51,11 @@ public struct MainTabCoordinator {
   @ObservableState
   public struct State: Equatable {
     public var selectedTab: Int
+    /// 직전 탭 — 탐색/빠른배틀 상단 백탭 시 이 탭으로 복귀.
+    public var previousTab: Int = Tab.home.rawValue
     public var homeState: HomeCoordinator.State
     public var exploreState: HifiCoordinator.State
-    public var quickBattleState: HomeCoordinator.State
+    public var quickBattleState: BattleCoordinator.State
     public var myPageState: HomeCoordinator.State
 
     public init(selectedTab: Int = Tab.home.rawValue) {
@@ -70,7 +73,7 @@ public struct MainTabCoordinator {
     case tabReselected(Int)
     case home(HomeCoordinator.Action)
     case explore(HifiCoordinator.Action)
-    case quickBattle(HomeCoordinator.Action)
+    case quickBattle(BattleCoordinator.Action)
     case myPage(HomeCoordinator.Action)
   }
 
@@ -82,7 +85,7 @@ public struct MainTabCoordinator {
       HifiCoordinator()
     }
     Scope(state: \.quickBattleState, action: \.quickBattle) {
-      HomeCoordinator()
+      BattleCoordinator()
     }
     Scope(state: \.myPageState, action: \.myPage) {
       HomeCoordinator()
@@ -91,6 +94,7 @@ public struct MainTabCoordinator {
     Reduce { state, action in
       switch action {
       case let .selectTab(tab):
+        if tab != state.selectedTab { state.previousTab = state.selectedTab }
         state.selectedTab = tab
         return .none
 
@@ -103,6 +107,11 @@ public struct MainTabCoordinator {
         case .myPage: state.myPageState.routes.goBackToRoot()
         case .none: break
         }
+        return .none
+
+      // 빠른배틀(오늘의 배틀) 상단 백탭 → 직전 탭으로 복귀
+      case .quickBattle(.router(.routeAction(_, action: .battle(.delegate(.backToHome))))):
+        state.selectedTab = state.previousTab
         return .none
 
       case .home, .explore, .quickBattle, .myPage:

@@ -35,7 +35,8 @@ public struct BattleOptionDTO: Decodable {
   public let stance: String
   public let representative: String
   public let imageUrl: String
-  public let tags: [BattleTagDTO]
+  // today 배틀 옵션 응답엔 tags 가 없으므로 옵셔널.
+  public let tags: [BattleTagDTO]?
 }
 
 public struct BattleTagDTO: Decodable {

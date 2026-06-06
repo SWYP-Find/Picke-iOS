@@ -15,6 +15,10 @@ public struct BattleUseCaseImpl: BattleInterface {
 
   public init() {}
 
+  public func fetchTodayBattles() async throws -> TodayBattlePage {
+    return try await battleRepository.fetchTodayBattles()
+  }
+
   public func fetchBattle(battleId: Int) async throws -> BattleDetail {
     return try await battleRepository.fetchBattle(battleId: battleId)
   }

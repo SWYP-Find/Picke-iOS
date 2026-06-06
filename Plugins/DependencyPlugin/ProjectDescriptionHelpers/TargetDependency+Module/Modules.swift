@@ -25,12 +25,12 @@ public extension ModulePath {
     case MainTab
     case Home
     case Chat
-
+    case Hifi
+    case Web
+    case Battle
 
     public static let name: String = "Presentation"
       
-      case Hifi
-      case Web
   }
 }
 

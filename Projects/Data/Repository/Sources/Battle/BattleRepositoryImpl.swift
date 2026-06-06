@@ -24,6 +24,18 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     self.provider = provider
   }
 
+  public func fetchTodayBattles() async throws -> TodayBattlePage {
+    let dto: TodayBattlePageResponseDTO = try await provider.request(.today)
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "오늘의 배틀 응답이 비어 있습니다"
+      Log.error("[BattleRepositoryImpl] empty todayBattles payload: \(message)")
+      throw BattleError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
+
   public func fetchBattle(battleId: Int) async throws -> BattleDetail {
     let dto: BattleDetailResponseDTO = try await provider.request(
       .detail(battleId: battleId)

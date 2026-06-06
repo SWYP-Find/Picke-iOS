@@ -10,6 +10,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Utill
 
 @ViewAction(for: CurationFeature.self)
 public struct CurationView: View {
@@ -145,7 +146,7 @@ private extension CurationView {
         HStack(spacing: 2) {
           Image(systemName: "clock")
             .font(.system(size: 11, weight: .regular))
-          Text(durationText(battle.audioDuration))
+          Text(battle.audioDuration.roundedMinuteText)
             .pretendardFont(family: .Medium, size: 12)
         }
         .foregroundStyle(.neutral300)
@@ -223,11 +224,6 @@ private extension CurationView {
       .foregroundStyle(.neutral900)
       .frame(width: 24, height: 24)
       .background(.secondary200, in: Circle())
-  }
-
-  func durationText(_ seconds: Int) -> String {
-    let minutes = max(1, Int((Double(seconds) / 60).rounded()))
-    return "\(minutes)분"
   }
 }
 
