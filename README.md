@@ -84,26 +84,26 @@ Picke-iOS/
 │   │   └── Derived/               # Tuist 생성 plist
 │   │
 │   ├── Presentation/              # 🎨 UI Layer
-│   │   ├── Auth/                  # 로그인 / 코디네이터 / Toast
-│   │   ├── Home/                  # 홈 피드 / 큐레이팅 / 스켈레톤
-│   │   ├── Chat/                  # 사전·사후 투표 / 채팅방 / 관점·대댓글 / 큐레이팅 (ChatCoordinator)
-│   │   ├── Hifi/                  # Hi-Fi 프로토타입 모듈
+│   │   ├── Auth/                  # 로그인 / 온보딩 / 인증 코디네이터
+│   │   ├── Battle/                # 오늘의 배틀 / 빠른 배틀 화면 모델과 메인 플로우
+│   │   ├── Chat/                  # 투표 / 채팅방 / 관점·대댓글 / 큐레이팅
+│   │   ├── Hifi/                  # 탐색·검색 기반 Hi-Fi 화면
+│   │   ├── Home/                  # 홈 피드 / 추천 / 스켈레톤
 │   │   ├── MainTab/               # 탭 라우팅 / GNB
 │   │   ├── Splash/                # 스플래시
+│   │   ├── Web/                   # 약관 / 외부 링크 WebView
 │   │   └── Presentation/          # 공통 프레젠테이션 유틸
 │   │
 │   ├── Domain/                    # 🔥 Business Logic Layer
-│   │   ├── Entity/                # Auth / Home / OAuth / Error 도메인 엔티티
-│   │   ├── DomainInterface/       # Auth / Home / OAuth Repository + Manager 인터페이스
-│   │   └── UseCase/               # AuthUseCaseImpl, UnifiedOAuthUseCase, Provider/{Apple,Google,Kakao}
+│   │   ├── Entity/                # Auth / Battle / Comment / Home / OAuth / Share / Error 엔티티
+│   │   ├── DomainInterface/       # Repository / Manager 인터페이스
+│   │   └── UseCase/               # Auth / Battle / Comment / Home / OAuth / Perspective / Search 유스케이스
 │   │
 │   ├── Data/                      # 📡 Data Layer
-│   │   ├── Model/                 # BaseResponseDTO / Auth·Home DTO + Entity Mapper
-│   │   ├── API/                   # PieckeDomain, AuthAPI, HomeAPI, BaseAPI
-│   │   ├── Service/               # AuthService / HomeService (BaseTargetType), 요청 바디
-│   │   └── Repository/            # Auth·Home RepositoryImpl + OAuth Repository
-│   │       ├── Auth/              # Interceptor, RefreshToken Session, Pool, MoyaProvider 확장
-│   │       └── OAuth/             # Apple / Google / Kakao / Web OAuth 구현
+│   │   ├── API/                   # Base / Auth / Battle / Comment / Home / Perspective / Search endpoint
+│   │   ├── Service/               # Moya TargetType + 요청 바디
+│   │   ├── Model/                 # BaseResponseDTO + DTO → Entity 매퍼
+│   │   └── Repository/            # RepositoryImpl + OAuth / AudioPlayer 구현
 │   │
 │   ├── Network/                   # 🌐 Network Layer
 │   │   ├── Networking/            # 네트워크 클라이언트 export
@@ -111,10 +111,10 @@ Picke-iOS/
 │   │   └── ThirdPartys/           # AsyncMoya / WeaveDI 등 SPM 재노출
 │   │
 │   └── Shared/                    # 🔧 Shared Layer
-│       ├── DesignSystem/          # 공통 UI / 컬러 토큰 / 이미지 / Toast / Floating 배너 / AudioPlayer / 팝업
+│       ├── DesignSystem/          # 공통 UI / 컬러 토큰 / 이미지 / Toast / Floating 배너 / 팝업
 │       ├── Shared/                # 공유 모델·확장
 │       ├── ThirdParty/            # 써드파티 래퍼
-│       └── Utill/                 # 공통 유틸리티
+│       └── Utill/                 # 날짜 / 숫자 / 문자열 표시 유틸리티
 │
 ├── 🔧 Tuist/
 │   ├── Package.swift              # SPM 의존성 정의
@@ -129,19 +129,18 @@ Picke-iOS/
 
 ```mermaid
 graph TD
-    A[🎨 Presentation Layer] --> B[🔥 Domain Layer]
-    B --> C[📡 Data Layer]
-    D[🌐 Network Layer] --> C
-    E[🔧 Shared Layer] --> A
-    E --> B
-    E --> C
+    A[Presentation: SwiftUI + TCA Feature] --> B[Domain: UseCase + Entity]
+    B --> C[DomainInterface: Repository Protocol]
+    D[Data: RepositoryImpl] --> C
+    D --> E[Data: DTO Model + Service + API]
+    E --> F[Network: AsyncMoya + Header + Token]
+    G[Shared: DesignSystem / Utill] --> A
+    G --> B
+    G --> D
 
-    A -.-> F[SwiftUI Views]
-    A -.-> G[TCA Reducers]
-    B -.-> H[UseCases]
-    B -.-> I[Entities]
-    C -.-> J[Repositories]
-    C -.-> K[API Services]
+    A -.-> H[Auth / Battle / Chat / Home / Hifi / MainTab / Splash / Web]
+    B -.-> I[Auth / Battle / Comment / Perspective / Search UseCase]
+    D -.-> J[Auth / Battle / Comment / Home / OAuth / Perspective / Search Repository]
 ```
 
 ### 🕸️ TuistSpider 확장 뷰
@@ -159,23 +158,21 @@ graph TD
 ### 🔄 의존성 방향 원칙
 
 ```
-Presentation → Domain (UseCase / Entity)
-       ↓
-Domain/UseCase → Domain (Interface / Entity)
-       ↓
-Data/Repository → Domain (Interface / Entity) + Data (Model + Service + API)
-       ↓
-Data/Service → Data (API) + Network/Foundations (APIHeader) + Domain/Entity (요청 식별값)
-       ↓
-Network/Foundations → Network/ThirdPartys (AsyncMoya, WeaveDI)
+Presentation → Domain/UseCase + Domain/Entity
+Domain/UseCase → DomainInterface + Domain/Entity
+Data/Repository → DomainInterface + Domain/Entity + Data/Model + Data/Service
+Data/Service → Data/API + Network/Foundations
+Network/Foundations → Network/ThirdPartys
+Shared/DesignSystem · Shared/Utill → 필요한 상위 모듈에서만 참조
 ```
 
 **핵심 설계 원칙**
-- ✅ **Presentation** 은 Domain UseCase / Entity 만 직접 참조
-- ✅ **Domain** 은 외부 계층에 의존하지 않는 순수 비즈니스 로직
-- ✅ **Data/Repository** 는 Domain 인터페이스를 구현, DTO ↔ Entity 매핑 담당
-- ✅ **Data/Service** 는 endpoint / header / method / parameter 정의만 담당하고 DTO Model 에 의존하지 않음
-- ✅ 모든 데이터 흐름은 **Domain 을 중심**으로 진행
+- ✅ **Presentation** 은 Repository 를 직접 잡지 않고 UseCase / Entity 를 통해 동작합니다.
+- ✅ **Domain/Entity** 는 SwiftUI / TCA / Network 에 의존하지 않는 순수 모델만 둡니다.
+- ✅ 화면 전용 모델은 해당 Presentation 모듈의 `Model/` 에 두고, 도메인 공용 모델만 Entity 로 올립니다.
+- ✅ **DomainInterface** 는 Repository 계약을 정의하고, **Data/Repository** 가 이를 구현합니다.
+- ✅ **Data/Model** 은 DTO 와 Entity 매핑을 담당하고, **Data/Service** 는 endpoint / method / parameter 만 담당합니다.
+- ✅ 공통 표시 포맷은 `Shared/Utill`, 공통 UI 와 디자인 토큰은 `Shared/DesignSystem` 에 둡니다.
 
 ## 🔐 OAuth 인증 플로우
 
@@ -261,7 +258,7 @@ KeychainManager 저장 + AuthSessionManager.credential 갱신
 #### 🔧 빌드 & 배포
 - **Tuist** — 프로젝트 생성 / 모듈 의존성 관리
 - **Swift Package Manager** — 패키지 의존성 관리
-- **fastlane** — 자동화된 빌드 / 배포 (예정)
+- **fastlane + Bundler** — TestFlight / App Store 빌드·업로드 자동화
 
 ### 📱 지원 환경
 - **💻 Xcode**: 16.0 이상
@@ -290,7 +287,14 @@ cd Picke-iOS
 curl -Ls https://install.tuist.io | bash
 ```
 
-#### 3️⃣ 프로젝트 빌드 / 생성
+#### 3️⃣ Ruby / fastlane 의존성 설치
+```bash
+rbenv install 3.3.9
+rbenv global 3.3.9
+bundle install
+```
+
+#### 4️⃣ 프로젝트 빌드 / 생성
 ```bash
 # 전체 워크플로우 (권장)
 ./make build      # clean → install → generate
@@ -301,7 +305,7 @@ curl -Ls https://install.tuist.io | bash
 ./make generate   # Xcode 프로젝트 생성
 ```
 
-#### 4️⃣ Xcode 열기
+#### 5️⃣ Xcode 열기
 ```bash
 open Picke.xcworkspace
 ```
@@ -346,6 +350,12 @@ tuist clean       # Tuist 캐시 정리
 ```bash
 tuist graph       # 의존성 그래프 생성
 tuist test        # 전체 테스트 실행
+```
+
+### 🚀 배포
+```bash
+bundle exec fastlane ios QA       # TestFlight 업로드
+bundle exec fastlane ios release  # App Store 배포
 ```
 
 ## 📄 라이선스
