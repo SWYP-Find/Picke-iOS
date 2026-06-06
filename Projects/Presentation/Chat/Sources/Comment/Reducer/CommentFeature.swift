@@ -599,28 +599,48 @@ extension CommentFeature {
     fallback: VoteSummary
   ) -> VoteSummary {
     guard stats.options.count >= 2 else { return fallback }
-    let a = stats.options[0]
-    let b = stats.options[1]
+    let optionA = matchedStatsOption(
+      in: stats.options,
+      fallbackOptionId: fallback.optionA.optionId,
+      fallbackIndex: 0
+    )
+    let optionB = matchedStatsOption(
+      in: stats.options,
+      fallbackOptionId: fallback.optionB.optionId,
+      fallbackIndex: 1
+    )
     return VoteSummary(
       changeBadgeTitle: fallback.changeBadgeTitle,
-      optionA: VoteOptionSummary(
-        // vote-stats optionId 가 0(누락)이면 배틀 상세에서 채운 값(fallback)을 유지 — 그래야
-        // 옵션 탭에서 댓글 등록 시 해당 진영 optionId 로 정확히 등록된다.
-        optionId: a.optionId > 0 ? a.optionId : fallback.optionA.optionId,
-        label: a.label ?? fallback.optionA.label,
-        title: a.title.isEmpty ? fallback.optionA.title : a.title,
-        representative: fallback.optionA.representative,
-        imageUrl: a.imageUrl ?? fallback.optionA.imageUrl,
-        percentage: a.ratio
-      ),
-      optionB: VoteOptionSummary(
-        optionId: b.optionId > 0 ? b.optionId : fallback.optionB.optionId,
-        label: b.label ?? fallback.optionB.label,
-        title: b.title.isEmpty ? fallback.optionB.title : b.title,
-        representative: fallback.optionB.representative,
-        imageUrl: b.imageUrl ?? fallback.optionB.imageUrl,
-        percentage: b.ratio
-      )
+      optionA: makeOptionSummary(optionA, fallback: fallback.optionA),
+      optionB: makeOptionSummary(optionB, fallback: fallback.optionB)
+    )
+  }
+
+  private func matchedStatsOption(
+    in options: [BattleVoteStatsOption],
+    fallbackOptionId: Int,
+    fallbackIndex: Int
+  ) -> BattleVoteStatsOption {
+    if fallbackOptionId > 0,
+       let matched = options.first(where: { $0.optionId == fallbackOptionId })
+    {
+      return matched
+    }
+    return options[fallbackIndex]
+  }
+
+  private func makeOptionSummary(
+    _ option: BattleVoteStatsOption,
+    fallback: VoteOptionSummary
+  ) -> VoteOptionSummary {
+    VoteOptionSummary(
+      // vote-stats 응답 순서가 배틀 상세와 달라도 fallback optionId 로 A/B 진영을 유지한다.
+      optionId: option.optionId > 0 ? option.optionId : fallback.optionId,
+      label: option.label ?? fallback.label,
+      title: option.title.isEmpty ? fallback.title : option.title,
+      representative: fallback.representative,
+      imageUrl: option.imageUrl ?? fallback.imageUrl,
+      percentage: option.ratio
     )
   }
 }
