@@ -7,10 +7,10 @@
 
 import ComposableArchitecture
 import DomainInterface
-import UseCase
 import Entity
 import Foundation
 import LogMacro
+import UseCase
 
 @Reducer
 public struct HomeFeature {
@@ -72,6 +72,8 @@ public struct HomeFeature {
 
   public enum DelegateAction: Equatable {
     case presentPreVote(battleId: Int)
+    /// "더보기" → 탐색 탭으로 이동.
+    case moveToExplore
   }
 
   nonisolated enum CancelID: Hashable {
@@ -114,7 +116,7 @@ extension HomeFeature {
       return .send(.async(.fetchHome))
 
     case .seeMoreTapped:
-      return .none
+      return .send(.delegate(.moveToExplore))
 
     case let .voteTapped(question):
       return .send(.delegate(.presentPreVote(battleId: question.battleId)))
@@ -182,7 +184,7 @@ extension HomeFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .presentPreVote:
+    case .presentPreVote, .moveToExplore:
       .none
     }
   }

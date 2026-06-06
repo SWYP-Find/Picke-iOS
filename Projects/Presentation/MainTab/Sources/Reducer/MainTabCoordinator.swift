@@ -114,6 +114,12 @@ public struct MainTabCoordinator {
         state.selectedTab = state.previousTab
         return .none
 
+      // 홈 "더보기" → 탐색 탭으로 이동
+      case .home(.router(.routeAction(_, action: .home(.delegate(.moveToExplore))))):
+        if state.selectedTab != Tab.explore.rawValue { state.previousTab = state.selectedTab }
+        state.selectedTab = Tab.explore.rawValue
+        return .none
+
       case .home, .explore, .quickBattle, .myPage:
         return .none
       }
