@@ -530,8 +530,13 @@ extension CommentFeature {
       switch result {
       case let .success(page):
         let myPid = state.perspectiveId
+        // 진영(.a/.b) 은 옵션 label 문자열이 아니라 optionId 로 판별(서버 label 이 "A"/"B" 가 아닐 수 있음).
+        let optionAId = state.voteSummary.optionA.optionId
         let mapped = page.items.enumerated().map { idx, item -> CommentItem in
           var comment = CommentItem(item: item, order: idx)
+          if optionAId > 0 {
+            comment.option = item.option.optionId == optionAId ? .a : .b
+          }
           // 서버 isMyPerspective 가 누락/false 여도 내 perspectiveId 와 일치하면 내 글로 판정.
           if let myPid, comment.perspectiveId == myPid {
             comment.isMine = true
