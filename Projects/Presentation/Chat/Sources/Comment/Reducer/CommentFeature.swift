@@ -599,7 +599,9 @@ extension CommentFeature {
     return VoteSummary(
       changeBadgeTitle: fallback.changeBadgeTitle,
       optionA: VoteOptionSummary(
-        optionId: a.optionId,
+        // vote-stats optionId 가 0(누락)이면 배틀 상세에서 채운 값(fallback)을 유지 — 그래야
+        // 옵션 탭에서 댓글 등록 시 해당 진영 optionId 로 정확히 등록된다.
+        optionId: a.optionId > 0 ? a.optionId : fallback.optionA.optionId,
         label: a.label ?? fallback.optionA.label,
         title: a.title.isEmpty ? fallback.optionA.title : a.title,
         representative: fallback.optionA.representative,
@@ -607,7 +609,7 @@ extension CommentFeature {
         percentage: a.ratio
       ),
       optionB: VoteOptionSummary(
-        optionId: b.optionId,
+        optionId: b.optionId > 0 ? b.optionId : fallback.optionB.optionId,
         label: b.label ?? fallback.optionB.label,
         title: b.title.isEmpty ? fallback.optionB.title : b.title,
         representative: fallback.optionB.representative,
