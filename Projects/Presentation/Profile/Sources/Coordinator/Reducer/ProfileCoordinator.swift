@@ -93,6 +93,15 @@ extension ProfileCoordinator {
     case .routeAction(_, action: .settings(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    // 알림 설정 → 알림 설정 화면.
+    case .routeAction(_, action: .settings(.delegate(.openNotificationSettings))):
+      state.routes.push(.notificationSetting(.init()))
+      return .none
+
+    // 알림 설정 백탭 → 뒤로.
+    case .routeAction(_, action: .notificationSetting(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     // 개인정보 처리방침 → 웹뷰.
     case .routeAction(_, action: .settings(.delegate(.openPrivacy))):
       state.routes.push(.web(.init(url: TermsDocument.privacy.urlString)))
@@ -161,6 +170,7 @@ extension ProfileCoordinator {
     case battleRecord(BattleRecordFeature)
     case contentActivity(ContentActivityFeature)
     case notice(NoticeFeature)
+    case notificationSetting(NotificationSettingFeature)
     case web(WebReducer)
   }
 }

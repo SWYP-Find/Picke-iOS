@@ -83,6 +83,7 @@ private extension PointHistoryView {
         .padding(.horizontal, 16)
       }
       .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize)
     }
   }
 

@@ -49,6 +49,14 @@ public struct ProfileUseCaseImpl: ProfileInterface {
       activityType: activityType
     )
   }
+
+  public func fetchNotificationSettings() async throws -> NotificationSettings {
+    return try await profileRepository.fetchNotificationSettings()
+  }
+
+  public func updateNotificationSettings(_ settings: NotificationSettings) async throws -> NotificationSettings {
+    return try await profileRepository.updateNotificationSettings(settings)
+  }
 }
 
 extension ProfileUseCaseImpl: DependencyKey {

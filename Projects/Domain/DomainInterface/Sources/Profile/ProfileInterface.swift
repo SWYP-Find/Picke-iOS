@@ -23,6 +23,8 @@ public protocol ProfileInterface: Sendable {
     size: Int,
     activityType: ContentActivityType?
   ) async throws -> ContentActivityPage
+  func fetchNotificationSettings() async throws -> NotificationSettings
+  func updateNotificationSettings(_ settings: NotificationSettings) async throws -> NotificationSettings
 }
 
 public struct ProfileRepositoryDependency: DependencyKey {

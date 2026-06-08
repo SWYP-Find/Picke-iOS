@@ -33,6 +33,8 @@ public struct ProfileCoordinatorView: View {
         ContentActivityView(store: contentActivityStore)
       case let .notice(noticeStore):
         NoticeView(store: noticeStore)
+      case let .notificationSetting(notificationStore):
+        NotificationSettingView(store: notificationStore)
       case let .web(webStore):
         WebView(store: webStore)
       }

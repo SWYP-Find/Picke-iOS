@@ -29,16 +29,37 @@ public struct ContentActivityView: View {
 
       tabBar()
 
-      if store.isLoading {
-        ContentActivitySkeletonView()
-      } else {
-        content()
+      Group {
+        if store.isLoading {
+          ContentActivitySkeletonView()
+        } else {
+          content()
+        }
       }
+      // 좌우 스와이프로 탭 전환 (CommentView 와 동일한 제스처 UX)
+      .simultaneousGesture(tabSwipeGesture())
     }
     .background(Color.beige200.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
+  }
+
+  /// 좌우 드래그 → 인접 탭 전환.
+  func tabSwipeGesture() -> some Gesture {
+    DragGesture(minimumDistance: 20)
+      .onEnded { value in
+        let horizontal = value.translation.width
+        let vertical = value.translation.height
+        guard abs(horizontal) > abs(vertical), abs(horizontal) > 50 else { return }
+        let tabs = ContentActivityType.allCases
+        guard let index = tabs.firstIndex(of: store.selectedTab) else { return }
+        if horizontal < 0, index < tabs.count - 1 {
+          send(.tabSelected(tabs[index + 1]))
+        } else if horizontal > 0, index > 0 {
+          send(.tabSelected(tabs[index - 1]))
+        }
+      }
   }
 }
 
@@ -104,6 +125,7 @@ private extension ContentActivityView {
         .padding(.horizontal, 16)
       }
       .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize)
     }
   }
 

@@ -65,6 +65,7 @@ private extension BattleRecordView {
         .padding(.horizontal, 16)
       }
       .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize)
     }
   }
 

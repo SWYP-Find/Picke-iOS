@@ -15,6 +15,8 @@ public enum ProfileService {
   case creditsHistory(query: CreditHistoryQueryRequest)
   case battleRecords(query: BattleRecordsQueryRequest)
   case contentActivities(query: ContentActivitiesQueryRequest)
+  case notificationSettings
+  case updateNotificationSettings(body: NotificationSettingsRequest)
 }
 
 extension ProfileService: BaseTargetType {
@@ -32,6 +34,10 @@ extension ProfileService: BaseTargetType {
       return ProfileAPI.battleRecords.description
     case .contentActivities:
       return ProfileAPI.contentActivities.description
+    case .notificationSettings:
+      return ProfileAPI.notificationSettings.description
+    case .updateNotificationSettings:
+      return ProfileAPI.notificationSettings.description
     }
   }
 
@@ -39,8 +45,10 @@ extension ProfileService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
-    case .mypage, .creditsHistory, .battleRecords, .contentActivities:
+    case .mypage, .creditsHistory, .battleRecords, .contentActivities, .notificationSettings:
       return .get
+    case .updateNotificationSettings:
+      return .patch
     }
   }
 
@@ -56,6 +64,11 @@ extension ProfileService: BaseTargetType {
       return dict.isEmpty ? nil : dict
     case let .contentActivities(query):
       guard let dict = query.toDictionary else { return nil }
+      return dict.isEmpty ? nil : dict
+    case .notificationSettings:
+      return nil
+    case let .updateNotificationSettings(body):
+      guard let dict = body.toDictionary else { return nil }
       return dict.isEmpty ? nil : dict
     }
   }

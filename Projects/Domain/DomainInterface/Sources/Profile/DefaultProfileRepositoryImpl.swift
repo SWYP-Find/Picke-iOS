@@ -56,4 +56,12 @@ public struct DefaultProfileRepositoryImpl: ProfileInterface {
   ) async throws -> ContentActivityPage {
     ContentActivityPage(items: [], nextOffset: 0, hasNext: false)
   }
+
+  public func fetchNotificationSettings() async throws -> NotificationSettings {
+    NotificationSettings()
+  }
+
+  public func updateNotificationSettings(_: NotificationSettings) async throws -> NotificationSettings {
+    NotificationSettings()
+  }
 }
