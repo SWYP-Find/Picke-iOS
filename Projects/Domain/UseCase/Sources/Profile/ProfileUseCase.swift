@@ -37,6 +37,18 @@ public struct ProfileUseCaseImpl: ProfileInterface {
       voteSide: voteSide
     )
   }
+
+  public func fetchContentActivities(
+    offset: Int,
+    size: Int,
+    activityType: ContentActivityType?
+  ) async throws -> ContentActivityPage {
+    return try await profileRepository.fetchContentActivities(
+      offset: offset,
+      size: size,
+      activityType: activityType
+    )
+  }
 }
 
 extension ProfileUseCaseImpl: DependencyKey {

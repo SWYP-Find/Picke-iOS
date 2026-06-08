@@ -18,6 +18,11 @@ public protocol ProfileInterface: Sendable {
     size: Int,
     voteSide: BattleVoteSide?
   ) async throws -> BattleRecordPage
+  func fetchContentActivities(
+    offset: Int,
+    size: Int,
+    activityType: ContentActivityType?
+  ) async throws -> ContentActivityPage
 }
 
 public struct ProfileRepositoryDependency: DependencyKey {

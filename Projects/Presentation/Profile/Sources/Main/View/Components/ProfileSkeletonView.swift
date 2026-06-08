@@ -55,41 +55,9 @@ struct ProfileSkeletonView: View {
     height: CGFloat,
     radius: CGFloat = 4
   ) -> some View {
-    LightSkeletonBlock(cornerRadius: radius)
+    SkeletonBlock(cornerRadius: radius, tone: .light)
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)
-  }
-}
-
-/// 라이트 배경용 skeleton 블록 (옅은 회색 base + 흰색 shimmer).
-private struct LightSkeletonBlock: View {
-  let cornerRadius: CGFloat
-
-  @State private var phase: CGFloat = -1
-
-  private let baseColor = Color.black.opacity(0.06)
-  private let shimmerColor = Color.white.opacity(0.55)
-
-  var body: some View {
-    RoundedRectangle(cornerRadius: cornerRadius)
-      .fill(baseColor)
-      .overlay {
-        LinearGradient(
-          stops: [
-            .init(color: shimmerColor.opacity(0), location: 0),
-            .init(color: shimmerColor, location: 0.5),
-            .init(color: shimmerColor.opacity(0), location: 1),
-          ],
-          startPoint: UnitPoint(x: phase, y: 0.5),
-          endPoint: UnitPoint(x: phase + 1, y: 0.5)
-        )
-      }
-      .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-      .onAppear {
-        withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-          phase = 2
-        }
-      }
   }
 }

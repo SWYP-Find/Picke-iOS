@@ -76,4 +76,28 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
 
     return data.toDomain()
   }
+
+  public func fetchContentActivities(
+    offset: Int,
+    size: Int,
+    activityType: ContentActivityType?
+  ) async throws -> ContentActivityPage {
+    let dto: ContentActivityResponseDTO = try await provider.request(
+      .contentActivities(
+        query: ContentActivitiesQueryRequest(
+          offset: offset,
+          size: size,
+          activityType: activityType.flatMap(\.rawValue)
+        )
+      )
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "콘텐츠 활동 응답이 비어 있습니다"
+      Log.error("[ProfileRepositoryImpl] empty contentActivities payload: \(message)")
+      throw ProfileError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
 }

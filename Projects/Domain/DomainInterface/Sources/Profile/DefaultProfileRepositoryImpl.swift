@@ -48,4 +48,12 @@ public struct DefaultProfileRepositoryImpl: ProfileInterface {
   ) async throws -> BattleRecordPage {
     BattleRecordPage(items: [], nextOffset: 0, hasNext: false)
   }
+
+  public func fetchContentActivities(
+    offset _: Int,
+    size _: Int,
+    activityType _: ContentActivityType?
+  ) async throws -> ContentActivityPage {
+    ContentActivityPage(items: [], nextOffset: 0, hasNext: false)
+  }
 }

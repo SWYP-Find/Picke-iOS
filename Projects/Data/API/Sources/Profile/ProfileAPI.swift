@@ -9,6 +9,7 @@ public enum ProfileAPI {
   case mypage
   case creditsHistory
   case battleRecords
+  case contentActivities
 
   public var description: String {
     switch self {
@@ -18,6 +19,8 @@ public enum ProfileAPI {
       return "credits/history"
     case .battleRecords:
       return "battle-records"
+    case .contentActivities:
+      return "content-activities"
     }
   }
 }
