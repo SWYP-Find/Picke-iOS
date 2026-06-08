@@ -74,14 +74,20 @@ extension ProfileCoordinator {
       state.routes.push(.pointHistory(.init()))
       return .none
 
+    // 포인트 내역에서 주제 제안 → 배틀 만들기 화면 진입.
+    case .routeAction(_, action: .pointHistory(.delegate(.suggestTopic))):
+      state.routes.push(.battleProposal(.init()))
+      return .none
+
+    // 배틀 만들기 닫기(취소/제안 완료) → 뒤로.
+    case .routeAction(_, action: .battleProposal(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     // 포인트 내역 상단 백탭 → 뒤로.
     case .routeAction(_, action: .pointHistory(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
     case .routeAction(_, action: .profile(.delegate(.openPhilosopher))):
-      return .none
-
-    case .routeAction(_, action: .profile(.delegate(.openNotification))):
       return .none
 
     // 설정 아이콘 → 설정 화면 진입.
@@ -176,6 +182,7 @@ extension ProfileCoordinator {
     case contentActivity(ContentActivityFeature)
     case notice(NoticeFeature)
     case notificationSetting(NotificationSettingFeature)
+    case battleProposal(BattleProposalFeature)
     case web(WebReducer)
   }
 }

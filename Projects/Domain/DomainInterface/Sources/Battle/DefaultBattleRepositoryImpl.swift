@@ -102,4 +102,19 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
   public func fetchRecommendedBattles(battleId _: Int) async throws -> RecommendedBattlePage {
     RecommendedBattlePage(items: [], nextCursor: nil, hasNext: false)
   }
+
+  public func proposeBattle(_: BattleProposalDraft) async throws -> BattleProposal {
+    BattleProposal(
+      id: 0,
+      userId: 0,
+      nickname: "",
+      category: "",
+      topic: "",
+      positionA: "",
+      positionB: "",
+      description: "",
+      status: "",
+      createdAt: nil
+    )
+  }
 }

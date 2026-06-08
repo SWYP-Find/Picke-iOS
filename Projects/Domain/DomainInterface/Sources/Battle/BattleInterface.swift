@@ -34,6 +34,7 @@ public protocol BattleInterface: Sendable {
   ) async throws -> BattlePerspective
   func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective?
   func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage
+  func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal
 }
 
 public struct BattleRepositoryDependency: DependencyKey {
