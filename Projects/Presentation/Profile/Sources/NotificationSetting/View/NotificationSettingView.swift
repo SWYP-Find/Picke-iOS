@@ -55,7 +55,6 @@ private extension NotificationSettingView {
       Text(section.title)
         .pretendardFont(family: .SemiBold, size: 12)
         .foregroundStyle(.gray300)
-        .padding(.bottom, 4)
 
       VStack(spacing: 0) {
         ForEach(section.keys) { key in

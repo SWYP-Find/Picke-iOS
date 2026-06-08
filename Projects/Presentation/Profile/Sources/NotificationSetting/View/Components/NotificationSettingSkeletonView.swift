@@ -18,7 +18,6 @@ struct NotificationSettingSkeletonView: View {
       ForEach(Array(sectionRowCounts.enumerated()), id: \.offset) { _, rowCount in
         VStack(alignment: .leading, spacing: 4) {
           block(width: 90, height: 12)
-            .padding(.bottom, 4)
 
           VStack(spacing: 0) {
             ForEach(0 ..< rowCount, id: \.self) { _ in
