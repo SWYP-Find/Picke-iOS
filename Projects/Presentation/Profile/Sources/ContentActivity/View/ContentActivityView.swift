@@ -173,20 +173,22 @@ private extension ContentActivityView {
 
   @ViewBuilder
   func avatar(_ author: ContentActivityAuthor) -> some View {
-    if let url = URL(string: author.characterImageURL), !author.characterImageURL.isEmpty {
-      KFImage(url)
-        .resizable()
-        .scaledToFill()
-        .frame(width: 36, height: 36)
-        .clipShape(Circle())
-    } else {
-      ZStack {
-        Circle().fill(.beige600)
+    // 디자인(Z5YAW): 항상 beige600 원 배경 위에 캐릭터/기본 아이콘.
+    ZStack {
+      Circle().fill(.beige600)
+
+      if !author.characterImageURL.isEmpty, let url = URL(string: author.characterImageURL) {
+        KFImage(url)
+          .resizable()
+          .scaledToFit()
+          .padding(3)
+      } else {
         Image(systemName: "cat.fill")
           .font(.system(size: 16))
           .foregroundStyle(.gray300)
       }
-      .frame(width: 36, height: 36)
     }
+    .frame(width: 36, height: 36)
+    .clipShape(Circle())
   }
 }

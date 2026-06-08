@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
   name: "Profile",
@@ -14,7 +14,7 @@ let project = Project.makeAppModule(
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
-    .Presentation(implements: .Web)
+    .Presentation(implements: .Web),
   ],
   sources: ["Sources/**"]
 )

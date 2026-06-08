@@ -113,21 +113,23 @@ private extension ProfileView {
 
   @ViewBuilder
   func avatar() -> some View {
-    if let urlString = store.profileImageURL, let url = URL(string: urlString) {
-      KFImage(url)
-        .resizable()
-        .scaledToFill()
-        .frame(width: 52, height: 52)
-        .clipShape(Circle())
-    } else {
-      ZStack {
-        Circle().fill(.beige600)
+    // 디자인(oFtBQ): 항상 beige600 원 배경 위에 캐릭터 이미지/기본 아이콘을 올린다.
+    ZStack {
+      Circle().fill(.beige600)
+
+      if let urlString = store.profileImageURL, let url = URL(string: urlString) {
+        KFImage(url)
+          .resizable()
+          .scaledToFit()
+          .padding(4)
+      } else {
         Image(systemName: "cat.fill")
           .font(.system(size: 24))
           .foregroundStyle(.gray300)
       }
-      .frame(width: 52, height: 52)
     }
+    .frame(width: 52, height: 52)
+    .clipShape(Circle())
   }
 
   // MARK: 포인트 충전 버튼
@@ -158,14 +160,12 @@ private extension ProfileView {
           .foregroundStyle(.gray800)
           .padding(.vertical, 4)
           .padding(.horizontal, 6)
-          .background(Color.secondary300)
-          .clipShape(RoundedRectangle(cornerRadius: 2))
+          .background(.secondary300, in: RoundedRectangle(cornerRadius: 2))
       }
       .padding(.vertical, 20)
       .padding(.horizontal, 16)
       .frame(maxWidth: .infinity)
-      .background(Color.primary800)
-      .clipShape(RoundedRectangle(cornerRadius: 8))
+      .background(.primary800, in: RoundedRectangle(cornerRadius: 8))
     }
     .buttonStyle(.plain)
   }
@@ -205,8 +205,7 @@ private extension ProfileView {
       }
       .padding(16)
       .frame(maxWidth: .infinity)
-      .background(Color.beige400)
-      .clipShape(RoundedRectangle(cornerRadius: 8))
+      .background(.beige400, in: RoundedRectangle(cornerRadius: 8))
       .overlay(
         RoundedRectangle(cornerRadius: 8)
           .stroke(.beige600, lineWidth: 1)

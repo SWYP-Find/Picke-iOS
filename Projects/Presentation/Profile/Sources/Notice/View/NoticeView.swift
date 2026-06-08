@@ -71,8 +71,8 @@ private extension NoticeView {
 
   var emptyMessage: String {
     switch store.selectedTab {
-    case .notice: "등록된 공지사항이 없어요"
-    case .event: "진행 중인 이벤트가 없어요"
+    case .notice: "새로운 공지사항이 없습니다"
+    case .event: "새로운 이벤트가 없습니다"
     }
   }
 }
