@@ -95,9 +95,8 @@ extension ProfileCoordinator {
       state.routes.push(.settings(.init()))
       return .none
 
-    // 알림(종) 아이콘 → 알림 설정 화면 진입.
+    // 알림(종) 아이콘은 현재 연결 화면 없음.
     case .routeAction(_, action: .profile(.delegate(.openNotification))):
-      state.routes.push(.notificationSetting(.init()))
       return .none
 
     // 설정 상단 백탭 → 뒤로.
