@@ -27,6 +27,8 @@ public struct ProfileCoordinatorView: View {
         PointHistoryView(store: pointHistoryStore)
       case let .settings(settingsStore):
         SettingsView(store: settingsStore)
+      case let .battleRecord(battleRecordStore):
+        BattleRecordView(store: battleRecordStore)
       case let .web(webStore):
         WebView(store: webStore)
       }

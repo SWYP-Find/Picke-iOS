@@ -52,4 +52,28 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
 
     return data.toDomain()
   }
+
+  public func fetchBattleRecords(
+    offset: Int,
+    size: Int,
+    voteSide: BattleVoteSide?
+  ) async throws -> BattleRecordPage {
+    let dto: BattleRecordResponseDTO = try await provider.request(
+      .battleRecords(
+        query: BattleRecordsQueryRequest(
+          offset: offset,
+          size: size,
+          voteSide: voteSide.flatMap { $0 == .unknown ? nil : $0.rawValue }
+        )
+      )
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "배틀 기록 응답이 비어 있습니다"
+      Log.error("[ProfileRepositoryImpl] empty battleRecords payload: \(message)")
+      throw ProfileError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
 }

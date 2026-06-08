@@ -107,8 +107,19 @@ extension ProfileCoordinator {
     case .routeAction(_, action: .web(.backToRoot)):
       return .send(.view(.backAction))
 
-    case .routeAction(_, action: .profile(.delegate(.menuSelected))):
+    // 메뉴 선택 — 내 배틀 기록만 화면 진입 (나머지는 추후).
+    case let .routeAction(_, action: .profile(.delegate(.menuSelected(item)))):
+      switch item {
+      case .battleHistory:
+        state.routes.push(.battleRecord(.init()))
+      case .contentActivity, .noticeEvent:
+        break
+      }
       return .none
+
+    // 내 배틀 기록 백탭 → 뒤로.
+    case .routeAction(_, action: .battleRecord(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     default:
       return .none
@@ -137,6 +148,7 @@ extension ProfileCoordinator {
     case profile(ProfileFeature)
     case pointHistory(PointHistoryFeature)
     case settings(SettingsFeature)
+    case battleRecord(BattleRecordFeature)
     case web(WebReducer)
   }
 }

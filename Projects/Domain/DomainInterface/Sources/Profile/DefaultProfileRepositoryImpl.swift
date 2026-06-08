@@ -40,4 +40,12 @@ public struct DefaultProfileRepositoryImpl: ProfileInterface {
   ) async throws -> CreditHistoryPage {
     CreditHistoryPage(items: [], nextOffset: 0, hasNext: false)
   }
+
+  public func fetchBattleRecords(
+    offset _: Int,
+    size _: Int,
+    voteSide _: BattleVoteSide?
+  ) async throws -> BattleRecordPage {
+    BattleRecordPage(items: [], nextOffset: 0, hasNext: false)
+  }
 }

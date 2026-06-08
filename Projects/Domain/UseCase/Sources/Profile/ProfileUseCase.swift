@@ -25,6 +25,18 @@ public struct ProfileUseCaseImpl: ProfileInterface {
   ) async throws -> CreditHistoryPage {
     return try await profileRepository.fetchCreditHistory(offset: offset, size: size)
   }
+
+  public func fetchBattleRecords(
+    offset: Int,
+    size: Int,
+    voteSide: BattleVoteSide?
+  ) async throws -> BattleRecordPage {
+    return try await profileRepository.fetchBattleRecords(
+      offset: offset,
+      size: size,
+      voteSide: voteSide
+    )
+  }
 }
 
 extension ProfileUseCaseImpl: DependencyKey {

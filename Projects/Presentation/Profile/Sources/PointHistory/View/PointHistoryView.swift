@@ -123,16 +123,6 @@ private extension PointHistoryView {
 
   @ViewBuilder
   func emptyState() -> some View {
-    VStack(spacing: 8) {
-      Spacer()
-      Image(systemName: "tray")
-        .font(.system(size: 36, weight: .regular))
-        .foregroundStyle(.gray300)
-      Text("포인트 내역이 없습니다")
-        .pretendardFont(family: .Medium, size: 14)
-        .foregroundStyle(.gray300)
-      Spacer()
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    PickeEmptyStateView(message: "포인트 내역이 없어요")
   }
 }

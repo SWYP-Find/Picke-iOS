@@ -13,6 +13,11 @@ public protocol ProfileInterface: Sendable {
     offset: Int,
     size: Int
   ) async throws -> CreditHistoryPage
+  func fetchBattleRecords(
+    offset: Int,
+    size: Int,
+    voteSide: BattleVoteSide?
+  ) async throws -> BattleRecordPage
 }
 
 public struct ProfileRepositoryDependency: DependencyKey {
