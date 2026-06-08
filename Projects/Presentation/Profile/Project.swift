@@ -5,8 +5,8 @@ import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
-  name: "rofile",
-  bundleId: .appBundleID(name: ".rofile"),
+  name: "Profile",
+  bundleId: .appBundleID(name: ".Profile"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
@@ -14,6 +14,7 @@ let project = Project.makeAppModule(
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
+    .Presentation(implements: .Web)
   ],
   sources: ["Sources/**"]
 )

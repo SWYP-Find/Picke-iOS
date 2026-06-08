@@ -38,6 +38,9 @@ public enum CustomAlertStyle: Equatable {
   case report
   case alreadyWatched
   case deleteConfirm
+  case logout
+  case withdraw
+  case suggestTopic
 }
 
 @CasePathable
@@ -120,6 +123,39 @@ public extension CustomAlertState where Action == CustomAlertAction {
       cancelTitle: "취소",
       isDestructive: true,
       style: .alreadyWatched
+    )
+  }
+
+  /// 로그아웃 확인 — 확정(로그아웃)=왼쪽 밝은 버튼, 취소(유지)=오른쪽 primary 버튼.
+  static func logout() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "로그아웃 시 원활한 이용이 어려울 수 있습니다.\n그럼에도 로그아웃하시겠습니까?",
+      confirmTitle: "네, 로그아웃합니다",
+      cancelTitle: "그대로 있을게요",
+      isDestructive: true,
+      style: .logout
+    )
+  }
+
+  /// 회원 탈퇴 확인 — 확정(탈퇴)=왼쪽 밝은 버튼, 취소(유지)=오른쪽 primary 버튼.
+  static func withdraw() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "탈퇴 시 지금까지의 이용기록이 영구 삭제 됩니다.\n그럼에도 탈퇴하시겠습니까?",
+      confirmTitle: "네, 탈퇴합니다",
+      cancelTitle: "그대로 있을게요",
+      isDestructive: true,
+      style: .withdraw
+    )
+  }
+
+  /// 주제 제안 — 제안하기=오른쪽 primary 버튼, 뒤로가기=왼쪽 밝은 버튼.
+  static func suggestTopic() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "나만의 배틀을 제안해주세요",
+      message: "-30P를 사용해 원하는 주제를 제안하고,\n채택되면 +100P를 돌려받아요.",
+      confirmTitle: "제안하기",
+      cancelTitle: "뒤로가기",
+      style: .suggestTopic
     )
   }
 }

@@ -20,7 +20,7 @@ public struct WebView: View {
 
   public var body: some View {
     ZStack {
-      Color.basicBlack
+      Color.beige50
         .edgesIgnoringSafeArea(.all)
 
       VStack {
@@ -30,7 +30,7 @@ public struct WebView: View {
         PickeNavigationBar(onBack: { store.send(.backToRoot) }) {
           Color.clear.frame(width: 24, height: 24)
         }
-        .foregroundStyle(.beige50)
+        .foregroundStyle(.neutral900)
 
         Spacer()
           .frame(height: 20)
@@ -40,5 +40,7 @@ public struct WebView: View {
       }
       .navigationBarBackButtonHidden(true)
     }
+    .toolbar(.hidden, for: .navigationBar)
+    .toolbar(.hidden, for: .tabBar)
   }
 }

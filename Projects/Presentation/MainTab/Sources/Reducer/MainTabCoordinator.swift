@@ -14,6 +14,7 @@ import Battle
 import DesignSystem
 import Hifi
 import Home
+import Profile
 
 /// 픽케 메인 탭 코디네이터.
 /// 모든 탭은 우선 HomeCoordinator 로 채워두고, 각 기능 (Explore / QuickBattle / MyPage)
@@ -56,7 +57,7 @@ public struct MainTabCoordinator {
     public var homeState: HomeCoordinator.State
     public var exploreState: HifiCoordinator.State
     public var quickBattleState: BattleCoordinator.State
-    public var myPageState: HomeCoordinator.State
+    public var myPageState: ProfileCoordinator.State
 
     public init(selectedTab: Int = Tab.home.rawValue) {
       self.selectedTab = selectedTab
@@ -74,7 +75,13 @@ public struct MainTabCoordinator {
     case home(HomeCoordinator.Action)
     case explore(HifiCoordinator.Action)
     case quickBattle(BattleCoordinator.Action)
-    case myPage(HomeCoordinator.Action)
+    case myPage(ProfileCoordinator.Action)
+    case delegate(DelegateAction)
+  }
+
+  public enum DelegateAction: Equatable {
+    /// 로그아웃/탈퇴 완료 → 루트(App)에서 로그인 화면으로 전환.
+    case sessionEnded
   }
 
   public var body: some ReducerOf<Self> {
@@ -88,7 +95,7 @@ public struct MainTabCoordinator {
       BattleCoordinator()
     }
     Scope(state: \.myPageState, action: \.myPage) {
-      HomeCoordinator()
+      ProfileCoordinator()
     }
 
     Reduce { state, action in
@@ -114,15 +121,38 @@ public struct MainTabCoordinator {
         state.selectedTab = state.previousTab
         return .none
 
+      // 마이 상단 백탭 → 직전 탭으로 복귀
+      case .myPage(.router(.routeAction(_, action: .profile(.delegate(.backToHome))))):
+        state.selectedTab = state.previousTab
+        return .none
+
+      // 설정 → 로그아웃/탈퇴 완료 → App 으로 세션 종료 전파
+      case .myPage(.router(.routeAction(_, action: .settings(.delegate(.sessionEnded))))):
+        return .send(.delegate(.sessionEnded))
+
       // 홈 "더보기" → 탐색 탭으로 이동
       case .home(.router(.routeAction(_, action: .home(.delegate(.moveToExplore))))):
         if state.selectedTab != Tab.explore.rawValue { state.previousTab = state.selectedTab }
         state.selectedTab = Tab.explore.rawValue
         return .none
 
+      case let .delegate(delegateAction):
+        return handleDelegateAction(state: &state, action: delegateAction)
+
       case .home, .explore, .quickBattle, .myPage:
         return .none
       }
+    }
+  }
+
+  /// delegate 는 부모(App)가 관찰 — MainTab 은 발행만 하고 여기서는 가로채지 않는다.
+  private func handleDelegateAction(
+    state _: inout State,
+    action: DelegateAction
+  ) -> Effect<Action> {
+    switch action {
+    case .sessionEnded:
+      return .none
     }
   }
 }

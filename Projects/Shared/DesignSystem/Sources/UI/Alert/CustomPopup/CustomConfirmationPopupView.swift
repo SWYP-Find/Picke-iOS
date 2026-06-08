@@ -60,7 +60,7 @@ struct CustomConfirmationPopup: View {
     switch style {
     case .confirmation:
       return 20
-    case .finalVote, .report, .alreadyWatched, .deleteConfirm:
+    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic:
       return 0
     }
   }
@@ -78,6 +78,106 @@ struct CustomConfirmationPopup: View {
       alreadyWatchedContent
     case .deleteConfirm:
       deleteConfirmContent
+    case .logout, .withdraw:
+      logoutWithdrawContent
+    case .suggestTopic:
+      suggestTopicContent
+    }
+  }
+
+  /// 로그아웃/탈퇴 — 본문(title) + 확정(왼쪽 밝은) / 취소(오른쪽 primary).
+  private var logoutWithdrawContent: some View {
+    pickeAlertCard(opacity: 0.9) {
+      VStack(spacing: 16) {
+        pickeBodyText(title)
+
+        pickeTwoButtonRow(
+          leftTitle: confirmTitle, leftAction: onConfirm,
+          rightTitle: cancelTitle, rightAction: onCancel
+        )
+      }
+    }
+  }
+
+  /// 주제 제안 — 타이틀 + 본문 + 뒤로가기(왼쪽 밝은) / 제안하기(오른쪽 primary).
+  private var suggestTopicContent: some View {
+    pickeAlertCard {
+      VStack(spacing: 16) {
+        VStack(spacing: 10) {
+          Text(title)
+            .pretendardFont(family: .SemiBold, size: 16)
+            .foregroundStyle(.primary800)
+            .multilineTextAlignment(.center)
+
+          if !message.isEmpty {
+            pickeBodyText(message)
+          }
+        }
+
+        pickeTwoButtonRow(
+          leftTitle: cancelTitle, leftAction: onCancel,
+          rightTitle: confirmTitle, rightAction: onConfirm
+        )
+      }
+    }
+  }
+
+  // MARK: picke 공통 팝업 헬퍼
+
+  /// 베이지 카드 + primary 보더 컨테이너 (width 313, top padding 20).
+  private func pickeAlertCard(
+    opacity: Double = 1,
+    @ViewBuilder content: () -> some View
+  ) -> some View {
+    content()
+      .padding(.top, 20)
+      .frame(width: 313)
+      .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
+      .overlay(
+        RoundedRectangle(cornerRadius: 2)
+          .stroke(.primary500, lineWidth: 1.5)
+      )
+      .opacity(opacity)
+      .clipShape(RoundedRectangle(cornerRadius: 2))
+      .onTapGesture {}
+  }
+
+  /// 본문 텍스트 (14/Medium, primary800, 가운데, 좌우 20).
+  private func pickeBodyText(_ text: String) -> some View {
+    Text(text)
+      .pretendardFont(family: .Medium, size: 14)
+      .foregroundStyle(.primary800)
+      .lineSpacing(14 * 0.4)
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, 20)
+  }
+
+  /// 좌(밝은)·우(primary) 2버튼 행. 좌/우 의미는 호출부가 결정.
+  private func pickeTwoButtonRow(
+    leftTitle: String, leftAction: @escaping () -> Void,
+    rightTitle: String, rightAction: @escaping () -> Void
+  ) -> some View {
+    HStack(spacing: 0) {
+      Button(action: leftAction) {
+        Text(leftTitle)
+          .pretendardFont(family: .Medium, size: 14)
+          .foregroundStyle(.primary800)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 17)
+          .background(.secondary50, in: Rectangle())
+      }
+      .buttonStyle(.plain)
+
+      Button(action: rightAction) {
+        Text(rightTitle)
+          .pretendardFont(family: .Medium, size: 14)
+          .foregroundStyle(.secondary50)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 17)
+          .background(.primary500, in: Rectangle())
+      }
+      .buttonStyle(.plain)
     }
   }
 

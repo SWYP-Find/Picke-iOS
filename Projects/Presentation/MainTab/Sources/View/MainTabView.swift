@@ -12,6 +12,7 @@ import Battle
 import DesignSystem
 import Hifi
 import Home
+import Profile
 import TCAFlow
 
 import ComposableArchitecture
@@ -129,7 +130,7 @@ extension MainTabView {
       )
 
     case .myPage:
-      HomeCoordinatorView(
+      ProfileCoordinatorView(
         store: store.scope(state: \.myPageState, action: \.myPage)
       )
 

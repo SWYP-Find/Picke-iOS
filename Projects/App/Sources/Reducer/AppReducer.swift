@@ -13,18 +13,17 @@ import Presentation
 @Reducer
 public struct AppReducer: Sendable {
   public init() {}
-  
+
   @ObservableState
   public enum State {
     case splash(SplashFeature.State)
     case auth(AuthCoordinator.State)
     case mainTab(MainTabCoordinator.State)
-   
-    
+
     public init() {
       self = .splash(SplashFeature.State())
     }
-    
+
     // Animation identifier for SwiftUI transitions
     var animationID: String {
       switch self {
@@ -34,8 +33,9 @@ public struct AppReducer: Sendable {
       }
     }
   }
-  
-  //MARK: - Action
+
+  // MARK: - Action
+
   public enum Action: ViewAction {
     case view(View)
     case async(AsyncAction)
@@ -43,55 +43,54 @@ public struct AppReducer: Sendable {
     case navigation(NavigationAction)
     case scope(ScopeAction)
   }
-  
+
   @CasePathable
   public enum View {
     case presentView
     case presentRoot
     case presentAuth
-    
   }
-  
-  //MARK: - 앱내에서 사용하는 액션
+
+  // MARK: - 앱내에서 사용하는 액션
+
   public enum InnerAction: Equatable {
     case completeAuthTransition
     case completeMainTabTransition
   }
-  
-  //MARK: - 비동기 처리 액션
+
+  // MARK: - 비동기 처리 액션
+
   public enum AsyncAction: Equatable {
     case startNotificationListener
     case refreshTokenExpired
   }
-  
-  //MARK: - 네비게이션 연결 액션
-  public enum NavigationAction: Equatable {
-    
-  }
-  
-  //MARK: - 스코프 액션
+
+  // MARK: - 네비게이션 연결 액션
+
+  public enum NavigationAction: Equatable {}
+
+  // MARK: - 스코프 액션
+
   @CasePathable
   public enum ScopeAction {
     case splash(SplashFeature.Action)
     case auth(AuthCoordinator.Action)
     case mainTab(MainTabCoordinator.Action)
- 
   }
-  
+
   @Dependency(\.continuousClock) var clock
-  
+
   // 🎯 PFW 패턴: 강타입 최소 CancelID (3개로 축소)
   private enum CancelID: Hashable {
     case coordinator(CoordinatorType)
     case transition
     case refreshTokenListener
-    
+
     enum CoordinatorType: Hashable {
-     
       case auth
     }
   }
-  
+
   // 🎯 PFW 패턴: 최소한의 핵심 취소 (3개만)
   private func cancelAllCoordinatorEffects() -> Effect<Action> {
     return .merge([
@@ -99,11 +98,11 @@ public struct AppReducer: Sendable {
 //      .cancel(id: CancelID.coordinator(.staff)),
 //      .cancel(id: CancelID.coordinator(.member)),
       .cancel(id: CancelID.coordinator(.auth)),
-      
+
 //
     ])
   }
-  
+
   // 🎯 PFW 패턴: 상태 변경 전에 effect 취소를 먼저 완료
   private func startTransition(_ action: InnerAction) -> Effect<Action> {
     .concatenate(
@@ -113,26 +112,26 @@ public struct AppReducer: Sendable {
     )
     .cancellable(id: CancelID.transition, cancelInFlight: true)
   }
-  
+
   // 제거됨: PFW 권장사항에 따라 단순화
-  
+
   public var body: some ReducerOf<Self> {
     // 🔥 TCA 해결책 4: Reduce를 ifCaseLet보다 먼저 배치하여 액션 필터링 우선 처리
     Reduce { state, action in
       switch action {
-      case .view(let viewAction):
+      case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
-        
-      case .inner(let innerAction):
+
+      case let .inner(innerAction):
         return handleInnerAction(state: &state, action: innerAction)
-        
-      case .async(let asyncAction):
+
+      case let .async(asyncAction):
         return handleAsyncAction(state: &state, action: asyncAction)
-        
-      case .navigation(let navigationAction):
+
+      case let .navigation(navigationAction):
         return handleNavigationAction(state: &state, action: navigationAction)
-        
-      case .scope(let scopeAction):
+
+      case let .scope(scopeAction):
         // 🎯 PFW 패턴: 단순한 위임 - 복잡한 검증은 handleScopeAction에서
         return handleScopeAction(state: &state, action: scopeAction)
       }
@@ -148,9 +147,9 @@ public struct AppReducer: Sendable {
       MainTabCoordinator()
     }
   }
-  
+
   private func handleViewAction(
-    state: inout State,
+    state _: inout State,
     action: View
   ) -> Effect<Action> {
     switch action {
@@ -158,31 +157,29 @@ public struct AppReducer: Sendable {
       return .run { send in
         await send(.scope(.splash(.view(.onAppear))))
       }
-      
+
     case .presentRoot:
       return startTransition(.completeMainTabTransition)
-      
+
     case .presentAuth:
       return startTransition(.completeAuthTransition)
-      
-   
     }
   }
-  
+
   private func handleAsyncAction(
-    state: inout State,
+    state _: inout State,
     action: AsyncAction
   ) -> Effect<Action> {
     switch action {
     case .startNotificationListener:
       return setupRefreshTokenExpiredListener()
         .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true)
-      
+
     case .refreshTokenExpired:
       return startTransition(.completeAuthTransition)
     }
   }
-  
+
   private func handleInnerAction(
     state: inout State,
     action: InnerAction
@@ -191,21 +188,20 @@ public struct AppReducer: Sendable {
     case .completeAuthTransition:
       state = .auth(.init())
       return .none
-      
+
     case .completeMainTabTransition:
       state = .mainTab(.init())
       return .none
-      
     }
   }
-  
+
   private func handleNavigationAction(
-    state: inout State,
-    action: NavigationAction
+    state _: inout State,
+    action _: NavigationAction
   ) -> Effect<Action> {
     return .none
   }
-  
+
   // 🎯 PFW 철학: 단순하고 조합 가능한 상태 검증
   private func isValidAction(
     _ action: ScopeAction,
@@ -231,7 +227,7 @@ public struct AppReducer: Sendable {
     // 🎯 PFW 패턴: 단순한 네비게이션 처리
     return handleScopeNavigation(action: action)
   }
-  
+
   // 🎯 PFW 패턴: 네비게이션 로직 분리
   private func handleScopeNavigation(action: ScopeAction) -> Effect<Action> {
     switch action {
@@ -253,18 +249,20 @@ public struct AppReducer: Sendable {
     case .auth(.navigation(.presentMainTab)):
       return .send(.view(.presentRoot))
 
+    // 로그아웃/탈퇴 → 로그인 화면으로 복귀
+    case .mainTab(.delegate(.sessionEnded)):
+      return .send(.view(.presentAuth))
+
     default:
       return .none
     }
   }
-  
-  
+
   private func isSplashState(_ state: State) -> Bool {
     guard case .splash = state else { return false }
     return true
   }
-  
-  
+
   private func setupRefreshTokenExpiredListener() -> Effect<Action> {
     return .publisher {
       NotificationCenter.default
@@ -273,5 +271,4 @@ public struct AppReducer: Sendable {
     }
     .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true)
   }
-  
 }

@@ -16,7 +16,8 @@ let project = Project.makeAppModule(
     .Shared(implements: .DesignSystem),
     .Presentation(implements: .Home),
     .Presentation(implements: .Hifi),
-    .Presentation(implements: .Battle)
+    .Presentation(implements: .Battle),
+    .Presentation(implements: .Profile)
   ],
   sources: ["Sources/**"]
 )

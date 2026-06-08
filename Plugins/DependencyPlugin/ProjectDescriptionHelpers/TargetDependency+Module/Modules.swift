@@ -28,6 +28,7 @@ public extension ModulePath {
     case Hifi
     case Web
     case Battle
+    case Profile
 
     public static let name: String = "Presentation"
       

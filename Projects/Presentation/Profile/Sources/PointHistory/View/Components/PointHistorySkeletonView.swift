@@ -31,7 +31,7 @@ struct PointHistorySkeletonView: View {
           .clipShape(RoundedRectangle(cornerRadius: 8))
           .overlay(
             RoundedRectangle(cornerRadius: 8)
-              .stroke(Color.beige600, lineWidth: 1)
+              .stroke(.beige600, lineWidth: 1)
           )
         }
       }

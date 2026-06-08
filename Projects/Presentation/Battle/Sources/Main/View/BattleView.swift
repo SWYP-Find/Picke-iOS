@@ -339,7 +339,7 @@ private extension BattleView {
         .scaledToFit()
         .frame(width: 135, height: 90)
 
-      Text("오늘의 배틀이 없습니다")
+      Text("아직 빠른 배틀이 선정되지않았어요\n 조금만 기다려주세요!")
         .pretendardCustomFont(textStyle: .bodyMedium)
         .foregroundStyle(.beige300)
     }

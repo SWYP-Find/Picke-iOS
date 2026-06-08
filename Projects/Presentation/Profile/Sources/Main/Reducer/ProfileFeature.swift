@@ -1,0 +1,227 @@
+//
+//  ProfileFeature.swift
+//  Profile
+//
+//  마이페이지 루트 기능 — picke.pen `마이페이지_잠금`.
+//  프로필 카드(닉네임/잠금) + 포인트 충전 + 나의 철학자 유형 + 메뉴 리스트.
+//  프로필/포인트 조회 API 연동 전까지는 기본(목) 값 노출.
+//
+
+import Foundation
+
+import ComposableArchitecture
+import Entity
+import LogMacro
+import UseCase
+
+@Reducer
+public struct ProfileFeature {
+  public init() {}
+
+  /// 마이페이지 메뉴 항목 — picke.pen 기준.
+  public enum MenuItem: String, CaseIterable, Equatable, Identifiable {
+    case battleHistory = "내 배틀 기록"
+    case contentActivity = "내 콘텐츠 활동"
+    case noticeEvent = "공지방 · 이벤트"
+
+    public var id: String { rawValue }
+  }
+
+  @ObservableState
+  public struct State: Equatable {
+    public var isLoading: Bool = false
+    /// 닉네임.
+    public var nickname: String = "사색하는 고양이"
+    /// 사용자 코드 (앞에 `@` 표기).
+    public var userCode: String = "user_code"
+    /// 프로필 잠금 여부 — 닉네임 옆 자물쇠 노출.
+    public var isLocked: Bool = true
+    /// 보유 포인트.
+    public var point: Int = 240
+    /// 나의 철학자 유형 — 미확정 시 `??형`.
+    public var philosopherType: String?
+    /// 프로필 이미지 URL (없으면 기본 아바타).
+    public var profileImageURL: String?
+    /// 메뉴 목록.
+    public var menuItems: [MenuItem] = MenuItem.allCases
+
+    public init() {}
+
+    /// 표시용 철학자 유형.
+    public var philosopherDisplay: String { philosopherType ?? "??형" }
+  }
+
+  public enum Action: ViewAction, BindableAction {
+    case binding(BindingAction<State>)
+    case view(View)
+    case async(AsyncAction)
+    case inner(InnerAction)
+    case delegate(DelegateAction)
+  }
+
+  @CasePathable
+  public enum View {
+    case onAppear
+    case backTapped
+    case notificationTapped
+    case settingsTapped
+    case profileTapped
+    case chargePointTapped
+    case philosopherTapped
+    case menuTapped(MenuItem)
+  }
+
+  public enum AsyncAction: Equatable {
+    case fetchProfile
+  }
+
+  public enum InnerAction: Equatable {
+    case myPageResponse(Result<MyPage, ProfileError>)
+  }
+
+  public enum DelegateAction: Equatable {
+    /// 상단 백탭 → 직전 탭으로 복귀.
+    case backToHome
+    /// 알림함 이동.
+    case openNotification
+    /// 설정 화면 이동.
+    case openSettings
+    /// 프로필 카드 탭 → 편집.
+    case editProfile
+    /// 포인트 충전.
+    case chargePoint
+    /// 나의 철학자 유형 상세.
+    case openPhilosopher
+    /// 메뉴 항목 선택.
+    case menuSelected(MenuItem)
+  }
+
+  nonisolated enum CancelID: Hashable {
+    case fetchProfile
+  }
+
+  @Dependency(\.profileUseCase) private var profileUseCase
+
+  public var body: some Reducer<State, Action> {
+    BindingReducer()
+    Reduce { state, action in
+      switch action {
+      case .binding:
+        return .none
+
+      case let .view(viewAction):
+        return handleViewAction(state: &state, action: viewAction)
+
+      case let .async(asyncAction):
+        return handleAsyncAction(state: &state, action: asyncAction)
+
+      case let .inner(innerAction):
+        return handleInnerAction(state: &state, action: innerAction)
+
+      case let .delegate(delegateAction):
+        return handleDelegateAction(state: &state, action: delegateAction)
+      }
+    }
+  }
+}
+
+extension ProfileFeature {
+  private func handleViewAction(
+    state _: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .onAppear:
+      return .send(.async(.fetchProfile))
+
+    case .backTapped:
+      return .send(.delegate(.backToHome))
+
+    case .notificationTapped:
+      return .send(.delegate(.openNotification))
+
+    case .settingsTapped:
+      return .send(.delegate(.openSettings))
+
+    case .profileTapped:
+      return .send(.delegate(.editProfile))
+
+    case .chargePointTapped:
+      return .send(.delegate(.chargePoint))
+
+    case .philosopherTapped:
+      return .send(.delegate(.openPhilosopher))
+
+    case let .menuTapped(item):
+      return .send(.delegate(.menuSelected(item)))
+    }
+  }
+
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
+    switch action {
+    case .fetchProfile:
+      state.isLoading = true
+      return .run { [useCase = profileUseCase] send in
+        let result = await Result {
+          try await useCase.fetchMyPage()
+        }
+        .mapError(ProfileError.from)
+        return await send(.inner(.myPageResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchProfile, cancelInFlight: true)
+    }
+  }
+
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .myPageResponse(result):
+      state.isLoading = false
+      switch result {
+      case let .success(myPage):
+        state.nickname = myPage.profile.nickname
+        state.userCode = myPage.profile.userTag
+        state.point = myPage.tier.currentPoint
+        state.philosopherType = myPage.philosopher.typeName.isEmpty ? nil : myPage.philosopher.typeName
+        state.profileImageURL = myPage.profile.characterImageURL.isEmpty ? nil : myPage.profile.characterImageURL
+      case let .failure(error):
+        Log.error("[ProfileFeature] fetchMyPage failed: \(error.localizedDescription)")
+      }
+      return .none
+    }
+  }
+
+  /// delegate 는 부모(ProfileCoordinator / MainTab)가 처리 — Feature 는 발행만 한다.
+  private func handleDelegateAction(
+    state _: inout State,
+    action: DelegateAction
+  ) -> Effect<Action> {
+    switch action {
+    case .backToHome:
+      return .none
+
+    case .openNotification:
+      return .none
+
+    case .openSettings:
+      return .none
+
+    case .editProfile:
+      return .none
+
+    case .chargePoint:
+      return .none
+
+    case .openPhilosopher:
+      return .none
+
+    case .menuSelected:
+      return .none
+    }
+  }
+}

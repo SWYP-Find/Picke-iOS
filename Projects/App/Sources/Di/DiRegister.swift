@@ -41,7 +41,7 @@ public final class AppDIManager: Sendable {
       .register { PerspectiveRepositoryImpl() as PerspectiveInterface }
       .register { SearchRepositoryImpl() as SearchInterface }
       .register { AudioPlayerRepositoryImpl() as AudioPlayerInterface }
-//      .register { ProfileRepositoryImpl() as ProfileInterface }
+      .register { ProfileRepositoryImpl() as ProfileInterface }
 //      .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
 
       // 🔐 OAuth Provider 계층 (PFW 조합 패턴)
