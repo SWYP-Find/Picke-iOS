@@ -31,7 +31,7 @@ public struct PickeEmptyStateView: View {
 
       Text(message)
         .pretendardCustomFont(textStyle: .bodyMedium)
-        .foregroundStyle(.beige300)
+        .foregroundStyle(.gray300)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
