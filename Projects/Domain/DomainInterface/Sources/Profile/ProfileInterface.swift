@@ -9,6 +9,7 @@ import WeaveDI
 
 public protocol ProfileInterface: Sendable {
   func fetchMyPage() async throws -> MyPage
+  func fetchRecap() async throws -> PhilosopherRecap
   func fetchCreditHistory(
     offset: Int,
     size: Int

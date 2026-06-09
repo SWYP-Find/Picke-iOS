@@ -36,6 +36,18 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
     return data.toDomain()
   }
 
+  public func fetchRecap() async throws -> PhilosopherRecap {
+    let dto: RecapResponseDTO = try await provider.request(.recap)
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "리캡 응답이 비어 있습니다"
+      Log.error("[ProfileRepositoryImpl] empty recap payload: \(message)")
+      throw ProfileError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
+
   public func fetchCreditHistory(
     offset: Int,
     size: Int

@@ -19,6 +19,10 @@ public struct ProfileUseCaseImpl: ProfileInterface {
     return try await profileRepository.fetchMyPage()
   }
 
+  public func fetchRecap() async throws -> PhilosopherRecap {
+    return try await profileRepository.fetchRecap()
+  }
+
   public func fetchCreditHistory(
     offset: Int,
     size: Int

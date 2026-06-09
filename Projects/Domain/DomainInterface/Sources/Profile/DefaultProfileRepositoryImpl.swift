@@ -34,6 +34,49 @@ public struct DefaultProfileRepositoryImpl: ProfileInterface {
     )
   }
 
+  public func fetchRecap() async throws -> PhilosopherRecap {
+    PhilosopherRecap(
+      myCard: RecapCard(
+        philosopherType: "",
+        philosopherLabel: "",
+        typeName: "",
+        description: "",
+        keywordTags: [],
+        imageURL: ""
+      ),
+      bestMatchCard: RecapCard(
+        philosopherType: "",
+        philosopherLabel: "",
+        typeName: "",
+        description: "",
+        keywordTags: [],
+        imageURL: ""
+      ),
+      worstMatchCard: RecapCard(
+        philosopherType: "",
+        philosopherLabel: "",
+        typeName: "",
+        description: "",
+        keywordTags: [],
+        imageURL: ""
+      ),
+      scores: RecapScores(
+        principle: 0,
+        reason: 0,
+        individual: 0,
+        change: 0,
+        inner: 0,
+        ideal: 0
+      ),
+      preferenceReport: PreferenceReport(
+        totalParticipation: 0,
+        opinionChanges: 0,
+        battleWinRate: 0,
+        favoriteTopics: []
+      )
+    )
+  }
+
   public func fetchCreditHistory(
     offset _: Int,
     size _: Int

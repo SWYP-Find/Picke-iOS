@@ -12,6 +12,7 @@ import AsyncMoya
 
 public enum ProfileService {
   case mypage
+  case recap
   case creditsHistory(query: CreditHistoryQueryRequest)
   case battleRecords(query: BattleRecordsQueryRequest)
   case contentActivities(query: ContentActivitiesQueryRequest)
@@ -28,6 +29,8 @@ extension ProfileService: BaseTargetType {
     switch self {
     case .mypage:
       return ProfileAPI.mypage.description
+    case .recap:
+      return ProfileAPI.recap.description
     case .creditsHistory:
       return ProfileAPI.creditsHistory.description
     case .battleRecords:
@@ -45,7 +48,7 @@ extension ProfileService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
-    case .mypage, .creditsHistory, .battleRecords, .contentActivities, .notificationSettings:
+    case .mypage, .recap, .creditsHistory, .battleRecords, .contentActivities, .notificationSettings:
       return .get
     case .updateNotificationSettings:
       return .patch
@@ -55,6 +58,8 @@ extension ProfileService: BaseTargetType {
   public var parameters: [String: Any]? {
     switch self {
     case .mypage:
+      return nil
+    case .recap:
       return nil
     case let .creditsHistory(query):
       guard let dict = query.toDictionary else { return nil }

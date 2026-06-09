@@ -7,6 +7,7 @@ import Foundation
 
 public enum ProfileAPI {
   case mypage
+  case recap
   case creditsHistory
   case battleRecords
   case contentActivities
@@ -16,6 +17,8 @@ public enum ProfileAPI {
     switch self {
     case .mypage:
       return "mypage"
+    case .recap:
+      return "recap"
     case .creditsHistory:
       return "credits/history"
     case .battleRecords:

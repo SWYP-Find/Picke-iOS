@@ -37,6 +37,8 @@ public struct ProfileCoordinatorView: View {
         NotificationSettingView(store: notificationStore)
       case let .battleProposal(battleProposalStore):
         BattleProposalView(store: battleProposalStore)
+      case let .recap(recapStore):
+        RecapView(store: recapStore)
       case let .web(webStore):
         WebView(store: webStore)
       }

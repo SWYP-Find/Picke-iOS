@@ -87,8 +87,14 @@ extension ProfileCoordinator {
     case .routeAction(_, action: .pointHistory(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    // 나의 철학자 유형 카드 탭 → 리캡 화면 진입.
     case .routeAction(_, action: .profile(.delegate(.openPhilosopher))):
+      state.routes.push(.recap(.init()))
       return .none
+
+    // 리캡 백탭 → 뒤로.
+    case .routeAction(_, action: .recap(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     // 설정 아이콘 → 설정 화면 진입.
     case .routeAction(_, action: .profile(.delegate(.openSettings))):
@@ -182,6 +188,7 @@ extension ProfileCoordinator {
     case notice(NoticeFeature)
     case notificationSetting(NotificationSettingFeature)
     case battleProposal(BattleProposalFeature)
+    case recap(RecapFeature)
     case web(WebReducer)
   }
 }
