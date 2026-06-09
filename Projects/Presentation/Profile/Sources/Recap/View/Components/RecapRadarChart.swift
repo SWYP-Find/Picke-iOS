@@ -36,6 +36,7 @@ public struct RecapRadarChart: View {
     GeometryReader { geo in
       let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
       let radius = min(geo.size.width, geo.size.height) / 2 * 0.78
+      let ratios = axes.map { clamp($0.value / 100) }
 
       ZStack {
         // 4겹 그리드 육각형
@@ -53,10 +54,10 @@ public struct RecapRadarChart: View {
           .stroke(.beige600, lineWidth: 1)
         }
 
-        // 데이터 폴리곤 (primary500 8% 채움 + 스트로크, 애니메이션)
-        dataPath(center: center, radius: radius)
+        // 데이터 폴리곤 (animatableData 로 중심→값 실제 보간)
+        RadarPolygon(ratios: ratios, unit: unit, progress: progress)
           .fill(.primary500.opacity(0.08))
-        dataPath(center: center, radius: radius)
+        RadarPolygon(ratios: ratios, unit: unit, progress: progress)
           .stroke(.primary500, lineWidth: 1.5)
 
         // 꼭짓점 점 (6px)
@@ -111,16 +112,29 @@ private extension RecapRadarChart {
       path.closeSubpath()
     }
   }
+}
 
-  /// 점수 기반 데이터 폴리곤 (progress 로 중심→값 보간).
-  func dataPath(center: CGPoint, radius: CGFloat) -> Path {
-    Path { path in
-      for (index, axis) in axes.enumerated() {
-        let ratio = clamp(axis.value / 100) * progress
-        let p = vertex(center: center, radius: radius * ratio, index: index)
-        if index == 0 { path.move(to: p) } else { path.addLine(to: p) }
-      }
-      path.closeSubpath()
+/// 데이터 폴리곤 Shape — progress(animatableData)로 중심→값을 부드럽게 보간.
+private struct RadarPolygon: Shape {
+  let ratios: [CGFloat]
+  let unit: [CGPoint]
+  var progress: CGFloat
+
+  var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  func path(in rect: CGRect) -> Path {
+    let center = CGPoint(x: rect.midX, y: rect.midY)
+    let radius = min(rect.width, rect.height) / 2 * 0.78
+    var path = Path()
+    for index in unit.indices {
+      let r = radius * ratios[index] * progress
+      let point = CGPoint(x: center.x + r * unit[index].x, y: center.y + r * unit[index].y)
+      if index == 0 { path.move(to: point) } else { path.addLine(to: point) }
     }
+    path.closeSubpath()
+    return path
   }
 }
