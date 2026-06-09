@@ -21,30 +21,33 @@ public struct RecapScoreBar: View {
   }
 
   public var body: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 8) {
       Text(axis.label)
         .pretendardFont(family: .Medium, size: 10)
         .foregroundStyle(.neutral900)
+        .fixedSize()
 
-      Spacer(minLength: 6)
+      Spacer(minLength: 4)
 
-      HStack(spacing: 6) {
-        ZStack(alignment: .leading) {
-          Capsule()
-            .fill(.primary100)
-            .frame(width: trackWidth, height: 4)
-          Capsule()
-            .fill(.primary500)
-            .frame(width: trackWidth * ratio * progress, height: 4)
-        }
-
-        Text("\(Int(axis.value.rounded()))")
-          .pretendardFont(family: .SemiBold, size: 11)
-          .foregroundStyle(.neutral900)
+      ZStack(alignment: .leading) {
+        Capsule()
+          .fill(.primary100)
+          .frame(width: trackWidth, height: 4)
+        Capsule()
+          .fill(.primary500)
+          .frame(width: trackWidth * ratio * progress, height: 4)
       }
+      .frame(width: trackWidth)
+
+      Text("\(Int(axis.value.rounded()))")
+        .pretendardFont(family: .SemiBold, size: 11)
+        .foregroundStyle(.neutral900)
+        .fixedSize()
+        .frame(minWidth: 18, alignment: .trailing)
     }
     .padding(.vertical, 8)
-    .padding(.horizontal, 12)
+    .padding(.horizontal, 10)
+    .frame(maxWidth: .infinity)
     .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
     .onAppear {
       progress = 0

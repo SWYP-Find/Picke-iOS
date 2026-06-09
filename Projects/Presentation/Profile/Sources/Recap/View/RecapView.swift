@@ -35,13 +35,16 @@ public struct RecapView: View {
       if let recap = store.recap {
         content(recap)
       } else {
-        ProgressView()
-          .frame(maxWidth: .infinity, maxHeight: .infinity)
+        RecapSkeletonView()
       }
     }
     .background(Color.beige200.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
+    .sheet(item: $store.shareItem) { item in
+      ShareSheet(items: item.items)
+        .presentationDetents([.fraction(0.5)])
+    }
     .onAppear { send(.onAppear) }
   }
 }

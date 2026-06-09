@@ -96,7 +96,7 @@ extension ProfileCoordinator {
     case .routeAction(_, action: .recap(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 설정 아이콘 → 설정 화면 진입.
+    // 설정 아이콘 → 설정 화면 진입.리고
     case .routeAction(_, action: .profile(.delegate(.openSettings))):
       state.routes.push(.settings(.init()))
       return .none

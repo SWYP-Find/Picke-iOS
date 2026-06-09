@@ -21,6 +21,8 @@ public struct RecapFeature {
   public struct State: Equatable {
     public var isLoading: Bool = false
     public var recap: PhilosopherRecap?
+    /// 애플 시스템 공유 시트 트리거.
+    public var shareItem: ShareItem?
 
     public init() {}
   }
@@ -97,7 +99,19 @@ extension RecapFeature {
 
     case .shareTapped:
       guard let recap = state.recap else { return .none }
-      return .send(.delegate(.share(recap)))
+      let text = [
+        "나의 철학자 유형: \(recap.myCard.typeName)",
+        recap.myCard.description,
+        recap.myCard.keywordTags.map { "#\($0)" }.joined(separator: " "),
+      ]
+      .filter { !$0.isEmpty }
+      .joined(separator: "\n\n")
+      var items: [Any] = [text]
+      if !recap.myCard.imageURL.isEmpty, let url = URL(string: recap.myCard.imageURL) {
+        items.append(url)
+      }
+      state.shareItem = ShareItem(items: items)
+      return .none
     }
   }
 
