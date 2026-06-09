@@ -44,15 +44,24 @@ public struct RecapRadarChart: View {
 
         // 데이터 폴리곤 (애니메이션)
         dataPolygon(center: center, radius: radius)
-          .fill(.primary500.opacity(0.22))
+          .fill(.primary500.opacity(0.18))
         dataPolygon(center: center, radius: radius)
           .stroke(.primary500, lineWidth: 1.5)
 
-        // 축 라벨
+        // 데이터 꼭짓점 점
+        ForEach(Array(axes.enumerated()), id: \.offset) { index, axis in
+          let ratio = max(0, min(1, axis.value / 100)) * progress
+          Circle()
+            .fill(.primary500)
+            .frame(width: 5, height: 5)
+            .position(vertex(center: center, radius: radius * ratio, index: index))
+        }
+
+        // 축 라벨 (상단 '원칙'은 볼드)
         ForEach(Array(axes.enumerated()), id: \.offset) { index, axis in
           Text(axis.label)
-            .pretendardFont(family: .Medium, size: 10)
-            .foregroundStyle(.gray500)
+            .pretendardFont(family: index == 0 ? .SemiBold : .Medium, size: 12)
+            .foregroundStyle(index == 0 ? .gray700 : .gray400)
             .position(labelPosition(center: center, radius: radius, index: index))
         }
       }
