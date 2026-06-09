@@ -104,7 +104,8 @@ private extension RecapView {
             columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)],
             spacing: 8
           ) {
-            ForEach(scores.axes) { axis in
+            // picke.pen 그리드 순서: 원칙·이성 / 개인·변화 / 내면·이상
+            ForEach(scores.gridAxes) { axis in
               RecapScoreBar(axis: axis)
             }
           }

@@ -31,7 +31,7 @@ public struct RecapScores: Equatable {
     self.ideal = ideal
   }
 
-  /// 레이더/바 표시 순서 (라벨, 0~100 값).
+  /// 레이더 각도 순서 (원칙↑ → 시계방향: 이성·개인·변화·이상·내면).
   public var axes: [RecapScoreAxis] {
     [
       RecapScoreAxis(label: "원칙", value: principle),
@@ -40,6 +40,18 @@ public struct RecapScores: Equatable {
       RecapScoreAxis(label: "변화", value: change),
       RecapScoreAxis(label: "이상", value: ideal),
       RecapScoreAxis(label: "내면", value: inner),
+    ]
+  }
+
+  /// 점수 바 2열 그리드 순서 (picke.pen: 원칙·이성 / 개인·변화 / 내면·이상).
+  public var gridAxes: [RecapScoreAxis] {
+    [
+      RecapScoreAxis(label: "원칙", value: principle),
+      RecapScoreAxis(label: "이성", value: reason),
+      RecapScoreAxis(label: "개인", value: individual),
+      RecapScoreAxis(label: "변화", value: change),
+      RecapScoreAxis(label: "내면", value: inner),
+      RecapScoreAxis(label: "이상", value: ideal),
     ]
   }
 }
