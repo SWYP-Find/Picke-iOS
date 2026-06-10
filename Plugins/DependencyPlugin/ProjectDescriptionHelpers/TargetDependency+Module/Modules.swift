@@ -17,6 +17,7 @@ public enum ModulePath {
 }
 
 // MARK: FeatureModule
+
 public extension ModulePath {
   enum Presentations: String, CaseIterable {
     case Presentation
@@ -31,14 +32,13 @@ public extension ModulePath {
     case Profile
 
     public static let name: String = "Presentation"
-      
-      case Notification
+
+    case Notification
   }
 }
 
+// MARK: -  CoreDomainModule
 
-
-//MARK: -  CoreDomainModule
 public extension ModulePath {
   enum Networks: String, CaseIterable {
     case Networking
@@ -49,7 +49,8 @@ public extension ModulePath {
   }
 }
 
-//MARK: -  CoreMoudule
+// MARK: -  CoreMoudule
+
 public extension ModulePath {
   enum Datas: String, CaseIterable {
     case Model
@@ -62,8 +63,8 @@ public extension ModulePath {
   }
 }
 
+// MARK: -  CoreMoudule
 
-//MARK: -  CoreMoudule
 public extension ModulePath {
   enum Domains: String, CaseIterable {
     case Entity
@@ -72,21 +73,17 @@ public extension ModulePath {
     case DataInterface
     case DomainInterface
 
-
     public static let name: String = "Domain"
   }
 }
-
 
 public extension ModulePath {
   enum Shareds: String, CaseIterable {
     case Shared
     case DesignSystem
     case Utill
-    
+
     public static let name: String = "Shared"
-      case ThirdParty
+    case ThirdParty
   }
 }
-
-

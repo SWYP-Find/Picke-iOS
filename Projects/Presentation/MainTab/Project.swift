@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
   name: "MainTab",
@@ -17,7 +17,7 @@ let project = Project.makeAppModule(
     .Presentation(implements: .Home),
     .Presentation(implements: .Hifi),
     .Presentation(implements: .Battle),
-    .Presentation(implements: .Profile)
+    .Presentation(implements: .Profile),
   ],
   sources: ["Sources/**"]
 )
