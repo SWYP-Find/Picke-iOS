@@ -11,7 +11,7 @@ import DesignSystem
 
 struct PointHistorySkeletonView: View {
   var body: some View {
-    ScrollView(showsIndicators: false) {
+    ScrollView {
       VStack(spacing: 16) {
         ForEach(0 ..< 8, id: \.self) { _ in
           HStack(spacing: 16) {
@@ -25,7 +25,7 @@ struct PointHistorySkeletonView: View {
               block(width: 28, height: 12)
             }
           }
-          .padding(12)
+          .padding(16)
           .frame(maxWidth: .infinity)
           .background(.beige50, in: RoundedRectangle(cornerRadius: 8))
           .overlay(
@@ -37,6 +37,7 @@ struct PointHistorySkeletonView: View {
       .padding(.vertical, 20)
       .padding(.horizontal, 16)
     }
+    .scrollIndicators(.hidden)
   }
 
   @ViewBuilder

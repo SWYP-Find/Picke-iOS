@@ -64,7 +64,7 @@ private extension PointHistoryView {
       emptyState()
     } else {
       ScrollView {
-        LazyVStack(spacing: 12) {
+        LazyVStack(spacing: 16) {
           ForEach(store.items) { item in
             historyRow(item)
               .onAppear {
@@ -112,7 +112,7 @@ private extension PointHistoryView {
           .foregroundStyle(.gray300)
       }
     }
-    .padding(12)
+    .padding(16)
     .frame(maxWidth: .infinity)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 8))
     .overlay(

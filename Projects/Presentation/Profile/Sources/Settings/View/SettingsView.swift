@@ -50,6 +50,7 @@ private extension SettingsView {
         menuRow(item)
       }
     }
+    .padding(.top, 12)
     .padding(.horizontal, 16)
   }
 
