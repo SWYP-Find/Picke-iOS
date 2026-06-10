@@ -17,6 +17,9 @@ import UseCase
 public struct RecapFeature {
   public init() {}
 
+  /// 소비한 배틀이 이 수 미만이면 잠금. (서버 미제공 — 클라이언트 상수)
+  static let unlockThreshold = 5
+
   @ObservableState
   public struct State: Equatable {
     public var isLoading: Bool = false
@@ -25,6 +28,12 @@ public struct RecapFeature {
     public var shareItem: ShareItem?
 
     public init() {}
+
+    /// 소비한 배틀(총 참여) < 5 → 잠금.
+    public var isLocked: Bool {
+      guard let recap else { return false }
+      return recap.preferenceReport.totalParticipation < RecapFeature.unlockThreshold
+    }
   }
 
   public enum Action: ViewAction, BindableAction {

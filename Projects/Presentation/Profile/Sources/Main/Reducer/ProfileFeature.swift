@@ -34,12 +34,14 @@ public struct ProfileFeature {
     public var nickname: String = "사색하는 고양이"
     /// 사용자 코드 (앞에 `@` 표기).
     public var userCode: String = "user_code"
-    /// 프로필 잠금 여부 — 닉네임 옆 자물쇠 노출.
-    public var isLocked: Bool = true
     /// 보유 포인트.
     public var point: Int = 240
-    /// 나의 철학자 유형 — 미확정 시 `??형`.
+    /// 나의 철학자 유형명(예: `칸트형`) — 미확정 시 nil → `??형`.
     public var philosopherType: String?
+    /// 철학자 라벨(예: `원칙주의자`).
+    public var philosopherLabel: String = ""
+    /// 철학자 이미지 URL.
+    public var philosopherImageURL: String?
     /// 프로필 이미지 URL (없으면 기본 아바타).
     public var profileImageURL: String?
     /// 메뉴 목록.
@@ -47,8 +49,16 @@ public struct ProfileFeature {
 
     public init() {}
 
-    /// 표시용 철학자 유형.
-    public var philosopherDisplay: String { philosopherType ?? "??형" }
+    /// 철학자 유형 미확정(잠금) 여부.
+    public var isPhilosopherLocked: Bool {
+      philosopherType?.isEmpty ?? true
+    }
+
+    /// 표시용 철학자 유형 — 잠금 시 `??형`, 아니면 `유형명 · 라벨`.
+    public var philosopherDisplay: String {
+      guard let type = philosopherType, !type.isEmpty else { return "??형" }
+      return philosopherLabel.isEmpty ? type : "\(type) · \(philosopherLabel)"
+    }
   }
 
   public enum Action: ViewAction, BindableAction {
@@ -188,6 +198,8 @@ extension ProfileFeature {
         state.userCode = myPage.profile.userTag
         state.point = myPage.tier.currentPoint
         state.philosopherType = myPage.philosopher.typeName.isEmpty ? nil : myPage.philosopher.typeName
+        state.philosopherLabel = myPage.philosopher.philosopherLabel
+        state.philosopherImageURL = myPage.philosopher.imageURL.isEmpty ? nil : myPage.philosopher.imageURL
         state.profileImageURL = myPage.profile.characterImageURL.isEmpty ? nil : myPage.profile.characterImageURL
       case let .failure(error):
         Log.error("[ProfileFeature] fetchMyPage failed: \(error.localizedDescription)")

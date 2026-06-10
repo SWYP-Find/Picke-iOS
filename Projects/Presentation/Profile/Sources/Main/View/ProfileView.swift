@@ -88,17 +88,9 @@ private extension ProfileView {
         avatar()
 
         VStack(alignment: .leading, spacing: 2) {
-          HStack(spacing: 5) {
-            Text(store.nickname)
-              .pretendardFont(family: .SemiBold, size: 16)
-              .foregroundStyle(.gray800)
-
-            if store.isLocked {
-              Image(systemName: "lock.fill")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.gray300)
-            }
-          }
+          Text(store.nickname)
+            .pretendardFont(family: .SemiBold, size: 16)
+            .foregroundStyle(.gray800)
 
           Text("@\(store.userCode)")
             .pretendardFont(family: .Regular, size: 13)
@@ -181,11 +173,21 @@ private extension ProfileView {
         ZStack {
           RoundedRectangle(cornerRadius: 8)
             .fill(.beige200)
-          Image(systemName: "brain.head.profile")
-            .font(.system(size: 20))
-            .foregroundStyle(.gray300)
+          if let urlString = store.philosopherImageURL, let url = URL(string: urlString) {
+            KFImage(url)
+              .resizable()
+              .scaledToFit()
+              .padding(4)
+          } else {
+            Image(systemName: "brain.head.profile")
+              .font(.system(size: 20))
+              .foregroundStyle(.gray300)
+          }
         }
         .frame(width: 40, height: 40)
+        // 잠금(??형) 시 철학자 아바타 그레이 처리
+        .grayscale(store.isPhilosopherLocked ? 1 : 0)
+        .opacity(store.isPhilosopherLocked ? 0.7 : 1)
 
         VStack(alignment: .leading, spacing: 4) {
           Text("나의 철학자 유형")

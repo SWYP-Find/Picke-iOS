@@ -33,7 +33,11 @@ public struct RecapView: View {
       .foregroundStyle(.gray500)
 
       if let recap = store.recap {
-        content(recap)
+        if store.isLocked {
+          RecapLockedView()
+        } else {
+          content(recap)
+        }
       } else {
         RecapSkeletonView()
       }
