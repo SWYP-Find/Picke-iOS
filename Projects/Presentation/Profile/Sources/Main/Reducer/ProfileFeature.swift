@@ -30,12 +30,12 @@ public struct ProfileFeature {
   @ObservableState
   public struct State: Equatable {
     public var isLoading: Bool = false
-    /// 닉네임.
-    public var nickname: String = "사색하는 고양이"
-    /// 사용자 코드 (앞에 `@` 표기).
-    public var userCode: String = "user_code"
-    /// 보유 포인트.
-    public var point: Int = 240
+    /// 닉네임 — /me/mypage 응답에서 주입.
+    public var nickname: String = ""
+    /// 사용자 코드 (앞에 `@` 표기) — /me/mypage 응답에서 주입.
+    public var userCode: String = ""
+    /// 보유 포인트 — /me/mypage 응답에서 주입.
+    public var point: Int = 0
     /// 나의 철학자 유형명(예: `칸트형`) — 미확정 시 nil → `??형`.
     public var philosopherType: String?
     /// 철학자 라벨(예: `원칙주의자`).
