@@ -18,6 +18,7 @@ public enum PieckeDomain {
   case comment
   case perspective
   case search
+  case notification
 }
 
 extension PieckeDomain: DomainType {
@@ -43,6 +44,8 @@ extension PieckeDomain: DomainType {
       return "api/v1/perspectives/"
     case .search:
       return "api/v1/search/"
+    case .notification:
+      return "api/v1/notifications"
     }
   }
 }

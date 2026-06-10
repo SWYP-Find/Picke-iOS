@@ -8,6 +8,7 @@ import Foundation
 import SwiftUI
 
 import ComposableArchitecture
+import Notification
 import TCAFlow
 import Web
 
@@ -39,6 +40,9 @@ public struct ProfileCoordinatorView: View {
         BattleProposalView(store: battleProposalStore)
       case let .recap(recapStore):
         RecapView(store: recapStore)
+      case let .notification(notificationStore):
+        NotificationCoordinatorView(store: notificationStore)
+          .toolbar(.hidden, for: .tabBar)
       case let .web(webStore):
         WebView(store: webStore)
       }

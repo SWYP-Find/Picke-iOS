@@ -9,6 +9,7 @@ import Foundation
 
 import ComposableArchitecture
 import Entity
+import Notification
 import TCAFlow
 import Web
 
@@ -101,9 +102,14 @@ extension ProfileCoordinator {
       state.routes.push(.settings(.init()))
       return .none
 
-    // 알림(종) 아이콘은 현재 연결 화면 없음.
+    // 알림(종) 아이콘 → 알림받기 화면 진입.
     case .routeAction(_, action: .profile(.delegate(.openNotification))):
+      state.routes.push(.notification(.init()))
       return .none
+
+    // 알림받기 백탭 → 뒤로.
+    case .routeAction(_, action: .notification(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     // 설정 상단 백탭 → 뒤로.
     case .routeAction(_, action: .settings(.delegate(.dismiss))):
@@ -189,6 +195,7 @@ extension ProfileCoordinator {
     case notificationSetting(NotificationSettingFeature)
     case battleProposal(BattleProposalFeature)
     case recap(RecapFeature)
+    case notification(NotificationCoordinator)
     case web(WebReducer)
   }
 }
@@ -196,5 +203,3 @@ extension ProfileCoordinator {
 // swiftformat:enable extensionAccessControl
 
 extension ProfileCoordinator.ProfileScreen.State: Equatable {}
-
-

@@ -1,21 +1,19 @@
-import DependencyPackagePlugin
-import DependencyPlugin
 import Foundation
 import ProjectDescription
+import DependencyPlugin
 import ProjectTemplatePlugin
+import DependencyPackagePlugin
 
 let project = Project.makeAppModule(
-  name: "Home",
-  bundleId: .appBundleID(name: ".Home"),
+  name: "Notification",
+  bundleId: .appBundleID(name: ".Notification"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .SPM.tcaFlow,
-    .SPM.kingfisher,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
-    .Presentation(implements: .Chat),
-    .Presentation(implements: .Notification)
+    .SPM.composableArchitecture,
+    .SPM.tcaFlow,
   ],
   sources: ["Sources/**"]
 )

@@ -45,6 +45,7 @@ public struct HifiFeature {
     case sortTapped(ExploreSort)
     case itemTapped(id: Int)
     case reachedBottom
+    case notificationTapped
   }
 
   public enum AsyncAction: Equatable {
@@ -57,6 +58,8 @@ public struct HifiFeature {
 
   public enum DelegateAction: Equatable {
     case openBattle(battleId: Int)
+    /// 알림(종) 아이콘 → 알림받기 화면.
+    case openNotification
   }
 
   nonisolated enum CancelID: Hashable {
@@ -109,6 +112,9 @@ extension HifiFeature {
 
     case let .itemTapped(id):
       return .send(.delegate(.openBattle(battleId: id)))
+
+    case .notificationTapped:
+      return .send(.delegate(.openNotification))
 
     case .reachedBottom:
       // 무한 스크롤: 다음 페이지가 있고 로딩 중이 아니면 추가 로드.

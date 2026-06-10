@@ -15,6 +15,7 @@ let project = Project.makeAppModule(
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .Presentation(implements: .Web),
+    .Presentation(implements: .Notification)
   ],
   sources: ["Sources/**"]
 )

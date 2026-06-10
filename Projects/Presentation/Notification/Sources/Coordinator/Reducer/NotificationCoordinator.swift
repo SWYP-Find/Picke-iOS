@@ -1,37 +1,37 @@
 //
-//  HomeCoordinator.swift
-//  Home
+//  NotificationCoordinator.swift
+//  Notification
 //
-//  Created by Wonji Suh on 5/15/26.
+//  알림 모듈 진입점. 루트는 알림받기 목록(NotificationFeature).
+//  상세 화면 연결 시 NotificationScreen 에 case 추가.
 //
 
 import Foundation
 
-import Chat
 import ComposableArchitecture
-import Notification
 import TCAFlow
 
-@FlowCoordinator(screen: "HomeScreen", navigation: true)
-public struct HomeCoordinator {
+@FlowCoordinator(screen: "NotificationScreen", navigation: true)
+public struct NotificationCoordinator {
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<HomeScreen.State>]
+    public var routes: [Route<NotificationScreen.State>]
 
     public init() {
-      routes = [.root(.home(.init()), embedInNavigationView: true)]
+      routes = [.root(.notification(.init()), embedInNavigationView: true)]
     }
   }
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<HomeScreen>)
+    case router(IndexedRouterActionOf<NotificationScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
     case navigation(NavigationAction)
+    case delegate(DelegateAction)
   }
 
   @CasePathable
@@ -44,6 +44,11 @@ public struct HomeCoordinator {
   public enum InnerAction: Equatable {}
   public enum NavigationAction: Equatable {}
 
+  public enum DelegateAction: Equatable {
+    /// 알림 모듈 전체를 빠져나가 부모 스택으로 복귀.
+    case dismiss
+  }
+
   func handleRoute(
     state: inout State,
     action: Action
@@ -55,35 +60,21 @@ public struct HomeCoordinator {
       handleViewAction(state: &state, action: viewAction)
     case .async, .inner, .navigation:
       .none
+    case let .delegate(delegateAction):
+      handleDelegateAction(state: &state, action: delegateAction)
     }
   }
 }
 
-extension HomeCoordinator {
+extension NotificationCoordinator {
   private func routerAction(
-    state: inout State,
-    action: IndexedRouterActionOf<HomeScreen>
+    state _: inout State,
+    action: IndexedRouterActionOf<NotificationScreen>
   ) -> Effect<Action> {
     switch action {
-    case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
-      state.routes.push(.chat(.init(battleId: battleId)))
-      return .none
-
-    case .routeAction(_, action: .chat(.delegate(.dismiss))):
-      return .send(.view(.backAction))
-
-    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
-      // 큐레이팅 X — 홈 루트로 복귀
-      return .send(.view(.backToRootAction))
-
-    // 알림(종) 아이콘 → 알림받기 화면 진입.
-    case .routeAction(_, action: .home(.delegate(.openNotification))):
-      state.routes.push(.notification(.init()))
-      return .none
-
-    // 알림받기 백탭 → 뒤로.
+    // 목록(루트) 백탭 → 알림 모듈 종료(부모로 복귀).
     case .routeAction(_, action: .notification(.delegate(.dismiss))):
-      return .send(.view(.backAction))
+      return .send(.delegate(.dismiss))
 
     default:
       return .none
@@ -103,18 +94,26 @@ extension HomeCoordinator {
       return .none
     }
   }
+
+  private func handleDelegateAction(
+    state _: inout State,
+    action: DelegateAction
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss:
+      return .none
+    }
+  }
 }
 
 // swiftformat:disable extensionAccessControl
-extension HomeCoordinator {
+extension NotificationCoordinator {
   @Reducer
-  public enum HomeScreen {
-    case home(HomeFeature)
-    case chat(ChatCoordinator)
-    case notification(NotificationCoordinator)
+  public enum NotificationScreen {
+    case notification(NotificationFeature)
   }
 }
 
 // swiftformat:enable extensionAccessControl
 
-extension HomeCoordinator.HomeScreen.State: Equatable {}
+extension NotificationCoordinator.NotificationScreen.State: Equatable {}

@@ -22,7 +22,7 @@ public struct HomeView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      HomeHeaderView { /* TODO: 알림 화면 */ } // sticky — 스크롤 영향 없음
+      HomeHeaderView { send(.notificationTapped) } // sticky — 스크롤 영향 없음
 
       ScrollView(showsIndicators: false) {
         if shouldShowSkeleton {

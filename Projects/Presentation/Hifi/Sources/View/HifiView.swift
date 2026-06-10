@@ -23,7 +23,7 @@ public struct HifiView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      HifiHeaderView {}
+      HifiHeaderView { send(.notificationTapped) }
 
       categoryTabs()
 

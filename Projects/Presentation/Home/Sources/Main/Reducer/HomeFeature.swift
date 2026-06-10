@@ -53,6 +53,7 @@ public struct HomeFeature {
     case hotBattleTapped(HotBattle)
     case bestBattleTapped(BestBattle)
     case newBattleTapped(NewBattle)
+    case notificationTapped
   }
 
   public enum Section: Equatable {
@@ -74,6 +75,8 @@ public struct HomeFeature {
     case presentPreVote(battleId: Int)
     /// "더보기" → 탐색 탭으로 이동.
     case moveToExplore
+    /// 알림(종) 아이콘 → 알림받기 화면.
+    case openNotification
   }
 
   nonisolated enum CancelID: Hashable {
@@ -132,6 +135,9 @@ extension HomeFeature {
 
     case let .newBattleTapped(battle):
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
+
+    case .notificationTapped:
+      return .send(.delegate(.openNotification))
     }
   }
 
@@ -184,8 +190,8 @@ extension HomeFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .presentPreVote, .moveToExplore:
-      .none
+    case .presentPreVote, .moveToExplore, .openNotification:
+      return .none
     }
   }
 }
