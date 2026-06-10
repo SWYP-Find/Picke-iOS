@@ -80,6 +80,7 @@ public struct ProfileFeature {
     case settingsTapped
     case profileTapped
     case chargePointTapped
+    case freeChargeTapped
     case philosopherTapped
     case menuTapped(MenuItem)
   }
@@ -114,6 +115,7 @@ public struct ProfileFeature {
   }
 
   @Dependency(\.profileUseCase) private var profileUseCase
+  @Dependency(\.rewardedAdClient) private var rewardedAdClient
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -161,6 +163,15 @@ extension ProfileFeature {
 
     case .chargePointTapped:
       return .send(.delegate(.chargePoint))
+
+    case .freeChargeTapped:
+      // 무료 충전 → 리워드 광고 표시, 보상 획득 시 포인트 갱신.
+      return .run { [rewardedAdClient] send in
+        let earned = await rewardedAdClient.showRewardedAd()
+        if earned {
+          await send(.async(.fetchProfile))
+        }
+      }
 
     case .philosopherTapped:
       return .send(.delegate(.openPhilosopher))

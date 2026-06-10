@@ -136,38 +136,48 @@ private extension ProfileView {
 
   @ViewBuilder
   func chargeButton() -> some View {
-    Button {
-      send(.chargePointTapped)
-    } label: {
-      HStack(spacing: 6) {
-        // 포인트 뱃지 + 보유 포인트
-        ZStack {
-          Circle().fill(.secondary300)
-          Text("P")
-            .pretendardFont(family: .Bold, size: 11)
-            .foregroundStyle(.gray800)
+    HStack(spacing: 6) {
+      // 좌측(포인트 뱃지 + 보유 포인트) → 포인트 내역 상세
+      Button {
+        send(.chargePointTapped)
+      } label: {
+        HStack(spacing: 6) {
+          ZStack {
+            Circle().fill(.secondary300)
+            Text("P")
+              .pretendardFont(family: .Bold, size: 11)
+              .foregroundStyle(.gray800)
+          }
+          .frame(width: 24, height: 24)
+
+          Text("내 포인트 \(store.point)")
+            .pretendardFont(family: .SemiBold, size: 12)
+            .foregroundStyle(.beige50)
+
+          Spacer(minLength: 8)
         }
-        .frame(width: 24, height: 24)
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
 
-        Text("내 포인트 \(store.point)")
-          .pretendardFont(family: .SemiBold, size: 12)
-          .foregroundStyle(.beige50)
-
-        Spacer(minLength: 8)
-
+      // 무료 충전 → 리워드 광고
+      Button {
+        send(.freeChargeTapped)
+      } label: {
         Text("무료 충전")
           .pretendardFont(family: .Medium, size: 11)
           .foregroundStyle(.gray800)
           .padding(.vertical, 4)
           .padding(.horizontal, 6)
           .background(.secondary300, in: RoundedRectangle(cornerRadius: 2))
+          .contentShape(Rectangle())
       }
-      .padding(.vertical, 20)
-      .padding(.horizontal, 16)
-      .frame(maxWidth: .infinity)
-      .background(.primary800, in: RoundedRectangle(cornerRadius: 8))
+      .buttonStyle(.plain)
     }
-    .buttonStyle(.plain)
+    .padding(.vertical, 20)
+    .padding(.horizontal, 16)
+    .frame(maxWidth: .infinity)
+    .background(.primary800, in: RoundedRectangle(cornerRadius: 8))
   }
 
   // MARK: 나의 철학자 유형
