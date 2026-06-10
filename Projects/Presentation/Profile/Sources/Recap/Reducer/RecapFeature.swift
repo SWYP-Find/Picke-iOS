@@ -69,6 +69,7 @@ public struct RecapFeature {
   }
 
   @Dependency(\.profileUseCase) private var profileUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -120,6 +121,9 @@ extension RecapFeature {
         items.append(url)
       }
       state.shareItem = ShareItem(items: items)
+      analyticsUseCase.track(
+        .reportAction(ReportActionData(actionType: .share, topIndicator: recap.myCard.typeName))
+      )
       return .none
     }
   }
@@ -152,6 +156,9 @@ extension RecapFeature {
       switch result {
       case let .success(recap):
         state.recap = recap
+        analyticsUseCase.track(
+          .reportAction(ReportActionData(actionType: .view, topIndicator: recap.myCard.typeName))
+        )
       case let .failure(error):
         Log.error("[RecapFeature] fetchRecap failed: \(error.localizedDescription)")
       }

@@ -2,8 +2,8 @@
 //  AnalyticsUseCase.swift
 //  UseCase
 //
-//  Mixpanel 이벤트 트래킹 — 타입 안전한 이벤트 + 공통 유저 프로퍼티.
-//  (TimeSpot-iOS AnalyticsUseCase 패턴을 Picke 도메인에 맞춰 적용)
+//  Mixpanel 트래킹 — PICKé 핵심 이벤트 명세서 기준.
+//  이벤트를 쪼개지 않고 하나의 카테고리 + 속성값으로 구분(무료 플랜 한도 절약).
 //
 
 import Foundation
@@ -14,217 +14,164 @@ import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
 
-// MARK: - 이벤트 정의
+// MARK: - 이벤트 정의 (명세서)
 
 public enum AnalyticsEvent: Sendable {
-  case auth(AuthEventType, AuthEventData)
-  case battle(BattleEventType, BattleEventData)
-  case session(SessionEventType, SessionEventData)
+  /// 소셜 가입 완료 및 메인 진입 시.
+  case signUp(method: String)
+  /// 배틀 각 단계 완료 시 (pre_vote / audio_end / post_vote).
+  case battleStep(BattleStepData)
+  /// 리포트 조회/공유 클릭 시.
+  case reportAction(ReportActionData)
+  /// 댓글 등록 성공 시.
+  case communityAction(CommunityActionData)
+  /// 보상형 광고 시청 완료 시.
+  case adRevenue(placement: String)
 }
 
-public enum AuthEventType: String, Sendable {
-  case loginSucceeded = "login_succeeded"
-  case loginFailed = "login_failed"
-  case signupSucceeded = "signup_succeeded"
-  case signupFailed = "signup_failed"
+public enum BattleStep: String, Sendable {
+  case preVote = "pre_vote"
+  case audioEnd = "audio_end"
+  case postVote = "post_vote"
 }
 
-public struct AuthEventData: Sendable {
-  public let username: String?
-  public let userTag: String?
-  public let socialType: String?
-  public let isNewUser: Bool?
-  public let errorDescription: String?
+public struct BattleStepData: Sendable {
+  public let stepName: BattleStep
+  public let contentID: String
+  /// 선택지(좌/우 등). 없으면 미전송.
+  public let choice: String?
+  /// 사전→사후 투표 변경 여부. post_vote 에서만 유의미.
+  public let isChanged: Bool?
 
   public init(
-    username: String? = nil,
-    userTag: String? = nil,
-    socialType: String? = nil,
-    isNewUser: Bool? = nil,
-    errorDescription: String? = nil
+    stepName: BattleStep,
+    contentID: String,
+    choice: String? = nil,
+    isChanged: Bool? = nil
   ) {
-    self.username = username
-    self.userTag = userTag
-    self.socialType = socialType
-    self.isNewUser = isNewUser
-    self.errorDescription = errorDescription
+    self.stepName = stepName
+    self.contentID = contentID
+    self.choice = choice
+    self.isChanged = isChanged
   }
 }
 
-public enum BattleEventType: String, Sendable {
-  case viewed = "battle_viewed"
-  case detailOpened = "battle_detail_opened"
-  case prevoteSubmitted = "battle_prevote_submitted"
-  case postvoteSubmitted = "battle_postvote_submitted"
+public enum ReportActionType: String, Sendable {
+  case view
+  case share
 }
 
-public struct BattleEventData: Sendable {
-  public let battleID: Int?
-  public let battleTitle: String?
-  public let voteSide: String?
-  public let source: String?
+public struct ReportActionData: Sendable {
+  public let actionType: ReportActionType
+  /// 대표 지표(최상위 철학자 유형 등). 없으면 미전송.
+  public let topIndicator: String?
 
-  public init(
-    battleID: Int? = nil,
-    battleTitle: String? = nil,
-    voteSide: String? = nil,
-    source: String? = nil
-  ) {
-    self.battleID = battleID
-    self.battleTitle = battleTitle
-    self.voteSide = voteSide
-    self.source = source
+  public init(actionType: ReportActionType, topIndicator: String? = nil) {
+    self.actionType = actionType
+    self.topIndicator = topIndicator
   }
 }
 
-public enum SessionEventType: String, Sendable {
-  case logoutSucceeded = "logout_succeeded"
-}
+public struct CommunityActionData: Sendable {
+  public let contentID: String
+  public let commentLength: Int
 
-public struct SessionEventData: Sendable {
-  public let provider: String
-
-  public init(provider: String) {
-    self.provider = provider
+  public init(contentID: String, commentLength: Int) {
+    self.contentID = contentID
+    self.commentLength = commentLength
   }
 }
 
 // MARK: - UseCase
 
 public struct AnalyticsUseCase: Sendable {
+  /// 로그인 성공 직후 유저 고유 ID 를 Mixpanel 에 연결.
+  public var identify: @Sendable (_ userID: String, _ method: String?) -> Void
+  /// 핵심 퍼널 이벤트 트래킹.
   public var track: @Sendable (_ event: AnalyticsEvent) -> Void
 
-  public init(track: @escaping @Sendable (_ event: AnalyticsEvent) -> Void) {
+  public init(
+    identify: @escaping @Sendable (_ userID: String, _ method: String?) -> Void,
+    track: @escaping @Sendable (_ event: AnalyticsEvent) -> Void
+  ) {
+    self.identify = identify
     self.track = track
   }
 }
 
 extension AnalyticsUseCase: DependencyKey {
-  public static let liveValue = AnalyticsUseCase { event in
-    let mixpanel = Mixpanel.mainInstance()
-    let userSession = currentUserSession()
+  public static let liveValue = AnalyticsUseCase(
+    identify: { userID, method in
+      guard !userID.isEmpty else { return }
 
-    switch event {
-    case let .auth(type, data):
-      if type == .loginSucceeded || type == .signupSucceeded {
-        identifyIfPossible(
-          mixpanel: mixpanel,
-          userTag: data.userTag,
-          socialType: data.socialType,
-          isNewUser: data.isNewUser,
-          username: data.username
-        )
+      let mixpanel = Mixpanel.mainInstance()
+      mixpanel.identify(distinctId: userID)
+      MPSessionReplay.getInstance()?.identify(distinctId: userID)
+
+      var properties: Properties = [:]
+      if let method, !method.isEmpty {
+        properties["provider"] = method
       }
-      let properties = authProperties(data, userSession: userSession)
-      #logDebug("Mixpanel track", ["event": type.rawValue, "properties": String(describing: properties)])
-      mixpanel.track(event: type.rawValue, properties: properties)
-
-    case let .battle(type, data):
-      let properties = battleProperties(data, userSession: userSession)
-      #logDebug("Mixpanel track", ["event": type.rawValue, "properties": String(describing: properties)])
-      mixpanel.track(event: type.rawValue, properties: properties)
-
-    case let .session(type, data):
-      let properties = sessionProperties(data, userSession: userSession)
-      #logDebug("Mixpanel track", ["event": type.rawValue, "properties": String(describing: properties)])
-      mixpanel.track(event: type.rawValue, properties: properties)
-      if type == .logoutSucceeded {
-        mixpanel.reset()
-        MPSessionReplay.getInstance()?.identify(distinctId: mixpanel.distinctId)
+      if !properties.isEmpty {
+        mixpanel.people.set(properties: properties)
       }
+    },
+    track: { event in
+      let mixpanel = Mixpanel.mainInstance()
+      let name = eventName(event)
+      let properties = eventProperties(event)
+      #logDebug("Mixpanel track", ["event": name, "properties": String(describing: properties)])
+      mixpanel.track(event: name, properties: properties)
     }
-  }
+  )
 
-  public static let testValue = AnalyticsUseCase { _ in }
+  public static let testValue = AnalyticsUseCase(identify: { _, _ in }, track: { _ in })
   public static let previewValue = testValue
 
-  private static func identifyIfPossible(
-    mixpanel: MixpanelInstance,
-    userTag: String?,
-    socialType: String?,
-    isNewUser: Bool?,
-    username: String?
-  ) {
-    let distinctID = userTag?.nilIfEmpty
-      ?? username?.nilIfEmpty
-      ?? "\(socialType ?? "unknown")-\(UUID().uuidString)"
-    mixpanel.identify(distinctId: distinctID)
-    MPSessionReplay.getInstance()?.identify(distinctId: distinctID)
-
-    var properties: Properties = [:]
-    if let socialType {
-      properties["provider"] = socialType
+  private static func eventName(_ event: AnalyticsEvent) -> String {
+    switch event {
+    case .signUp: "sign_up"
+    case .battleStep: "battle_step"
+    case .reportAction: "report_action"
+    case .communityAction: "community_action"
+    case .adRevenue: "ad_revenue"
     }
-    if let isNewUser {
-      properties["is_new_user"] = isNewUser
-    }
-    if let username, !username.isEmpty {
-      properties["$name"] = username
-      properties["username"] = username
-    }
-    if let userTag, !userTag.isEmpty {
-      properties["user_tag"] = userTag
-    }
-
-    guard !properties.isEmpty else { return }
-    mixpanel.people.set(properties: properties)
   }
 
-  private static func authProperties(_ data: AuthEventData, userSession: UserSession) -> Properties {
-    var properties = commonUserProperties(userSession: userSession)
-    if let username = data.username {
-      properties["username"] = username
-    }
-    if let userTag = data.userTag {
-      properties["user_tag"] = userTag
-    }
-    if let socialType = data.socialType {
-      properties["social_type"] = socialType
-    }
-    if let isNewUser = data.isNewUser {
-      properties["is_new_user"] = isNewUser
-    }
-    if let errorDescription = data.errorDescription {
-      properties["error_description"] = errorDescription
-    }
-    return properties
-  }
+  private static func eventProperties(_ event: AnalyticsEvent) -> Properties {
+    switch event {
+    case let .signUp(method):
+      return ["method": method]
 
-  private static func battleProperties(_ data: BattleEventData, userSession: UserSession) -> Properties {
-    var properties = commonUserProperties(userSession: userSession)
-    if let battleID = data.battleID {
-      properties["battle_id"] = battleID
-    }
-    if let battleTitle = data.battleTitle {
-      properties["battle_title"] = battleTitle
-    }
-    if let voteSide = data.voteSide {
-      properties["vote_side"] = voteSide
-    }
-    if let source = data.source {
-      properties["source"] = source
-    }
-    return properties
-  }
+    case let .battleStep(data):
+      var properties: Properties = [
+        "step_name": data.stepName.rawValue,
+        "content_id": data.contentID,
+      ]
+      if let choice = data.choice {
+        properties["choice"] = choice
+      }
+      if let isChanged = data.isChanged {
+        properties["is_changed"] = isChanged
+      }
+      return properties
 
-  private static func sessionProperties(_ data: SessionEventData, userSession: UserSession) -> Properties {
-    var properties = commonUserProperties(userSession: userSession)
-    properties["provider"] = data.provider
-    return properties
-  }
+    case let .reportAction(data):
+      var properties: Properties = ["action_type": data.actionType.rawValue]
+      if let topIndicator = data.topIndicator {
+        properties["top_indicator"] = topIndicator
+      }
+      return properties
 
-  private static func currentUserSession() -> UserSession {
-    @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
-    return userSession
-  }
+    case let .communityAction(data):
+      return [
+        "content_id": data.contentID,
+        "comment_length": data.commentLength,
+      ]
 
-  private static func commonUserProperties(userSession: UserSession) -> Properties {
-    var properties: Properties = [:]
-    if !userSession.name.isEmpty {
-      properties["username"] = userSession.name
+    case let .adRevenue(placement):
+      return ["placement": placement]
     }
-    properties["provider"] = userSession.provider.rawValue
-    return properties
   }
 }
 
@@ -233,8 +180,4 @@ public extension DependencyValues {
     get { self[AnalyticsUseCase.self] }
     set { self[AnalyticsUseCase.self] = newValue }
   }
-}
-
-private extension String {
-  var nilIfEmpty: String? { isEmpty ? nil : self }
 }

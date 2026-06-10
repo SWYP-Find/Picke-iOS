@@ -1,27 +1,24 @@
 //
-//  rofileTests.swift
-//  Presentation.rofileTests
+//  ProfileTests.swift
+//  Presentation.ProfileTests
 //
 //  Created by Roy on 2026-06-08.
 //
 
+@testable import Profile
 import Testing
-@testable import rofile
 
-struct rofileTests {
+struct ProfileTests {
+  @Test
+  func profileExample() {
+    // This is an example of a test case.
+    #expect(true)
+  }
 
-    @Test
-    func rofileExample() {
-        // This is an example of a test case.
-        #expect(true)
-    }
-
-    @Test
-    func rofileLogicTest() {
-        // Add your test logic here.
-        let result = true
-        #expect(result == true)
-    }
-
+  @Test
+  func profileLogicTest() {
+    // Add your test logic here.
+    let result = true
+    #expect(result == true)
+  }
 }
-

@@ -221,6 +221,7 @@ public struct ChatRoomFeature {
 
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.audioPlayer) private var audioPlayer
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -486,6 +487,9 @@ extension ChatRoomFeature {
         if !state.hasFinishedListening {
           state.hasFinishedListening = true
           UserDefaults.standard.set(true, forKey: State.listenedKey(battleId: state.battleId))
+          analyticsUseCase.track(
+            .battleStep(BattleStepData(stepName: .audioEnd, contentID: "\(state.battleId)"))
+          )
         }
         state.isPlaying = false
         if !state.hasPresentedFinalVoteAlert {

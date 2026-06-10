@@ -116,6 +116,7 @@ public struct ProfileFeature {
 
   @Dependency(\.profileUseCase) private var profileUseCase
   @Dependency(\.rewardedAdClient) private var rewardedAdClient
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -165,10 +166,11 @@ extension ProfileFeature {
       return .send(.delegate(.chargePoint))
 
     case .freeChargeTapped:
-      // 무료 충전 → 리워드 광고 표시, 보상 획득 시 포인트 갱신.
-      return .run { [rewardedAdClient] send in
+      // 무료 충전 → 리워드 광고 표시, 보상 획득 시 ad_revenue 트래킹 + 포인트 갱신.
+      return .run { [rewardedAdClient, analyticsUseCase] send in
         let earned = await rewardedAdClient.showRewardedAd()
         if earned {
+          analyticsUseCase.track(.adRevenue(placement: "충전소"))
           await send(.async(.fetchProfile))
         }
       }

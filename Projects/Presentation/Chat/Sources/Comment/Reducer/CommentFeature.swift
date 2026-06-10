@@ -155,6 +155,7 @@ public struct CommentFeature {
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.commentUseCase) private var commentUseCase
   @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -427,11 +428,16 @@ extension CommentFeature {
         }
       }()
       // 관점 등록: POST /battles/{id}/perspectives, body {content, optionId}
-      return .run { [battle = battleUseCase] send in
+      return .run { [battle = battleUseCase, analyticsUseCase] send in
         let result = await Result {
           try await battle.createPerspective(battleId: battleId, content: content, optionId: optionId)
         }
         .mapError(BattleError.from)
+        if case .success = result {
+          analyticsUseCase.track(
+            .communityAction(CommunityActionData(contentID: "\(battleId)", commentLength: content.count))
+          )
+        }
         return await send(.inner(.createCommentResponse(result)))
       }
       .cancellable(id: CancelID.createComment, cancelInFlight: false)

@@ -90,7 +90,6 @@ public struct SettingsFeature {
 
   @Dependency(\.authUseCase) private var authUseCase
   @Dependency(\.keychainManager) private var keychainManager
-  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -158,15 +157,12 @@ extension SettingsFeature {
     case .performLogout:
       guard !state.isProcessing else { return .none }
       state.isProcessing = true
-      @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
-      let provider = userSession.provider.rawValue
-      return .run { [analyticsUseCase] send in
+      return .run { send in
         do {
           _ = try await authUseCase.logout()
         } catch {
           Log.error("[SettingsFeature] logout failed: \(error.localizedDescription)")
         }
-        analyticsUseCase.track(.session(.logoutSucceeded, SessionEventData(provider: provider)))
         await send(.inner(.sessionCleared))
       }
       .cancellable(id: CancelID.auth, cancelInFlight: true)

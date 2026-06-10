@@ -199,17 +199,12 @@ extension LoginFeature {
       case let .success(loginEntity):
         state.loginEntity = loginEntity
 
-        analyticsUseCase.track(
-          .auth(
-            loginEntity.isNewUser ? .signupSucceeded : .loginSucceeded,
-            AuthEventData(
-              username: loginEntity.name,
-              userTag: loginEntity.userTag,
-              socialType: loginEntity.provider.rawValue,
-              isNewUser: loginEntity.isNewUser
-            )
-          )
-        )
+        // 로그인 성공 직후 유저 고유 ID(userTag) 를 Mixpanel 에 연결.
+        analyticsUseCase.identify(loginEntity.userTag, loginEntity.provider.rawValue)
+        // 신규 가입(메인 진입) 시 sign_up.
+        if loginEntity.isNewUser {
+          analyticsUseCase.track(.signUp(method: loginEntity.provider.rawValue))
+        }
 
         guard loginEntity.isNewUser else {
           return .send(.delegate(.presentMainTab))
@@ -224,15 +219,6 @@ extension LoginFeature {
       case let .failure(error):
         #logNetwork("로그인 실패", error.localizedDescription)
         let socialType = state.currentSocialType
-        analyticsUseCase.track(
-          .auth(
-            .loginFailed,
-            AuthEventData(
-              socialType: socialType?.rawValue,
-              errorDescription: error.errorDescription ?? error.localizedDescription
-            )
-          )
-        )
         return .run { _ in
           await MainActor.run {
             let errorMessage = switch socialType {
