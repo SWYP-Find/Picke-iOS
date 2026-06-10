@@ -48,12 +48,12 @@ private extension RecapLockedView {
 
       ZStack {
         Circle().fill(.beige600)
-        Image(systemName: "brain.head.profile")
-          .font(.system(size: 30))
-          .foregroundStyle(.gray300)
+        Image(asset: .lock)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 30, height: 30)
       }
       .frame(width: 68, height: 68)
-      .grayscale(1)
       .opacity(0.7)
 
       Text("아직 분석할 기록이 부족해요.\n배틀에 참여하면 성향을 확인할 수 있어요!")
