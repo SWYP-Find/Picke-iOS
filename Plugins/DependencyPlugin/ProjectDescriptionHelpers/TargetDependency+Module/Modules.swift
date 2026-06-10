@@ -32,6 +32,7 @@ public extension ModulePath {
 
     public static let name: String = "Presentation"
       
+      case Notification
   }
 }
 
