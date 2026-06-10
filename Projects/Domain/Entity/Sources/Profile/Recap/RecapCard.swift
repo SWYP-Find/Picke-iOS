@@ -31,4 +31,13 @@ public struct RecapCard: Equatable {
     self.keywordTags = keywordTags
     self.imageURL = imageURL
   }
+
+  public static let empty = RecapCard(
+    philosopherType: "",
+    philosopherLabel: "",
+    typeName: "",
+    description: "",
+    keywordTags: [],
+    imageURL: ""
+  )
 }

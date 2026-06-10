@@ -31,6 +31,10 @@ public struct RecapScores: Equatable {
     self.ideal = ideal
   }
 
+  public static let empty = RecapScores(
+    principle: 0, reason: 0, individual: 0, change: 0, inner: 0, ideal: 0
+  )
+
   /// 레이더 각도 순서 (원칙↑ → 시계방향: 이성·개인·변화·내면·직관).
   public var axes: [RecapScoreAxis] {
     [

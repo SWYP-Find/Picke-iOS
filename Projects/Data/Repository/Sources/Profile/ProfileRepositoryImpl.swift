@@ -39,10 +39,11 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
   public func fetchRecap() async throws -> PhilosopherRecap {
     let dto: RecapResponseDTO = try await provider.request(.recap)
 
+    // 배틀 5개 미만 사용자는 서버가 data: nil (200) 로 응답 → 잠금 상태.
+    // 에러로 던지지 않고 빈 recap(totalParticipation 0 → isLocked)으로 반환.
     guard let data = dto.data else {
-      let message = dto.error?.message ?? "리캡 응답이 비어 있습니다"
-      Log.error("[ProfileRepositoryImpl] empty recap payload: \(message)")
-      throw ProfileError.backendError(message)
+      Log.info("[ProfileRepositoryImpl] recap 빈 응답 → 잠금 화면 반환")
+      return .empty
     }
 
     return data.toDomain()

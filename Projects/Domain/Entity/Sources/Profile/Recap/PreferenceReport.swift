@@ -25,4 +25,11 @@ public struct PreferenceReport: Equatable {
     self.battleWinRate = battleWinRate
     self.favoriteTopics = favoriteTopics
   }
+
+  public static let empty = PreferenceReport(
+    totalParticipation: 0,
+    opinionChanges: 0,
+    battleWinRate: 0,
+    favoriteTopics: []
+  )
 }
