@@ -1,6 +1,6 @@
 //
 //  RewardedAdClient.swift
-//  Profile
+//  UseCase
 //
 //  무료 충전 — GoogleMobileAds 리워드 동영상 광고(네이티브).
 //  광고 클릭 시 랜딩(웹뷰)은 SDK 인앱 브라우저로 자동 처리되며,
@@ -43,8 +43,13 @@ public extension DependencyValues {
 /// 리워드 광고 1회 표시를 책임지는 프레젠터. 표시 종료(보상/닫힘/실패)까지 self 를 유지한다.
 @MainActor
 private final class RewardedAdPresenter: NSObject, FullScreenContentDelegate {
-  // TODO: 실제 발급된 리워드 광고 유닛 ID 로 교체 (현재 Google 테스트 ID).
-  private let adUnitID = "ca-app-pub-3940256099942544/1712485313"
+  // 리워드 광고 유닛 ID — xcconfig(REWARD_AD_UNIT) → Info.plist → Bundle 에서 주입.
+  // 값이 없으면 Google 테스트 ID 로 폴백.
+  private let adUnitID: String = {
+    let key = Bundle.main.object(forInfoDictionaryKey: "REWARD_AD_UNIT") as? String
+    if let key, !key.isEmpty { return key }
+    return "ca-app-pub-3940256099942544/1712485313"
+  }()
 
   private var rewardedAd: RewardedAd?
   private var continuation: CheckedContinuation<Bool, Never>?

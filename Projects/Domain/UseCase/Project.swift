@@ -15,6 +15,7 @@ let project = Project.makeModule(
     .SPM.weaveDI,
     .SPM.mixpanel,
     .SPM.mixpanelSessionReplay,
+    .SPM.googleMobileAds,
   ],
   sources: ["Sources/**"],
   hasTests: true

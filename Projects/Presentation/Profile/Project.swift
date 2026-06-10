@@ -14,7 +14,6 @@ let project = Project.makeAppModule(
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
-    .SPM.googleMobileAds,
     .Presentation(implements: .Web),
     .Presentation(implements: .Notification),
   ],
