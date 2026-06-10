@@ -11,6 +11,7 @@ import DesignSystem
 
 /// 홈 화면 최상단 GNB 위 헤더 (PicKé 로고 + 알림 아이콘).
 struct HomeHeaderView: View {
+  var hasUnread: Bool = false
   let onNotificationTapped: () -> Void
 
   var body: some View {
@@ -27,6 +28,14 @@ struct HomeHeaderView: View {
           .resizable()
           .scaledToFit()
           .frame(width: 24, height: 24)
+          .overlay(alignment: .topTrailing) {
+            if hasUnread {
+              Circle()
+                .fill(.errorDefault)
+                .frame(width: 6, height: 6)
+                .offset(x: 1, y: -1)
+            }
+          }
       }
     }
     .padding(.horizontal, 24)

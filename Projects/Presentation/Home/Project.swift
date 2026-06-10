@@ -14,7 +14,8 @@ let project = Project.makeAppModule(
     .SPM.kingfisher,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
-    .Presentation(implements: .Chat)
+    .Presentation(implements: .Chat),
+    .Presentation(implements: .Notification),
   ],
   sources: ["Sources/**"]
 )

@@ -11,6 +11,7 @@ BUNDLE_ID = "io.Picke.co"
 OUTPUT_DIR = "./fastlane/output"
 IPA_FILENAME = "#{APP_NAME}.ipa"
 TEAM_ID = ENV["TEAM_ID"] || "N94CS4N6VR"
+MATCH_KEYCHAIN_NAME = ENV["MATCH_KEYCHAIN_NAME"] || "match_keychain"
 
 # 릴리스용 변수 (누락되어 있던 부분 보완)
 APP_RELEASE_NAME = APP_NAME
@@ -19,9 +20,30 @@ APP_RELEASE_SCHEME = SCHEME
 APP_STAGE_NAME = STAGE_SCHEME
 APP_STAGE_SCHEME = STAGE_SCHEME
 
+def unlock_match_keychain
+  keychain_password = ENV["MATCH_KEYCHAIN_PASSWORD"].to_s
+  if keychain_password.empty?
+    UI.important("MATCH_KEYCHAIN_PASSWORD is missing. macOS may ask for the match keychain password.")
+    return
+  end
+
+  keychain_path = File.expand_path("~/Library/Keychains/#{MATCH_KEYCHAIN_NAME}-db")
+  unless File.exist?(keychain_path)
+    UI.message("match keychain does not exist yet: #{keychain_path}")
+    return
+  end
+
+  unlock_keychain(
+    path: keychain_path,
+    password: keychain_password,
+    add_to_search_list: true
+  )
+end
+
 platform :ios do
-
-
+  before_all do
+    unlock_match_keychain
+  end
 
   # 🚀 TestFlight 업로드 (Debug)
   desc "Upload to TestFlight (Debug)"
@@ -35,13 +57,57 @@ platform :ios do
       in_house: false
     )
 
+    # 빌드 번호 자동 증가 — TestFlight 최신 빌드 번호 + 1
+    begin
+      current_build_number = latest_testflight_build_number(
+        app_identifier: BUNDLE_ID,
+        platform: "ios"
+      )
+      puts "📱 TestFlight 최신 빌드 번호: #{current_build_number}"
+    rescue => e
+      puts "⚠️ TestFlight 빌드 번호 조회 실패, 기본값 1 사용: #{e.message}"
+      current_build_number = 1
+    end
+
+    begin
+      live_build_number = app_store_build_number(
+        app_identifier: BUNDLE_ID,
+        platform: "ios"
+      )
+      puts "🏪 App Store 라이브 빌드 번호: #{live_build_number}"
+      current_build_number = [current_build_number, live_build_number].max
+    rescue => e
+      puts "⚠️ App Store 빌드 번호 조회 실패: #{e.message}"
+    end
+
+    new_build_number = current_build_number + 1
+    puts "🔢 새로운 빌드 번호: #{new_build_number}"
+
+    # Extension+String.swift 의 빌드 번호 갱신 (tuist generate 시 CFBundleVersion 으로 반영)
+    extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
+    extension_content = File.read(extension_file_path)
+    extension_content = extension_content.gsub(
+      /public static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
+      "public static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {"
+    )
+    File.write(extension_file_path, extension_content)
+    puts "✅ 빌드 번호를 #{new_build_number}로 업데이트 완료"
+
+    # 갱신된 빌드 번호 반영을 위해 Tuist 강제 재생성
+    Dir.chdir("..") do
+      puts "🔧 Tuist workspace 재생성 중..."
+      sh("tuist generate --no-open")
+      puts "✅ Tuist workspace 재생성 완료"
+    end
 
     match(
       type: "appstore",
       readonly: true,
       git_url: "git@github.com:Roy-wonji/FastlaneMatch.git",
       storage_mode: "git",
-      app_identifier: ["io.Picke.co"]
+      app_identifier: ["io.Picke.co"],
+      keychain_name: MATCH_KEYCHAIN_NAME,
+      keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
     )
 
     ipa_path = nil
@@ -203,7 +269,9 @@ platform :ios do
         readonly: true,
         git_url: "git@github.com:Roy-wonji/FastlaneMatch.git",
         storage_mode: "git",
-        app_identifier: ["io.Picke.co"]
+        app_identifier: ["io.Picke.co"],
+        keychain_name: MATCH_KEYCHAIN_NAME,
+        keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
       )
 
       ipa_path = nil

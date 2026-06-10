@@ -16,15 +16,18 @@ import SwiftUI
 public struct PickeNavigationBar<Trailing: View>: View {
   private let onBack: (() -> Void)?
   private let centerIcon: Image?
+  private let centerTitle: String?
   private let trailing: () -> Trailing
 
   public init(
     onBack: (() -> Void)? = nil,
     centerIcon: Image? = nil,
+    centerTitle: String? = nil,
     @ViewBuilder trailing: @escaping () -> Trailing
   ) {
     self.onBack = onBack
     self.centerIcon = centerIcon
+    self.centerTitle = centerTitle
     self.trailing = trailing
   }
 
@@ -56,7 +59,11 @@ public struct PickeNavigationBar<Trailing: View>: View {
 
   @ViewBuilder
   private var centerArea: some View {
-    if let centerIcon {
+    if let centerTitle {
+      Text(centerTitle)
+        .pretendardFont(family: .SemiBold, size: 16)
+        .kerning(-0.4)
+    } else if let centerIcon {
       centerIcon
         .font(.system(size: 16, weight: .semibold))
         .frame(width: 24, height: 24)
@@ -69,8 +76,9 @@ public struct PickeNavigationBar<Trailing: View>: View {
 public extension PickeNavigationBar where Trailing == EmptyView {
   init(
     onBack: (() -> Void)? = nil,
-    centerIcon: Image? = nil
+    centerIcon: Image? = nil,
+    centerTitle: String? = nil
   ) {
-    self.init(onBack: onBack, centerIcon: centerIcon) { EmptyView() }
+    self.init(onBack: onBack, centerIcon: centerIcon, centerTitle: centerTitle) { EmptyView() }
   }
 }

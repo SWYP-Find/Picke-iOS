@@ -87,6 +87,7 @@ public struct LoginFeature {
   @Dependency(\.appleManger) var appleLoginManger
   @Dependency(\.unifiedOAuthUseCase) var unifiedOAuthUseCase
   @Dependency(\.continuousClock) var clock
+  @Dependency(\.analyticsUseCase) var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -197,6 +198,13 @@ extension LoginFeature {
       switch result {
       case let .success(loginEntity):
         state.loginEntity = loginEntity
+
+        // 로그인 성공 직후 유저 고유 ID(userTag) 를 Mixpanel 에 연결.
+        analyticsUseCase.identify(loginEntity.userTag, loginEntity.provider.rawValue)
+        // 신규 가입(메인 진입) 시 sign_up.
+        if loginEntity.isNewUser {
+          analyticsUseCase.track(.signUp(method: loginEntity.provider.rawValue))
+        }
 
         guard loginEntity.isNewUser else {
           return .send(.delegate(.presentMainTab))

@@ -7,6 +7,7 @@ force_for_new_certificates(true)
 shallow_clone(true)
 skip_certificate_matching(true)
 skip_confirmation(true)
+keychain_name(ENV["MATCH_KEYCHAIN_NAME"] || "match_keychain")
 keychain_password(ENV["MATCH_KEYCHAIN_PASSWORD"])
 
 # .env 파일에서 API 키가 있으면 임시 JSON 파일 생성 후 사용 완료시 자동 삭제

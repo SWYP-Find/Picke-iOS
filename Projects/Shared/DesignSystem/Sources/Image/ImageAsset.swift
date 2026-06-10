@@ -50,4 +50,9 @@ public enum ImageAsset: String {
   case avatarSunja
 
   case none
+
+  // MARK: - 프로필
+
+  case history
+  case lock
 }

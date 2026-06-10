@@ -80,6 +80,10 @@ public struct BattleUseCaseImpl: BattleInterface {
   public func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage {
     return try await battleRepository.fetchRecommendedBattles(battleId: battleId)
   }
+
+  public func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal {
+    return try await battleRepository.proposeBattle(draft)
+  }
 }
 
 extension BattleUseCaseImpl: DependencyKey {

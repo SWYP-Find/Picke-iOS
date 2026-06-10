@@ -7,10 +7,10 @@
 
 import ComposableArchitecture
 import DomainInterface
-import UseCase
 import Entity
 import Foundation
 import LogMacro
+import UseCase
 
 @Reducer
 public struct HomeFeature {
@@ -28,6 +28,9 @@ public struct HomeFeature {
     public var quizzes: [QuizQuestion] = []
     public var votes: [VoteQuestion] = []
     public var newBattles: [NewBattle] = []
+
+    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (알림 화면과 전역 공유).
+    @Shared(.inMemory("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
 
     public var currentQuiz: QuizQuestion? { quizzes.first }
     public var currentVote: VoteQuestion? { votes.first }
@@ -53,6 +56,7 @@ public struct HomeFeature {
     case hotBattleTapped(HotBattle)
     case bestBattleTapped(BestBattle)
     case newBattleTapped(NewBattle)
+    case notificationTapped
   }
 
   public enum Section: Equatable {
@@ -72,6 +76,10 @@ public struct HomeFeature {
 
   public enum DelegateAction: Equatable {
     case presentPreVote(battleId: Int)
+    /// "더보기" → 탐색 탭으로 이동.
+    case moveToExplore
+    /// 알림(종) 아이콘 → 알림받기 화면.
+    case openNotification
   }
 
   nonisolated enum CancelID: Hashable {
@@ -114,7 +122,7 @@ extension HomeFeature {
       return .send(.async(.fetchHome))
 
     case .seeMoreTapped:
-      return .none
+      return .send(.delegate(.moveToExplore))
 
     case let .voteTapped(question):
       return .send(.delegate(.presentPreVote(battleId: question.battleId)))
@@ -130,6 +138,9 @@ extension HomeFeature {
 
     case let .newBattleTapped(battle):
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
+
+    case .notificationTapped:
+      return .send(.delegate(.openNotification))
     }
   }
 
@@ -182,8 +193,8 @@ extension HomeFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .presentPreVote:
-      .none
+    case .presentPreVote, .moveToExplore, .openNotification:
+      return .none
     }
   }
 }

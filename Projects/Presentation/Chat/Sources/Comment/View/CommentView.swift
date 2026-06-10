@@ -261,6 +261,12 @@ private extension CommentView {
       }
     }
     .frame(maxWidth: .infinity)
+    // 전체 탭을 가로지르는 연속 베이스 라인 (셀별로 끊겨 보이던 문제 해결).
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(.neutral200)
+        .frame(height: 1)
+    }
   }
 
   @ViewBuilder
@@ -295,8 +301,8 @@ private extension CommentView {
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) {
           Rectangle()
-            .fill(isSelected ? Color.primary500 : Color.neutral200)
-            .frame(height: isSelected ? 2.5 : 1)
+            .fill(isSelected ? Color.primary500 : Color.clear)
+            .frame(height: 2.5)
         }
     }
     .buttonStyle(.plain)

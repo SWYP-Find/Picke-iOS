@@ -211,6 +211,10 @@ extension InfoPlistDictionary {
     merging(["GADApplicationIdentifier": .string(value)]) { _, new in new }
   }
 
+  func setRewardAdUnit(_ value: String) -> InfoPlistDictionary {
+    merging(["REWARD_AD_UNIT": .string(value)]) { _, new in new }
+  }
+
   func setSKAdNetworkItems(_ identifiers: [String]) -> InfoPlistDictionary {
     merging([
       "SKAdNetworkItems": .array(

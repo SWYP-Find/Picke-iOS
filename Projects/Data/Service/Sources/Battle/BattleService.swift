@@ -21,6 +21,7 @@ public enum BattleService {
   case createPerspective(battleId: Int, body: CreatePerspectiveRequest)
   case myPerspective(battleId: Int)
   case recommendations(battleId: Int)
+  case createProposal(body: BattleProposalRequest)
 }
 
 extension BattleService: BaseTargetType {
@@ -50,6 +51,8 @@ extension BattleService: BaseTargetType {
       return BattleAPI.myPerspective(battleId: battleId).description
     case let .recommendations(battleId):
       return BattleAPI.recommendations(battleId: battleId).description
+    case .createProposal:
+      return BattleAPI.proposals.description
     }
   }
 
@@ -59,7 +62,7 @@ extension BattleService: BaseTargetType {
     switch self {
     case .today, .detail, .scenario, .voteStats, .perspectives, .myPerspective, .recommendations:
       return .get
-    case .preVote, .postVote, .createPerspective:
+    case .preVote, .postVote, .createPerspective, .createProposal:
       return .post
     }
   }
@@ -82,6 +85,8 @@ extension BattleService: BaseTargetType {
       guard let dict = query.toDictionary else { return nil }
       return dict.isEmpty ? nil : dict
     case let .createPerspective(_, body):
+      return body.toDictionary
+    case let .createProposal(body):
       return body.toDictionary
     case .myPerspective:
       return nil

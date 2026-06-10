@@ -155,6 +155,7 @@ public struct CommentFeature {
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.commentUseCase) private var commentUseCase
   @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -427,11 +428,16 @@ extension CommentFeature {
         }
       }()
       // 관점 등록: POST /battles/{id}/perspectives, body {content, optionId}
-      return .run { [battle = battleUseCase] send in
+      return .run { [battle = battleUseCase, analyticsUseCase] send in
         let result = await Result {
           try await battle.createPerspective(battleId: battleId, content: content, optionId: optionId)
         }
         .mapError(BattleError.from)
+        if case .success = result {
+          analyticsUseCase.track(
+            .communityAction(CommunityActionData(contentID: "\(battleId)", commentLength: content.count))
+          )
+        }
         return await send(.inner(.createCommentResponse(result)))
       }
       .cancellable(id: CancelID.createComment, cancelInFlight: false)
@@ -569,7 +575,16 @@ extension CommentFeature {
     case let .createCommentResponse(result):
       state.isSubmitting = false
       switch result {
-      case .success:
+      case let .success(perspective):
+        // 서버는 댓글을 "유저가 투표한 진영"에 저장한다(요청 optionId 무시). 응답의 실제 진영
+        // (perspective.option)으로 필터를 전환해 방금 쓴 댓글이 그 진영 탭에서 보이도록 한다.
+        let votedOptionId = perspective.option.optionId
+        state.myOptionId = votedOptionId
+        if votedOptionId == state.voteSummary.optionA.optionId {
+          state.selectedFilter = .optionA
+        } else if votedOptionId == state.voteSummary.optionB.optionId {
+          state.selectedFilter = .optionB
+        }
         return .send(.async(.fetchPerspectives(reset: true)))
       case let .failure(error):
         Log.error("[CommentFeature] createComment failed: \(error.localizedDescription)")

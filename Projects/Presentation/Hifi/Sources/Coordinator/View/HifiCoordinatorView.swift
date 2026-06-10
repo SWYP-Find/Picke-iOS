@@ -9,6 +9,7 @@ import SwiftUI
 
 import Chat
 import ComposableArchitecture
+import Notification
 import TCAFlow
 
 public struct HifiCoordinatorView: View {
@@ -25,6 +26,9 @@ public struct HifiCoordinatorView: View {
         HifiView(store: hifiStore)
       case let .chat(chatStore):
         ChatCoordinatorView(store: chatStore)
+      case let .notification(notificationStore):
+        NotificationCoordinatorView(store: notificationStore)
+          .toolbar(.hidden, for: .tabBar)
       }
     }
   }

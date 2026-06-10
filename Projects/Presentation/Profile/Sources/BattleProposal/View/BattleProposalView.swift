@@ -1,0 +1,223 @@
+//
+//  BattleProposalView.swift
+//  Profile
+//
+//  배틀 주제 제안(배틀 만들기) UI — picke.pen `배틀 주제 제안`.
+//  카테고리 칩 + 주제 + 양측 입장(A/B) + 부가 설명 + 제안하기(-30P).
+//
+
+import SwiftUI
+
+import ComposableArchitecture
+import DesignSystem
+import Entity
+
+@ViewAction(for: BattleProposalFeature.self)
+public struct BattleProposalView: View {
+  @Bindable public var store: StoreOf<BattleProposalFeature>
+  @FocusState private var isInputFocused: Bool
+
+  public init(store: StoreOf<BattleProposalFeature>) {
+    self.store = store
+  }
+
+  public var body: some View {
+    VStack(spacing: 0) {
+      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "배틀 만들기")
+        .foregroundStyle(.gray500)
+
+      ScrollView {
+        VStack(spacing: 16) {
+          categoryField()
+          topicField()
+          stanceField()
+          descriptionField()
+          submitButton()
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 16)
+      }
+      .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize)
+      .background(
+        Color.beige200
+          .onTapGesture {
+            isInputFocused = false
+          }
+      )
+    }
+    .background(Color.beige200.ignoresSafeArea())
+    .toolbar(.hidden, for: .navigationBar)
+    .toolbar(.hidden, for: .tabBar)
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
+  }
+}
+
+private extension BattleProposalView {
+  // MARK: 공통 라벨
+
+  @ViewBuilder
+  func fieldLabel(_ text: String) -> some View {
+    Text(text)
+      .pretendardFont(family: .Medium, size: 12)
+      .foregroundStyle(.gray400)
+      .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  // MARK: 카테고리
+
+  @ViewBuilder
+  func categoryField() -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      fieldLabel("카테고리 *")
+
+      HStack(spacing: 0) {
+        ForEach(Array(BattleProposalCategory.allCases.enumerated()), id: \.element.id) { index, category in
+          let isSelected = store.selectedCategory == category
+          Button {
+            send(.categorySelected(category))
+          } label: {
+            Text(category.title)
+              .pretendardFont(family: .Medium, size: 14)
+              .foregroundStyle(isSelected ? .beige50 : .gray300)
+              .frame(maxWidth: .infinity)
+              .padding(.vertical, 8)
+              .background(isSelected ? Color.primary500 : Color.beige50)
+              .overlay(alignment: .trailing) {
+                if !isSelected, index < BattleProposalCategory.allCases.count - 1 {
+                  Rectangle().fill(.beige600).frame(width: 1)
+                }
+              }
+          }
+          .buttonStyle(.plain)
+        }
+      }
+      .clipShape(RoundedRectangle(cornerRadius: 2))
+      .overlay(
+        RoundedRectangle(cornerRadius: 2)
+          .stroke(.beige600, lineWidth: 1)
+      )
+    }
+  }
+
+  // MARK: 주제
+
+  @ViewBuilder
+  func topicField() -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      fieldLabel("주제 *")
+      inputField(text: $store.topic, placeholder: "논쟁이 될만한 주제를 한 줄로 써주세요")
+    }
+  }
+
+  // MARK: 양측 입장
+
+  @ViewBuilder
+  func stanceField() -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      fieldLabel("양측 입장 *")
+
+      HStack(spacing: 8) {
+        Text("A")
+          .pretendardFont(family: .SemiBold, size: 14)
+          .foregroundStyle(.primary500)
+          .frame(width: 20)
+        inputField(text: $store.positionA, placeholder: "첫 번째 입장을 입력하세요")
+      }
+
+      HStack(spacing: 8) {
+        Text("B")
+          .pretendardFont(family: .SemiBold, size: 14)
+          .foregroundStyle(.neutral900)
+          .frame(width: 20)
+        inputField(text: $store.positionB, placeholder: "두 번째 입장을 입력하세요")
+      }
+    }
+  }
+
+  // MARK: 입력 필드 (한 줄)
+
+  @ViewBuilder
+  func inputField(text: Binding<String>, placeholder: String) -> some View {
+    ZStack(alignment: .leading) {
+      if text.wrappedValue.isEmpty {
+        Text(placeholder)
+          .pretendardFont(family: .Medium, size: 13)
+          .foregroundStyle(.gray300)
+      }
+      TextField("", text: text)
+        .pretendardFont(family: .Medium, size: 13)
+        .foregroundStyle(.gray800)
+        .focused($isInputFocused)
+    }
+    .padding(.leading, 8)
+    .frame(height: 44)
+    .frame(maxWidth: .infinity)
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .overlay(
+      RoundedRectangle(cornerRadius: 2)
+        .stroke(.beige600, lineWidth: 1)
+    )
+  }
+
+  // MARK: 부가 설명
+
+  @ViewBuilder
+  func descriptionField() -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      fieldLabel("부가 설명 (선택)")
+
+      VStack(alignment: .trailing, spacing: 4) {
+        ZStack(alignment: .topLeading) {
+          if store.description.isEmpty {
+            Text("이 주제를 제안하는 이유나 배경을 자유롭게 써주세요")
+              .pretendardFont(family: .Regular, size: 13)
+              .foregroundStyle(.gray300)
+              .padding(.top, 8)
+              .padding(.leading, 4)
+          }
+          TextEditor(text: $store.description)
+            .pretendardFont(family: .Regular, size: 13)
+            .foregroundStyle(.gray800)
+            .scrollContentBackground(.hidden)
+            .frame(height: 60)
+            .focused($isInputFocused)
+        }
+
+        Text("\(store.description.count)/200")
+          .pretendardFont(family: .SemiBold, size: 10)
+          .foregroundStyle(.gray400)
+      }
+      .padding(.vertical, 8)
+      .padding(.horizontal, 12)
+      .frame(maxWidth: .infinity)
+      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .overlay(
+        RoundedRectangle(cornerRadius: 2)
+          .stroke(.beige600, lineWidth: 1)
+      )
+    }
+  }
+
+  // MARK: 제안하기
+
+  @ViewBuilder
+  func submitButton() -> some View {
+    Button {
+      send(.submitTapped)
+    } label: {
+      Text("제안하기 (-30P)")
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(.beige50)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 17)
+        .background(
+          store.isSubmitEnabled ? Color.primary500 : Color.primary200,
+          in: RoundedRectangle(cornerRadius: 2)
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(!store.isSubmitEnabled)
+    .padding(.top, 8)
+  }
+}

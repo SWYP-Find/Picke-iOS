@@ -119,6 +119,7 @@ public struct PreVoteFeature {
 
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -346,6 +347,9 @@ extension PreVoteFeature {
       state.isSubmitting = false
       switch result {
       case let .success(voteResult):
+        analyticsUseCase.track(
+          .battleStep(BattleStepData(stepName: .preVote, contentID: "\(state.battleId)"))
+        )
         return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .pre, result: voteResult)))
       case let .failure(error):
         Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
@@ -360,6 +364,9 @@ extension PreVoteFeature {
       state.isSubmitting = false
       switch result {
       case let .success(voteResult):
+        analyticsUseCase.track(
+          .battleStep(BattleStepData(stepName: .postVote, contentID: "\(state.battleId)"))
+        )
         return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .post, result: voteResult)))
       case let .failure(error):
         // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.

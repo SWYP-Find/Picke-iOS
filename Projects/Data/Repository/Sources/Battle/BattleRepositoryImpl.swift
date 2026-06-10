@@ -195,4 +195,26 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
 
     return data.toDomain()
   }
+
+  public func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal {
+    let dto: BattleProposalResponseDTO = try await provider.request(
+      .createProposal(
+        body: BattleProposalRequest(
+          category: draft.category,
+          topic: draft.topic,
+          positionA: draft.positionA,
+          positionB: draft.positionB,
+          description: draft.description
+        )
+      )
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "배틀 제안 응답이 비어 있습니다"
+      Log.error("[BattleRepositoryImpl] empty proposeBattle payload: \(message)")
+      throw BattleError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
 }

@@ -443,7 +443,8 @@ public struct VoteSummary: Equatable { ... }                 // ← Entity 로 �
 ```
 
 규칙:
-- **모든 화면 모델 (struct/enum)** 은 `Projects/Domain/Entity/Sources/<도메인>/` 아래에 둔다 (`Home/Comment.swift`, `Home/Battle.swift` 등)
+- **모든 화면 모델 (struct/enum)** 은 `Projects/Domain/Entity/Sources/<도메인>/` 아래에 둔다 (`Home/Battle/...`, `Profile/Credit/...` 등)
+- **파일당 public 타입 하나 (SOLID, 필수)** — 한 파일에 `struct`/`enum` 을 여러 개 넣지 않는다. 타입마다 `타입명.swift` 로 분리하고, `extension` 은 해당 타입 파일에 함께 둔다. 기능별 하위 폴더로 폴더링한다 (예: `Profile/MyPage/{MyPage,MyProfile,MyTier}.swift`, `Profile/Credit/{CreditHistoryPage,CreditHistoryItem}.swift`)
 - Feature 안에는 `State` / `Action` / `Reducer` / `CancelID` 같은 **TCA 컴포넌트만** 둔다
 - UI 분기용 enum (`CommentFilter`, `CommentSort`) 도 도메인 모델로 취급해 Entity 에 둔다 — 같은 도메인의 여러 화면에서 재사용 가능
 - 서버 응답 매핑 init (`init(item: BattlePerspective, order: Int)`) · 정적 mocks · `.empty` 팩토리도 모두 Entity 쪽에서 정의

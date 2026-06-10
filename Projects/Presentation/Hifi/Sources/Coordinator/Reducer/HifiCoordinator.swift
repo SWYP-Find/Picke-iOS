@@ -9,6 +9,7 @@ import Foundation
 
 import Chat
 import ComposableArchitecture
+import Notification
 import TCAFlow
 
 @FlowCoordinator(screen: "HifiScreen", navigation: true)
@@ -75,6 +76,15 @@ extension HifiCoordinator {
       // 큐레이팅 X — 탐색 루트로 복귀
       return .send(.view(.backToRootAction))
 
+    // 알림(종) 아이콘 → 알림받기 화면 진입.
+    case .routeAction(_, action: .hifi(.delegate(.openNotification))):
+      state.routes.push(.notification(.init()))
+      return .none
+
+    // 알림받기 백탭 → 뒤로.
+    case .routeAction(_, action: .notification(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     default:
       return .none
     }
@@ -101,6 +111,7 @@ extension HifiCoordinator {
   public enum HifiScreen {
     case hifi(HifiFeature)
     case chat(ChatCoordinator)
+    case notification(NotificationCoordinator)
   }
 }
 

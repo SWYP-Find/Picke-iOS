@@ -48,6 +48,7 @@ public extension InfoPlist {
       .setGIDClientID("${GOOGLE_CLIENT_ID}")
       .setAdmobToken("${ADMOB_TOKEN}")
       .setGADApplicationId("${ADMOB_TOKEN}")
+      .setRewardAdUnit("$(REWARD_AD_UNIT)")
       .setKakaoRestApiKey()
       .setLSApplicationQueriesSchemes([
         "kakaokompassauth", // 카카오톡 로그인
