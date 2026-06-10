@@ -9,9 +9,9 @@ import Foundation
 public extension MyPageDataDTO {
   func toDomain() -> MyPage {
     MyPage(
-      profile: profile.toDomain(),
-      philosopher: philosopher.toDomain(),
-      tier: tier.toDomain()
+      profile: profile?.toDomain() ?? .empty,
+      philosopher: philosopher?.toDomain() ?? .empty,
+      tier: tier?.toDomain() ?? .empty
     )
   }
 }

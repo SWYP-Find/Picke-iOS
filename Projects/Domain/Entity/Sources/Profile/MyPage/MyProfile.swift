@@ -31,4 +31,13 @@ public struct MyProfile: Equatable {
     self.characterImageURL = characterImageURL
     self.mannerTemperature = mannerTemperature
   }
+
+  public static let empty = MyProfile(
+    userTag: "",
+    nickname: "",
+    characterType: "",
+    characterLabel: "",
+    characterImageURL: "",
+    mannerTemperature: 0
+  )
 }

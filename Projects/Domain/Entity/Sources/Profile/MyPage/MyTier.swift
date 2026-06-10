@@ -21,4 +21,6 @@ public struct MyTier: Equatable {
     self.tierLabel = tierLabel
     self.currentPoint = currentPoint
   }
+
+  public static let empty = MyTier(tierCode: "", tierLabel: "", currentPoint: 0)
 }

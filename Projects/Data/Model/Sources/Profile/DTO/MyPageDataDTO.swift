@@ -8,9 +8,10 @@
 import Foundation
 
 public struct MyPageDataDTO: Decodable {
-  public let profile: MyProfileDTO
-  public let philosopher: MyPhilosopherDTO
-  public let tier: MyTierDTO
+  // philosopher 는 미확정(배틀 5개 미만) 시 null 로 내려와 옵셔널로 둔다.
+  public let profile: MyProfileDTO?
+  public let philosopher: MyPhilosopherDTO?
+  public let tier: MyTierDTO?
 }
 
 public struct MyProfileDTO: Decodable {

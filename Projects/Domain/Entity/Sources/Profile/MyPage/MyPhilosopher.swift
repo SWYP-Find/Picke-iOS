@@ -27,4 +27,12 @@ public struct MyPhilosopher: Equatable {
     self.description = description
     self.imageURL = imageURL
   }
+
+  public static let empty = MyPhilosopher(
+    philosopherType: "",
+    philosopherLabel: "",
+    typeName: "",
+    description: "",
+    imageURL: ""
+  )
 }
