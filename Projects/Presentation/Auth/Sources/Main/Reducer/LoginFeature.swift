@@ -87,6 +87,7 @@ public struct LoginFeature {
   @Dependency(\.appleManger) var appleLoginManger
   @Dependency(\.unifiedOAuthUseCase) var unifiedOAuthUseCase
   @Dependency(\.continuousClock) var clock
+  @Dependency(\.analyticsUseCase) var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -198,6 +199,18 @@ extension LoginFeature {
       case let .success(loginEntity):
         state.loginEntity = loginEntity
 
+        analyticsUseCase.track(
+          .auth(
+            loginEntity.isNewUser ? .signupSucceeded : .loginSucceeded,
+            AuthEventData(
+              username: loginEntity.name,
+              userTag: loginEntity.userTag,
+              socialType: loginEntity.provider.rawValue,
+              isNewUser: loginEntity.isNewUser
+            )
+          )
+        )
+
         guard loginEntity.isNewUser else {
           return .send(.delegate(.presentMainTab))
         }
@@ -211,6 +224,15 @@ extension LoginFeature {
       case let .failure(error):
         #logNetwork("로그인 실패", error.localizedDescription)
         let socialType = state.currentSocialType
+        analyticsUseCase.track(
+          .auth(
+            .loginFailed,
+            AuthEventData(
+              socialType: socialType?.rawValue,
+              errorDescription: error.errorDescription ?? error.localizedDescription
+            )
+          )
+        )
         return .run { _ in
           await MainActor.run {
             let errorMessage = switch socialType {
