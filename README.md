@@ -357,9 +357,12 @@ tuist test        # 전체 테스트 실행
 
 ### 🚀 배포
 ```bash
+export MATCH_KEYCHAIN_PASSWORD="<match keychain password>"
 bundle exec fastlane ios QA       # TestFlight 업로드
 bundle exec fastlane ios release  # App Store 배포
 ```
+
+`MATCH_KEYCHAIN_PASSWORD`가 설정되어 있으면 fastlane이 `match_keychain`을 먼저 unlock해서 macOS 키체인 비밀번호 팝업을 줄입니다.
 
 ## 📄 라이선스
 

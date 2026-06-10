@@ -11,6 +11,7 @@ BUNDLE_ID = "io.Picke.co"
 OUTPUT_DIR = "./fastlane/output"
 IPA_FILENAME = "#{APP_NAME}.ipa"
 TEAM_ID = ENV["TEAM_ID"] || "N94CS4N6VR"
+MATCH_KEYCHAIN_NAME = ENV["MATCH_KEYCHAIN_NAME"] || "match_keychain"
 
 # 릴리스용 변수 (누락되어 있던 부분 보완)
 APP_RELEASE_NAME = APP_NAME
@@ -19,9 +20,30 @@ APP_RELEASE_SCHEME = SCHEME
 APP_STAGE_NAME = STAGE_SCHEME
 APP_STAGE_SCHEME = STAGE_SCHEME
 
+def unlock_match_keychain
+  keychain_password = ENV["MATCH_KEYCHAIN_PASSWORD"].to_s
+  if keychain_password.empty?
+    UI.important("MATCH_KEYCHAIN_PASSWORD is missing. macOS may ask for the match keychain password.")
+    return
+  end
+
+  keychain_path = File.expand_path("~/Library/Keychains/#{MATCH_KEYCHAIN_NAME}-db")
+  unless File.exist?(keychain_path)
+    UI.message("match keychain does not exist yet: #{keychain_path}")
+    return
+  end
+
+  unlock_keychain(
+    path: keychain_path,
+    password: keychain_password,
+    add_to_search_list: true
+  )
+end
+
 platform :ios do
-
-
+  before_all do
+    unlock_match_keychain
+  end
 
   # 🚀 TestFlight 업로드 (Debug)
   desc "Upload to TestFlight (Debug)"
@@ -83,7 +105,9 @@ platform :ios do
       readonly: true,
       git_url: "git@github.com:Roy-wonji/FastlaneMatch.git",
       storage_mode: "git",
-      app_identifier: ["io.Picke.co"]
+      app_identifier: ["io.Picke.co"],
+      keychain_name: MATCH_KEYCHAIN_NAME,
+      keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
     )
 
     ipa_path = nil
@@ -245,7 +269,9 @@ platform :ios do
         readonly: true,
         git_url: "git@github.com:Roy-wonji/FastlaneMatch.git",
         storage_mode: "git",
-        app_identifier: ["io.Picke.co"]
+        app_identifier: ["io.Picke.co"],
+        keychain_name: MATCH_KEYCHAIN_NAME,
+        keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
       )
 
       ipa_path = nil
