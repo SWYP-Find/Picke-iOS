@@ -173,7 +173,13 @@ private extension ProfileView {
         ZStack {
           RoundedRectangle(cornerRadius: 8)
             .fill(.beige200)
-          if let urlString = store.philosopherImageURL, let url = URL(string: urlString) {
+          if store.isPhilosopherLocked {
+            // 배틀 5개 미만(미확정) → 잠금 이미지
+            Image(asset: .lock)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 20, height: 20)
+          } else if let urlString = store.philosopherImageURL, let url = URL(string: urlString) {
             KFImage(url)
               .resizable()
               .scaledToFit()
@@ -185,9 +191,6 @@ private extension ProfileView {
           }
         }
         .frame(width: 40, height: 40)
-        // 잠금(??형) 시 철학자 아바타 그레이 처리
-        .grayscale(store.isPhilosopherLocked ? 1 : 0)
-        .opacity(store.isPhilosopherLocked ? 0.7 : 1)
 
         VStack(alignment: .leading, spacing: 4) {
           Text("나의 철학자 유형")

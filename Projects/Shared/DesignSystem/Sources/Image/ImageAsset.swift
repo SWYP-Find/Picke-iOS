@@ -53,4 +53,5 @@ public enum ImageAsset: String {
   
   //MARK: - 프로필
   case history
+  case lock
 }

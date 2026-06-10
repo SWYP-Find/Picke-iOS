@@ -196,3 +196,5 @@ extension ProfileCoordinator {
 // swiftformat:enable extensionAccessControl
 
 extension ProfileCoordinator.ProfileScreen.State: Equatable {}
+
+
