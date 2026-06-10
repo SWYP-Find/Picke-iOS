@@ -29,6 +29,9 @@ public struct NotificationFeature {
     public var page: Int = 0
     public var hasNext: Bool = false
 
+    /// 홈/프로필 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (전역 공유).
+    @Shared(.inMemory("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
+
     public var hasUnread: Bool {
       items.contains { !$0.isRead }
     }
@@ -125,6 +128,8 @@ extension NotificationFeature {
     case .readAllTapped:
       guard state.hasUnread else { return .none }
       state.items = state.items.map { $0.markedAsRead() }
+      // 모두 읽음 → 홈/프로필 빨간점 제거.
+      state.$hasUnreadNotification.withLock { $0 = false }
       return .send(.async(.markAll))
 
     case let .notificationTapped(item):
@@ -133,6 +138,7 @@ extension NotificationFeature {
       if let index = state.items.firstIndex(where: { $0.id == item.id }) {
         state.items[index] = state.items[index].markedAsRead()
       }
+      updateUnreadBadge(state: &state)
       return .send(.async(.markRead(notificationId: item.notificationId)))
     }
   }
@@ -192,11 +198,20 @@ extension NotificationFeature {
         }
         state.hasNext = pageData.hasNext
         if pageData.hasNext { state.page += 1 }
+        updateUnreadBadge(state: &state)
       case let .failure(error):
         Log.error("[NotificationFeature] fetchNotifications failed: \(error.localizedDescription)")
       }
       return .none
     }
+  }
+
+  /// 전체 탭 기준 미읽음 존재 여부를 전역 빨간점 플래그에 반영.
+  /// (카테고리 필터 탭에서는 부분 정보이므로 갱신하지 않는다.)
+  private func updateUnreadBadge(state: inout State) {
+    guard state.selectedTab == .all else { return }
+    let hasUnread = state.hasUnread
+    state.$hasUnreadNotification.withLock { $0 = hasUnread }
   }
 
   private func handleDelegateAction(

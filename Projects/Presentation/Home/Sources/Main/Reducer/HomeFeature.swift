@@ -29,6 +29,9 @@ public struct HomeFeature {
     public var votes: [VoteQuestion] = []
     public var newBattles: [NewBattle] = []
 
+    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (알림 화면과 전역 공유).
+    @Shared(.inMemory("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
+
     public var currentQuiz: QuizQuestion? { quizzes.first }
     public var currentVote: VoteQuestion? { votes.first }
 

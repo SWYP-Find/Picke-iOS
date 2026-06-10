@@ -64,6 +64,14 @@ private extension ProfileView {
           .font(.system(size: 20, weight: .regular))
           .foregroundStyle(.neutral900)
           .frame(width: 24, height: 24)
+          .overlay(alignment: .topTrailing) {
+            if store.hasUnreadNotification {
+              Circle()
+                .fill(.errorDefault)
+                .frame(width: 6, height: 6)
+                .offset(x: 1, y: -1)
+            }
+          }
       }
 
       Button { send(.settingsTapped) } label: {
