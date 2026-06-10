@@ -12,10 +12,15 @@ import DesignSystem
 import Entity
 
 struct RecapLockedView: View {
-  /// 잠금 카드의 장식용 레이더(블러) 점수 — 실제 값 아님.
-  private let placeholderScores = RecapScores(
-    principle: 70, reason: 60, individual: 78, change: 45, inner: 65, ideal: 55
-  )
+  /// 잠금 장식용 레이더(블러) — picke.pen 잠금 그래프 라벨/형태(거의 꽉 찬 육각형).
+  private let placeholderAxes: [RecapScoreAxis] = [
+    RecapScoreAxis(label: "원칙", value: 95),
+    RecapScoreAxis(label: "논리", value: 88),
+    RecapScoreAxis(label: "일관성", value: 85),
+    RecapScoreAxis(label: "공감", value: 80),
+    RecapScoreAxis(label: "실용", value: 88),
+    RecapScoreAxis(label: "직관", value: 88),
+  ]
 
   var body: some View {
     ScrollView {
@@ -43,18 +48,17 @@ private extension RecapLockedView {
           .foregroundStyle(.primary500)
         Text("??형")
           .pretendardFont(family: .SemiBold, size: 24)
-          .foregroundStyle(.gray500)
+          .foregroundStyle(.gray800)
       }
 
       ZStack {
-        Circle().fill(.beige600)
+        Circle().fill(.gray50)
         Image(asset: .lock)
           .resizable()
           .scaledToFit()
           .frame(width: 30, height: 30)
       }
       .frame(width: 68, height: 68)
-      .opacity(0.7)
 
       Text("아직 분석할 기록이 부족해요.\n배틀에 참여하면 성향을 확인할 수 있어요!")
         .pretendardFont(family: .SemiBold, size: 14)
@@ -62,9 +66,10 @@ private extension RecapLockedView {
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
     }
+    .padding(.vertical, 20)
+    .frame(maxWidth: .infinity)
     .padding(.vertical, 16)
     .padding(.horizontal, 24)
-    .frame(maxWidth: .infinity)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
       RoundedRectangle(cornerRadius: 2)
@@ -85,7 +90,7 @@ private extension RecapLockedView {
         .foregroundStyle(.gray800)
 
       ZStack {
-        RecapRadarChart(axes: placeholderScores.axes)
+        RecapRadarChart(axes: placeholderAxes)
           .frame(height: 172)
           .opacity(0.4)
           .blur(radius: 4.375)
