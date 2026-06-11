@@ -87,8 +87,8 @@ platform :ios do
     extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
     extension_content = File.read(extension_file_path)
     extension_content = extension_content.gsub(
-      /public static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
-      "public static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {"
+      /static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
+      "static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {"
     )
     File.write(extension_file_path, extension_content)
     puts "✅ 빌드 번호를 #{new_build_number}로 업데이트 완료"
@@ -251,8 +251,8 @@ platform :ios do
       content = File.read(extension_file_path)
 
       # 빌드 번호 라인 수정
-      updated_content = content.gsub(/public static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
-                                   "public static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {")
+      updated_content = content.gsub(/static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
+                                   "static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {")
 
       File.write(extension_file_path, updated_content)
       puts "✅ 빌드 번호를 #{new_build_number}로 업데이트 완료"
