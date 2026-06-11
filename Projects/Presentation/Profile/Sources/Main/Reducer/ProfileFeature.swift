@@ -99,7 +99,7 @@ public struct ProfileFeature {
     /// 알림함 이동.
     case openNotification
     /// 설정 화면 이동.
-    case openSettings
+    case openSettings(nickname: String)
     /// 프로필 카드 탭 → 편집.
     case editProfile
     /// 포인트 충전.
@@ -143,7 +143,7 @@ public struct ProfileFeature {
 
 extension ProfileFeature {
   private func handleViewAction(
-    state _: inout State,
+    state: inout State,
     action: View
   ) -> Effect<Action> {
     switch action {
@@ -157,7 +157,7 @@ extension ProfileFeature {
       return .send(.delegate(.openNotification))
 
     case .settingsTapped:
-      return .send(.delegate(.openSettings))
+      return .send(.delegate(.openSettings(nickname: state.nickname)))
 
     case .profileTapped:
       return .send(.delegate(.editProfile))

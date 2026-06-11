@@ -126,8 +126,12 @@ public struct MainTabCoordinator {
         state.selectedTab = state.previousTab
         return .none
 
-      // 설정 → 로그아웃/탈퇴 완료 → App 으로 세션 종료 전파
+      // 설정 → 로그아웃 완료 → App 으로 세션 종료 전파
       case .myPage(.router(.routeAction(_, action: .settings(.delegate(.sessionEnded))))):
+        return .send(.delegate(.sessionEnded))
+
+      // 회원 탈퇴 완료 → App 으로 세션 종료 전파
+      case .myPage(.router(.routeAction(_, action: .withdraw(.delegate(.sessionEnded))))):
         return .send(.delegate(.sessionEnded))
 
       // 홈 "더보기" → 탐색 탭으로 이동
