@@ -64,9 +64,23 @@ ln -s AGENTS.md CLAUDE.md
 - 토픽 검색
 
 ### 👤 마이페이지
-- 내 콘텐츠 활동 / 토론 기록
-- 나의 철학자 유형
-- 포인트 내역 / 알림 / 설정
+- 프로필 카드 / 보유 포인트 + **무료 충전**(리워드 광고)
+- 포인트 내역, 내 배틀 기록, 내 콘텐츠 활동(댓글/좋아요), 공지사항·이벤트
+- **나의 철학자 유형(recap)** — 배틀 5개 미만 시 잠금 화면 분기, 애니메이션 레이더 차트 + 공유
+- 배틀 주제 제안, 설정·탈퇴·알림 설정
+
+### 🔔 알림 (Notification)
+- **알림받기** 목록 — 카테고리 탭(전체·콘텐츠·공지사항·이벤트) + 무한 스크롤
+- 탭 시 읽음 처리 / **모두 읽음**, `GET·POST /api/v1/notifications`
+- **미읽음 빨간점** — 전역 공유 상태(`HasUnreadNotification`)로 홈·프로필 종 아이콘에 표시, 모두 읽음 시 제거
+
+### 💰 무료 충전 (리워드 광고)
+- **GoogleMobileAds 리워드 동영상** 시청 → 포인트 충전 (광고 유닛 ID 는 `REWARD_AD_UNIT` config 주입)
+- `RewardedAdClient`(UseCase) — 로드·표시·보상 콜백을 async 로 추상화
+
+### 📊 행동 분석 (Mixpanel)
+- `AnalyticsUseCase` — 타입 안전 이벤트 + PICKé 핵심 이벤트 명세서 준수(이벤트 통합 전략)
+- `sign_up` / `battle_step`(pre_vote·audio_end·post_vote) / `report_action` / `community_action` / `ad_revenue` + 로그인 시 `identify`
 
 ## 🏗 프로젝트 아키텍처
 
@@ -90,17 +104,19 @@ Picke-iOS/
 │   │   ├── Hifi/                  # 탐색·검색 기반 Hi-Fi 화면
 │   │   ├── Home/                  # 홈 피드 / 추천 / 스켈레톤
 │   │   ├── MainTab/               # 탭 라우팅 / GNB
+│   │   ├── Notification/          # 알림받기 목록 / 카테고리 탭 / 미읽음 뱃지
+│   │   ├── Profile/               # 마이페이지 / 포인트 / 설정 / 배틀제안 / 배틀기록 / 콘텐츠활동 / 공지 / 리캡 / 무료충전
 │   │   ├── Splash/                # 스플래시
 │   │   ├── Web/                   # 약관 / 외부 링크 WebView
 │   │   └── Presentation/          # 공통 프레젠테이션 유틸
 │   │
 │   ├── Domain/                    # 🔥 Business Logic Layer
-│   │   ├── Entity/                # Auth / Battle / Comment / Home / OAuth / Share / Error 엔티티
+│   │   ├── Entity/                # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Share / Error 엔티티
 │   │   ├── DomainInterface/       # Repository / Manager 인터페이스
-│   │   └── UseCase/               # Auth / Battle / Comment / Home / OAuth / Perspective / Search 유스케이스
+│   │   └── UseCase/               # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Analytics / Ad 유스케이스
 │   │
 │   ├── Data/                      # 📡 Data Layer
-│   │   ├── API/                   # Base / Auth / Battle / Comment / Home / Perspective / Search endpoint
+│   │   ├── API/                   # Base / Auth / Battle / Comment / Home / Perspective / Profile / Notification endpoint
 │   │   ├── Service/               # Moya TargetType + 요청 바디
 │   │   ├── Model/                 # BaseResponseDTO + DTO → Entity 매퍼
 │   │   └── Repository/            # RepositoryImpl + OAuth / AudioPlayer 구현
