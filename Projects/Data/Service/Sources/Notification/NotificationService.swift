@@ -42,7 +42,7 @@ extension NotificationService: BaseTargetType {
     case .list, .detail:
       return .get
     case .read, .readAll:
-      return .post
+      return .patch
     }
   }
 

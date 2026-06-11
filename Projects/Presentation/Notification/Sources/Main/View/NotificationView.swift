@@ -2,8 +2,7 @@
 //  NotificationView.swift
 //  Notification
 //
-//  알림받기 UI — picke.pen `알림받기`.
-//  App Bar(뒤로/알림/모두 읽음) + 카테고리 탭 + 알림 카드 리스트 + 무한 스크롤.
+//  
 //
 
 import SwiftUI

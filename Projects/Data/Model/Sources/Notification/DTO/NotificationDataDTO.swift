@@ -19,6 +19,8 @@ public struct NotificationItemDTO: Decodable {
   public let title: String?
   public let body: String?
   public let referenceId: Int?
+  /// COMMENT_LIKE / NEW_COMMENT 에서 관점(댓글) 화면 이동용. 그 외 null.
+  public let perspectiveId: Int?
   public let isRead: Bool?
   public let createdAt: String?
 }
@@ -31,6 +33,8 @@ public struct NotificationDetailDTO: Decodable {
   public let title: String?
   public let body: String?
   public let referenceId: Int?
+  /// COMMENT_LIKE / NEW_COMMENT 에서 관점(댓글) 화면 이동용. 그 외 null.
+  public let perspectiveId: Int?
   public let isRead: Bool?
   public let createdAt: String?
   public let readAt: String?

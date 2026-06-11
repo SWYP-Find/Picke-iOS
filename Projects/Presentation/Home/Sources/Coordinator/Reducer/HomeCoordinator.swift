@@ -38,6 +38,8 @@ public struct HomeCoordinator {
   public enum View {
     case backAction
     case backToRootAction
+    /// 딥링크(알림) → 배틀 상세(채팅) 진입.
+    case openBattle(battleId: Int)
   }
 
   public enum AsyncAction: Equatable {}
@@ -100,6 +102,11 @@ extension HomeCoordinator {
       return .none
     case .backToRootAction:
       state.routes.goBackToRoot()
+      return .none
+    case let .openBattle(battleId):
+      // 중복 스택 방지 후 배틀(채팅) 상세 진입.
+      state.routes.goBackToRoot()
+      state.routes.push(.chat(.init(battleId: battleId)))
       return .none
     }
   }

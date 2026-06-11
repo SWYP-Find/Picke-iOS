@@ -33,17 +33,19 @@ public struct SettingsFeature {
   /// 확인 팝업 대기 동작 (confirm 시 무엇을 실행할지).
   public enum PendingAction: Equatable {
     case logout
-    case withdraw
   }
 
   @ObservableState
   public struct State: Equatable {
+    public var nickname: String
     public var menuItems: [MenuItem] = MenuItem.allCases
     public var pending: PendingAction?
     public var isProcessing: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
-    public init() {}
+    public init(nickname: String = "") {
+      self.nickname = nickname
+    }
   }
 
   public enum Action: ViewAction, BindableAction {
@@ -63,7 +65,6 @@ public struct SettingsFeature {
 
   public enum AsyncAction: Equatable {
     case performLogout
-    case performWithdraw
   }
 
   public enum InnerAction: Equatable {
@@ -80,6 +81,8 @@ public struct SettingsFeature {
     case openNotificationSettings
     case openPrivacy
     case openTerms
+    /// 회원 탈퇴 → 탈퇴 사유 화면으로.
+    case openWithdraw(nickname: String)
     /// 로그아웃/탈퇴 완료 → 로그인 화면으로.
     case sessionEnded
   }
@@ -90,6 +93,7 @@ public struct SettingsFeature {
 
   @Dependency(\.authUseCase) private var authUseCase
   @Dependency(\.keychainManager) private var keychainManager
+  @Dependency(\.deviceUseCase) private var deviceUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -142,9 +146,7 @@ extension SettingsFeature {
         state.customAlert = .logout()
         return .none
       case .withdraw:
-        state.pending = .withdraw
-        state.customAlert = .withdraw()
-        return .none
+        return .send(.delegate(.openWithdraw(nickname: state.nickname)))
       }
     }
   }
@@ -157,25 +159,15 @@ extension SettingsFeature {
     case .performLogout:
       guard !state.isProcessing else { return .none }
       state.isProcessing = true
-      return .run { send in
+      return .run { [deviceUseCase] send in
+        // Keychain 초기화 전(인증 유효) 에 디바이스 토큰 해제.
+        if let token = DeviceTokenStorage.token, !token.isEmpty {
+          try? await deviceUseCase.unregisterDevice(fcmToken: token)
+        }
         do {
           _ = try await authUseCase.logout()
         } catch {
           Log.error("[SettingsFeature] logout failed: \(error.localizedDescription)")
-        }
-        await send(.inner(.sessionCleared))
-      }
-      .cancellable(id: CancelID.auth, cancelInFlight: true)
-
-    case .performWithdraw:
-      guard !state.isProcessing else { return .none }
-      state.isProcessing = true
-      let token = keychainManager.refreshToken() ?? keychainManager.accessToken() ?? ""
-      return .run { send in
-        do {
-          _ = try await authUseCase.withDraw(token: token)
-        } catch {
-          Log.error("[SettingsFeature] withdraw failed: \(error.localizedDescription)")
         }
         await send(.inner(.sessionCleared))
       }
@@ -212,8 +204,6 @@ extension SettingsFeature {
           switch pending {
           case .logout:
             return .send(.async(.performLogout))
-          case .withdraw:
-            return .send(.async(.performWithdraw))
           case .none:
             return .none
           }
@@ -244,6 +234,8 @@ extension SettingsFeature {
     case .openPrivacy:
       return .none
     case .openTerms:
+      return .none
+    case .openWithdraw:
       return .none
     case .sessionEnded:
       return .none

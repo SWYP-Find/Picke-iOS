@@ -36,6 +36,8 @@ public struct ProfileCoordinatorView: View {
         NoticeView(store: noticeStore)
       case let .notificationSetting(notificationStore):
         NotificationSettingView(store: notificationStore)
+      case let .withdraw(withdrawStore):
+        WithdrawReasonView(store: withdrawStore)
       case let .battleProposal(battleProposalStore):
         BattleProposalView(store: battleProposalStore)
       case let .recap(recapStore):

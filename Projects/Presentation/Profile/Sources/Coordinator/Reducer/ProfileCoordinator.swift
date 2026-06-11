@@ -97,9 +97,9 @@ extension ProfileCoordinator {
     case .routeAction(_, action: .recap(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 설정 아이콘 → 설정 화면 진입.리고
-    case .routeAction(_, action: .profile(.delegate(.openSettings))):
-      state.routes.push(.settings(.init()))
+    // 설정 아이콘 → 설정 화면 진입.
+    case let .routeAction(_, action: .profile(.delegate(.openSettings(nickname)))):
+      state.routes.push(.settings(.init(nickname: nickname)))
       return .none
 
     // 알림(종) 아이콘 → 알림받기 화면 진입.
@@ -133,6 +133,15 @@ extension ProfileCoordinator {
     case .routeAction(_, action: .settings(.delegate(.openTerms))):
       state.routes.push(.web(.init(url: TermsDocument.service.urlString)))
       return .none
+
+    // 회원 탈퇴 → 탈퇴 사유 화면 진입.
+    case let .routeAction(_, action: .settings(.delegate(.openWithdraw(nickname)))):
+      state.routes.push(.withdraw(.init(nickname: nickname)))
+      return .none
+
+    // 탈퇴 사유 "픽케로 다시 돌아가기" → 뒤로.
+    case .routeAction(_, action: .withdraw(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     // 웹뷰 뒤로.
     case .routeAction(_, action: .web(.backToRoot)):
@@ -193,6 +202,7 @@ extension ProfileCoordinator {
     case contentActivity(ContentActivityFeature)
     case notice(NoticeFeature)
     case notificationSetting(NotificationSettingFeature)
+    case withdraw(WithdrawReasonFeature)
     case battleProposal(BattleProposalFeature)
     case recap(RecapFeature)
     case notification(NotificationCoordinator)

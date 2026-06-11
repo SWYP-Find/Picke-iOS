@@ -16,8 +16,10 @@ public struct NotificationItem: Equatable, Identifiable {
   public let title: String
   /// 본문 (예: "“AI가 만든 그림도 예술인가?”에 지금 참여해보세요!").
   public let body: String
-  /// 연관 리소스 id (배틀/공지 등). 없을 수 있음.
+  /// 연관 리소스 id (배틀=battleId / 답글=commentId 등). 없을 수 있음.
   public let referenceId: Int?
+  /// COMMENT_LIKE / NEW_COMMENT 에서 관점(댓글) 화면 이동용. 그 외 nil.
+  public let perspectiveId: Int?
   public let isRead: Bool
   public let createdAt: Date?
 
@@ -30,6 +32,7 @@ public struct NotificationItem: Equatable, Identifiable {
     title: String,
     body: String,
     referenceId: Int?,
+    perspectiveId: Int?,
     isRead: Bool,
     createdAt: Date?
   ) {
@@ -39,6 +42,7 @@ public struct NotificationItem: Equatable, Identifiable {
     self.title = title
     self.body = body
     self.referenceId = referenceId
+    self.perspectiveId = perspectiveId
     self.isRead = isRead
     self.createdAt = createdAt
   }
@@ -62,6 +66,7 @@ public struct NotificationItem: Equatable, Identifiable {
       title: title,
       body: body,
       referenceId: referenceId,
+      perspectiveId: perspectiveId,
       isRead: true,
       createdAt: createdAt
     )
