@@ -43,6 +43,7 @@ public final class AppDIManager: Sendable {
       .register { AudioPlayerRepositoryImpl() as AudioPlayerInterface }
       .register { ProfileRepositoryImpl() as ProfileInterface }
       .register { NotificationRepositoryImpl() as NotificationInterface }
+      .register { DeviceRepositoryImpl() as DeviceInterface }
 //      .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
 
       // 🔐 OAuth Provider 계층 (PFW 조합 패턴)
