@@ -6,6 +6,8 @@
 import SwiftUI
 
 struct CustomConfirmationPopup: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
   private let title: String
   private let message: String
   private let confirmTitle: String
@@ -38,22 +40,30 @@ struct CustomConfirmationPopup: View {
   }
 
   var body: some View {
-    ZStack {
-      Color.black
-        .opacity(isContentVisible ? 0.6 : 0)
-        .ignoresSafeArea()
-        .onTapGesture(perform: onCancel)
+    GeometryReader { proxy in
+      ZStack {
+        Color.black
+          .opacity(isContentVisible ? 0.6 : 0)
+          .ignoresSafeArea()
+          .onTapGesture(perform: onCancel)
 
-      popupContent
-        .padding(.horizontal, popupHorizontalPadding)
-        .offset(y: isContentVisible ? 0 : 120)
-        .opacity(isContentVisible ? 1 : 0)
+        popupContent
+          .frame(maxWidth: popupMaxWidth(for: proxy.size.width))
+          .padding(.horizontal, popupHorizontalPadding)
+          .offset(y: isContentVisible ? 0 : 120)
+          .opacity(isContentVisible ? 1 : 0)
+          .accessibilityAddTraits(.isModal)
+      }
     }
     .onAppear {
       withAnimation(.easeInOut(duration: 0.3)) {
         isContentVisible = true
       }
     }
+  }
+
+  private func popupMaxWidth(for containerWidth: CGFloat) -> CGFloat {
+    max(0, min(containerWidth - popupHorizontalPadding * 2, 360))
   }
 
   private var popupHorizontalPadding: CGFloat {
@@ -131,7 +141,7 @@ struct CustomConfirmationPopup: View {
   ) -> some View {
     content()
       .padding(.top, 20)
-      .frame(width: 313)
+      .frame(maxWidth: 313)
       .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
@@ -154,31 +164,64 @@ struct CustomConfirmationPopup: View {
   }
 
   /// 좌(밝은)·우(primary) 2버튼 행. 좌/우 의미는 호출부가 결정.
+  @ViewBuilder
   private func pickeTwoButtonRow(
-    leftTitle: String, leftAction: @escaping () -> Void,
-    rightTitle: String, rightAction: @escaping () -> Void
+    leftTitle: String,
+    leftAction: @escaping () -> Void,
+    rightTitle: String,
+    rightAction: @escaping () -> Void
   ) -> some View {
-    HStack(spacing: 0) {
-      Button(action: leftAction) {
-        Text(leftTitle)
-          .pretendardFont(family: .Medium, size: 14)
-          .foregroundStyle(.primary800)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 17)
-          .background(.secondary50, in: Rectangle())
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(spacing: 8) {
+        pickeSecondaryButton(title: leftTitle, action: leftAction)
+        pickePrimaryButton(title: rightTitle, action: rightAction)
       }
-      .buttonStyle(.plain)
-
-      Button(action: rightAction) {
-        Text(rightTitle)
-          .pretendardFont(family: .Medium, size: 14)
-          .foregroundStyle(.secondary50)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, 17)
-          .background(.primary500, in: Rectangle())
+      .padding(.horizontal, 16)
+      .padding(.bottom, 16)
+    } else {
+      HStack(spacing: 8) {
+        pickeSecondaryButton(title: leftTitle, action: leftAction)
+        pickePrimaryButton(title: rightTitle, action: rightAction)
       }
-      .buttonStyle(.plain)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 16)
     }
+  }
+
+  @ViewBuilder
+  private func pickeSecondaryButton(
+    title: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Text(title)
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(.primary800)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 48)
+        .background(.secondary50, in: RoundedRectangle(cornerRadius: 8))
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  private func pickePrimaryButton(
+    title: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Text(title)
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(.secondary50)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 48)
+        .background(.primary500, in: RoundedRectangle(cornerRadius: 8))
+    }
+    .buttonStyle(.plain)
   }
 
   private var deleteConfirmContent: some View {
@@ -218,7 +261,7 @@ struct CustomConfirmationPopup: View {
       }
     }
     .padding(.top, 20)
-    .frame(width: 313)
+    .frame(maxWidth: 313)
     .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
       RoundedRectangle(cornerRadius: 2)
@@ -272,7 +315,7 @@ struct CustomConfirmationPopup: View {
       }
     }
     .padding(.top, 24)
-    .frame(width: 343)
+    .frame(maxWidth: 343)
     .background(.beige500, in: RoundedRectangle(cornerRadius: 6))
     .overlay(
       RoundedRectangle(cornerRadius: 6)
@@ -327,7 +370,7 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.vertical, 28)
     .padding(.horizontal, 20)
-    .frame(width: 320)
+    .frame(maxWidth: 320)
     .background(ComponentToken.Popup.background, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
       RoundedRectangle(cornerRadius: 2)
@@ -371,7 +414,7 @@ struct CustomConfirmationPopup: View {
       }
     }
     .padding(.top, 20)
-    .frame(width: 313)
+    .frame(maxWidth: 313)
     .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
     .overlay(
       RoundedRectangle(cornerRadius: 2)
@@ -391,7 +434,7 @@ struct CustomConfirmationPopup: View {
       reportButtons
     }
     .padding(.top, 20)
-    .frame(width: 343)
+    .frame(maxWidth: 343)
     .background(.beige500, in: RoundedRectangle(cornerRadius: 6))
     .clipShape(RoundedRectangle(cornerRadius: 6))
     .overlay(
