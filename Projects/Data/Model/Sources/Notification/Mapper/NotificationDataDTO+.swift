@@ -24,6 +24,7 @@ public extension NotificationItemDTO {
       title: title ?? "",
       body: body ?? "",
       referenceId: referenceId,
+      perspectiveId: perspectiveId,
       isRead: isRead ?? false,
       createdAt: createdAt.flatMap(NotificationDateParser.parseISO8601)
     )
@@ -39,6 +40,7 @@ public extension NotificationDetailDTO {
       title: title ?? "",
       body: body ?? "",
       referenceId: referenceId,
+      perspectiveId: perspectiveId,
       isRead: isRead ?? false,
       createdAt: createdAt.flatMap(NotificationDateParser.parseISO8601),
       readAt: readAt.flatMap(NotificationDateParser.parseISO8601)

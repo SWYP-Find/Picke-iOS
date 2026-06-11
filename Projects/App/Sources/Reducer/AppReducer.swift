@@ -63,6 +63,8 @@ public struct AppReducer: Sendable {
   public enum AsyncAction: Equatable {
     case startNotificationListener
     case refreshTokenExpired
+    case observeDeeplink
+    case deeplinkReceived(PickeDeeplink)
   }
 
   // MARK: - 네비게이션 연결 액션
@@ -85,6 +87,7 @@ public struct AppReducer: Sendable {
     case coordinator(CoordinatorType)
     case transition
     case refreshTokenListener
+    case deeplinkListener
 
     enum CoordinatorType: Hashable {
       case auth
@@ -154,9 +157,12 @@ public struct AppReducer: Sendable {
   ) -> Effect<Action> {
     switch action {
     case .presentView:
-      return .run { send in
-        await send(.scope(.splash(.view(.onAppear))))
-      }
+      return .merge(
+        .run { send in
+          await send(.scope(.splash(.view(.onAppear))))
+        },
+        observeDeeplink()
+      )
 
     case .presentRoot:
       return startTransition(.completeMainTabTransition)
@@ -167,7 +173,7 @@ public struct AppReducer: Sendable {
   }
 
   private func handleAsyncAction(
-    state _: inout State,
+    state: inout State,
     action: AsyncAction
   ) -> Effect<Action> {
     switch action {
@@ -177,6 +183,24 @@ public struct AppReducer: Sendable {
 
     case .refreshTokenExpired:
       return startTransition(.completeAuthTransition)
+
+    case .observeDeeplink:
+      return observeDeeplink()
+
+    case let .deeplinkReceived(deeplink):
+      // 메인 진입 상태에서만 즉시 라우팅. 그 외에는 pending(UserDefaults)으로 보류.
+      guard case .mainTab = state else { return .none }
+      switch deeplink {
+      case let .battle(battleId):
+        // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 배틀 상세 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.home(.view(.openBattle(battleId: battleId))))))
+        )
+      case .perspective:
+        // 관점(댓글) 단독 진입로는 Chat 모듈에 perspectiveId 기반 진입 추가 후 연결.
+        return .none
+      }
     }
   }
 
@@ -191,6 +215,10 @@ public struct AppReducer: Sendable {
 
     case .completeMainTabTransition:
       state = .mainTab(.init())
+      // 콜드 스타트/로그인 직후 대기 중이던 딥링크 소비.
+      if let pending = PushDeeplinkBridge.consumePending() {
+        return .send(.async(.deeplinkReceived(pending)))
+      }
       return .none
     }
   }
@@ -247,7 +275,11 @@ public struct AppReducer: Sendable {
       }
 
     case .auth(.navigation(.presentMainTab)):
-      return .send(.view(.presentRoot))
+      // 로그인 성공 → 메인 진입 + APNs 디바이스 토큰 서버 등록.
+      return .merge(
+        .send(.view(.presentRoot)),
+        .run { _ in await PushTokenStore.register() }
+      )
 
     // 로그아웃/탈퇴 → 로그인 화면으로 복귀
     case .mainTab(.delegate(.sessionEnded)):
@@ -261,6 +293,18 @@ public struct AppReducer: Sendable {
   private func isSplashState(_ state: State) -> Bool {
     guard case .splash = state else { return false }
     return true
+  }
+
+  /// 푸시/인앱 알림 탭으로 브로드캐스트된 딥링크를 수신해 라우팅 액션으로 변환.
+  private func observeDeeplink() -> Effect<Action> {
+    .run { send in
+      for await notification in NotificationCenter.default.notifications(named: .pickeDeeplink) {
+        guard let encoded = notification.userInfo?["deeplink"] as? String,
+              let deeplink = PickeDeeplinkParser.parse(urlString: encoded) else { continue }
+        await send(.async(.deeplinkReceived(deeplink)))
+      }
+    }
+    .cancellable(id: CancelID.deeplinkListener, cancelInFlight: true)
   }
 
   private func setupRefreshTokenExpiredListener() -> Effect<Action> {

@@ -25,6 +25,7 @@ public struct DefaultNotificationRepositoryImpl: NotificationInterface {
       title: "",
       body: "",
       referenceId: nil,
+      perspectiveId: nil,
       isRead: false,
       createdAt: nil,
       readAt: nil

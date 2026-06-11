@@ -14,6 +14,8 @@ public struct NotificationDetail: Equatable, Identifiable {
   public let title: String
   public let body: String
   public let referenceId: Int?
+  /// COMMENT_LIKE / NEW_COMMENT 에서 관점(댓글) 화면 이동용. 그 외 nil.
+  public let perspectiveId: Int?
   public let isRead: Bool
   public let createdAt: Date?
   public let readAt: Date?
@@ -27,6 +29,7 @@ public struct NotificationDetail: Equatable, Identifiable {
     title: String,
     body: String,
     referenceId: Int?,
+    perspectiveId: Int?,
     isRead: Bool,
     createdAt: Date?,
     readAt: Date?
@@ -37,6 +40,7 @@ public struct NotificationDetail: Equatable, Identifiable {
     self.title = title
     self.body = body
     self.referenceId = referenceId
+    self.perspectiveId = perspectiveId
     self.isRead = isRead
     self.createdAt = createdAt
     self.readAt = readAt

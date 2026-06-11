@@ -133,13 +133,33 @@ extension NotificationFeature {
       return .send(.async(.markAll))
 
     case let .notificationTapped(item):
-      // 상세 화면 연결 전: 탭 시 읽음 처리만.
-      guard !item.isRead else { return .none }
-      if let index = state.items.firstIndex(where: { $0.id == item.id }) {
-        state.items[index] = state.items[index].markedAsRead()
+      var effects: [Effect<Action>] = []
+
+      // 미읽음일 때만 읽음 처리.
+      if !item.isRead {
+        if let index = state.items.firstIndex(where: { $0.id == item.id }) {
+          state.items[index] = state.items[index].markedAsRead()
+        }
+        updateUnreadBadge(state: &state)
+        effects.append(.send(.async(.markRead(notificationId: item.notificationId))))
       }
-      updateUnreadBadge(state: &state)
-      return .send(.async(.markRead(notificationId: item.notificationId)))
+
+      // detailCode 기반 딥링크 라우팅 (이미 읽은 항목도 이동).
+      if let deeplink = PickeDeeplinkParser.parse(
+        detailCode: item.detailCode,
+        referenceId: item.referenceId,
+        perspectiveId: item.perspectiveId
+      ) {
+        effects.append(.run { _ in
+          NotificationCenter.default.post(
+            name: .pickeDeeplink,
+            object: nil,
+            userInfo: ["deeplink": deeplink.encoded]
+          )
+        })
+      }
+
+      return .merge(effects)
     }
   }
 
