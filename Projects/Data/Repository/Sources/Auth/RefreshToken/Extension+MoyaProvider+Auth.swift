@@ -19,6 +19,7 @@ public extension MoyaProvider {
       session: manager.session,
       plugins: [
         MoyaLoggingPlugin(),
+        SessionInvalidationPlugin(),
       ]
     )
   }
