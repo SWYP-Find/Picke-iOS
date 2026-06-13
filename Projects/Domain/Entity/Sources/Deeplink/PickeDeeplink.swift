@@ -53,10 +53,16 @@ public enum PickeDeeplinkParser {
     return nil
   }
 
-  /// https://picke.store/battle/55 · https://picke.store/perspective/45?commentId=678
+  /// 유니버설 링크 · 커스텀 스킴 모두 흡수.
+  /// - https://picke.store/battle/55 · https://picke.store/perspective/45?commentId=678
+  /// - picke://battle/55 · picke://perspective/45?commentId=678
   public static func parse(urlString: String) -> PickeDeeplink? {
     guard let components = URLComponents(string: urlString) else { return nil }
-    let path = components.path.split(separator: "/").map(String.init)
+    var path = components.path.split(separator: "/").map(String.init)
+    // 커스텀 스킴(picke://battle/55) 은 host 가 리소스 타입이므로 path 앞에 합친다.
+    if let host = components.host, !host.isEmpty, host != "picke.store" {
+      path.insert(host, at: 0)
+    }
     guard path.count >= 2 else { return nil }
 
     switch path[0] {

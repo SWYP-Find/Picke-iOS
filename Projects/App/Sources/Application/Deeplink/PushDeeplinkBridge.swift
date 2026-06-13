@@ -23,6 +23,15 @@ enum PushDeeplinkBridge {
     broadcast(deeplink)
   }
 
+  /// 커스텀 스킴(picke://...) / 유니버설 링크 URL 로 앱이 열렸을 때.
+  static func handleURL(_ url: URL) {
+    guard let deeplink = PickeDeeplinkParser.parse(urlString: url.absoluteString) else {
+      #logDebug("[Deeplink] 처리 불가 URL: \(url.absoluteString)")
+      return
+    }
+    broadcast(deeplink)
+  }
+
   /// 딥링크를 대기열에 저장하고 즉시 알림.
   static func broadcast(_ deeplink: PickeDeeplink) {
     UserDefaults.standard.set(deeplink.encoded, forKey: pendingKey)

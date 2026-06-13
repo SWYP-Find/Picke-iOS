@@ -100,11 +100,18 @@ extension InfoPlistDictionary {
     return merging(dict) { _, new in new }
   }
 
-  // 매개변수 없는 URL 타입 (Google REVERSED_CLIENT_ID)
+  // URL 타입 (picke 커스텀 스킴 + Google REVERSED_CLIENT_ID)
   func setCFBundleURLTypes() -> InfoPlistDictionary {
     let dict: [String: Plist.Value] = [
       "CFBundleURLTypes": .array([
         .dictionary([
+          "CFBundleURLName": .string("picke"),
+          "CFBundleURLSchemes": .array([
+            .string("picke"),
+          ]),
+        ]),
+        .dictionary([
+          "CFBundleURLName": .string("google-oauth"),
           "CFBundleURLSchemes": .array([
             .string("${REVERSED_CLIENT_ID}"),
           ]),
