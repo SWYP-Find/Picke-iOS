@@ -28,11 +28,11 @@ public enum ExploreCategory: String, Equatable, Hashable, CaseIterable, Identifi
     }
   }
 
-  /// 검색 API `category` 쿼리 값 (대문자 영문 enum). 전체는 nil(필터 없음).
+  /// 검색 API `category` 쿼리 값 (서버는 한글 카테고리명을 사용). 전체는 nil(필터 없음).
   public var queryValue: String? {
     switch self {
     case .all: nil
-    default: rawValue.uppercased()
+    default: title
     }
   }
 }
