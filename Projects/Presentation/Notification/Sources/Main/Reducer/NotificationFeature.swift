@@ -30,7 +30,7 @@ public struct NotificationFeature {
     public var hasNext: Bool = false
 
     /// 홈/프로필 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (전역 공유).
-    @Shared(.inMemory("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
+    @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
 
     public var hasUnread: Bool {
       items.contains { !$0.isRead }
@@ -226,10 +226,9 @@ extension NotificationFeature {
     }
   }
 
-  /// 전체 탭 기준 미읽음 존재 여부를 전역 빨간점 플래그에 반영.
-  /// (카테고리 필터 탭에서는 부분 정보이므로 갱신하지 않는다.)
+  /// 로드된 항목 기준 미읽음 존재 여부를 전역 빨간점 플래그에 반영.
+  /// 개별 읽음/모두 읽음 즉시 반영용. (카테고리 탭은 부분 정보라 다음 전체 조회/새 푸시 때 보정됨)
   private func updateUnreadBadge(state: inout State) {
-    guard state.selectedTab == .all else { return }
     let hasUnread = state.hasUnread
     state.$hasUnreadNotification.withLock { $0 = hasUnread }
   }

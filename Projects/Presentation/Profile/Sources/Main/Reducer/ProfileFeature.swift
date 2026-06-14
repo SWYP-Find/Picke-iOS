@@ -48,7 +48,7 @@ public struct ProfileFeature {
     public var menuItems: [MenuItem] = MenuItem.allCases
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (알림 화면과 전역 공유).
-    @Shared(.inMemory("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
+    @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
 
     public init() {}
 
