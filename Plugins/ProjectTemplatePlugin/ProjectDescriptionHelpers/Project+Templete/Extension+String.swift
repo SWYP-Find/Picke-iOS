@@ -17,7 +17,7 @@ public extension String {
     return Project.Environment.bundlePrefix
   }
 
-  static func appBuildVersion(buildVersion: String = "26") -> String {
+  static func appBuildVersion(buildVersion: String = "27") -> String {
     return buildVersion
   }
 
