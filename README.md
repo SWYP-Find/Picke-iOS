@@ -44,6 +44,7 @@ ln -s AGENTS.md CLAUDE.md
 - **Apple Sign-In**: `ASAuthorizationAppleIDProvider` 네이티브 통합
 - **자동 토큰 갱신**: `AccessTokenCredential` JWT exp 디코딩 + 만료 5분 전 자동 refresh
 - **401 자동 처리**: `AuthInterceptor` 가 401 감지 → refresh 시도 → 실패 시 자동 로그아웃 알림 발송
+- **USER_404 강제 로그아웃**: `SessionInvalidationPlugin` 이 응답 바디 에러코드(`USER_404`) 감지 → Keychain/세션 정리 후 로그인 전환
 
 ### 🥊 오늘의 배틀
 - **사전 투표 → 1:1 채팅 토론 → 사후 투표** 의 한 흐름
@@ -67,12 +68,23 @@ ln -s AGENTS.md CLAUDE.md
 - 프로필 카드 / 보유 포인트 + **무료 충전**(리워드 광고)
 - 포인트 내역, 내 배틀 기록, 내 콘텐츠 활동(댓글/좋아요), 공지사항·이벤트
 - **나의 철학자 유형(recap)** — 배틀 5개 미만 시 잠금 화면 분기, 애니메이션 레이더 차트 + 공유
-- 배틀 주제 제안, 설정·탈퇴·알림 설정
+- 배틀 주제 제안, 알림 설정
+- **회원 탈퇴** — 탈퇴 사유(복수 선택) 입력 화면 분리, 제출 시 디바이스 토큰 해제 + 세션 종료
 
 ### 🔔 알림 (Notification)
 - **알림받기** 목록 — 카테고리 탭(전체·콘텐츠·공지사항·이벤트) + 무한 스크롤
-- 탭 시 읽음 처리 / **모두 읽음**, `GET·POST /api/v1/notifications`
-- **미읽음 빨간점** — 전역 공유 상태(`HasUnreadNotification`)로 홈·프로필 종 아이콘에 표시, 모두 읽음 시 제거
+- 탭 시 읽음 처리 / **모두 읽음** — `GET /api/v1/notifications`, 읽음은 `PATCH .../read·/read-all`
+- **미읽음 빨간점** — `@Shared(.appStorage("HasUnreadNotification"))` 로 홈·프로필 종 아이콘에 표시
+  - 개별/모두 읽음 시 즉시 제거, **새 푸시 수신 시 다시 표시**, 앱 재실행에도 상태 유지
+
+### 📲 푸시 알림 / 딥링크 (APNs)
+- **APNs 다이렉트 발송** (Firebase SDK 미사용) — 권한 요청·토큰 수신 후 `POST /api/v1/devices` 등록(`platform: "IOS"`), 로그아웃/탈퇴 시 해제
+- 알림 탭 → 페이로드(`type`/`url`)를 `PickeDeeplink` 로 변환해 배틀 상세 등으로 라우팅, 콜드 스타트 대기 딥링크 처리
+- **커스텀 URL scheme** `picke://battle/55` · `picke://perspective/45?commentId=678` (`onOpenURL`)
+
+### ⬆️ 앱 업데이트 안내
+- 스플래시에서 **App Store(iTunes lookup) 최신 버전 비교** → 업데이트 필요 시 안내 alert
+- "지금 업데이트" → App Store, "나중에" → 정상 진입
 
 ### 💰 무료 충전 (리워드 광고)
 - **GoogleMobileAds 리워드 동영상** 시청 → 포인트 충전 (광고 유닛 ID 는 `REWARD_AD_UNIT` config 주입)
@@ -91,7 +103,7 @@ Picke-iOS/
 ├── 📱 Projects/
 │   ├── App/                       # 메인 애플리케이션 타겟
 │   │   ├── Sources/
-│   │   │   ├── Application/       # AppDelegate, SceneDelegate
+│   │   │   ├── Application/       # AppDelegate(APNs) / PushTokenStore / Deeplink 브리지
 │   │   │   ├── Di/                # WeaveDI 등록 (DiRegister, AppPresentationContextProvider)
 │   │   │   ├── Reducer/           # TCA Root AppReducer
 │   │   │   └── View/              # Root Views
@@ -105,18 +117,18 @@ Picke-iOS/
 │   │   ├── Home/                  # 홈 피드 / 추천 / 스켈레톤
 │   │   ├── MainTab/               # 탭 라우팅 / GNB
 │   │   ├── Notification/          # 알림받기 목록 / 카테고리 탭 / 미읽음 뱃지
-│   │   ├── Profile/               # 마이페이지 / 포인트 / 설정 / 배틀제안 / 배틀기록 / 콘텐츠활동 / 공지 / 리캡 / 무료충전
-│   │   ├── Splash/                # 스플래시
+│   │   ├── Profile/               # 마이페이지 / 포인트 / 설정 / 탈퇴 / 배틀제안 / 배틀기록 / 콘텐츠활동 / 공지 / 리캡 / 무료충전
+│   │   ├── Splash/                # 스플래시 / 앱 업데이트 체크
 │   │   ├── Web/                   # 약관 / 외부 링크 WebView
 │   │   └── Presentation/          # 공통 프레젠테이션 유틸
 │   │
 │   ├── Domain/                    # 🔥 Business Logic Layer
-│   │   ├── Entity/                # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Share / Error 엔티티
-│   │   ├── DomainInterface/       # Repository / Manager 인터페이스
-│   │   └── UseCase/               # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Analytics / Ad 유스케이스
+│   │   ├── Entity/                # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Device / Deeplink / AppUpdate / Share / Error 엔티티
+│   │   ├── DomainInterface/       # Repository / Manager 인터페이스 (Device · AppUpdate 포함)
+│   │   └── UseCase/               # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Device / AppUpdate / Analytics / Ad 유스케이스
 │   │
 │   ├── Data/                      # 📡 Data Layer
-│   │   ├── API/                   # Base / Auth / Battle / Comment / Home / Perspective / Profile / Notification endpoint
+│   │   ├── API/                   # Base / Auth / Battle / Comment / Home / Perspective / Profile / Notification / Device endpoint
 │   │   ├── Service/               # Moya TargetType + 요청 바디
 │   │   ├── Model/                 # BaseResponseDTO + DTO → Entity 매퍼
 │   │   └── Repository/            # RepositoryImpl + OAuth / AudioPlayer 구현
