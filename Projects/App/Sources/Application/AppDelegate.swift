@@ -125,21 +125,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // MARK: - UNUserNotificationCenterDelegate
 
 extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
-  // 포그라운드 수신 → 배너/사운드 표시.
+  /// 홈/프로필 종 아이콘 빨간점 — NotificationFeature 의 @Shared(.appStorage) 와 동일 키.
+  private static let hasUnreadKey = "HasUnreadNotification"
+
+  // 포그라운드 수신 → 배너/사운드 표시 + 미읽음 빨간점 ON.
   func userNotificationCenter(
     _: UNUserNotificationCenter,
     willPresent _: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
+    UserDefaults.standard.set(true, forKey: Self.hasUnreadKey)
     completionHandler([.banner, .badge, .sound])
   }
 
-  // 알림 탭 → 페이로드를 딥링크로 변환해 라우팅 브로드캐스트.
+  // 알림 탭 → 미읽음 빨간점 ON + 페이로드를 딥링크로 변환해 라우팅 브로드캐스트.
   func userNotificationCenter(
     _: UNUserNotificationCenter,
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
+    UserDefaults.standard.set(true, forKey: Self.hasUnreadKey)
     let userInfo = response.notification.request.content.userInfo
     PushDeeplinkBridge.handlePushPayload(userInfo)
     completionHandler()
