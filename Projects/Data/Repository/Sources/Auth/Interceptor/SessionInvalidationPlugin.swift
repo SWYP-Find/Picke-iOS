@@ -15,7 +15,9 @@ import Moya
 
 final class SessionInvalidationPlugin: PluginType {
   /// 강제 로그아웃을 유발하는 서버 에러 코드.
-  private static let invalidSessionCodes: Set<String> = ["USER_404"]
+  /// - USER_404: 존재하지 않는 사용자
+  /// - AUTH_401: 인증 필요 (AuthInterceptor refresh+retry 후에도 최종 401 이면 세션 만료로 간주)
+  private static let invalidSessionCodes: Set<String> = ["USER_404", "AUTH_401"]
 
   private struct ErrorEnvelope: Decodable {
     struct APIError: Decodable { let code: String }
@@ -45,7 +47,7 @@ final class SessionInvalidationPlugin: PluginType {
     @Dependency(\.keychainManager) var keychainManager
     keychainManager.clear()
 
-      _Concurrency.Task { @MainActor in
+    _Concurrency.Task { @MainActor in
       AuthSessionManager.shared.credential = nil
       OptimizedSessionManager.shared.credential = nil
 
