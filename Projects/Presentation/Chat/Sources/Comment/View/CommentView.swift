@@ -165,7 +165,10 @@ private extension CommentView {
   @ViewBuilder
   func summarySection() -> some View {
     VStack(spacing: 12) {
-      changeBadge()
+      // 생각이 바뀐 경우(pre≠post)에만 뱃지 노출.
+      if store.isMindChanged {
+        changeBadge()
+      }
 
       HStack(alignment: .center, spacing: 12) {
         HStack(spacing: 4) {

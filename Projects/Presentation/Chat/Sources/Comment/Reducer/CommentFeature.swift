@@ -66,8 +66,12 @@ public struct CommentFeature {
         && !isSubmitting
     }
 
-    public init(battleId: Int = 0) {
+    /// pre 투표 대비 post 투표에서 진영이 바뀌었는지 — "생각이 바뀌었어요" 뱃지 표시 조건.
+    public var isMindChanged: Bool = false
+
+    public init(battleId: Int = 0, isMindChanged: Bool = false) {
       self.battleId = battleId
+      self.isMindChanged = isMindChanged
     }
   }
 

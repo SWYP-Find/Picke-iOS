@@ -77,12 +77,12 @@ extension ChatCoordinator {
     case .routeAction(_, action: .preVote(.delegate(.dismiss))):
       return .send(.delegate(.dismiss))
 
-    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _)))):
+    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _, isMindChanged)))):
       switch voteMode {
       case .pre:
         state.routes.push(.chatRoom(.init(battleId: battleId)))
       case .post:
-        state.routes.push(.comment(.init(battleId: battleId)))
+        state.routes.push(.comment(.init(battleId: battleId, isMindChanged: isMindChanged)))
       }
       return .none
 

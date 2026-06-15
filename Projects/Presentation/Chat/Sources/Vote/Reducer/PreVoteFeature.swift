@@ -104,7 +104,7 @@ public struct PreVoteFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
-    case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult)
+    case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult, isMindChanged: Bool)
     /// 이미 최종 투표(POST_VOTE)까지 마친 상태 — 댓글 화면으로 바로 이동.
     case alreadyFinalVoted(battleId: Int)
   }
@@ -350,7 +350,12 @@ extension PreVoteFeature {
         analyticsUseCase.track(
           .battleStep(BattleStepData(stepName: .preVote, contentID: "\(state.battleId)"))
         )
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .pre, result: voteResult)))
+        return .send(.delegate(.voteSubmitted(
+          battleId: state.battleId,
+          voteMode: .pre,
+          result: voteResult,
+          isMindChanged: false
+        )))
       case let .failure(error):
         Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
         return .none
@@ -367,7 +372,13 @@ extension PreVoteFeature {
         analyticsUseCase.track(
           .battleStep(BattleStepData(stepName: .postVote, contentID: "\(state.battleId)"))
         )
-        return .send(.delegate(.voteSubmitted(battleId: state.battleId, voteMode: .post, result: voteResult)))
+        let mindChanged = isMindChanged(state: state)
+        return .send(.delegate(.voteSubmitted(
+          battleId: state.battleId,
+          voteMode: .post,
+          result: voteResult,
+          isMindChanged: mindChanged
+        )))
       case let .failure(error):
         // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.
         // 재투표가 불가하므로 결과(댓글) 화면으로 이동한다.
@@ -375,6 +386,24 @@ extension PreVoteFeature {
         return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
       }
     }
+  }
+
+  /// pre 투표(기존 userVoteStatus: pro→옵션0 / con→옵션1) 대비 선택한 post 옵션이 다른 진영이면 true.
+  /// post 제출 직전 시점이라 battleDetail.userVoteStatus 는 아직 pre 투표 값.
+  private func isMindChanged(state: State) -> Bool {
+    guard
+      let detail = state.battleDetail,
+      let postOptionId = state.selectedOptionId,
+      detail.battleInfo.options.count >= 2
+    else { return false }
+
+    let preOptionId: Int? = switch detail.userVoteStatus {
+    case .pro: detail.battleInfo.options[0].optionId
+    case .con: detail.battleInfo.options[1].optionId
+    default: nil
+    }
+    guard let preOptionId else { return false }
+    return preOptionId != postOptionId
   }
 
   /// API 로 받은 BattleDetail 을 화면 모델 PreVoteBattle 로 매핑.
