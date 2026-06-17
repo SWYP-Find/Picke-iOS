@@ -1,0 +1,91 @@
+---
+format_version: "13"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: ios
+
+meta:
+  bitrise.io:
+    stack: osx-xcode-26.0.x
+    machine_type_id: g2-m1.4core
+
+app:
+  envs:
+    - BITRISE_PROJECT_PATH: Picke.xcworkspace
+    - BITRISE_SCHEME: Picke-Stage
+    - BITRISE_RELEASE_SCHEME: Picke-Prod
+    - BITRISE_CONFIGURATION: Release
+    # TEAM_ID / APPLE_ID / APP_STORE_CONNECT_* / MATCH_KEYCHAIN_PASSWORD 등
+    # 시크릿은 Bitrise 대시보드(App → Env Vars / Secrets)에 등록한다.
+
+# 공통 준비: mise(tuist) + bundler(fastlane) 설치 후 Tuist 프로젝트 생성
+workflows:
+  _setup:
+    steps:
+      # SSH 키가 등록된 경우에만 활성화(없으면 스킵 → 실패 안 함)
+      - activate-ssh-key@4:
+          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+      - git-clone@8: {}
+      - script@1:
+          title: Install mise + tuist + generate
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euxo pipefail
+                curl -fsSL https://mise.run | sh
+                export PATH="$HOME/.local/bin:$PATH"
+                eval "$($HOME/.local/bin/mise activate bash)"
+                mise install
+                mise exec -- tuist install
+                mise exec -- tuist generate --no-open
+
+  # PR / push 검증: 빌드 + 테스트
+  primary:
+    before_run:
+      - _setup
+    steps:
+      - xcode-test@6:
+          inputs:
+            - project_path: $BITRISE_PROJECT_PATH
+            - scheme: $BITRISE_SCHEME
+            - destination: platform=iOS Simulator,name=iPhone 16,OS=latest
+      - deploy-to-bitrise-io@2: {}
+
+  # TestFlight 업로드 (Stage) — fastlane QA 레인
+  qa:
+    before_run:
+      - _setup
+    steps:
+      - fastlane@3:
+          inputs:
+            - lane: QA
+      - deploy-to-bitrise-io@2: {}
+
+  # App Store 배포 (Prod) — fastlane release 레인. version 은 트리거/수동 입력.
+  release:
+    before_run:
+      - _setup
+    steps:
+      - script@1:
+          title: Derive version from tag
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -euxo pipefail
+                # v1.0.1 → 1.0.1 (태그 없으면 RELEASE_VERSION 환경변수 사용)
+                VER="${BITRISE_GIT_TAG#v}"
+                VER="${VER:-$RELEASE_VERSION}"
+                envman add --key RELEASE_VERSION --value "$VER"
+      - fastlane@3:
+          inputs:
+            - lane: "release version:$RELEASE_VERSION"
+      - deploy-to-bitrise-io@2: {}
+
+trigger_map:
+  - pull_request_source_branch: "*"
+    workflow: primary
+  - push_branch: develop
+    workflow: primary
+  - tag: "qa/*"
+    workflow: qa
+  - tag: "v*"
+    workflow: release
