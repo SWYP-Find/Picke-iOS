@@ -29,7 +29,17 @@ def unlock_match_keychain
 
   keychain_path = File.expand_path("~/Library/Keychains/#{MATCH_KEYCHAIN_NAME}-db")
   unless File.exist?(keychain_path)
-    UI.message("match keychain does not exist yet: #{keychain_path}")
+    # CI 등 키체인이 없는 환경에서는 새로 생성(언락 포함)
+    UI.message("match keychain 생성: #{keychain_path}")
+    create_keychain(
+      name: MATCH_KEYCHAIN_NAME,
+      password: keychain_password,
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      lock_when_sleeps: false,
+      add_to_search_list: true
+    )
     return
   end
 
