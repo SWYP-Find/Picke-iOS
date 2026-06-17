@@ -1,19 +1,19 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.makeModule(
   name: "DesignSystem",
   bundleId: .appBundleID(name: ".DesignSystem"),
   product: .staticFramework,
-  settings:  .settings(),
+  settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,
-    .Shared(implements: .ThirdParty)
+    .Shared(implements: .ThirdParty),
   ],
   sources: ["Sources/**"],
-  resources: ["Resources/**", "FontAsset/**"],
+  resources: ["Resources/**"],
   hasTests: false
 )
