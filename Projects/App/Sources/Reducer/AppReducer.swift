@@ -178,8 +178,12 @@ public struct AppReducer: Sendable {
   ) -> Effect<Action> {
     switch action {
     case .startNotificationListener:
-      return setupRefreshTokenExpiredListener()
-        .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true)
+      // 토큰 만료 리스너 + 인앱/푸시 딥링크 리스너를 함께 구동.
+      return .merge(
+        setupRefreshTokenExpiredListener()
+          .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true),
+        observeDeeplink()
+      )
 
     case .refreshTokenExpired:
       return startTransition(.completeAuthTransition)
@@ -197,9 +201,18 @@ public struct AppReducer: Sendable {
           .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
           .send(.scope(.mainTab(.home(.view(.openBattle(battleId: battleId))))))
         )
-      case .perspective:
-        // 관점(댓글) 단독 진입로는 Chat 모듈에 perspectiveId 기반 진입 추가 후 연결.
-        return .none
+      case let .perspective(perspectiveId, commentId):
+        // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 관점(답글) 화면 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.home(.view(.openPerspective(perspectiveId: perspectiveId, commentId: commentId))))))
+        )
+      case .point:
+        // 마이페이지 탭 전환 후 포인트 내역 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.myPage(.view(.openPointHistory)))))
+        )
       }
     }
   }

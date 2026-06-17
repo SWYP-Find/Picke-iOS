@@ -14,26 +14,45 @@ import Utill
 public struct CommentReplyView: View {
   @Bindable public var store: StoreOf<CommentReplyFeature>
   @FocusState private var isReplyFocused: Bool
+  /// 딥링크 타깃 답글로 1회만 스크롤.
+  @State private var didScrollToTarget = false
 
   public init(store: StoreOf<CommentReplyFeature>) {
     self.store = store
   }
 
+  /// targetCommentId 와 일치하는 답글로 스크롤(1회).
+  private func scrollToTargetReply(using proxy: ScrollViewProxy) {
+    guard !didScrollToTarget,
+          let targetId = store.targetCommentId,
+          let reply = store.replies.first(where: { $0.commentId == targetId })
+    else { return }
+    didScrollToTarget = true
+    withAnimation(.easeInOut(duration: 0.25)) {
+      proxy.scrollTo(reply.id, anchor: .center)
+    }
+  }
+
   public var body: some View {
     VStack(spacing: 0) {
       navigationBar()
-      ScrollView(showsIndicators: false) {
-        if store.isLoadingReplies, store.replies.isEmpty {
-          CommentReplySkeletonView()
-        } else {
-          VStack(spacing: 0) {
-            parentCommentSection()
-            replySection()
+      ScrollViewReader { proxy in
+        ScrollView(showsIndicators: false) {
+          if store.isLoadingReplies, store.replies.isEmpty {
+            CommentReplySkeletonView()
+          } else {
+            VStack(spacing: 0) {
+              parentCommentSection()
+              replySection()
+            }
+            .padding(.bottom, 16)
           }
-          .padding(.bottom, 16)
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .onChange(of: store.replies.count) { _, _ in
+          scrollToTargetReply(using: proxy)
         }
       }
-      .scrollDismissesKeyboard(.interactively)
       inputBar()
     }
     .background(Color.beige200.ignoresSafeArea())

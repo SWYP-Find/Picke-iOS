@@ -23,6 +23,8 @@ public struct CommentReplyFeature {
   public struct State: Equatable {
     public var perspectiveId: Int
     public var parentComment: CommentItem
+    /// 딥링크(알림)로 진입 시 스크롤할 답글 commentId.
+    public var targetCommentId: Int?
     public var replies: [CommentReplyItem] = []
     public var replyText: String = ""
     public var isLoadingDetail: Bool = false
@@ -60,6 +62,23 @@ public struct CommentReplyFeature {
     ) {
       self.perspectiveId = perspectiveId
       self.parentComment = parentComment
+    }
+
+    /// 딥링크(알림) 단독 진입 — 부모 관점은 onAppear 의 fetchParent 로 채운다.
+    /// commentId 가 있으면 답글 로드 후 해당 답글로 스크롤.
+    public init(perspectiveId: Int, targetCommentId: Int? = nil) {
+      self.perspectiveId = perspectiveId
+      self.targetCommentId = targetCommentId
+      parentComment = CommentItem(
+        perspectiveId: perspectiveId,
+        author: "",
+        timeAgo: "",
+        option: .a,
+        content: "",
+        replyCount: 0,
+        likeCount: 0,
+        createdOrder: 0
+      )
     }
   }
 

@@ -40,6 +40,8 @@ public struct HomeCoordinator {
     case backToRootAction
     /// 딥링크(알림) → 배틀 상세(채팅) 진입.
     case openBattle(battleId: Int)
+    /// 딥링크(알림) → 관점(답글) 화면 진입 (commentId 있으면 해당 답글로 스크롤).
+    case openPerspective(perspectiveId: Int, commentId: Int?)
   }
 
   public enum AsyncAction: Equatable {}
@@ -107,6 +109,11 @@ extension HomeCoordinator {
       // 중복 스택 방지 후 배틀(채팅) 상세 진입.
       state.routes.goBackToRoot()
       state.routes.push(.chat(.init(battleId: battleId)))
+      return .none
+    case let .openPerspective(perspectiveId, commentId):
+      // 중복 스택 방지 후 관점(답글) 화면 진입.
+      state.routes.goBackToRoot()
+      state.routes.push(.chat(.init(perspectiveId: perspectiveId, commentId: commentId)))
       return .none
     }
   }

@@ -39,6 +39,8 @@ public struct ProfileCoordinator {
   public enum View {
     case backAction
     case backToRootAction
+    /// 딥링크(알림) → 포인트 내역 진입.
+    case openPointHistory
   }
 
   public enum AsyncAction: Equatable {}
@@ -186,6 +188,11 @@ extension ProfileCoordinator {
       return .none
     case .backToRootAction:
       state.routes.goBackToRoot()
+      return .none
+    case .openPointHistory:
+      // 중복 스택 방지 후 포인트 내역 진입.
+      state.routes.goBackToRoot()
+      state.routes.push(.pointHistory(.init()))
       return .none
     }
   }

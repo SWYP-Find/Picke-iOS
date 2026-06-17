@@ -23,6 +23,14 @@ public struct ChatCoordinator {
     public init(battleId: Int = 0) {
       routes = [.root(.preVote(.init(battleId: battleId)), embedInNavigationView: true)]
     }
+
+    /// 딥링크(알림) 단독 진입 — 관점(답글) 화면으로 바로 시작.
+    public init(perspectiveId: Int, commentId: Int? = nil) {
+      routes = [.root(
+        .commentReply(.init(perspectiveId: perspectiveId, targetCommentId: commentId)),
+        embedInNavigationView: true
+      )]
+    }
   }
 
   @CasePathable
@@ -117,7 +125,8 @@ extension ChatCoordinator {
       return .none
 
     case .routeAction(_, action: .commentReply(.delegate(.dismiss))):
-      return .send(.view(.backAction))
+      // 단독(루트) 진입이면 코디네이터 자체를 닫고, 스택 내부면 뒤로.
+      return state.routes.count <= 1 ? .send(.delegate(.dismiss)) : .send(.view(.backAction))
 
     case let .routeAction(_, action: .comment(.delegate(.openCuration(battleId)))):
       state.routes.push(.curation(.init(battleId: battleId)))
