@@ -164,3 +164,8 @@ CLAUDE.md
 
 # Design tokens 원본은 SWYP-Find/design-tokens 레포가 단일 소스
 Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
+
+# secrets
+fastlane/.env
+fastlane/.env.*
+Config/*.xcconfig
