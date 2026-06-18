@@ -99,10 +99,15 @@ workflows:
             - content: |-
                 #!/usr/bin/env bash
                 set -euxo pipefail
-                # v1.0.1 → 1.0.1 (태그 없으면 RELEASE_VERSION 환경변수 사용)
+                # 태그(v1.0.3)가 있으면 거기서, 없으면(release 브랜치 push) appVersion 에서 추출
                 VER="${BITRISE_GIT_TAG#v}"
+                if [ -z "$VER" ]; then
+                  EXT="Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
+                  VER=$(grep -oE 'appVersion\(version: String = "[0-9.]+"' "$EXT" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+                fi
                 VER="${VER:-$RELEASE_VERSION}"
                 envman add --key RELEASE_VERSION --value "$VER"
+                echo "릴리스 버전: $VER"
       - fastlane@3:
           inputs:
             - lane: "release version:$RELEASE_VERSION"
@@ -111,5 +116,8 @@ workflows:
 trigger_map:
   - tag: "qa/*"
     workflow: qa
+  # release 브랜치에 push/merge → Prod(App Store) 배포
+  - push_branch: release
+    workflow: release
   - tag: "v*"
     workflow: release
