@@ -71,7 +71,7 @@ workflows:
                 msg = f"@everyone 🛠️ Picke {label} 빌드 시작 · 빌드 #{os.environ.get('BITRISE_BUILD_NUMBER','')}\n{os.environ.get('BITRISE_BUILD_URL','')}"
                 wh = os.environ.get('DISCORD_WEBHOOK','')
                 if wh:
-                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json","User-Agent":"Picke-CI/1.0"})
                     urllib.request.urlopen(req); print("discord start ok")
                 PY
 
@@ -125,7 +125,7 @@ workflows:
                 if url: msg += "\n" + url
                 wh = os.environ.get('DISCORD_WEBHOOK','')
                 if wh:
-                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json","User-Agent":"Picke-CI/1.0"})
                     urllib.request.urlopen(req); print("discord ok")
                 PY
       # Discord 알림 — 실패
@@ -142,7 +142,7 @@ workflows:
                 msg = f"@everyone ❌ Picke QA(TestFlight) 빌드 실패 · 빌드 #{os.environ.get('BITRISE_BUILD_NUMBER','')}\n{os.environ.get('BITRISE_BUILD_URL','')}"
                 wh = os.environ.get('DISCORD_WEBHOOK','')
                 if wh:
-                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json","User-Agent":"Picke-CI/1.0"})
                     urllib.request.urlopen(req); print("discord ok")
                 PY
 
@@ -184,7 +184,7 @@ workflows:
                 XXX\n{os.environ.get('BITRISE_BUILD_URL','')}"
                 wh = os.environ.get('DISCORD_WEBHOOK','')
                 if wh:
-                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json","User-Agent":"Picke-CI/1.0"})
                     urllib.request.urlopen(req); print("discord ok")
                 PY
       # Discord 알림 — 실패
@@ -201,7 +201,7 @@ workflows:
                 msg = f"@everyone ❌ Picke {os.environ.get('RELEASE_VERSION','')} App Store 배포 실패\n{os.environ.get('BITRISE_BUILD_URL','')}"
                 wh = os.environ.get('DISCORD_WEBHOOK','')
                 if wh:
-                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json","User-Agent":"Picke-CI/1.0"})
                     urllib.request.urlopen(req); print("discord ok")
                 PY
 
