@@ -87,6 +87,43 @@ workflows:
                 ~/.local/share/mise
                 Tuist/.build
       - deploy-to-bitrise-io@2: {}
+      # Discord 알림 — 성공
+      - script@1:
+          title: Discord notify (success)
+          run_if: '{{enveq "BITRISE_BUILD_STATUS" "0"}}'
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -eo pipefail
+                python3 - <<'PY'
+                import os, json, urllib.request
+                msg = f"✅ Picke QA(TestFlight) 업로드 성공 · 빌드 #{os.environ.get('BITRISE_BUILD_NUMBER','')}"
+                notes = os.environ.get('RELEASE_NOTES','').strip()
+                if notes: msg += "\n[변경사항]\n" + notes
+                url = os.environ.get('BITRISE_BUILD_URL','')
+                if url: msg += "\n" + url
+                wh = os.environ.get('DISCORD_WEBHOOK','')
+                if wh:
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    urllib.request.urlopen(req); print("discord ok")
+                PY
+      # Discord 알림 — 실패
+      - script@1:
+          title: Discord notify (failure)
+          is_always_run: true
+          run_if: .IsBuildFailed
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -eo pipefail
+                python3 - <<'PY'
+                import os, json, urllib.request
+                msg = f"❌ Picke QA(TestFlight) 빌드 실패 · 빌드 #{os.environ.get('BITRISE_BUILD_NUMBER','')}\n{os.environ.get('BITRISE_BUILD_URL','')}"
+                wh = os.environ.get('DISCORD_WEBHOOK','')
+                if wh:
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    urllib.request.urlopen(req); print("discord ok")
+                PY
 
   # App Store 배포 (Prod) — fastlane release 레인. version 은 트리거/수동 입력.
   release:
@@ -112,6 +149,39 @@ workflows:
           inputs:
             - lane: "release version:$RELEASE_VERSION"
       - deploy-to-bitrise-io@2: {}
+      # Discord 알림 — 성공
+      - script@1:
+          title: Discord notify (success)
+          run_if: '{{enveq "BITRISE_BUILD_STATUS" "0"}}'
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -eo pipefail
+                python3 - <<'PY'
+                import os, json, urllib.request
+                msg = f"🚀 Picke {os.environ.get('RELEASE_VERSION','')} App Store 업로드·심사 제출 완료\n{os.environ.get('BITRISE_BUILD_URL','')}"
+                wh = os.environ.get('DISCORD_WEBHOOK','')
+                if wh:
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    urllib.request.urlopen(req); print("discord ok")
+                PY
+      # Discord 알림 — 실패
+      - script@1:
+          title: Discord notify (failure)
+          is_always_run: true
+          run_if: .IsBuildFailed
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -eo pipefail
+                python3 - <<'PY'
+                import os, json, urllib.request
+                msg = f"❌ Picke {os.environ.get('RELEASE_VERSION','')} App Store 배포 실패\n{os.environ.get('BITRISE_BUILD_URL','')}"
+                wh = os.environ.get('DISCORD_WEBHOOK','')
+                if wh:
+                    req = urllib.request.Request(wh, data=json.dumps({"content": msg}).encode(), headers={"Content-Type":"application/json"})
+                    urllib.request.urlopen(req); print("discord ok")
+                PY
 
 # Pipelines: 워크플로를 파이프라인으로 감싸 Pipelines 탭/다이어그램에서 실행·시각화.
 # (iOS 전용·단일 fastlane 레인이라 현재는 단일 스테이지. 추후 단계 추가 가능.)
