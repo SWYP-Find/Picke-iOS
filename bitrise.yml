@@ -117,19 +117,18 @@ workflows:
 # (iOS 전용·단일 fastlane 레인이라 현재는 단일 스테이지. 추후 단계 추가 가능.)
 pipelines:
   deploy-qa:
+    # Tag: qa/* → TestFlight(Stage)
+    triggers:
+      tag:
+        - name: "qa/*"
     workflows:
       qa: {}
   deploy-prod:
+    # Push: release 브랜치 push/merge / Tag: v* → Prod(App Store) 배포
+    triggers:
+      push:
+        - branch: release
+      tag:
+        - name: "v*"
     workflows:
       release: {}
-
-trigger_map:
-  # Tag: qa/* → TestFlight(Stage)
-  - tag: "qa/*"
-    pipeline: deploy-qa
-  # Push: release 브랜치 push/merge → Prod(App Store) 배포
-  - push_branch: release
-    pipeline: deploy-prod
-  # Tag: v* → Prod(App Store) 배포
-  - tag: "v*"
-    pipeline: deploy-prod
