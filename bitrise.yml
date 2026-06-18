@@ -21,16 +21,33 @@ app:
 workflows:
   _setup:
     steps:
-      # SSH 키가 등록된 경우에만 활성화(없으면 스킵 → 실패 안 함)
-      - activate-ssh-key@4:
-          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+      # 메인 repo(Picke-iOS)는 public → 인증 불필요.
+      # private config/인증서 repo 는 아래 스크립트에서 GITHUB_TOKEN HTTPS 로 접근.
       - git-clone@8: {}
+      # SPM/tuist/mise 캐시 복원 (Package.resolved 변경 시 자동 무효화)
+      - restore-cache@3:
+          inputs:
+            - key: |-
+                spm-{{ .OS }}-{{ checksum "Tuist/Package.resolved" }}
+                spm-{{ .OS }}-
       - script@1:
           title: Install mise + tuist + generate
           inputs:
             - content: |-
                 #!/usr/bin/env bash
-                set -euxo pipefail
+                set -exo pipefail
+                # GitHub 토큰으로 SSH→HTTPS 치환 (private config 클론 + match 접근)
+                git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
+                git config --global url."https://x-access-token:${GITHUB_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
+                # fastlane match 가 토큰 HTTPS 로 인증서 repo 를 읽도록 URL 주입
+                envman add --key MATCH_GIT_URL --value "https://x-access-token:${GITHUB_TOKEN}@github.com/Roy-wonji/FastlaneMatch.git"
+                # 미커밋 시크릿(xcconfig + .env)을 private config repo 에서 복원
+                rm -rf /tmp/ios-config
+                git clone --depth 1 https://x-access-token:${GITHUB_TOKEN}@github.com/SWYP-Find/iOS-Config.git /tmp/ios-config
+                mkdir -p Config fastlane
+                cp /tmp/ios-config/Config/*.xcconfig Config/
+                cp /tmp/ios-config/fastlane/.env fastlane/.env
+                # mise + tuist
                 curl -fsSL https://mise.run | sh
                 export PATH="$HOME/.local/bin:$PATH"
                 eval "$($HOME/.local/bin/mise activate bash)"
@@ -38,26 +55,37 @@ workflows:
                 mise exec -- tuist install
                 mise exec -- tuist generate --no-open
 
-  # PR / push 검증: 빌드 + 테스트
-  primary:
-    before_run:
-      - _setup
-    steps:
-      - xcode-test@6:
-          inputs:
-            - project_path: $BITRISE_PROJECT_PATH
-            - scheme: $BITRISE_SCHEME
-            - destination: platform=iOS Simulator,name=iPhone 16,OS=latest
-      - deploy-to-bitrise-io@2: {}
-
   # TestFlight 업로드 (Stage) — fastlane QA 레인
   qa:
     before_run:
       - _setup
     steps:
+      # git 로그 → 릴리스 노트(RELEASE_NOTES) 자동 생성. fastlane changelog 로 전달.
+      - script@1:
+          title: Generate release notes
+          inputs:
+            - content: |-
+                #!/usr/bin/env bash
+                set -eo pipefail
+                # 머지/빌드번호/CI 커밋 제외하고 최근 커밋 메시지 수집
+                NOTES=$(git log -n 15 --no-merges --pretty=format:"- %s" \
+                  | grep -vE '^- (Merge|chore: 빌드|chore: bump|ci:)' \
+                  | head -10)
+                [ -z "$NOTES" ] && NOTES="버그 수정 및 개선"
+                envman add --key RELEASE_NOTES --value "$NOTES"
+                echo "릴리스 노트:"; echo "$NOTES"
       - fastlane@3:
           inputs:
             - lane: QA
+      # 빌드 산출물(SPM/tuist/mise) 캐시 저장
+      - save-cache@1:
+          inputs:
+            - key: spm-{{ .OS }}-{{ checksum "Tuist/Package.resolved" }}
+            - paths: |-
+                ~/Library/Caches/org.swift.swiftpm
+                ~/.cache/tuist
+                ~/.local/share/mise
+                Tuist/.build
       - deploy-to-bitrise-io@2: {}
 
   # App Store 배포 (Prod) — fastlane release 레인. version 은 트리거/수동 입력.
@@ -81,10 +109,6 @@ workflows:
       - deploy-to-bitrise-io@2: {}
 
 trigger_map:
-  - pull_request_source_branch: "*"
-    workflow: primary
-  - push_branch: develop
-    workflow: primary
   - tag: "qa/*"
     workflow: qa
   - tag: "v*"
