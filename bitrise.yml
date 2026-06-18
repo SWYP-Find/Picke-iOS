@@ -1,5 +1,5 @@
 ---
-format_version: "13"
+format_version: "23"
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 project_type: ios
 
@@ -113,11 +113,23 @@ workflows:
             - lane: "release version:$RELEASE_VERSION"
       - deploy-to-bitrise-io@2: {}
 
+# Pipelines: 워크플로를 파이프라인으로 감싸 Pipelines 탭/다이어그램에서 실행·시각화.
+# (iOS 전용·단일 fastlane 레인이라 현재는 단일 스테이지. 추후 단계 추가 가능.)
+pipelines:
+  deploy-qa:
+    workflows:
+      qa: {}
+  deploy-prod:
+    workflows:
+      release: {}
+
 trigger_map:
+  # Tag: qa/* → TestFlight(Stage)
   - tag: "qa/*"
-    workflow: qa
-  # release 브랜치에 push/merge → Prod(App Store) 배포
+    pipeline: deploy-qa
+  # Push: release 브랜치 push/merge → Prod(App Store) 배포
   - push_branch: release
-    workflow: release
+    pipeline: deploy-prod
+  # Tag: v* → Prod(App Store) 배포
   - tag: "v*"
-    workflow: release
+    pipeline: deploy-prod
