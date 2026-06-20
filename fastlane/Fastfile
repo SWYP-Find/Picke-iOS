@@ -202,13 +202,14 @@ platform :ios do
     end
 
     begin
-      # Picke/picke는 내부(Internal) 테스터 그룹 → groups 미지정. 처리 완료되면 내부 테스터에게 자동 배포됨
+      # Picke/picke 그룹에 배포 (External 그룹이어야 실제 지정됨. Internal이면 자동 배포되고 아래 rescue로 넘어감)
       upload_to_testflight(
         ipa: ipa_path,
         changelog: ENV.fetch("RELEASE_NOTES", "변경사항"),
+        groups: ["Picke", "picke"],
         beta_app_description: "Picke 앱입니다.",
-        notify_external_testers: false,
-        skip_waiting_for_build_processing: true,
+        notify_external_testers: true,
+        skip_waiting_for_build_processing: false,
         demo_account_required: false,
         uses_non_exempt_encryption: false
       )
@@ -216,7 +217,7 @@ platform :ios do
       # 바이너리 업로드는 끝났는데 그룹/심사 배포 단계만 실패하면 빌드 실패시키지 않고 경고만
       if e.message.include?("Another build is in review") || e.message.downcase.include?("beta review") ||
          e.message.include?("internal group") || e.message.downcase.include?("cannot be assigned")
-        UI.important("⚠️ 그룹/심사 배포 단계 보류 — 바이너리 업로드는 완료됨.")
+        UI.important("⚠️ 그룹/심사 배포 단계 보류 — 바이너리 업로드는 완료됨. (Picke/picke가 Internal 그룹이면 자동 배포됨)")
       else
         raise e
       end
