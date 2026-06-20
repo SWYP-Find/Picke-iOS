@@ -1,0 +1,26 @@
+# Picke 스모크 테스트 (maestro)
+#
+# 주의: iOS 26.3 / Xcode 26 시뮬레이터에서는 maestro XCUITest 드라이버 채널이
+# 연결되지 않아 현재 실행 불가(2.6.1 시작단계 hang / 1.39 channel-alive 실패).
+# 환경이 maestro iOS 26 을 지원하면 이 플로우를 사용한다. 그 전까지는
+# Scripts/e2e_smoke_idb.sh (idb 기반) 를 사용한다.
+#
+# 실행: maestro --device <UDID> test Scripts/maestro/smoke.yaml
+appId: io.Picke.co
+---
+- launchApp
+- assertVisible: "Best 배틀"
+- takeScreenshot: home
+# 알림 모두읽음 (QA-47)
+- tapOn: "알림"
+- assertVisible: "모두 읽음"
+- tapOn: "모두 읽음"
+- back
+# 탭바 네비게이션 — maestro 는 XCUITest 히트테스트로 탭바 정확 탭 가능
+- tapOn: "탐색"
+- takeScreenshot: explore           # QA-39 탐색 상단 네비
+- tapOn: "빠른 배틀"
+- takeScreenshot: quickbattle        # QA-46
+- tapOn: "마이"
+- assertVisible: "나의 철학자 유형"
+- takeScreenshot: mypage
