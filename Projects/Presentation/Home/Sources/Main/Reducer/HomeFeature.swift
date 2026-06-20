@@ -174,6 +174,8 @@ extension HomeFeature {
       case let .success(bundle):
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
+        // QA-47: 홈 진입/재진입 시 서버의 미읽음 여부를 종 아이콘 빨간점(전역 공유 플래그)에 반영.
+        state.$hasUnreadNotification.withLock { $0 = home.newNotice }
         state.heroes = home.heroes
         state.heroIndex = 0
         state.hotBattles = home.hotBattles

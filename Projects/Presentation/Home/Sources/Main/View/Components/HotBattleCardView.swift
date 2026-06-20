@@ -45,17 +45,22 @@ struct HotBattleCardView: View {
 
   @ViewBuilder
   private var thumbnail: some View {
-    if let url = battle.thumbnailURL {
-      KFImage(url)
-        .placeholder { SkeletonView() }
-        .resizable()
-        .scaledToFill()
-        .frame(width: 196, height: 124)
-        .clipShape(RoundedRectangle(cornerRadius: 2))
-    } else {
-      RoundedRectangle(cornerRadius: 2)
-        .fill(.beige500)
-        .frame(width: 196, height: 124)
+    // QA-43: Figma node 3888-3736 기준 — height 140, border 4pt(.borderBeigeSelected), radius 2.
+    Group {
+      if let url = battle.thumbnailURL {
+        KFImage(url)
+          .placeholder { SkeletonView() }
+          .resizable()
+          .scaledToFill()
+      } else {
+        Rectangle()
+          .fill(.beige500)
+      }
     }
+    .frame(width: 196, height: 140)
+    .clipShape(RoundedRectangle(cornerRadius: 2))
+    .overlay(
+      RoundedRectangle(cornerRadius: 2).stroke(.borderBeigeSelected, lineWidth: 4)
+    )
   }
 }

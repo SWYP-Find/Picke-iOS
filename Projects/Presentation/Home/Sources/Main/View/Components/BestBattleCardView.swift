@@ -19,7 +19,7 @@ struct BestBattleCardView: View {
       Text("\(battle.rank)")
         .pretendardFont(family: .Bold, size: 28)
         .foregroundStyle(battle.rank == 1 ? .primary500 : .neutral300)
-        .frame(width: 28, alignment: .leading)
+        .frame(width: 28, alignment: .center) // QA-41: 순위 숫자(1,2,3) 중앙정렬
 
       VStack(alignment: .leading, spacing: 8) {
         Text(battle.pair)

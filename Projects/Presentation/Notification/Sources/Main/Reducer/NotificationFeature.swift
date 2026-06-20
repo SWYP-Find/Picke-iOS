@@ -126,7 +126,8 @@ extension NotificationFeature {
       return .send(.async(.fetch(reset: false)))
 
     case .readAllTapped:
-      guard state.hasUnread else { return .none }
+      // QA-47: 빨간점은 푸시 수신(AppDelegate) 시점에 전역 플래그로 켜질 수 있어,
+      // 현재 로드된 리스트의 미읽음 여부와 무관하게 항상 전역 빨간점을 끈다.
       state.items = state.items.map { $0.markedAsRead() }
       // 모두 읽음 → 홈/프로필 빨간점 제거.
       state.$hasUnreadNotification.withLock { $0 = false }
