@@ -142,7 +142,7 @@ public extension CustomAlertState where Action == CustomAlertAction {
     CustomAlertState(
       title: "탈퇴 시 지금까지의 이용기록이 영구 삭제 됩니다.\n그럼에도 탈퇴하시겠습니까?",
       confirmTitle: "네, 탈퇴합니다",
-      cancelTitle: "그대로 있을게요",
+      cancelTitle: "뒤로가기",
       isDestructive: true,
       style: .withdraw
     )
