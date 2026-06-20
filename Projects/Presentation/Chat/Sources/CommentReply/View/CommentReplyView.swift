@@ -37,17 +37,18 @@ public struct CommentReplyView: View {
     VStack(spacing: 0) {
       navigationBar()
       ScrollViewReader { proxy in
-        ScrollView(showsIndicators: false) {
+        ScrollView {
           if store.isLoadingReplies, store.replies.isEmpty {
             CommentReplySkeletonView()
           } else {
             VStack(spacing: 0) {
               parentCommentSection()
+              replyCountHeader()
               replySection()
             }
-            .padding(.bottom, 16)
           }
         }
+        .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .onChange(of: store.replies.count) { _, _ in
           scrollToTargetReply(using: proxy)
@@ -55,7 +56,7 @@ public struct CommentReplyView: View {
       }
       inputBar()
     }
-    .background(Color.beige200.ignoresSafeArea())
+    .background(Color.beige200.ignoresSafeArea()) // Figma 화면 배경 beige200
     .contentShape(Rectangle())
     .onTapGesture {
       isReplyFocused = false
@@ -107,10 +108,10 @@ public struct CommentReplyView: View {
         Text(title)
           .pretendardFont(family: .Medium, size: 13)
       }
-      .foregroundStyle(Color.beige50)
+      .foregroundStyle(.beige50)
       .padding(.horizontal, 14)
       .padding(.vertical, 7)
-      .background(Color.primary500, in: Capsule())
+      .background(.primary500, in: Capsule())
     }
     .buttonStyle(.plain)
   }
@@ -131,9 +132,10 @@ private extension CommentReplyView {
 
       Spacer()
 
+      // 타이틀 "댓글" — heading/sm Pretendard SemiBold 16, gray500
       Text("댓글")
         .pretendardFont(family: .SemiBold, size: 16)
-        .foregroundStyle(.neutral500)
+        .foregroundStyle(.gray500)
 
       Spacer()
 
@@ -141,13 +143,9 @@ private extension CommentReplyView {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
-    .foregroundStyle(.neutral500)
-    .background(.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .foregroundStyle(.gray500)
+    // Figma: 앱바는 beige200 위에 투명 배치, 하단 구분선 없음
+    .background(.beige200)
   }
 }
 
@@ -156,52 +154,57 @@ private extension CommentReplyView {
 private extension CommentReplyView {
   @ViewBuilder
   func parentCommentSection() -> some View {
-    VStack(spacing: 0) {
-      commentCard(
-        author: store.parentComment.isMine ? "나" : store.parentComment.author,
-        imageURL: store.parentComment.authorImageURL,
-        timeAgo: store.parentComment.timeAgo,
-        option: store.parentComment.option,
-        optionLabel: store.parentComment.optionLabel ?? "",
-        content: store.parentComment.content,
-        replyCount: store.parentComment.replyCount,
-        likeCount: store.parentComment.likeCount,
-        isLiked: store.parentComment.isLiked,
-        isMine: store.parentComment.isMine,
-        background: .beige50,
-        showsReplyCount: true,
-        moreAction: { send(.parentMenu(.more)) },
-        likeAction: { send(.parentLikeTapped) }
-      )
-      .overlay(alignment: .topTrailing) {
-        if store.parentMenuOpen {
-          parentMenuView()
-            .padding(.trailing, 12)
-            .offset(y: 46)
-            .zIndex(1)
-        }
-      }
-    }
-    .padding(12)
-    .background(.beige50)
-    .zIndex(store.parentMenuOpen ? 1 : 0)
-    .overlay(alignment: .bottom) {
+    // Figma: 원본 댓글은 beige50 풀폭 행, 상·하단 구분선(beige600)
+    commentCard(
+      author: store.parentComment.isMine ? "나" : store.parentComment.author,
+      imageURL: store.parentComment.authorImageURL,
+      timeAgo: store.parentComment.timeAgo,
+      option: store.parentComment.option,
+      optionLabel: store.parentComment.optionLabel ?? "",
+      content: store.parentComment.content,
+      replyCount: store.parentComment.replyCount,
+      likeCount: store.parentComment.likeCount,
+      isLiked: store.parentComment.isLiked,
+      isMine: store.parentComment.isMine,
+      showsReplyCount: true,
+      moreAction: { send(.parentMenu(.more)) },
+      likeAction: { send(.parentLikeTapped) }
+    )
+    .overlay(alignment: .top) {
       Rectangle()
         .fill(.beige600)
         .frame(height: 1)
     }
+    .overlay(alignment: .topTrailing) {
+      if store.parentMenuOpen {
+        parentMenuView()
+          .padding(.trailing, 12)
+          .offset(y: 46)
+          .zIndex(1)
+      }
+    }
+    .zIndex(store.parentMenuOpen ? 1 : 0)
+  }
+
+  @ViewBuilder
+  func replyCountHeader() -> some View {
+    // Figma: "답글 N개" 헤더 — beige200 배경, 하단 구분선, gray800 SemiBold 13
+    Text("답글 \(store.replies.count)개")
+      .pretendardFont(family: .SemiBold, size: 13)
+      .foregroundStyle(.gray800)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(12)
+      .background(.beige200)
+      .overlay(alignment: .bottom) {
+        Rectangle()
+          .fill(.beige600)
+          .frame(height: 1)
+      }
   }
 
   @ViewBuilder
   func replySection() -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("답글 \(store.replies.count)개")
-        .pretendardFont(family: .SemiBold, size: 13)
-        .foregroundStyle(.neutral900)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.top, 12)
-
+    VStack(alignment: .leading, spacing: 0) {
       ForEach(store.replies) { reply in
         commentCard(
           author: reply.isMine ? "나" : reply.author,
@@ -214,7 +217,6 @@ private extension CommentReplyView {
           likeCount: reply.likeCount,
           isLiked: reply.isLiked,
           isMine: reply.isMine,
-          background: .beige50,
           showsReplyCount: false,
           moreAction: { send(.replyMenu(id: reply.id, action: .more)) },
           likeAction: { send(.replyLikeTapped(reply.id)) }
@@ -230,8 +232,6 @@ private extension CommentReplyView {
         .zIndex(store.menuTargetReplyId == reply.id ? 1 : 0)
       }
     }
-    .padding(.bottom, 24)
-    .background(.beige50)
   }
 
   func commentCard(
@@ -245,30 +245,31 @@ private extension CommentReplyView {
     likeCount: Int,
     isLiked: Bool,
     isMine: Bool,
-    background: Color,
     showsReplyCount: Bool,
     moreAction: (() -> Void)? = nil,
     likeAction: @escaping () -> Void
   ) -> some View {
+    // Figma: 댓글/답글은 beige50 풀폭 행 + 하단 구분선(beige600), 내부 카드 박스 없음
     VStack(alignment: .leading, spacing: 8) {
       commentHeader(
         author: author,
         imageURL: imageURL,
         timeAgo: timeAgo,
-        option: option,
-        optionLabel: optionLabel,
         isMine: isMine,
         moreAction: moreAction
       )
 
+      // Figma: 옵션 칩은 헤더 아래 독립 라인에 배치
+      optionBadge(label: optionLabel, option: option)
+
       Text(content)
         .pretendardFont(family: .Regular, size: 13)
-        .foregroundStyle(.neutral400)
+        .foregroundStyle(.gray400)
         .lineSpacing(13 * 0.4)
         .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 2)
 
-      HStack(spacing: 12) {
+      HStack(spacing: 4) {
         Spacer()
 
         if showsReplyCount, let replyCount {
@@ -283,60 +284,60 @@ private extension CommentReplyView {
         }
         .buttonStyle(.plain)
       }
-      .foregroundStyle(.neutral300)
+      .foregroundStyle(.gray300)
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(background, in: RoundedRectangle(cornerRadius: 2))
-    .overlay {
-      RoundedRectangle(cornerRadius: 2)
-        .stroke(.beige600, lineWidth: 1)
+    .background(.beige50)
+    .overlay(alignment: .bottom) {
+      Rectangle()
+        .fill(.beige600)
+        .frame(height: 1)
     }
-    .padding(.horizontal, 12)
   }
 
   func commentHeader(
     author: String,
     imageURL: String?,
     timeAgo: String,
-    option: CommentOption,
-    optionLabel: String,
     isMine: Bool,
     moreAction: (() -> Void)?
   ) -> some View {
-    HStack(alignment: .top, spacing: 8) {
+    // Figma top 행: 아바타(36) + 이름/시간 스택 + 세로 더보기, 요소 간 gap 6
+    HStack(spacing: 6) {
       CommentAvatarView(
         imageURL: imageURL,
         fallback: author,
         size: 36
       )
 
-      VStack(alignment: .leading, spacing: 4) {
-        HStack(spacing: 6) {
+      VStack(alignment: .leading, spacing: 0) {
+        HStack(spacing: 4) {
           Text(author)
             .pretendardFont(family: .Medium, size: 14)
-            .foregroundStyle(.neutral500)
+            .foregroundStyle(.gray500)
             .lineLimit(1)
 
           if isMine {
             myBadge()
           }
-
-          Text(timeAgo)
-            .pretendardFont(family: .SemiBold, size: 10)
-            .foregroundStyle(.neutral300)
         }
 
-        optionBadge(label: optionLabel, option: option)
+        // 시간 — caption/sm/semibold Pretendard SemiBold 10, gray300
+        Text(timeAgo)
+          .pretendardFont(family: .SemiBold, size: 10)
+          .foregroundStyle(.gray300)
       }
 
       Spacer()
 
       Button { moreAction?() } label: {
+        // Figma: 세로 점 3개(더보기) 24pt
         Image(systemName: "ellipsis")
+          .rotationEffect(.degrees(90))
           .font(.system(size: 18, weight: .regular))
-          .foregroundStyle(.neutral300)
-          .frame(width: 44, height: 44)
+          .foregroundStyle(.gray300)
+          .frame(width: 24, height: 24)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -366,7 +367,8 @@ private extension CommentReplyView {
     systemName: String,
     text: String
   ) -> some View {
-    HStack(spacing: 4) {
+    // Figma like/more 칩: 아이콘 16 + 텍스트(Medium 12, gray300), 내부 gap 2, padding px6/py4
+    HStack(spacing: 2) {
       Image(systemName: systemName)
         .font(.system(size: 14, weight: .medium))
         .frame(width: 16, height: 16)
@@ -374,6 +376,8 @@ private extension CommentReplyView {
       Text(text)
         .pretendardFont(family: .Medium, size: 12)
     }
+    .padding(.horizontal, 6)
+    .padding(.vertical, 4)
   }
 }
 
@@ -384,15 +388,16 @@ private extension CommentReplyView {
   func inputBar() -> some View {
     HStack(alignment: .bottom, spacing: 8) {
       VStack(alignment: .leading, spacing: 6) {
+        // Figma textarea: 텍스트/플레이스홀더 gray300, Pretendard Regular 13
         TextField("내 의견은 어쩌구 저쩌구", text: $store.replyText, axis: .vertical)
           .pretendardFont(family: .Regular, size: 13)
-          .foregroundStyle(.neutral400)
+          .foregroundStyle(.gray300)
           .lineLimit(1 ... 3)
           .focused($isReplyFocused)
 
         Text("\(store.replyText.count)/200")
           .pretendardFont(family: .SemiBold, size: 10)
-          .foregroundStyle(.neutral400)
+          .foregroundStyle(.gray300)
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .padding(.horizontal, 12)
@@ -420,5 +425,7 @@ private extension CommentReplyView {
         .fill(.beige800)
         .frame(height: 1)
     }
+    // Figma: 입력바 상단 그림자 0 -4 6 rgba(0,0,0,0.08)
+    .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: -4)
   }
 }
