@@ -23,7 +23,7 @@ public struct RecapView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "나의 철학자 유형") {
-        Button { send(.shareTapped) } label: {
+        Button { send(.shareTapped(snapshot: captureCardSnapshot())) } label: {
           Image(systemName: "square.and.arrow.up")
             .font(.system(size: 18, weight: .regular))
             .foregroundStyle(.neutral900)
@@ -203,7 +203,7 @@ private extension RecapView {
   @ViewBuilder
   func shareButton() -> some View {
     Button {
-      send(.shareTapped)
+      send(.shareTapped(snapshot: captureCardSnapshot()))
     } label: {
       HStack(spacing: 6) {
         Text("공유하기")
@@ -218,5 +218,27 @@ private extension RecapView {
       .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
     }
     .buttonStyle(.plain)
+  }
+}
+
+// MARK: - 공유 스냅샷 (인스타 스토리/게시물용 카드 이미지)
+
+private extension RecapView {
+  /// 철학자 유형 카드를 이미지로 렌더해 PNG 데이터로 반환. (없으면 nil → 텍스트/URL 공유로 폴백)
+  @MainActor
+  func captureCardSnapshot() -> Data? {
+    guard let recap = store.recap else { return nil }
+    let renderer = ImageRenderer(content: shareSnapshotCard(recap.myCard))
+    renderer.scale = UIScreen.main.scale
+    return renderer.uiImage?.pngData()
+  }
+
+  /// 공유용 카드 레이아웃 — 카드 + 배경 패딩 (외부 의존 없이 단독 렌더 가능).
+  @ViewBuilder
+  func shareSnapshotCard(_ card: RecapCard) -> some View {
+    RecapPhilosopherCard(card: card)
+      .padding(20)
+      .frame(width: 340)
+      .background(Color.beige200)
   }
 }

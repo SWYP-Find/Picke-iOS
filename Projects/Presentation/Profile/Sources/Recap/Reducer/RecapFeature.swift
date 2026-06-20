@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import UIKit
 
 import ComposableArchitecture
 import Entity
@@ -48,7 +49,8 @@ public struct RecapFeature {
   public enum View {
     case onAppear
     case backTapped
-    case shareTapped
+    /// 공유하기 — 철학자 유형 카드를 이미지로 렌더한 스냅샷(View 에서 ImageRenderer 로 캡처)을 함께 전달.
+    case shareTapped(snapshot: Data?)
   }
 
   public enum AsyncAction: Equatable {
@@ -107,7 +109,7 @@ extension RecapFeature {
     case .backTapped:
       return .send(.delegate(.dismiss))
 
-    case .shareTapped:
+    case let .shareTapped(snapshot):
       guard let recap = state.recap else { return .none }
       let text = [
         "나의 철학자 유형: \(recap.myCard.typeName)",
@@ -117,7 +119,10 @@ extension RecapFeature {
       .filter { !$0.isEmpty }
       .joined(separator: "\n\n")
       var items: [Any] = [text]
-      if !recap.myCard.imageURL.isEmpty, let url = URL(string: recap.myCard.imageURL) {
+      // 인스타 스토리/게시물 공유를 위해 카드 스냅샷 이미지를 우선 포함.
+      if let snapshot, let image = UIImage(data: snapshot) {
+        items.append(image)
+      } else if !recap.myCard.imageURL.isEmpty, let url = URL(string: recap.myCard.imageURL) {
         items.append(url)
       }
       state.shareItem = ShareItem(items: items)

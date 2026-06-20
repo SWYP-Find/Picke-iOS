@@ -41,7 +41,8 @@ public struct WithdrawReasonFeature {
     }
   }
 
-  public enum Action: ViewAction {
+  public enum Action: ViewAction, BindableAction {
+    case binding(BindingAction<State>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -85,8 +86,12 @@ public struct WithdrawReasonFeature {
   @Dependency(\.deviceUseCase) private var deviceUseCase
 
   public var body: some Reducer<State, Action> {
+    BindingReducer()
     Reduce { state, action in
       switch action {
+      case .binding:
+        return .none
+
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
 
