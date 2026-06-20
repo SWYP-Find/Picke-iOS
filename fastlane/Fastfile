@@ -183,7 +183,6 @@ platform :ios do
         build_timing_summary: true,
         disable_package_automatic_updates: true,
         skip_package_dependencies_resolution: true,
-        skip_package_repository_fetches: true,
         use_system_scm: true,
         xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                 "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
@@ -202,16 +201,25 @@ platform :ios do
       )
     end
 
-    upload_to_testflight(
-      ipa: ipa_path,
-      changelog: ENV.fetch("RELEASE_NOTES", "변경사항"),
-      groups: ["Picke", "picke"],
-      beta_app_description: "Picke 앱입니다.",
-      notify_external_testers: true,
-      skip_waiting_for_build_processing: true,
-      demo_account_required: false,
-      uses_non_exempt_encryption: false
-    )
+    begin
+      upload_to_testflight(
+        ipa: ipa_path,
+        changelog: ENV.fetch("RELEASE_NOTES", "변경사항"),
+        groups: ["Picke", "picke"],
+        beta_app_description: "Picke 앱입니다.",
+        notify_external_testers: true,
+        skip_waiting_for_build_processing: false,
+        demo_account_required: false,
+        uses_non_exempt_encryption: false
+      )
+    rescue => e
+      # 외부 그룹 베타 심사는 버전당 1개만 가능 → 이전 빌드 심사 중이면 제출만 실패(바이너리 업로드는 이미 완료)
+      if e.message.include?("Another build is in review") || e.message.downcase.include?("beta review")
+        UI.important("⚠️ 이전 빌드가 베타 심사 중이라 외부 그룹 제출은 보류됨. 바이너리 업로드는 완료 — 이전 심사 완료 후 배포 가능.")
+      else
+        raise e
+      end
+    end
   end
 
   # 🚀 App Store 배포
@@ -347,7 +355,6 @@ platform :ios do
           build_timing_summary: true,
           disable_package_automatic_updates: true,
           skip_package_dependencies_resolution: true,
-          skip_package_repository_fetches: true,
           use_system_scm: true,
           xcargs: "CODE_SIGN_IDENTITY='Apple Distribution: Wonji Suh (N94CS4N6VR)' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                   "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
