@@ -65,10 +65,10 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
-          # Gemfile이 Ruby 3.3.9 요구 → rbenv로 맞춤
-          rbenv install -s 3.3.9
-          rbenv global 3.3.9
-          eval "$(rbenv init - bash)"
+          # Gemfile이 Ruby 3.3.9 요구 → mise로 설치 후 PATH 우선
+          mise install ruby@3.3.9
+          export PATH="$(mise where ruby@3.3.9)/bin:$PATH"
+          ruby -v
           gem install bundler --no-document
           bundle install
           bundle exec fastlane ios QA
@@ -175,10 +175,10 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
-          # Gemfile이 Ruby 3.3.9 요구 → rbenv로 맞춤
-          rbenv install -s 3.3.9
-          rbenv global 3.3.9
-          eval "$(rbenv init - bash)"
+          # Gemfile이 Ruby 3.3.9 요구 → mise로 설치 후 PATH 우선
+          mise install ruby@3.3.9
+          export PATH="$(mise where ruby@3.3.9)/bin:$PATH"
+          ruby -v
           gem install bundler --no-document
           bundle install
           bundle exec fastlane ios release version:$RELEASE_VERSION
