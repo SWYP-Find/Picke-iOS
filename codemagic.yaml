@@ -35,8 +35,7 @@ workflows:
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
           mise install "tuist@${TUIST_VERSION}"
-          chmod +x ./make
-          mise exec "tuist@${TUIST_VERSION}" -- bash -c './make clean && ./make install && ./make generate'
+          mise exec "tuist@${TUIST_VERSION}" -- bash -c 'tuist install && tuist generate --no-open'
           ls -d *.xcworkspace
       - name: 릴리스 노트 수집 ([v버전] + 요약 파일)
         script: |
@@ -112,8 +111,7 @@ workflows:
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
           mise install "tuist@${TUIST_VERSION}"
-          chmod +x ./make
-          mise exec "tuist@${TUIST_VERSION}" -- bash -c './make clean && ./make install && ./make generate'
+          mise exec "tuist@${TUIST_VERSION}" -- bash -c 'tuist install && tuist generate --no-open'
           mise exec "tuist@${TUIST_VERSION}" -- tuist test
 
   deploy-prod:
@@ -154,8 +152,7 @@ workflows:
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
           mise install "tuist@${TUIST_VERSION}"
-          chmod +x ./make
-          mise exec "tuist@${TUIST_VERSION}" -- bash -c './make clean && ./make install && ./make generate'
+          mise exec "tuist@${TUIST_VERSION}" -- bash -c 'tuist install && tuist generate --no-open'
           ls -d *.xcworkspace
       - name: Discord 빌드 시작 알림
         script: |
