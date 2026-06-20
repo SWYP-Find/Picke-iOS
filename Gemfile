@@ -1,5 +1,6 @@
 source "https://rubygems.org"
 
-ruby "3.3.9"
-
-gem "fastlane"
+gem 'fastlane', '~> 2.231.0'
+gem "logger"
+gem "abbrev"
+gem "mutex_m"

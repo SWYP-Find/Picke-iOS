@@ -65,11 +65,6 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
-          # Gemfile이 Ruby 3.3.9 요구 → mise로 설치 후 PATH 우선
-          mise install ruby@3.3.9
-          export PATH="$(mise where ruby@3.3.9)/bin:$PATH"
-          ruby -v
-          gem install bundler --no-document
           bundle install
           bundle exec fastlane ios QA
       - name: Discord 성공 알림 (멘션 + 릴리스 노트)
@@ -175,11 +170,6 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
-          # Gemfile이 Ruby 3.3.9 요구 → mise로 설치 후 PATH 우선
-          mise install ruby@3.3.9
-          export PATH="$(mise where ruby@3.3.9)/bin:$PATH"
-          ruby -v
-          gem install bundler --no-document
           bundle install
           bundle exec fastlane ios release version:$RELEASE_VERSION
       - name: Discord 성공 알림
