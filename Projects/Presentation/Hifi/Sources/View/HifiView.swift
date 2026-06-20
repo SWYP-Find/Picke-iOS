@@ -110,6 +110,7 @@ private extension HifiView {
 private extension HifiView {
   @ViewBuilder
   func categoryTabs() -> some View {
+    // 고정 높이로 가둬 진입/스크롤/선택 변경 시 세로 흔들림 방지 (소형 기종 대응).
     ScrollView(.horizontal) {
       HStack(spacing: 2) {
         ForEach(store.categories, id: \.self) { category in
@@ -119,6 +120,7 @@ private extension HifiView {
       .padding(.horizontal, 16)
     }
     .scrollIndicators(.hidden)
+    .frame(height: 40)
     .background(.white)
     .overlay(alignment: .bottom) {
       Rectangle().fill(.beige600).frame(height: 1.5)
@@ -130,17 +132,17 @@ private extension HifiView {
     let isSelected = store.selectedCategory == category
     Button { send(.categoryTapped(category)) } label: {
       // picke.pen `뷰전환`: 탭 폭 50 고정, 선택 시 하단 4px primary500 풀폭 밑줄.
+      // 폰트 웨이트는 고정(Medium)해 글자 폭 변화로 인한 가로 흔들림 제거.
+      // 밑줄은 항상 자리(4px) 확보하고 색만 토글해 세로 레이아웃 재계산 방지.
       Text(category.title)
-        .pretendardFont(family: isSelected ? .Medium : .Regular, size: 14)
-        .foregroundStyle(isSelected ? Color.primary500 : Color.gray300)
+        .pretendardFont(family: .Medium, size: 14)
+        .foregroundStyle(isSelected ? .primary500 : .gray300)
         .frame(width: 50)
-        .padding(.vertical, 8)
+        .frame(maxHeight: .infinity)
         .overlay(alignment: .bottom) {
-          if isSelected {
-            Rectangle()
-              .fill(.primary500)
-              .frame(height: 4)
-          }
+          Rectangle()
+            .fill(isSelected ? .primary500 : .clear)
+            .frame(height: 4)
         }
     }
     .buttonStyle(.plain)

@@ -24,6 +24,14 @@ public struct BattleView: View {
     self.store = store
   }
 
+  /// 현재 보이는 배틀의 인덱스 (상단 paging 바 채움 기준). 스크롤 전엔 0.
+  private var currentPageIndex: Int {
+    guard let id = currentBattleId,
+          let index = store.battles.firstIndex(where: { $0.id == id })
+    else { return 0 }
+    return index
+  }
+
   public var body: some View {
     // ZStack 은 safe-area 존중(ignoresSafeArea 미적용) → appBar 가 노치 아래 + 항상 최상단 탭 가능.
     // 배경/pager 는 각자 내부에서 ignoresSafeArea 로 풀블리드 유지.
@@ -39,12 +47,25 @@ public struct BattleView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    // PreVoteView 패턴: 앱바는 overlay 로 올려 항상 최상단·탭 가능하게.
+    // PreVoteView 패턴: 상단 paging 바 + 앱바를 overlay 로 올려 항상 최상단·탭 가능하게.
     .overlay(alignment: .top) {
-      appBar()
-        .padding(.top, 10)
-        .contentShape(Rectangle())
-        .zIndex(10)
+      VStack(spacing: 14) {
+        // 배틀이 여러 건일 때만 상단 paging 바 노출. 터치 시 해당 배틀로 이동.
+        if store.battles.count > 1 {
+          BattlePagingBar(
+            pageCount: store.battles.count,
+            currentIndex: currentPageIndex,
+            onSelect: { index in
+              guard store.battles.indices.contains(index) else { return }
+              let id = store.battles[index].id
+              withAnimation(.easeInOut(duration: 0.25)) { currentBattleId = id }
+            }
+          )
+        }
+        appBar()
+      }
+      .padding(.top, 10)
+      .zIndex(10)
     }
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
