@@ -182,6 +182,7 @@ private extension CurationView {
 
   @ViewBuilder
   func cardVersus(_ battle: RecommendedBattle) -> some View {
+    // QA-40: VS 뱃지를 양쪽 옵션 버튼의 세로 중앙에 두고, 두 옵션은 동일 너비로 통일한다.
     HStack(spacing: 8) {
       optionButton(battle.options[safe: 0])
       versusBadge()
@@ -192,6 +193,7 @@ private extension CurationView {
 
   @ViewBuilder
   func optionButton(_ option: RecommendedBattleOption?) -> some View {
+    // QA-40/42: 두 옵션 버튼을 좌측 정렬 + 동일 너비로 통일해 위치가 들쭉날쭉하지 않게 한다.
     HStack(spacing: 4) {
       CommentAvatarView(
         imageURL: option?.imageUrl,
@@ -199,16 +201,19 @@ private extension CurationView {
         size: 40
       )
 
-      VStack(spacing: 2) {
+      // 철학자 이름 / 대표 의견은 모두 좌측 정렬.
+      VStack(alignment: .leading, spacing: 2) {
         Text(option?.title ?? "")
           .pretendardFont(family: .SemiBold, size: 11)
           .foregroundStyle(.neutral500)
+          .frame(maxWidth: .infinity, alignment: .leading)
         Text(option?.representative ?? "")
           .pretendardFont(family: .Regular, size: 10)
           .foregroundStyle(.neutral300)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
-    .frame(maxWidth: .infinity)
+    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(8)
     .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
     .overlay {

@@ -161,9 +161,11 @@ extension PreVoteFeature {
       if state.battleDetail == nil, state.battle == nil, !state.isLoading {
         effects.append(.send(.async(.fetchBattleDetail)))
       }
-      // pre/post 모두 진입 시 내 참여(perspective) 여부를 조회한다.
+      // 사전(pre) 진입 시에만 내 참여(perspective) 여부를 조회한다.
       // 이미 참여했으면 "다시 투표" 알럿 → 삭제 후 재투표.
-      if state.myPerspective == nil {
+      // 최종(post) 진입은 사전 참여가 이미 전제이므로 이 알럿이 뜨면 안 되고,
+      // 알럿 presentation 이 공유 시트(.sheet) presentation 을 막는 문제도 생긴다.
+      if state.voteMode == .pre, state.myPerspective == nil {
         effects.append(.send(.async(.fetchMyPerspective)))
       }
       return effects.isEmpty ? .none : .merge(effects)

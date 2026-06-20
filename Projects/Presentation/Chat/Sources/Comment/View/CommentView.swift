@@ -164,11 +164,11 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func summarySection() -> some View {
-    VStack(spacing: 12) {
-      // 생각이 바뀐 경우(pre≠post)에만 뱃지 노출.
-      if store.isMindChanged {
-        changeBadge()
-      }
+    // Figma 7423-7968: 칩 행 py2, gap4, stats 행 py4.
+    VStack(spacing: 4) {
+      // 사후투표 후 칩을 항상 노출 — 문구는 isMindChanged 에 따라 분기.
+      changeBadge()
+        .padding(.vertical, 2)
 
       HStack(alignment: .center, spacing: 12) {
         HStack(spacing: 4) {
@@ -193,9 +193,9 @@ private extension CommentView {
           )
         }
       }
+      .padding(.vertical, 4)
     }
     .padding(.horizontal, 16)
-    .padding(.vertical, 16)
     .background(.beige50)
   }
 
@@ -205,7 +205,7 @@ private extension CommentView {
       Image(systemName: "lightbulb")
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(.primary500)
-      Text(store.voteSummary.changeBadgeTitle)
+      Text(store.changeBadgeTitle)
         .pretendardFont(family: .SemiBold, size: 11)
         .foregroundStyle(.primary500)
     }
@@ -248,12 +248,11 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func filterSection() -> some View {
-    VStack(spacing: 12) {
+    // Figma 7423-7968: 필터탭은 탭별 py8 자체 패딩, 그 아래 List 컨테이너 top16 → sort 행(py4).
+    VStack(spacing: 16) {
       filterTabs()
       sortRow()
     }
-    .padding(.top, 14)
-    .padding(.bottom, 12)
   }
 
   @ViewBuilder
@@ -280,6 +279,7 @@ private extension CommentView {
       Spacer()
     }
     .padding(.horizontal, 16)
+    .padding(.vertical, 4) // Figma: sort 행 py4
   }
 
   @ViewBuilder
@@ -363,8 +363,9 @@ private extension CommentView {
         .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
       }
     }
+    .padding(.top, 16) // Figma: List 컨테이너 top16
     .padding(.horizontal, 16)
-    .padding(.bottom, 24)
+    .padding(.bottom, 24) // Figma: 댓글모음 pb24
   }
 
   @ViewBuilder
@@ -548,11 +549,10 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func inputBar() -> some View {
-    VStack(spacing: 8) {
-      HStack(alignment: .bottom, spacing: 8) {
-        inputTextBox()
-        sendButton()
-      }
+    // Figma 7423-8013: 컨테이너 h128 / pt12 pb24 px16 / gap8, 내부 요소는 세로 중앙(items-center).
+    HStack(spacing: 8) {
+      inputTextBox()
+      sendButton()
     }
     .padding(.top, 12)
     .padding(.horizontal, 16)
@@ -568,12 +568,16 @@ private extension CommentView {
 
   @ViewBuilder
   func inputTextBox() -> some View {
+    // Figma 7423-8014: 입력박스는 flex-1 h-full 로 컨테이너 높이를 꽉 채운다 (px12 py8).
+    // 입력 텍스트는 상단, 글자수 카운터는 하단 우측에 배치.
     VStack(alignment: .leading, spacing: 6) {
       TextField("댓글을 입력해주세요", text: $store.commentText, axis: .vertical)
         .pretendardFont(family: .Regular, size: 13)
         .foregroundStyle(.neutral400)
-        .lineLimit(1 ... 3)
         .focused($isCommentFocused)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+
+      Spacer(minLength: 0)
 
       Text("\(store.commentText.count)/200")
         .pretendardFont(family: .SemiBold, size: 10)
@@ -582,7 +586,7 @@ private extension CommentView {
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 8)
-    .frame(maxWidth: .infinity)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(.beige50)
   }
 

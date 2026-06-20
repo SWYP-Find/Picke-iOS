@@ -66,8 +66,14 @@ public struct CommentFeature {
         && !isSubmitting
     }
 
-    /// pre 투표 대비 post 투표에서 진영이 바뀌었는지 — "생각이 바뀌었어요" 뱃지 표시 조건.
+    /// pre 투표 대비 post 투표에서 진영이 바뀌었는지.
+    /// 사후투표 후엔 칩을 항상 노출하되, 이 값에 따라 문구만 분기한다.
     public var isMindChanged: Bool = false
+
+    /// 생각 변화 칩 문구 — 바뀜/안 바뀜 양쪽 모두 노출.
+    public var changeBadgeTitle: String {
+      isMindChanged ? "생각이 바뀌었어요" : "생각이 바뀌지 않았어요"
+    }
 
     public init(battleId: Int = 0, isMindChanged: Bool = false) {
       self.battleId = battleId
