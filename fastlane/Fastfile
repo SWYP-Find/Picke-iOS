@@ -67,31 +67,9 @@ platform :ios do
       in_house: false
     )
 
-    # 빌드 번호 자동 증가 — TestFlight 최신 빌드 번호 + 1
-    begin
-      current_build_number = latest_testflight_build_number(
-        app_identifier: BUNDLE_ID,
-        platform: "ios"
-      )
-      puts "📱 TestFlight 최신 빌드 번호: #{current_build_number}"
-    rescue => e
-      puts "⚠️ TestFlight 빌드 번호 조회 실패, 기본값 1 사용: #{e.message}"
-      current_build_number = 1
-    end
-
-    begin
-      live_build_number = app_store_build_number(
-        app_identifier: BUNDLE_ID,
-        platform: "ios"
-      )
-      puts "🏪 App Store 라이브 빌드 번호: #{live_build_number}"
-      current_build_number = [current_build_number, live_build_number].max
-    rescue => e
-      puts "⚠️ App Store 빌드 번호 조회 실패: #{e.message}"
-    end
-
-    new_build_number = current_build_number + 1
-    puts "🔢 새로운 빌드 번호: #{new_build_number}"
+    # 빌드 번호 = 날짜형 YYMMDDHHMM (항상 증가, App Store 조회 불필요)
+    new_build_number = Time.now.strftime("%y%m%d%H%M")
+    puts "🔢 새로운 빌드 번호(날짜형): #{new_build_number}"
 
     # Extension+String.swift 의 빌드 번호 갱신 (tuist generate 시 CFBundleVersion 으로 반영)
     extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
@@ -236,35 +214,9 @@ platform :ios do
         in_house: false
       )
 
-      # QA와 동일한 빌드 번호 자동 증가 로직
-      begin
-        current_build_number = latest_testflight_build_number(
-          app_identifier: BUNDLE_ID,
-          platform: "ios"
-        )
-        puts "📱 TestFlight 최신 빌드 번호: #{current_build_number}"
-      rescue => e
-        puts "⚠️ TestFlight 빌드 번호 조회 실패, 기본값 1 사용: #{e.message}"
-        current_build_number = 1
-      end
-
-      # App Store 라이브 버전 빌드 번호도 확인
-      begin
-        live_build_number = app_store_build_number(
-          app_identifier: BUNDLE_ID,
-          platform: "ios"
-        )
-        puts "🏪 App Store 라이브 빌드 번호: #{live_build_number}"
-
-        # 더 높은 빌드 번호 사용
-        current_build_number = [current_build_number, live_build_number].max
-      rescue => e
-        puts "⚠️ App Store 빌드 번호 조회 실패: #{e.message}"
-      end
-
-      new_build_number = current_build_number + 1
-      puts "🔢 현재 최고 빌드 번호: #{current_build_number}"
-      puts "🔢 새로운 빌드 번호: #{new_build_number}"
+      # 빌드 번호 = 날짜형 YYMMDDHHMM (항상 증가, App Store 조회 불필요)
+      new_build_number = Time.now.strftime("%y%m%d%H%M")
+      puts "🔢 새로운 빌드 번호(날짜형): #{new_build_number}"
 
       # Extension+String.swift 파일에서 빌드 번호 업데이트
       extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
