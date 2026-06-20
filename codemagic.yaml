@@ -65,6 +65,11 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
+          # Gemfile이 Ruby 3.3.9 요구 → rbenv로 맞춤
+          rbenv install -s 3.3.9
+          rbenv global 3.3.9
+          eval "$(rbenv init - bash)"
+          gem install bundler --no-document
           bundle install
           bundle exec fastlane ios QA
       - name: Discord 성공 알림 (멘션 + 릴리스 노트)
@@ -170,6 +175,11 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
+          # Gemfile이 Ruby 3.3.9 요구 → rbenv로 맞춤
+          rbenv install -s 3.3.9
+          rbenv global 3.3.9
+          eval "$(rbenv init - bash)"
+          gem install bundler --no-document
           bundle install
           bundle exec fastlane ios release version:$RELEASE_VERSION
       - name: Discord 성공 알림
