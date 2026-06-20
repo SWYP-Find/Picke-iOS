@@ -196,13 +196,15 @@ extension ChatRoomView {
     speaker: ChatSpeaker,
     messages: [ChatMessage]
   ) -> some View {
-    VStack(alignment: speaker.side == .left ? .leading : .trailing, spacing: 6) {
+    let alignment: HorizontalAlignment = speaker.side == .left ? .leading : .trailing
+    VStack(alignment: alignment, spacing: 6) {
       Text(speaker.name)
         .pretendardFont(family: .SemiBold, size: 13)
         .foregroundStyle(.neutral500)
         .padding(.horizontal, 4)
 
-      VStack(alignment: .leading, spacing: 6) {
+      // 오른쪽 화자는 말풍선도 우측 정렬되도록 내부 VStack 정렬을 side 에 맞춘다.
+      VStack(alignment: alignment, spacing: 6) {
         ForEach(messages) { message in
           let isActive = store.isPlaying && message.id == store.activeMessageId
           HStack(alignment: .center, spacing: 6) {
@@ -242,12 +244,10 @@ extension ChatRoomView {
       )
   }
 
-  /// 재생 중 말풍선 옆 음성 파형 아이콘.
+  /// 재생 중 말풍선 옆 이퀄라이저 애니메이션 (재생 상태에 반응).
   @ViewBuilder
   private func waveformIcon() -> some View {
-    Image(systemName: "waveform")
-      .font(.system(size: 18, weight: .semibold))
-      .foregroundStyle(.primary500)
+    AudioEqualizerView(isPlaying: store.isPlaying)
       .frame(width: 24, height: 24)
   }
 
@@ -401,7 +401,6 @@ extension ChatRoomView {
             }
         )
         .allowsHitTesting(store.canScrub)
-        .opacity(store.canScrub ? 1.0 : 0.6)
       }
       .frame(height: 16)
 

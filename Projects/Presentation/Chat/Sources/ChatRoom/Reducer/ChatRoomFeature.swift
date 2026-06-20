@@ -341,6 +341,8 @@ extension ChatRoomFeature {
       state.visibleNodeIds = state.scenario.map { [$0.startNodeId] } ?? []
       state.isWaitingForNodeSelection = false
       state.selectedOptionLabel = nil
+      // 처음부터 다시 들을 때도 최종투표 팝업이 다시 뜨도록 1회성 플래그를 리셋한다.
+      state.hasPresentedFinalVoteAlert = false
       return .run { [player = audioPlayer] _ in
         await player.pause()
         await player.seek(to: 0)
@@ -354,7 +356,7 @@ extension ChatRoomFeature {
       }
 
     case .seekBackwardTapped:
-      guard state.canScrub else { return .none }
+      // 15초 되감기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
       let target = max(0, state.currentTime - 15)
       state.currentTime = target
       return .run { [player = audioPlayer] _ in
@@ -362,7 +364,7 @@ extension ChatRoomFeature {
       }
 
     case .seekForwardTapped:
-      guard state.canScrub else { return .none }
+      // 15초 넘기기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
       let target = min(state.totalDuration, state.currentTime + 15)
       state.currentTime = target
       return .run { [player = audioPlayer] _ in
@@ -574,6 +576,8 @@ extension ChatRoomFeature {
           state.customAlert = nil
           state.currentTime = 0
           state.isPlaying = true
+          // 다시 듣기(replay) 후 끝까지 들으면 최종투표 팝업이 재노출되도록 1회성 플래그를 리셋한다.
+          state.hasPresentedFinalVoteAlert = false
           return .run { [player = audioPlayer] _ in
             await player.seek(to: 0)
             await player.play()
