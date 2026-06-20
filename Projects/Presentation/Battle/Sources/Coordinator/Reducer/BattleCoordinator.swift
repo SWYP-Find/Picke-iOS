@@ -9,6 +9,8 @@ import Foundation
 
 import Chat
 import ComposableArchitecture
+import DesignSystem
+import Shared
 import TCAFlow
 
 @FlowCoordinator(screen: "BattleScreen", navigation: true)
@@ -74,6 +76,14 @@ extension BattleCoordinator {
 
     // 채팅방 다 들으면 → ChatCoordinator(초기 PreVote) 흐름으로 연결.
     case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
+      // QA-38: 투표 안정화 전까지 진입 차단. 플래그가 켜지면 기존 흐름 그대로 동작.
+      guard FeatureFlag.isVotingEnabled else {
+        return .run { _ in
+          await MainActor.run {
+            ToastManager.shared.showInfo(FeatureFlag.votingDisabledMessage)
+          }
+        }
+      }
       state.routes.push(.chat(.init(battleId: battleId)))
       return .none
 

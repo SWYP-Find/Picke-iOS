@@ -9,7 +9,9 @@ import Foundation
 
 import Chat
 import ComposableArchitecture
+import DesignSystem
 import Notification
+import Shared
 import TCAFlow
 
 @FlowCoordinator(screen: "HomeScreen", navigation: true)
@@ -70,6 +72,14 @@ extension HomeCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
+      // QA-38: 투표 안정화 전까지 진입 차단. 플래그가 켜지면 기존 흐름 그대로 동작.
+      guard FeatureFlag.isVotingEnabled else {
+        return .run { _ in
+          await MainActor.run {
+            ToastManager.shared.showInfo(FeatureFlag.votingDisabledMessage)
+          }
+        }
+      }
       state.routes.push(.chat(.init(battleId: battleId)))
       return .none
 

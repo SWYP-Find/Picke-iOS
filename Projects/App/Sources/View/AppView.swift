@@ -14,12 +14,12 @@ import Presentation
 
 struct AppView: View {
   @Bindable var store: StoreOf<AppReducer>
-  
+
   var body: some View {
     ZStack(alignment: .topLeading) {
       Color.primary50
         .edgesIgnoringSafeArea(.all)
-      
+
       SwitchStore(store) { state in
         switch state {
         case .splash:
@@ -27,8 +27,7 @@ struct AppView: View {
             SplashView(store: store)
               .transition(.opacity.combined(with: .scale(scale: 0.98)))
           }
-          
-        
+
         case .auth:
           if let store = store.scope(state: \.auth, action: \.scope.auth) {
             AuthCoordinatorView(store: store)
@@ -36,7 +35,6 @@ struct AppView: View {
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)
               ))
-
           }
 
         case .mainTab:
@@ -46,11 +44,11 @@ struct AppView: View {
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)
               ))
-
           }
         }
       }
     }
+    .toastOverlay()
     .animation(
       .spring(response: 0.52, dampingFraction: 0.94, blendDuration: 0.14),
       value: store.state.animationID
@@ -61,13 +59,13 @@ struct AppView: View {
   }
 }
 
-
 #Preview {
   AppView(
     store: Store(
       initialState: AppReducer.State(),
       reducer: {
         AppReducer()
-      })
+      }
+    )
   )
 }

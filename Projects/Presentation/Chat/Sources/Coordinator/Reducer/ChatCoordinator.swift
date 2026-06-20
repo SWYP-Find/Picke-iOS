@@ -9,7 +9,9 @@
 import Foundation
 
 import ComposableArchitecture
+import DesignSystem
 import LogMacro
+import Shared
 import TCAFlow
 
 @FlowCoordinator(screen: "ChatScreen", navigation: true)
@@ -102,6 +104,14 @@ extension ChatCoordinator {
       return .send(.view(.backAction))
 
     case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
+      // QA-38: 투표 안정화 전까지 진입 차단. 플래그가 켜지면 기존 흐름 그대로 동작.
+      guard FeatureFlag.isVotingEnabled else {
+        return .run { _ in
+          await MainActor.run {
+            ToastManager.shared.showInfo(FeatureFlag.votingDisabledMessage)
+          }
+        }
+      }
       state.routes.push(.preVote(.init(battleId: battleId, voteMode: .post)))
       return .none
 
@@ -140,6 +150,14 @@ extension ChatCoordinator {
       return .send(.delegate(.popToRoot))
 
     case let .routeAction(_, action: .curation(.delegate(.openBattle(battleId)))):
+      // QA-38: 투표 안정화 전까지 진입 차단. 플래그가 켜지면 기존 흐름 그대로 동작.
+      guard FeatureFlag.isVotingEnabled else {
+        return .run { _ in
+          await MainActor.run {
+            ToastManager.shared.showInfo(FeatureFlag.votingDisabledMessage)
+          }
+        }
+      }
       state.routes.push(.preVote(.init(battleId: battleId)))
       return .none
 
