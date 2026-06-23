@@ -11,6 +11,7 @@ import SwiftUI
 import ComposableArchitecture
 import DesignSystem
 import Entity
+import Kingfisher
 
 @ViewAction(for: RecapFeature.self)
 public struct RecapView: View {
@@ -23,7 +24,7 @@ public struct RecapView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "나의 철학자 유형") {
-        Button { send(.shareTapped(snapshot: captureCardSnapshot())) } label: {
+        Button { shareWithSnapshot() } label: {
           Image(systemName: "square.and.arrow.up")
             .font(.system(size: 18, weight: .regular))
             .foregroundStyle(.neutral900)
@@ -203,7 +204,7 @@ private extension RecapView {
   @ViewBuilder
   func shareButton() -> some View {
     Button {
-      send(.shareTapped(snapshot: captureCardSnapshot()))
+      shareWithSnapshot()
     } label: {
       HStack(spacing: 6) {
         Text("공유하기")
@@ -224,19 +225,43 @@ private extension RecapView {
 // MARK: - 공유 스냅샷 (인스타 스토리/게시물용 카드 이미지)
 
 private extension RecapView {
+  /// 공유 트리거 — 아바타(철학자) 이미지를 먼저 비동기 로드한 뒤 카드 스냅샷을 렌더한다.
+  /// KFImage 는 ImageRenderer(동기 렌더) 에서 로드 전이라 빈 이미지로 캡처되므로(=스토리에 이미지 누락),
+  /// Kingfisher 로 미리 받아 `avatarOverride` 로 주입해 동기 렌더한다.
+  func shareWithSnapshot() {
+    Task { @MainActor in
+      let avatar = await loadAvatarImage()
+      send(.shareTapped(snapshot: captureCardSnapshot(avatar: avatar)))
+    }
+  }
+
+  /// 카드 아바타 원격 이미지를 Kingfisher 로 선로드 (없거나 실패 시 nil → SF Symbol 폴백).
+  @MainActor
+  func loadAvatarImage() async -> UIImage? {
+    guard let recap = store.recap,
+          !recap.myCard.imageURL.isEmpty,
+          let url = URL(string: recap.myCard.imageURL)
+    else { return nil }
+    return await withCheckedContinuation { continuation in
+      KingfisherManager.shared.retrieveImage(with: url) { result in
+        continuation.resume(returning: try? result.get().image)
+      }
+    }
+  }
+
   /// 철학자 유형 카드를 이미지로 렌더해 PNG 데이터로 반환. (없으면 nil → 텍스트/URL 공유로 폴백)
   @MainActor
-  func captureCardSnapshot() -> Data? {
+  func captureCardSnapshot(avatar: UIImage?) -> Data? {
     guard let recap = store.recap else { return nil }
-    let renderer = ImageRenderer(content: shareSnapshotCard(recap.myCard))
+    let renderer = ImageRenderer(content: shareSnapshotCard(recap.myCard, avatar: avatar))
     renderer.scale = UIScreen.main.scale
     return renderer.uiImage?.pngData()
   }
 
   /// 공유용 카드 레이아웃 — 카드 + 배경 패딩 (외부 의존 없이 단독 렌더 가능).
   @ViewBuilder
-  func shareSnapshotCard(_ card: RecapCard) -> some View {
-    RecapPhilosopherCard(card: card)
+  func shareSnapshotCard(_ card: RecapCard, avatar: UIImage?) -> some View {
+    RecapPhilosopherCard(card: card, avatarOverride: avatar)
       .padding(20)
       .frame(width: 340)
       .background(Color.beige200)

@@ -14,9 +14,13 @@ import Kingfisher
 
 public struct RecapPhilosopherCard: View {
   private let card: RecapCard
+  /// 공유 스냅샷용 — ImageRenderer 는 동기 렌더라 KFImage(비동기) 가 빈 채로 캡처된다.
+  /// 미리 로드한 아바타 이미지를 주입하면 동기 렌더되어 스토리/게시물 공유에 이미지가 포함된다.
+  private let avatarOverride: UIImage?
 
-  public init(card: RecapCard) {
+  public init(card: RecapCard, avatarOverride: UIImage? = nil) {
     self.card = card
+    self.avatarOverride = avatarOverride
   }
 
   public var body: some View {
@@ -78,7 +82,13 @@ public struct RecapPhilosopherCard: View {
   private var avatar: some View {
     ZStack {
       Circle().fill(.beige600)
-      if !card.imageURL.isEmpty, let url = URL(string: card.imageURL) {
+      if let avatarOverride {
+        // 공유 스냅샷: 사전 로드된 이미지를 동기 렌더.
+        Image(uiImage: avatarOverride)
+          .resizable()
+          .scaledToFit()
+          .padding(6)
+      } else if !card.imageURL.isEmpty, let url = URL(string: card.imageURL) {
         KFImage(url)
           .resizable()
           .scaledToFit()
