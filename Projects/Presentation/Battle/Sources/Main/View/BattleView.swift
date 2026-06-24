@@ -174,6 +174,10 @@ private extension BattleView {
       }
     }
     .padding(.horizontal, 16)
+    // VStack overlay 로 감싸이면서 HStack 이 전체 너비로 확장되지 못해 뒤로가기 버튼이
+    // 중앙으로 collapse → 좌측 상단 탭이 안 먹던 문제 수정. 전체 너비 강제.
+    .frame(maxWidth: .infinity)
+    .contentShape(Rectangle())
   }
 }
 
