@@ -3,6 +3,12 @@ workflows:
     name: Stage → TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 90
+    cache:
+      # SPM/Tuist 의존성 다운로드만 캐싱(빌드 속도↑). DerivedData(빌드 산출물)는 stale 모듈 위험으로 제외.
+      cache_paths:
+        - ~/Library/Caches/org.swift.swiftpm
+        - ~/Library/Caches/tuist
+        - $CM_BUILD_DIR/Tuist/.build
     environment:
       xcode: "26.0"
       vars:
@@ -90,6 +96,11 @@ workflows:
     name: PR 유닛 테스트
     instance_type: mac_mini_m2
     max_build_duration: 60
+    cache:
+      cache_paths:
+        - ~/Library/Caches/org.swift.swiftpm
+        - ~/Library/Caches/tuist
+        - $CM_BUILD_DIR/Tuist/.build
     environment:
       xcode: "26.0"
       vars:
@@ -119,6 +130,11 @@ workflows:
     name: Prod → App Store
     instance_type: mac_mini_m2
     max_build_duration: 90
+    cache:
+      cache_paths:
+        - ~/Library/Caches/org.swift.swiftpm
+        - ~/Library/Caches/tuist
+        - $CM_BUILD_DIR/Tuist/.build
     environment:
       xcode: "26.0"
       vars:
