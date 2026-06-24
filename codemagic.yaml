@@ -13,7 +13,7 @@ workflows:
       xcode: "26.0"
       vars:
         CONFIG_REPO: "SWYP-Find/iOS-Config"
-        TUIST_VERSION: "4.154.0"
+        TUIST_VERSION: "4.200.0"
       groups:
         - picke   # Codemagic에 CONFIG_REPO_TOKEN, DISCORD_WEBHOOK 등록
     triggering:
@@ -105,7 +105,7 @@ workflows:
       xcode: "26.0"
       vars:
         CONFIG_REPO: "SWYP-Find/iOS-Config"
-        TUIST_VERSION: "4.154.0"
+        TUIST_VERSION: "4.200.0"
       groups:
         - picke
     triggering:
@@ -139,7 +139,7 @@ workflows:
       xcode: "26.0"
       vars:
         CONFIG_REPO: "SWYP-Find/iOS-Config"
-        TUIST_VERSION: "4.154.0"
+        TUIST_VERSION: "4.200.0"
       groups:
         - picke
     triggering:
