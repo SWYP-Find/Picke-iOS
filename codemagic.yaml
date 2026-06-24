@@ -66,6 +66,8 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
+          # 매크로 모듈 캐시 깨짐(CasePathsMacrosSupport/SwiftNavigationMacros 아카이브 실패) 방지 — DerivedData 완전 정리
+          rm -rf ~/Library/Developer/Xcode/DerivedData
           bundle install
           bundle exec fastlane ios QA
       - name: Discord 성공 알림 (멘션 + 릴리스 노트)
@@ -172,6 +174,8 @@ workflows:
         script: |
           export PATH="$HOME/.local/bin:$PATH"
           eval "$(mise activate bash)"
+          # 매크로 모듈 캐시 깨짐(CasePathsMacrosSupport/SwiftNavigationMacros 아카이브 실패) 방지 — DerivedData 완전 정리
+          rm -rf ~/Library/Developer/Xcode/DerivedData
           bundle install
           bundle exec fastlane ios release version:$RELEASE_VERSION
       - name: Discord 성공 알림
