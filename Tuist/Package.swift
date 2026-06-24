@@ -27,7 +27,16 @@
       "Mixpanel": .staticFramework,
       "MixpanelSessionReplay": .staticFramework,
       "GoogleMobileAds": .staticFramework,
-    ]
+    ],
+    // swift-navigation / swift-case-paths 매크로(SwiftNavigationMacros, CasePathsMacrosSupport)가
+    // Xcode Explicit Modules 아카이브에서 "header 'CasePathsMacrosSupport-Swift.h' not found"로
+    // 빌드 실패하는 버그 회피 — SPM 의존성 타깃 전체에 Explicit Modules 비활성을 직접 적용.
+    baseSettings: .settings(
+      base: [
+        "SWIFT_ENABLE_EXPLICIT_MODULES": "NO",
+        "CLANG_ENABLE_EXPLICIT_MODULES": "NO",
+      ]
+    )
   )
 #endif
 
