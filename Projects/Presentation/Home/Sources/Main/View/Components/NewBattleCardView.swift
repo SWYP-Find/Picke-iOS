@@ -153,9 +153,13 @@ extension NewBattleCardView {
 
   @ViewBuilder
   private var vsBadge: some View {
+    // `.vs`(versus_home.svg)는 흰색(#FEFEFD)이라 히어로의 어두운 배경에선 보이지만
+    // 새로운 배틀의 밝은 베이지 카드 배경에선 안 보인다. template 렌더 + 회색 틴트로 보이게 한다.
     Image(asset: .vs)
+      .renderingMode(.template)
       .resizable()
       .scaledToFit()
       .frame(width: 18, height: 32)
+      .foregroundStyle(.neutral300)
   }
 }
