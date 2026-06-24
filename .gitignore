@@ -137,7 +137,9 @@ docs/graph/
 
 # Tuist managed dependencies
 **/Tuist/.build
-**/Tuist/Package.resolved
+# Package.resolved 는 커밋해서 CI(tuist install)가 로컬과 동일한 SPM 버전을 쓰게 한다.
+# (미커밋 시 CI가 매번 새로 resolve → swift-syntax 등 버전 드리프트로 매크로 아카이브 실패)
+# **/Tuist/Package.resolved
 **/Resources/GoogleService-Info.plist
 **/Plugins/ProjectTemplatePlugin/.build
 
