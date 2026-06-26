@@ -499,6 +499,7 @@ workflows:
                     msg = "@everyone\n"
                     msg += f"✅ **Picke** TestFlight 배포 완료 · #{bn}"
                     if notes: msg += "\n" + notes
+                    msg += "\n🔗 TestFlight: https://testflight.apple.com/join/AQZ5xFkB"
                     if url: msg += "\n" + url
                 wh = os.environ.get('DISCORD_WEBHOOK','')
                 if wh:
