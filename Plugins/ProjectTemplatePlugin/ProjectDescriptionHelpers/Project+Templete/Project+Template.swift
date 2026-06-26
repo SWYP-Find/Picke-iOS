@@ -8,6 +8,7 @@
 import ProjectDescription
 
 // MARK: - Suppress Warnings Setting
+
 private let suppressWarningsSettings: ProjectDescription.Settings = .settings(
   base: ["OTHER_SWIFT_FLAGS": "$(inherited) -suppress-warnings"]
 )
@@ -16,7 +17,7 @@ public extension Project {
   static func makeAppModule(
     name: String = Environment.appName,
     bundleId: String,
-    platform: Platform = .iOS,
+    platform _: Platform = .iOS,
     product: Product,
     packages: [Package] = [],
     deploymentTarget: ProjectDescription.DeploymentTargets = Environment.deploymentTarget,
@@ -24,7 +25,7 @@ public extension Project {
     settings: ProjectDescription.Settings,
     scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
-    sources: ProjectDescription.SourceFilesList = ["Sources/**"],
+    sources _: ProjectDescription.SourceFilesList = ["Sources/**"],
     resources: ProjectDescription.ResourceFileElements? = nil,
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
@@ -38,14 +39,13 @@ public extension Project {
       bundleId: bundleId,
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      sources: sources,
-      resources: resources,
+      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: dependencies,
       settings: suppressWarningsSettings
     )
-    
+
     let appProdTarget: Target = .target(
       name: "\(name)-Prod",
       destinations: destinations,
@@ -53,15 +53,13 @@ public extension Project {
       bundleId: "\(bundleId)",
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      sources: sources,
-      resources: resources,
+      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: dependencies,
       settings: suppressWarningsSettings
     )
-    
-    
+
     let appStageTarget: Target = .target(
       name: "\(name)-Stage",
       destinations: destinations,
@@ -69,15 +67,13 @@ public extension Project {
       bundleId: "\(bundleId)",
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      sources: sources,
-      resources: resources,
+      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: dependencies,
       settings: suppressWarningsSettings
     )
-    
-    
+
     let appDevTarget: Target = .target(
       name: "\(name)-Debug",
       destinations: destinations,
@@ -85,18 +81,17 @@ public extension Project {
       bundleId: "\(bundleId)",
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      sources: sources,
-      resources: resources,
+      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: dependencies,
       settings: suppressWarningsSettings
     )
-    
+
     var targets: [Target] = [appTarget, appDevTarget, appStageTarget, appProdTarget]
-    
+
     if hasTests {
-      let appTestTarget : Target = .target(
+      let appTestTarget: Target = .target(
         name: "\(name)Tests",
         destinations: destinations,
         product: .unitTests,
@@ -109,7 +104,7 @@ public extension Project {
       )
       targets.append(appTestTarget)
     }
-    
+
     return Project(
       name: name,
       options: .options(
@@ -122,11 +117,11 @@ public extension Project {
       schemes: schemes
     )
   }
-  
+
   static func makeModule(
     name: String = Environment.appName,
     bundleId: String,
-    platform: Platform = .iOS,
+    platform _: Platform = .iOS,
     product: Product,
     packages: [Package] = [],
     deploymentTarget: ProjectDescription.DeploymentTargets = Environment.deploymentTarget,
@@ -134,7 +129,7 @@ public extension Project {
     settings: ProjectDescription.Settings,
     scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
-    sources: ProjectDescription.SourceFilesList = ["Sources/**"],
+    sources _: ProjectDescription.SourceFilesList = ["Sources/**"],
     resources: ProjectDescription.ResourceFileElements? = nil,
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
@@ -148,18 +143,17 @@ public extension Project {
       bundleId: bundleId,
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      sources: sources,
-      resources: resources,
+      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: dependencies,
       settings: suppressWarningsSettings
     )
-    
+
     var targets: [Target] = [appTarget]
-    
+
     if hasTests {
-      let appTestTarget : Target = .target(
+      let appTestTarget: Target = .target(
         name: "\(name)Tests",
         destinations: destinations,
         product: .unitTests,
@@ -172,7 +166,7 @@ public extension Project {
       )
       targets.append(appTestTarget)
     }
-    
+
     return Project(
       name: name,
       packages: packages,
@@ -183,10 +177,8 @@ public extension Project {
   }
 }
 
-
-
-extension Scheme {
-  public static func makeScheme(target: ConfigurationName, name: String) -> Scheme {
+public extension Scheme {
+  static func makeScheme(target: ConfigurationName, name: String) -> Scheme {
     return Scheme.scheme(
       name: name,
       shared: true,
@@ -200,14 +192,9 @@ extension Scheme {
       archiveAction: .archiveAction(configuration: target),
       profileAction: .profileAction(configuration: target),
       analyzeAction: .analyzeAction(configuration: target)
-      
     )
-    
   }
-  
-  
 }
-
 
 public extension Scheme {
   static func scheme(name: String, environment: ConfigurationEnvironment) -> Scheme {
@@ -216,7 +203,7 @@ public extension Scheme {
     case .prod: appName
     case .dev, .stage: "\(appName)-\(environment.name)"
     }
-    
+
     return .scheme(
       name: schemeName,
       buildAction: .buildAction(targets: [.target(name)]),
