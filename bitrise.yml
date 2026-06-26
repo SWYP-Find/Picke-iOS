@@ -11,7 +11,7 @@ meta:
 app:
   envs:
     - CONFIG_REPO: SWYP-Find/iOS-Config
-    - TUIST_VERSION: 4.200.0
+    - TUIST_VERSION: 4.154.0
     - REPO: SWYP-Find/Picke-iOS
 
 pipelines:
