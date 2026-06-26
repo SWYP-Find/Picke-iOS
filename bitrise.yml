@@ -467,6 +467,8 @@ workflows:
   discord-success:
     summary: 배포 성공 Discord 알림. 릴리스 노트는 레포에서 직접 계산. NOTIFY_KIND로 분기.
     steps:
+      - activate-ssh-key@4:
+          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
       - git-clone@8: {}
       - script@1:
           title: Discord 성공 알림 (@everyone + 릴리스 노트)
