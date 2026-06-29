@@ -1,0 +1,61 @@
+name: Release Auto Tag
+
+# release 브랜치에 머지되면 Config/Shared.xcconfig 의 MARKETING_VERSION 으로
+# v태그(예: v1.0.3)를 만들어 푸시하고, Bitrise deploy-live(App Store 심사 제출)를 직접 트리거한다.
+# 참고: GITHUB_TOKEN 으로 푸시한 태그는 다른 워크플로(bitrise-trigger.yml 의 tag v*)를
+#       재트리거하지 못하므로, 중복 없이 이 워크플로에서 Bitrise API 를 직접 호출한다.
+# 멱등성: 동일 v태그가 이미 원격에 있으면 태그/배포를 건너뛴다(버전을 올려야 새로 배포).
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  tag-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create version tag
+        id: tag
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -E '^[[:space:]]*MARKETING_VERSION' Config/Shared.xcconfig | head -1 | sed -E 's/.*=[[:space:]]*//' | tr -d '[:space:]')
+          if [ -z "$VERSION" ]; then echo "MARKETING_VERSION 파싱 실패"; exit 1; fi
+          TAG="v$VERSION"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "▶ 태그 $TAG 이미 존재 — 새 태그/배포 스킵 (버전을 올려야 배포됨)"
+            exit 0
+          fi
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "▶ 태그 푸시: $TAG"
+
+      - name: Trigger Bitrise deploy-live (App Store 심사 제출)
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          BITRISE_TOKEN: ${{ secrets.BITRISE_API_TOKEN }}
+          APP_SLUG: cc46a893-15b6-40b5-a5ea-2cbb4948c4ec
+          TAG: ${{ steps.tag.outputs.tag }}
+          COMMIT_HASH: ${{ github.sha }}
+          PUSH_MSG: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          PAYLOAD=$(jq -nc \
+            --arg tag "$TAG" --arg pipeline "deploy-live" \
+            --arg msg "$(printf '%s' "$PUSH_MSG" | head -n1)" --arg hash "$COMMIT_HASH" \
+            '{hook_info:{type:"bitrise"}, build_params:{tag:$tag, pipeline_id:$pipeline, commit_message:$msg, commit_hash:$hash}}')
+          echo "▶ Bitrise deploy-live 트리거: $TAG"
+          curl -fsSL -X POST "https://api.bitrise.io/v0.1/apps/${APP_SLUG}/builds" \
+            -H "Authorization: ${BITRISE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            | python3 -c "import sys,json;d=json.load(sys.stdin);print('build #',d.get('build_number'),d.get('build_url',''))"
