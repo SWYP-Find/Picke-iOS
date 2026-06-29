@@ -2,7 +2,7 @@
 //  NotificationView.swift
 //  Notification
 //
-//  
+//
 //
 
 import SwiftUI
@@ -32,6 +32,7 @@ public struct NotificationView: View {
             .foregroundStyle(.gray300)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("notification.readAll")
       }
       .foregroundStyle(.gray500)
 

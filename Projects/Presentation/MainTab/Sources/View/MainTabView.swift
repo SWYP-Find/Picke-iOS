@@ -96,6 +96,7 @@ extension MainTabView {
     } icon: {
       tabIcon(for: tab)
     }
+    .accessibilityIdentifier("tab.\(tab.tag)")
   }
 
   @ViewBuilder
