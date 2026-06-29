@@ -153,13 +153,11 @@ extension NewBattleCardView {
 
   @ViewBuilder
   private var vsBadge: some View {
-    // `.vs`(versus_home.svg)는 흰색(#FEFEFD)이라 히어로의 어두운 배경에선 보이지만
-    // 새로운 배틀의 밝은 베이지 카드 배경에선 안 보인다. template 렌더 + 회색 틴트로 보이게 한다.
-    Image(asset: .vs)
-      .renderingMode(.template)
-      .resizable()
-      .scaledToFit()
-      .frame(width: 18, height: 32)
-      .foregroundStyle(.neutral300)
+    // Figma(4037:4233 VS) 매핑: 24×24 secondary200(#F3E3C7) 원형 + Pretendard Bold 8 neutral900(#131212) 글자.
+    Text("VS")
+      .pretendardFont(family: .Bold, size: 8)
+      .foregroundStyle(.neutral900)
+      .frame(width: 24, height: 24)
+      .background(.secondary200, in: Circle())
   }
 }

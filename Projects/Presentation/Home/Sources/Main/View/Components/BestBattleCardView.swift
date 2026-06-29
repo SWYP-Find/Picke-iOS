@@ -15,7 +15,7 @@ struct BestBattleCardView: View {
   let battle: BestBattle
 
   var body: some View {
-    HStack(alignment: .top, spacing: 16) {
+    HStack(alignment: .center, spacing: 16) {
       Text("\(battle.rank)")
         .pretendardFont(family: .Bold, size: 28)
         .foregroundStyle(battle.rank == 1 ? .primary500 : .neutral300)
