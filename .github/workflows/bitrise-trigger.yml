@@ -23,22 +23,41 @@ jobs:
         env:
           BITRISE_TOKEN: ${{ secrets.BITRISE_API_TOKEN }}
           APP_SLUG: cc46a893-15b6-40b5-a5ea-2cbb4948c4ec
+          # 값은 env 로 전달(직접 ${{ }} 보간 시 커밋메시지 셸 인젝션 위험 방지)
+          EVENT_NAME: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.number }}
+          COMMIT_HASH: ${{ github.sha }}
+          PUSH_MSG: ${{ github.event.head_commit.message }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # 페이로드는 단일 jq 호출로 구성. commit_message 는 제목(첫 줄)만 사용 —
+          # 멀티라인/제어문자로 JSON 이 깨지는 것을 방지(Bitrise UI 는 제목을 표시).
+          if [ "$EVENT_NAME" = "pull_request" ]; then
             PIPELINE="run-tests"
-            BRANCH="${{ github.head_ref }}"
-            PARAMS=$(printf '"branch":"%s","pull_request_id":%s,"pipeline_id":"%s"' "$BRANCH" "${{ github.event.number }}" "$PIPELINE")
-          elif [ "${{ github.ref_type }}" = "tag" ]; then
+            PAYLOAD=$(jq -nc \
+              --arg branch "$HEAD_REF" --argjson pr "${PR_NUMBER:-0}" \
+              --arg pipeline "$PIPELINE" --arg msg "$(printf '%s' "$PR_TITLE" | head -n1)" --arg hash "$COMMIT_HASH" \
+              '{hook_info:{type:"bitrise"}, build_params:{branch:$branch, pull_request_id:$pr, pipeline_id:$pipeline, commit_message:$msg, commit_hash:$hash}}')
+          elif [ "$REF_TYPE" = "tag" ]; then
             PIPELINE="deploy-live"
-            PARAMS=$(printf '"tag":"%s","pipeline_id":"%s"' "${{ github.ref_name }}" "$PIPELINE")
+            PAYLOAD=$(jq -nc \
+              --arg tag "$REF_NAME" --arg pipeline "$PIPELINE" \
+              --arg msg "$(printf '%s' "$PUSH_MSG" | head -n1)" --arg hash "$COMMIT_HASH" \
+              '{hook_info:{type:"bitrise"}, build_params:{tag:$tag, pipeline_id:$pipeline, commit_message:$msg, commit_hash:$hash}}')
           else
             PIPELINE="deploy-stg"
-            PARAMS=$(printf '"branch":"%s","pipeline_id":"%s"' "${{ github.ref_name }}" "$PIPELINE")
+            PAYLOAD=$(jq -nc \
+              --arg branch "$REF_NAME" --arg pipeline "$PIPELINE" \
+              --arg msg "$(printf '%s' "$PUSH_MSG" | head -n1)" --arg hash "$COMMIT_HASH" \
+              '{hook_info:{type:"bitrise"}, build_params:{branch:$branch, pipeline_id:$pipeline, commit_message:$msg, commit_hash:$hash}}')
           fi
           echo "▶ Bitrise 트리거: $PIPELINE"
           curl -fsSL -X POST "https://api.bitrise.io/v0.1/apps/${APP_SLUG}/builds" \
             -H "Authorization: ${BITRISE_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "{\"hook_info\":{\"type\":\"bitrise\"},\"build_params\":{${PARAMS}}}" \
+            -d "$PAYLOAD" \
             | python3 -c "import sys,json;d=json.load(sys.stdin);print('build #',d.get('build_number'),d.get('build_url',''))"
