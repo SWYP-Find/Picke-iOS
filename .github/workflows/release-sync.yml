@@ -1,0 +1,38 @@
+name: Sync Release Branch on Tag
+
+# develop 에 푸시하고 v태그(예: v1.0.3)를 붙이면, 그 태그 커밋을 release 브랜치로 자동 병합한다.
+# (배포 자체는 bitrise-trigger.yml 의 tag v* → deploy-live 가 담당 = App Store 심사 제출)
+# 즉 "develop + 태그 → release 가 해당 코드를 풀받아 동기화" 를 자동화한다.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  sync-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge tag into release
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          echo "▶ 태그 $TAG ($GITHUB_SHA) → release 동기화"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin release >/dev/null 2>&1; then
+            git fetch origin release
+            git checkout -B release origin/release
+          else
+            git checkout -B release "$GITHUB_SHA"
+          fi
+          # 태그 커밋을 release 로 병합(이미 최신이면 ff, 아니면 머지 커밋)
+          git merge --no-edit "$GITHUB_SHA"
+          git push origin release
+          echo "✓ release 가 $TAG 로 동기화됨"
