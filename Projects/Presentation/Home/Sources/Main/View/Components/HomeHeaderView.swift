@@ -7,11 +7,14 @@
 
 import SwiftUI
 
+import ComposableArchitecture
 import DesignSystem
 
 /// 홈 화면 최상단 GNB 위 헤더 (PicKé 로고 + 알림 아이콘).
 struct HomeHeaderView: View {
-  var hasUnread: Bool = false
+  /// 종 빨간점 — 미읽음 플래그를 @Shared(appStorage)로 뷰에서 직접 관찰해 즉시 반응 갱신.
+  /// (store.hasUnreadNotification 로 전달받으면 타 화면의 @Shared 변경이 뷰 재렌더를 트리거하지 않아 점이 stale 하게 남던 문제 방지)
+  @Shared(.appStorage("HasUnreadNotification")) private var hasUnread = false
   let onNotificationTapped: () -> Void
 
   var body: some View {
