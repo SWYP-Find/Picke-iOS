@@ -201,7 +201,7 @@ extension AnalyticsUseCase: DependencyKey {
       return properties
 
     case let .uiAction(action, screen):
-      return ["action": action, "screen": screen]
+      return ["action": action.rawValue, "screen": screen.rawValue]
 
     case let .playbackAction(action, contentID):
       return ["action": action, "content_id": contentID]

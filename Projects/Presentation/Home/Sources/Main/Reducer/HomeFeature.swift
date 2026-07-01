@@ -126,7 +126,7 @@ extension HomeFeature {
       return .send(.async(.fetchHome))
 
     case .seeMoreTapped:
-      analyticsUseCase.track(.uiAction(action: "home_more", screen: "home"))
+      analyticsUseCase.track(.uiAction(action: .homeMore, screen: .home))
       return .send(.delegate(.moveToExplore))
 
     case let .voteTapped(question):
@@ -166,7 +166,7 @@ extension HomeFeature {
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
     case .notificationTapped:
-      analyticsUseCase.track(.uiAction(action: "home_notification", screen: "home"))
+      analyticsUseCase.track(.uiAction(action: .homeNotification, screen: .home))
       return .send(.delegate(.openNotification))
     }
   }

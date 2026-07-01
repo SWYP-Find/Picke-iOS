@@ -52,6 +52,7 @@ public struct BattleFeature {
     case shareTapped(battleId: Int)
     case optionTapped(battleId: Int, optionId: Int)
     case enterBattleTapped(battleId: Int)
+    case pagingTapped(index: Int)
   }
 
   public enum AsyncAction: Equatable {
@@ -109,10 +110,17 @@ extension BattleFeature {
       analyticsUseCase.track(.screenView(screen: .quickBattle, referrer: nil))
       return .send(.async(.fetchRequested))
 
+    case let .pagingTapped(index):
+      let contentID = state.battles.indices.contains(index) ? "\(state.battles[index].id)" : nil
+      analyticsUseCase.track(.contentAction(ContentActionData(action: .quickBattleNext, contentID: contentID)))
+      return .none
+
     case .backTapped:
+      analyticsUseCase.track(.uiAction(action: .quickBattleBack, screen: .quickBattle))
       return .send(.delegate(.backToHome))
 
     case let .shareTapped(battleId):
+      analyticsUseCase.track(.shareAction(ShareActionData(target: .battle)))
       guard let battle = state.battles.first(where: { $0.battleId == battleId }) else { return .none }
       let text = [
         battle.title,
@@ -127,6 +135,7 @@ extension BattleFeature {
       return .none
 
     case let .optionTapped(battleId, optionId):
+      analyticsUseCase.track(.uiAction(action: .quickBattleOption, screen: .quickBattle))
       // 같은 옵션 재탭 시 해제, 아니면 선택.
       if state.selectedOptionByBattle[battleId] == optionId {
         state.selectedOptionByBattle[battleId] = nil
@@ -136,6 +145,7 @@ extension BattleFeature {
       return .none
 
     case let .enterBattleTapped(battleId):
+      analyticsUseCase.track(.uiAction(action: .quickBattleEnter, screen: .quickBattle))
       // 선택해야만 입장 가능. 입장 시 투표 확정 → 복귀 시 옵션 변경 비활성화.
       guard state.selectedOptionByBattle[battleId] != nil else { return .none }
       state.votedBattleIds.insert(battleId)

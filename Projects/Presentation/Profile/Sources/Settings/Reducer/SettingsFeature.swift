@@ -143,12 +143,12 @@ extension SettingsFeature {
       case .terms:
         return .send(.delegate(.openTerms))
       case .logout:
-        analyticsUseCase.track(.uiAction(action: "settings_logout", screen: "settings"))
+        analyticsUseCase.track(.uiAction(action: .settingsLogout, screen: .settings))
         state.pending = .logout
         state.customAlert = .logout()
         return .none
       case .withdraw:
-        analyticsUseCase.track(.uiAction(action: "settings_withdraw", screen: "settings"))
+        analyticsUseCase.track(.uiAction(action: .settingsWithdraw, screen: .settings))
         return .send(.delegate(.openWithdraw(nickname: state.nickname)))
       }
     }

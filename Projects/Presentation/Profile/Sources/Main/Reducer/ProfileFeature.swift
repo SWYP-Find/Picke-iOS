@@ -155,18 +155,18 @@ extension ProfileFeature {
       return .send(.delegate(.backToHome))
 
     case .notificationTapped:
-      analyticsUseCase.track(.uiAction(action: "mypage_notification", screen: "mypage"))
+      analyticsUseCase.track(.uiAction(action: .mypageNotification, screen: .mypage))
       return .send(.delegate(.openNotification))
 
     case .settingsTapped:
-      analyticsUseCase.track(.uiAction(action: "mypage_settings", screen: "mypage"))
+      analyticsUseCase.track(.uiAction(action: .mypageSettings, screen: .mypage))
       return .send(.delegate(.openSettings(nickname: state.nickname)))
 
     case .profileTapped:
       return .send(.delegate(.editProfile))
 
     case .chargePointTapped:
-      analyticsUseCase.track(.uiAction(action: "point_charge", screen: "mypage"))
+      analyticsUseCase.track(.uiAction(action: .pointCharge, screen: .mypage))
       return .send(.delegate(.chargePoint))
 
     case .freeChargeTapped:

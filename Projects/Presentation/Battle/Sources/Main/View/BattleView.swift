@@ -58,6 +58,7 @@ public struct BattleView: View {
             onSelect: { index in
               guard store.battles.indices.contains(index) else { return }
               let id = store.battles[index].id
+              send(.pagingTapped(index: index))
               withAnimation(.easeInOut(duration: 0.25)) { currentBattleId = id }
             }
           )

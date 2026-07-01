@@ -27,4 +27,5 @@ public enum AnalyticsScreen: String, Sendable {
   case settings
   case withdraw
   case recap
+  case mainTab = "main_tab"
 }

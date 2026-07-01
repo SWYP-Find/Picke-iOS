@@ -105,14 +105,13 @@ public struct MainTabCoordinator {
       case let .selectTab(tab):
         if tab != state.selectedTab {
           state.previousTab = state.selectedTab
-          let name = switch Tab(rawValue: tab) {
-          case .home: "tab_home"
-          case .explore: "tab_explore"
-          case .quickBattle: "tab_quick_battle"
-          case .myPage: "tab_mypage"
-          case .none: "tab_\(tab)"
+          switch Tab(rawValue: tab) {
+          case .home: analyticsUseCase.track(.uiAction(action: .tabHome, screen: .mainTab))
+          case .explore: analyticsUseCase.track(.uiAction(action: .tabExplore, screen: .mainTab))
+          case .quickBattle: analyticsUseCase.track(.uiAction(action: .tabQuickBattle, screen: .mainTab))
+          case .myPage: analyticsUseCase.track(.uiAction(action: .tabMypage, screen: .mainTab))
+          case .none: break
           }
-          analyticsUseCase.track(.uiAction(action: name, screen: "main_tab"))
         }
         state.selectedTab = tab
         return .none
