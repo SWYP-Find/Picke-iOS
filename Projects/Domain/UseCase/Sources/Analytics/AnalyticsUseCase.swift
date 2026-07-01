@@ -2,8 +2,9 @@
 //  AnalyticsUseCase.swift
 //  UseCase
 //
-//  Mixpanel 트래킹 — PICKé 핵심 이벤트 명세서 기준.
+//  Mixpanel 트래킹 UseCase. 이벤트 정의는 AnalyticsEvent.swift / Events/ 참고.
 //  이벤트를 쪼개지 않고 하나의 카테고리 + 속성값으로 구분(무료 플랜 한도 절약).
+//  설계: docs/analytics-mixpanel-design.md
 //
 
 import Foundation
@@ -14,99 +15,59 @@ import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
 
-// MARK: - 이벤트 정의 (명세서)
-
-public enum AnalyticsEvent: Sendable {
-  /// 소셜 가입 완료 및 메인 진입 시.
-  case signUp(method: String)
-  /// 배틀 각 단계 완료 시 (pre_vote / audio_end / post_vote).
-  case battleStep(BattleStepData)
-  /// 리포트 조회/공유 클릭 시.
-  case reportAction(ReportActionData)
-  /// 댓글 등록 성공 시.
-  case communityAction(CommunityActionData)
-  /// 보상형 광고 시청 완료 시.
-  case adRevenue(placement: String)
-}
-
-public enum BattleStep: String, Sendable {
-  case preVote = "pre_vote"
-  case audioEnd = "audio_end"
-  case postVote = "post_vote"
-}
-
-public struct BattleStepData: Sendable {
-  public let stepName: BattleStep
-  public let contentID: String
-  /// 선택지(좌/우 등). 없으면 미전송.
-  public let choice: String?
-  /// 사전→사후 투표 변경 여부. post_vote 에서만 유의미.
-  public let isChanged: Bool?
-
-  public init(
-    stepName: BattleStep,
-    contentID: String,
-    choice: String? = nil,
-    isChanged: Bool? = nil
-  ) {
-    self.stepName = stepName
-    self.contentID = contentID
-    self.choice = choice
-    self.isChanged = isChanged
-  }
-}
-
-public enum ReportActionType: String, Sendable {
-  case view
-  case share
-}
-
-public struct ReportActionData: Sendable {
-  public let actionType: ReportActionType
-  /// 대표 지표(최상위 철학자 유형 등). 없으면 미전송.
-  public let topIndicator: String?
-
-  public init(actionType: ReportActionType, topIndicator: String? = nil) {
-    self.actionType = actionType
-    self.topIndicator = topIndicator
-  }
-}
-
-public struct CommunityActionData: Sendable {
-  public let contentID: String
-  public let commentLength: Int
-
-  public init(contentID: String, commentLength: Int) {
-    self.contentID = contentID
-    self.commentLength = commentLength
-  }
-}
-
 // MARK: - UseCase
 
 public struct AnalyticsUseCase: Sendable {
-  /// 로그인 성공 직후 유저 고유 ID 를 Mixpanel 에 연결.
+  /// 앱 시작 시 공통 슈퍼 프로퍼티(os_type/app_version/build) 등록.
+  public var registerBaseProperties: @Sendable () -> Void
+  /// 로그인 성공 직후 유저 고유 ID 연결 + 로그인 슈퍼/유저 프로퍼티 설정.
   public var identify: @Sendable (_ userID: String, _ method: String?) -> Void
   /// 핵심 퍼널 이벤트 트래킹.
   public var track: @Sendable (_ event: AnalyticsEvent) -> Void
+  /// 로그아웃/탈퇴 시 계정 분리(reset) + 공통 프로퍼티 재등록.
+  public var reset: @Sendable () -> Void
 
   public init(
+    registerBaseProperties: @escaping @Sendable () -> Void,
     identify: @escaping @Sendable (_ userID: String, _ method: String?) -> Void,
-    track: @escaping @Sendable (_ event: AnalyticsEvent) -> Void
+    track: @escaping @Sendable (_ event: AnalyticsEvent) -> Void,
+    reset: @escaping @Sendable () -> Void
   ) {
+    self.registerBaseProperties = registerBaseProperties
     self.identify = identify
     self.track = track
+    self.reset = reset
   }
 }
 
 extension AnalyticsUseCase: DependencyKey {
+  /// 모든 이벤트에 자동 첨부되는 공통 슈퍼 프로퍼티(플랫폼/버전). is_logged_in 은 identify/reset 이 관리.
+  public static func baseSuperProperties() -> Properties {
+    let info = Bundle.main.infoDictionary
+    return [
+      "os_type": "ios",
+      "app_version": (info?["CFBundleShortVersionString"] as? String) ?? "",
+      "build": (info?["CFBundleVersion"] as? String) ?? "",
+    ]
+  }
+
   public static let liveValue = AnalyticsUseCase(
+    registerBaseProperties: {
+      Mixpanel.mainInstance().registerSuperProperties(baseSuperProperties())
+    },
     identify: { userID, method in
       guard !userID.isEmpty else { return }
 
       let mixpanel = Mixpanel.mainInstance()
       mixpanel.identify(distinctId: userID)
       MPSessionReplay.getInstance()?.identify(distinctId: userID)
+
+      // 로그인 컨텍스트를 슈퍼 프로퍼티로 등록 → 이후 모든 이벤트에 자동 첨부.
+      var superProps: Properties = ["is_logged_in": true]
+      if let method, !method.isEmpty {
+        superProps["login_provider"] = method
+      }
+      mixpanel.registerSuperProperties(superProps)
 
       var properties: Properties = [:]
       if let method, !method.isEmpty {
@@ -122,10 +83,20 @@ extension AnalyticsUseCase: DependencyKey {
       let properties = eventProperties(event)
       #logDebug("Mixpanel track", ["event": name, "properties": String(describing: properties)])
       mixpanel.track(event: name, properties: properties)
+    },
+    reset: {
+      let mixpanel = Mixpanel.mainInstance()
+      mixpanel.reset() // 슈퍼 프로퍼티 포함 전체 초기화 → 계정 분리.
+      mixpanel.registerSuperProperties(baseSuperProperties()) // 공통 프로퍼티 재등록(is_logged_in 미포함 = 로그아웃).
     }
   )
 
-  public static let testValue = AnalyticsUseCase(identify: { _, _ in }, track: { _ in })
+  public static let testValue = AnalyticsUseCase(
+    registerBaseProperties: {},
+    identify: { _, _ in },
+    track: { _ in },
+    reset: {}
+  )
   public static let previewValue = testValue
 
   private static func eventName(_ event: AnalyticsEvent) -> String {
@@ -135,6 +106,15 @@ extension AnalyticsUseCase: DependencyKey {
     case .reportAction: "report_action"
     case .communityAction: "community_action"
     case .adRevenue: "ad_revenue"
+    case .onboardingStep: "onboarding_step"
+    case .pointAction: "point_action"
+    case .notificationAction: "notification_action"
+    case .shareAction: "share_action"
+    case .screenView: "screen_view"
+    case .contentAction: "content_action"
+    case .uiAction: "ui_action"
+    case .playbackAction: "playback_action"
+    case .engagementAction: "engagement_action"
     }
   }
 
@@ -171,6 +151,63 @@ extension AnalyticsUseCase: DependencyKey {
 
     case let .adRevenue(placement):
       return ["placement": placement]
+
+    case let .onboardingStep(step, method):
+      var properties: Properties = ["step": step.rawValue]
+      if let method, !method.isEmpty {
+        properties["method"] = method
+      }
+      return properties
+
+    case let .pointAction(data):
+      var properties: Properties = [
+        "type": data.type.rawValue,
+        "amount": data.amount,
+      ]
+      if let balance = data.balance {
+        properties["balance"] = balance
+      }
+      return properties
+
+    case let .notificationAction(data):
+      var properties: Properties = ["action": data.action.rawValue]
+      if let count = data.unreadCount {
+        properties["unread_count"] = count
+      }
+      return properties
+
+    case let .shareAction(data):
+      var properties: Properties = ["target": data.target.rawValue]
+      if let channel = data.channel {
+        properties["channel"] = channel
+      }
+      return properties
+
+    case let .screenView(screen, referrer):
+      var properties: Properties = ["screen": screen]
+      if let referrer, !referrer.isEmpty {
+        properties["referrer"] = referrer
+      }
+      return properties
+
+    case let .contentAction(data):
+      var properties: Properties = ["action": data.action.rawValue]
+      if let contentID = data.contentID {
+        properties["content_id"] = contentID
+      }
+      if let section = data.section {
+        properties["section"] = section
+      }
+      return properties
+
+    case let .uiAction(action, screen):
+      return ["action": action, "screen": screen]
+
+    case let .playbackAction(action, contentID):
+      return ["action": action, "content_id": contentID]
+
+    case let .engagementAction(action, targetID):
+      return ["action": action, "target_id": targetID]
     }
   }
 }
