@@ -202,11 +202,12 @@ extension LoginFeature {
         // 로그인 성공 직후 유저 고유 ID(userTag) 를 Mixpanel 에 연결.
         analyticsUseCase.identify(loginEntity.userTag, loginEntity.provider.rawValue)
         // 신규 가입(메인 진입) 시 sign_up.
+        let provider = AnalyticsProvider(rawValue: loginEntity.provider.rawValue)
         if loginEntity.isNewUser {
-          analyticsUseCase.track(.signUp(method: loginEntity.provider.rawValue))
+          analyticsUseCase.track(.signUp(method: provider ?? .kakao))
         }
         // 온보딩 완료(홈 진입) 퍼널.
-        analyticsUseCase.track(.onboardingStep(step: .homeEntered, method: loginEntity.provider.rawValue))
+        analyticsUseCase.track(.onboardingStep(step: .homeEntered, provider: provider))
 
         guard loginEntity.isNewUser else {
           return .send(.delegate(.presentMainTab))

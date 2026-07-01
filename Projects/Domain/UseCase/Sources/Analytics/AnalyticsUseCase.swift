@@ -121,7 +121,7 @@ extension AnalyticsUseCase: DependencyKey {
   private static func eventProperties(_ event: AnalyticsEvent) -> Properties {
     switch event {
     case let .signUp(method):
-      return ["method": method]
+      return ["method": method.rawValue]
 
     case let .battleStep(data):
       var properties: Properties = [
@@ -150,12 +150,12 @@ extension AnalyticsUseCase: DependencyKey {
       ]
 
     case let .adRevenue(placement):
-      return ["placement": placement]
+      return ["placement": placement.rawValue]
 
-    case let .onboardingStep(step, method):
+    case let .onboardingStep(step, provider):
       var properties: Properties = ["step": step.rawValue]
-      if let method, !method.isEmpty {
-        properties["method"] = method
+      if let provider {
+        properties["method"] = provider.rawValue
       }
       return properties
 
@@ -185,8 +185,8 @@ extension AnalyticsUseCase: DependencyKey {
 
     case let .screenView(screen, referrer):
       var properties: Properties = ["screen": screen.rawValue]
-      if let referrer, !referrer.isEmpty {
-        properties["referrer"] = referrer
+      if let referrer {
+        properties["referrer"] = referrer.rawValue
       }
       return properties
 

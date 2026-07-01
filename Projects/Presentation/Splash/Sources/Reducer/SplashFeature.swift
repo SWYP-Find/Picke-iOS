@@ -111,7 +111,7 @@ extension SplashFeature {
     switch action {
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .splash, referrer: nil))
-      analyticsUseCase.track(.onboardingStep(step: .splash, method: nil))
+      analyticsUseCase.track(.onboardingStep(step: .splash, provider: nil))
       return .run { send in
         try await clock.sleep(for: .seconds(1.2))
         await send(.async(.checkAppUpdate))

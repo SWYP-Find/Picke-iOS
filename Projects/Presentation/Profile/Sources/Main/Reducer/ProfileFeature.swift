@@ -174,7 +174,7 @@ extension ProfileFeature {
       return .run { [rewardedAdClient, analyticsUseCase] send in
         let earned = await rewardedAdClient.showRewardedAd()
         if earned {
-          analyticsUseCase.track(.adRevenue(placement: "충전소"))
+          analyticsUseCase.track(.adRevenue(placement: .charge))
           await send(.async(.fetchProfile))
         }
       }
