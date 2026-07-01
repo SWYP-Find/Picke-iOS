@@ -133,7 +133,7 @@ extension HomeFeature {
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .voteCardTap,
         contentID: "\(question.battleId)",
-        section: "vote"
+        section: .vote
       )))
       return .send(.delegate(.presentPreVote(battleId: question.battleId)))
 
@@ -145,7 +145,7 @@ extension HomeFeature {
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .battleCardTap,
         contentID: "\(battle.battleId)",
-        section: "hot"
+        section: .hot
       )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
@@ -153,7 +153,7 @@ extension HomeFeature {
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .battleCardTap,
         contentID: "\(battle.battleId)",
-        section: "best"
+        section: .best
       )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
@@ -161,7 +161,7 @@ extension HomeFeature {
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .newBattleTap,
         contentID: "\(battle.battleId)",
-        section: "new"
+        section: .new
       )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 

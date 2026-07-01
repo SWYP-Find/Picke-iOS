@@ -37,7 +37,7 @@ public enum AnalyticsEvent: Sendable {
   /// 버튼 탭 전반.
   case uiAction(action: AnalyticsButton, screen: AnalyticsScreen)
   /// (Tier3, 선택) 재생 조작.
-  case playbackAction(action: String, contentID: String)
+  case playbackAction(action: PlaybackAction, contentID: String)
   /// (Tier3, 선택) 미세 상호작용.
-  case engagementAction(action: String, targetID: String)
+  case engagementAction(action: EngagementAction, targetID: String)
 }

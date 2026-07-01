@@ -27,4 +27,19 @@ public enum AnalyticsButton: String, Sendable {
   case tabExplore = "tab_explore"
   case tabQuickBattle = "tab_quick_battle"
   case tabMypage = "tab_mypage"
+  // 댓글
+  case commentShare = "comment_share"
+  case commentFilter = "comment_filter"
+  case commentSort = "comment_sort"
+  case commentLike = "comment_like"
+  case commentDelete = "comment_delete"
+  case replySend = "reply_send"
+  // 채팅방(재생)
+  case chatroomPlay = "chatroom_play"
+  case chatroomSeekBackward = "chatroom_seek_backward"
+  case chatroomSeekForward = "chatroom_seek_forward"
+  // 사전투표
+  case prevoteShare = "prevote_share"
+  // 큐레이션
+  case curationBattle = "curation_battle"
 }

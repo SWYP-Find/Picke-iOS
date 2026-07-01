@@ -196,7 +196,7 @@ extension AnalyticsUseCase: DependencyKey {
         properties["content_id"] = contentID
       }
       if let section = data.section {
-        properties["section"] = section
+        properties["section"] = section.rawValue
       }
       return properties
 
@@ -204,10 +204,10 @@ extension AnalyticsUseCase: DependencyKey {
       return ["action": action.rawValue, "screen": screen.rawValue]
 
     case let .playbackAction(action, contentID):
-      return ["action": action, "content_id": contentID]
+      return ["action": action.rawValue, "content_id": contentID]
 
     case let .engagementAction(action, targetID):
-      return ["action": action, "target_id": targetID]
+      return ["action": action.rawValue, "target_id": targetID]
     }
   }
 }

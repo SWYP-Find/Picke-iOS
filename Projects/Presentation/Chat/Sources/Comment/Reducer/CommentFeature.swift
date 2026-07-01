@@ -225,6 +225,7 @@ extension CommentFeature {
       return .send(.delegate(.openCuration(battleId: state.battleId)))
 
     case .shareTapped:
+      analyticsUseCase.track(.uiAction(action: .commentShare, screen: .comment))
       return .none
 
     case let .commentRow(id, action):
@@ -285,11 +286,13 @@ extension CommentFeature {
       return .none
 
     case let .filterTapped(filter):
+      analyticsUseCase.track(.uiAction(action: .commentFilter, screen: .comment))
       state.selectedFilter = filter
       state.reportTargetCommentID = nil
       return .send(.async(.fetchPerspectives(reset: true)))
 
     case let .sortTapped(sort):
+      analyticsUseCase.track(.uiAction(action: .commentSort, screen: .comment))
       state.selectedSort = sort
       state.reportTargetCommentID = nil
       return .send(.async(.fetchPerspectives(reset: true)))

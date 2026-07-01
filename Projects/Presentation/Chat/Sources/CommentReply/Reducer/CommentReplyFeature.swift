@@ -157,6 +157,7 @@ public struct CommentReplyFeature {
 
   @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
   @Dependency(\.commentUseCase) private var commentUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -259,12 +260,14 @@ extension CommentReplyFeature {
       return .send(.delegate(.dismiss))
 
     case .parentLikeTapped:
+      analyticsUseCase.track(.uiAction(action: .commentLike, screen: .commentReply))
       let wasLiked = state.parentComment.isLiked
       state.parentComment.isLiked.toggle()
       state.parentComment.likeCount += state.parentComment.isLiked ? 1 : -1
       return .send(.async(.toggleParentLike(currentlyLiked: wasLiked)))
 
     case let .replyLikeTapped(id):
+      analyticsUseCase.track(.uiAction(action: .commentLike, screen: .commentReply))
       guard let index = state.replies.firstIndex(where: { $0.id == id }),
             let commentId = state.replies[index].commentId
       else { return .none }

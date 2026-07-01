@@ -102,6 +102,7 @@ extension CurationFeature {
       return .send(.delegate(.close))
 
     case let .battleTapped(battleId):
+      analyticsUseCase.track(.uiAction(action: .curationBattle, screen: .curation))
       return .send(.delegate(.openBattle(battleId: battleId)))
     }
   }

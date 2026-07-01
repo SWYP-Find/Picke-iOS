@@ -350,6 +350,7 @@ extension ChatRoomFeature {
       }
 
     case .togglePlayTapped:
+      analyticsUseCase.track(.uiAction(action: .chatroomPlay, screen: .chatroom))
       state.isPlaying.toggle()
       let playing = state.isPlaying
       return .run { [player = audioPlayer] _ in
@@ -357,6 +358,7 @@ extension ChatRoomFeature {
       }
 
     case .seekBackwardTapped:
+      analyticsUseCase.track(.uiAction(action: .chatroomSeekBackward, screen: .chatroom))
       // 15초 되감기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
       let target = max(0, state.currentTime - 15)
       state.currentTime = target
@@ -365,6 +367,7 @@ extension ChatRoomFeature {
       }
 
     case .seekForwardTapped:
+      analyticsUseCase.track(.uiAction(action: .chatroomSeekForward, screen: .chatroom))
       // 15초 넘기기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
       let target = min(state.totalDuration, state.currentTime + 15)
       state.currentTime = target
