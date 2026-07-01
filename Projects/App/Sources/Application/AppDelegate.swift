@@ -127,6 +127,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
   /// 홈/프로필 종 아이콘 빨간점 — NotificationFeature 의 @Shared(.appStorage) 와 동일 키.
   private static let hasUnreadKey = "HasUnreadNotification"
+  /// QA-47 모두읽음 가드 키 — 새 푸시(진짜 미읽음)가 오면 가드를 해제한다.
+  private static let readAllPendingKey = "NotificationReadAllPending"
+
+  /// 새 알림 수신 = 진짜 미읽음 → 빨간점 ON + 모두읽음 가드 해제.
+  private func markUnreadFromPush() {
+    UserDefaults.standard.set(true, forKey: Self.hasUnreadKey)
+    UserDefaults.standard.set(false, forKey: Self.readAllPendingKey)
+  }
 
   // 포그라운드 수신 → 배너/사운드 표시 + 미읽음 빨간점 ON.
   func userNotificationCenter(
@@ -134,7 +142,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     willPresent _: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
-    UserDefaults.standard.set(true, forKey: Self.hasUnreadKey)
+    markUnreadFromPush()
     completionHandler([.banner, .badge, .sound])
   }
 
@@ -144,7 +152,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     didReceive response: UNNotificationResponse,
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
-    UserDefaults.standard.set(true, forKey: Self.hasUnreadKey)
+    markUnreadFromPush()
     let userInfo = response.notification.request.content.userInfo
     PushDeeplinkBridge.handlePushPayload(userInfo)
     completionHandler()

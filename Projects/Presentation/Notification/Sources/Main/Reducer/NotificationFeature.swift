@@ -31,6 +31,8 @@ public struct NotificationFeature {
 
     /// 홈/프로필 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (전역 공유).
     @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
+    /// QA-47: 모두읽음 직후 홈 재진입 시 서버 지연으로 빨간점이 되살아나는 것을 막는 가드.
+    @Shared(.appStorage("NotificationReadAllPending")) public var readAllPending: Bool = false
 
     public var hasUnread: Bool {
       items.contains { !$0.isRead }
@@ -129,8 +131,9 @@ extension NotificationFeature {
       // QA-47: 빨간점은 푸시 수신(AppDelegate) 시점에 전역 플래그로 켜질 수 있어,
       // 현재 로드된 리스트의 미읽음 여부와 무관하게 항상 전역 빨간점을 끈다.
       state.items = state.items.map { $0.markedAsRead() }
-      // 모두 읽음 → 홈/프로필 빨간점 제거.
+      // 모두 읽음 → 홈/프로필 빨간점 제거 + 서버 반영 지연 동안 홈 재진입이 되살리지 않도록 pending 설정.
       state.$hasUnreadNotification.withLock { $0 = false }
+      state.$readAllPending.withLock { $0 = true }
       return .send(.async(.markAll))
 
     case let .notificationTapped(item):
