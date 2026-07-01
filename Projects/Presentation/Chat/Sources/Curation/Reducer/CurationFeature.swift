@@ -63,6 +63,7 @@ public struct CurationFeature {
   }
 
   @Dependency(\.battleUseCase) private var battleUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -90,12 +91,14 @@ extension CurationFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .curation, referrer: nil))
       return .send(.async(.fetchRecommendations))
 
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
     case .closeButtonTapped:
+      analyticsUseCase.track(.contentAction(ContentActionData(action: .battleRecommendClose)))
       return .send(.delegate(.close))
 
     case let .battleTapped(battleId):

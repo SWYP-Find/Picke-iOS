@@ -67,6 +67,7 @@ public struct HifiFeature {
   }
 
   @Dependency(\.searchUseCase) private var searchUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -94,6 +95,7 @@ extension HifiFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .explore, referrer: nil))
       return .send(.async(.searchRequested(reset: true)))
 
     case let .categoryTapped(category):

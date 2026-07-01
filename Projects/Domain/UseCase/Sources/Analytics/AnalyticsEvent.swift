@@ -31,7 +31,7 @@ public enum AnalyticsEvent: Sendable {
   /// 공유(리포트/배틀/최종투표) — 모든 공유 통일.
   case shareAction(ShareActionData)
   /// 화면 진입 (전체 화면).
-  case screenView(screen: String, referrer: String?)
+  case screenView(screen: AnalyticsScreen, referrer: String?)
   /// 홈/콘텐츠 카드 탭.
   case contentAction(ContentActionData)
   /// 버튼 탭 전반.

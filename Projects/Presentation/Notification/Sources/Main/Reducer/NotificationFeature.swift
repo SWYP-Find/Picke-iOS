@@ -110,7 +110,7 @@ extension NotificationFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      analyticsUseCase.track(.screenView(screen: "notification", referrer: nil))
+      analyticsUseCase.track(.screenView(screen: .notification, referrer: nil))
       guard state.items.isEmpty else { return .none }
       analyticsUseCase.track(.notificationAction(NotificationActionData(action: .viewList)))
       return .send(.async(.fetch(reset: true)))

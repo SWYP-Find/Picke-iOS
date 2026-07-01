@@ -184,7 +184,7 @@ extension AnalyticsUseCase: DependencyKey {
       return properties
 
     case let .screenView(screen, referrer):
-      var properties: Properties = ["screen": screen]
+      var properties: Properties = ["screen": screen.rawValue]
       if let referrer, !referrer.isEmpty {
         properties["referrer"] = referrer
       }

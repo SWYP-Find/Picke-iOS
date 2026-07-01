@@ -209,6 +209,7 @@ extension CommentFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .comment, referrer: nil))
       return .merge(
         .send(.async(.fetchBattle)),
         .send(.async(.fetchMyPerspective)),

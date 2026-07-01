@@ -103,6 +103,7 @@ extension RecapFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .recap, referrer: nil))
       guard state.recap == nil else { return .none }
       return .send(.async(.fetch))
 

@@ -205,6 +205,8 @@ extension LoginFeature {
         if loginEntity.isNewUser {
           analyticsUseCase.track(.signUp(method: loginEntity.provider.rawValue))
         }
+        // 온보딩 완료(홈 진입) 퍼널.
+        analyticsUseCase.track(.onboardingStep(step: .homeEntered, method: loginEntity.provider.rawValue))
 
         guard loginEntity.isNewUser else {
           return .send(.delegate(.presentMainTab))

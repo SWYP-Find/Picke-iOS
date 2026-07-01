@@ -148,7 +148,7 @@ extension ProfileFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      analyticsUseCase.track(.screenView(screen: "mypage", referrer: nil))
+      analyticsUseCase.track(.screenView(screen: .mypage, referrer: nil))
       return .send(.async(.fetchProfile))
 
     case .backTapped:

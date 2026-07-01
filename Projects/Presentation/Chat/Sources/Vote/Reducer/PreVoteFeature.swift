@@ -157,6 +157,7 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .prevote, referrer: nil))
       var effects: [Effect<Action>] = []
       if state.battleDetail == nil, state.battle == nil, !state.isLoading {
         effects.append(.send(.async(.fetchBattleDetail)))

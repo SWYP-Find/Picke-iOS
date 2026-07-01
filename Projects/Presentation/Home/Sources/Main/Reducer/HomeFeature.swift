@@ -117,7 +117,7 @@ extension HomeFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      analyticsUseCase.track(.screenView(screen: "home", referrer: nil))
+      analyticsUseCase.track(.screenView(screen: .home, referrer: nil))
       guard !state.hasLoadedHome, !state.isLoading else { return .none }
       return .send(.async(.fetchHome))
 

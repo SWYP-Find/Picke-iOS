@@ -315,6 +315,7 @@ extension ChatRoomFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .chatroom, referrer: nil))
       let needsFetch = state.scenario == nil && !state.isLoadingScenario
       let subscribe: Effect<Action> = .send(.async(.subscribePlayer))
       return needsFetch
