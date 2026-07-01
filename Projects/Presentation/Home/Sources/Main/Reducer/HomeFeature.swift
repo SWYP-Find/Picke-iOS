@@ -89,6 +89,7 @@ public struct HomeFeature {
   }
 
   @Dependency(\.homeUseCase) private var homeUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -116,6 +117,7 @@ extension HomeFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: "home", referrer: nil))
       guard !state.hasLoadedHome, !state.isLoading else { return .none }
       return .send(.async(.fetchHome))
 
@@ -124,24 +126,47 @@ extension HomeFeature {
       return .send(.async(.fetchHome))
 
     case .seeMoreTapped:
+      analyticsUseCase.track(.uiAction(action: "home_more", screen: "home"))
       return .send(.delegate(.moveToExplore))
 
     case let .voteTapped(question):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .voteCardTap,
+        contentID: "\(question.battleId)",
+        section: "vote"
+      )))
       return .send(.delegate(.presentPreVote(battleId: question.battleId)))
 
     case let .heroTapped(battle):
+      analyticsUseCase.track(.contentAction(ContentActionData(action: .heroTap, contentID: "\(battle.battleId)")))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
     case let .hotBattleTapped(battle):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .battleCardTap,
+        contentID: "\(battle.battleId)",
+        section: "hot"
+      )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
     case let .bestBattleTapped(battle):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .battleCardTap,
+        contentID: "\(battle.battleId)",
+        section: "best"
+      )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
     case let .newBattleTapped(battle):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .newBattleTap,
+        contentID: "\(battle.battleId)",
+        section: "new"
+      )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
     case .notificationTapped:
+      analyticsUseCase.track(.uiAction(action: "home_notification", screen: "home"))
       return .send(.delegate(.openNotification))
     }
   }

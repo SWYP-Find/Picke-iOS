@@ -84,6 +84,8 @@ public struct MainTabCoordinator {
     case sessionEnded
   }
 
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
+
   public var body: some ReducerOf<Self> {
     Scope(state: \.homeState, action: \.home) {
       HomeCoordinator()
@@ -101,7 +103,17 @@ public struct MainTabCoordinator {
     Reduce { state, action in
       switch action {
       case let .selectTab(tab):
-        if tab != state.selectedTab { state.previousTab = state.selectedTab }
+        if tab != state.selectedTab {
+          state.previousTab = state.selectedTab
+          let name = switch Tab(rawValue: tab) {
+          case .home: "tab_home"
+          case .explore: "tab_explore"
+          case .quickBattle: "tab_quick_battle"
+          case .myPage: "tab_mypage"
+          case .none: "tab_\(tab)"
+          }
+          analyticsUseCase.track(.uiAction(action: name, screen: "main_tab"))
+        }
         state.selectedTab = tab
         return .none
 

@@ -78,6 +78,7 @@ public struct NotificationFeature {
   }
 
   @Dependency(\.notificationUseCase) private var notificationUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -109,7 +110,9 @@ extension NotificationFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: "notification", referrer: nil))
       guard state.items.isEmpty else { return .none }
+      analyticsUseCase.track(.notificationAction(NotificationActionData(action: .viewList)))
       return .send(.async(.fetch(reset: true)))
 
     case .backTapped:
@@ -128,6 +131,10 @@ extension NotificationFeature {
       return .send(.async(.fetch(reset: false)))
 
     case .readAllTapped:
+      analyticsUseCase.track(.notificationAction(NotificationActionData(
+        action: .readAll,
+        unreadCount: state.items.count(where: { !$0.isRead })
+      )))
       // QA-47: 빨간점은 푸시 수신(AppDelegate) 시점에 전역 플래그로 켜질 수 있어,
       // 현재 로드된 리스트의 미읽음 여부와 무관하게 항상 전역 빨간점을 끈다.
       state.items = state.items.map { $0.markedAsRead() }
@@ -137,6 +144,7 @@ extension NotificationFeature {
       return .send(.async(.markAll))
 
     case let .notificationTapped(item):
+      analyticsUseCase.track(.notificationAction(NotificationActionData(action: .itemTap)))
       var effects: [Effect<Action>] = []
 
       // 미읽음일 때만 읽음 처리.
