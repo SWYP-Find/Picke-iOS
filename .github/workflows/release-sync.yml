@@ -36,3 +36,18 @@ jobs:
           git merge --no-edit "$GITHUB_SHA"
           git push origin release
           echo "✓ release 가 $TAG 로 동기화됨"
+
+      - name: Publish GitHub Release (latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          # 태그 릴리스를 생성/갱신하고 항상 최신(latest)으로 표시 → 저장소의 "Latest release" 갱신
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --latest --verify-tag
+            echo "▶ 릴리스 $TAG → latest 로 갱신"
+          else
+            gh release create "$TAG" --title "$TAG" --generate-notes --latest --verify-tag
+            echo "▶ 릴리스 $TAG 생성(latest)"
+          fi
