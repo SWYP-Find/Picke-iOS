@@ -94,6 +94,7 @@ public struct SettingsFeature {
   @Dependency(\.authUseCase) private var authUseCase
   @Dependency(\.keychainManager) private var keychainManager
   @Dependency(\.deviceUseCase) private var deviceUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -184,6 +185,8 @@ extension SettingsFeature {
       state.isProcessing = false
       // 서버 호출 성공/실패와 무관하게 로컬 세션은 정리하고 로그인으로 전환.
       keychainManager.clear()
+      // 계정 분리 — Mixpanel distinct_id/슈퍼프로퍼티 초기화(다음 유저와 혼선 방지).
+      analyticsUseCase.reset()
       return .send(.delegate(.sessionEnded))
     }
   }

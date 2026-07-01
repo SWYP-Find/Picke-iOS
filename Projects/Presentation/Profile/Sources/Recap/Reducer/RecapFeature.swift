@@ -126,9 +126,8 @@ extension RecapFeature {
         items.append(url)
       }
       state.shareItem = ShareItem(items: items)
-      analyticsUseCase.track(
-        .reportAction(ReportActionData(actionType: .share, topIndicator: recap.myCard.typeName))
-      )
+      // 모든 공유는 share_action 으로 통일 (report_action 은 조회 전용).
+      analyticsUseCase.track(.shareAction(ShareActionData(target: .recap)))
       return .none
     }
   }

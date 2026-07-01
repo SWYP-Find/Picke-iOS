@@ -25,6 +25,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       ]
     )
     Mixpanel.initialize(token: mixPanelKey ?? "", trackAutomaticEvents: true)
+    // 모든 이벤트에 자동 첨부되는 공통 슈퍼 프로퍼티(플랫폼/버전). is_logged_in 은 로그인/로그아웃이 관리.
+    let info = Bundle.main.infoDictionary
+    Mixpanel.mainInstance().registerSuperProperties([
+      "os_type": "ios",
+      "app_version": (info?["CFBundleShortVersionString"] as? String) ?? "",
+      "build": (info?["CFBundleVersion"] as? String) ?? "",
+    ])
     // NOTE: MixpanelSessionReplay 1.4.0의 _UIReparentingView swizzling이
     // SwiftUI UIHostingController.view에 적용되며 콘솔 경고가 출력될 수 있음 (기능 영향 없음).
     // SDK 측 SwiftUI 호환성 개선 시 경고 자동 해소 예정.
