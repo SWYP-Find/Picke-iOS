@@ -15,6 +15,8 @@ import Kingfisher
 @ViewAction(for: ProfileFeature.self)
 public struct ProfileView: View {
   @Bindable public var store: StoreOf<ProfileFeature>
+  /// 종 빨간점 — @Shared(appStorage)로 직접 관찰(타 화면 변경에도 즉시 반영).
+  @Shared(.appStorage("HasUnreadNotification")) private var hasUnread = false
 
   public init(store: StoreOf<ProfileFeature>) {
     self.store = store
@@ -65,7 +67,7 @@ private extension ProfileView {
           .foregroundStyle(.neutral900)
           .frame(width: 24, height: 24)
           .overlay(alignment: .topTrailing) {
-            if store.hasUnreadNotification {
+            if hasUnread {
               Circle()
                 .fill(.errorDefault)
                 .frame(width: 6, height: 6)
