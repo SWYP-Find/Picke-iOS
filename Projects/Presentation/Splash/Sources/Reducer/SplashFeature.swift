@@ -74,6 +74,7 @@ public struct SplashFeature {
   @Dependency(\.keychainManager) var keychainManager
   @Dependency(\.appUpdateUseCase) var appUpdateUseCase
   @Dependency(\.openURL) var openURL
+  @Dependency(\.analyticsUseCase) var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -109,6 +110,8 @@ extension SplashFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .splash, referrer: nil))
+      analyticsUseCase.track(.onboardingStep(step: .splash, method: nil))
       return .run { send in
         try await clock.sleep(for: .seconds(1.2))
         await send(.async(.checkAppUpdate))

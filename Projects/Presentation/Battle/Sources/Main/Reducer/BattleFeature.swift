@@ -67,6 +67,7 @@ public struct BattleFeature {
   }
 
   @Dependency(\.battleUseCase) private var battleUseCase
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public enum DelegateAction: Equatable {
     /// 배틀 입장 → 채팅방 진입
@@ -105,6 +106,7 @@ extension BattleFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: .quickBattle, referrer: nil))
       return .send(.async(.fetchRequested))
 
     case .backTapped:
