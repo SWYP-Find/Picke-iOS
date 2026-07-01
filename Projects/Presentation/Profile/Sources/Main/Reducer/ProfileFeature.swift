@@ -148,21 +148,25 @@ extension ProfileFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      analyticsUseCase.track(.screenView(screen: "mypage", referrer: nil))
       return .send(.async(.fetchProfile))
 
     case .backTapped:
       return .send(.delegate(.backToHome))
 
     case .notificationTapped:
+      analyticsUseCase.track(.uiAction(action: "mypage_notification", screen: "mypage"))
       return .send(.delegate(.openNotification))
 
     case .settingsTapped:
+      analyticsUseCase.track(.uiAction(action: "mypage_settings", screen: "mypage"))
       return .send(.delegate(.openSettings(nickname: state.nickname)))
 
     case .profileTapped:
       return .send(.delegate(.editProfile))
 
     case .chargePointTapped:
+      analyticsUseCase.track(.uiAction(action: "point_charge", screen: "mypage"))
       return .send(.delegate(.chargePoint))
 
     case .freeChargeTapped:
