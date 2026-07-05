@@ -30,6 +30,8 @@ public struct PreVoteFeature {
     public var battleDetail: BattleDetail?
     public var selectedOptionId: Int?
     public var isLoading: Bool = false
+    /// 배틀 상세(사전투표) 로드(디코딩/네트워크) 실패 여부. true 면 무한 스켈레톤 대신 오류+재시도 UI 를 노출한다.
+    public var detailLoadFailed: Bool = false
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
     public var battleId: Int = 0
@@ -70,6 +72,7 @@ public struct PreVoteFeature {
   public enum View {
     case onAppear
     case backButtonTapped
+    case retryTapped
     case shareTapped(snapshot: Data?)
     case optionTapped(optionId: Int)
     case primaryButtonTapped
@@ -174,6 +177,9 @@ extension PreVoteFeature {
     case .backButtonTapped:
       return .send(.delegate(.dismiss))
 
+    case .retryTapped:
+      return .send(.async(.fetchBattleDetail))
+
     case let .shareTapped(snapshot):
       let detail = state.battleDetail
       let battle = state.battle
@@ -232,6 +238,7 @@ extension PreVoteFeature {
     switch action {
     case .fetchBattleDetail:
       state.isLoading = true
+      state.detailLoadFailed = false
       let battleId = state.battleId
       return .run { [repository = battleUseCase] send in
         let result = await Result {
@@ -320,8 +327,10 @@ extension PreVoteFeature {
       case let .success(detail):
         state.battleDetail = detail
         state.battle = makeBattle(from: detail)
+        state.detailLoadFailed = false
       case let .failure(error):
-        Log.error("[PreVoteFeature] fetchBattle failed: \(error.localizedDescription)")
+        state.detailLoadFailed = true
+        Log.error("[PreVoteFeature] fetchBattle failed: \(error) — \(error.localizedDescription)")
       }
       return .none
 

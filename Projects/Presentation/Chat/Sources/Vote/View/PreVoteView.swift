@@ -22,7 +22,9 @@ public struct PreVoteView: View {
 
   public var body: some View {
     Group {
-      if shouldShowSkeleton {
+      if shouldShowLoadError {
+        loadErrorContent()
+      } else if shouldShowSkeleton {
         PreVoteSkeletonView()
       } else {
         loadedContent()
@@ -33,14 +35,14 @@ public struct PreVoteView: View {
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
     .overlay(alignment: .bottom) {
-      if !shouldShowSkeleton {
+      if !shouldShowSkeleton, !shouldShowLoadError {
         primaryButton()
           .padding(.horizontal, PreVoteLayout.ctaHorizontalPadding)
           .padding(.bottom, PreVoteLayout.ctaBottomSpacing)
       }
     }
     .overlay(alignment: .top) {
-      if !shouldShowSkeleton {
+      if !shouldShowSkeleton, !shouldShowLoadError {
         navigationBar()
           .background(Color.clear)
           .padding(.top, 12)
@@ -58,8 +60,53 @@ public struct PreVoteView: View {
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
+  /// 로드 실패 & 아직 표시할 배틀이 없을 때 무한 스켈레톤 대신 오류+재시도 노출.
+  private var shouldShowLoadError: Bool {
+    store.detailLoadFailed && store.battle == nil
+  }
+
   private var shouldShowSkeleton: Bool {
-    store.isLoading || store.battle == nil
+    (store.isLoading || store.battle == nil) && !shouldShowLoadError
+  }
+
+  @ViewBuilder
+  private func loadErrorContent() -> some View {
+    VStack(spacing: 0) {
+      HStack {
+        Button { send(.backButtonTapped) } label: {
+          Image(systemName: "chevron.left")
+            .font(.system(size: 24, weight: .regular))
+            .frame(width: 20, height: 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        Spacer()
+      }
+      .padding(.horizontal, 16)
+      .padding(.top, 12)
+      .foregroundStyle(.neutral800)
+
+      Spacer()
+      VStack(spacing: 16) {
+        Text("배틀을 불러오지 못했어요")
+          .pretendardFont(family: .SemiBold, size: 16)
+          .foregroundStyle(.neutral800)
+        Button { send(.retryTapped) } label: {
+          Text("다시 시도")
+            .pretendardFont(family: .SemiBold, size: 14)
+            .foregroundStyle(.neutral800)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .overlay(
+              RoundedRectangle(cornerRadius: 8)
+                .stroke(Color.beige600, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+      }
+      Spacer()
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
   @ViewBuilder
