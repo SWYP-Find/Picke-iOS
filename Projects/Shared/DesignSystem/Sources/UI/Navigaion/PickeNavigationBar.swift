@@ -61,7 +61,7 @@ public struct PickeNavigationBar<Trailing: View>: View {
   private var centerArea: some View {
     if let centerTitle {
       Text(centerTitle)
-        .pretendardFont(family: .SemiBold, size: 16)
+        .pretendardCustomFont(textStyle: .headingMedium)
         .kerning(-0.4)
     } else if let centerIcon {
       centerIcon
