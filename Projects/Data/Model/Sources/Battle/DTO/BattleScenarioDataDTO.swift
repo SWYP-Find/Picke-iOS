@@ -30,6 +30,24 @@ public struct ScenarioNodeDTO: Decodable {
   public let autoNextNodeId: Int?
   public let scripts: [ScenarioScriptDTO]
   public let interactiveOptions: [ScenarioInteractiveOptionDTO]?
+
+  enum CodingKeys: String, CodingKey {
+    case nodeId, nodeName, audioDuration, autoNextNodeId, scripts, interactiveOptions
+  }
+
+  // audioDuration 등 일부 필드가 누락/null 이어도 노드(→시나리오) 전체 디코딩이 실패하지 않도록 방어.
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    nodeId = try container.decode(Int.self, forKey: .nodeId)
+    nodeName = (try? container.decodeIfPresent(String.self, forKey: .nodeName)) ?? ""
+    audioDuration = (try? container.decodeIfPresent(Int.self, forKey: .audioDuration)) ?? 0
+    autoNextNodeId = try? container.decodeIfPresent(Int.self, forKey: .autoNextNodeId)
+    scripts = (try? container.decodeIfPresent([ScenarioScriptDTO].self, forKey: .scripts)) ?? []
+    interactiveOptions = try? container.decodeIfPresent(
+      [ScenarioInteractiveOptionDTO].self,
+      forKey: .interactiveOptions
+    )
+  }
 }
 
 public struct ScenarioScriptDTO: Decodable {
@@ -38,6 +56,20 @@ public struct ScenarioScriptDTO: Decodable {
   public let speakerType: String
   public let speakerName: String
   public let text: String
+
+  enum CodingKeys: String, CodingKey {
+    case scriptId, startTimeMs, speakerType, speakerName, text
+  }
+
+  // startTimeMs 등 일부 필드가 누락/null 이어도 스크립트(→시나리오) 전체 디코딩이 실패하지 않도록 방어.
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    scriptId = try container.decode(Int.self, forKey: .scriptId)
+    startTimeMs = (try? container.decodeIfPresent(Int.self, forKey: .startTimeMs)) ?? 0
+    speakerType = (try? container.decodeIfPresent(String.self, forKey: .speakerType)) ?? ""
+    speakerName = (try? container.decodeIfPresent(String.self, forKey: .speakerName)) ?? ""
+    text = (try? container.decodeIfPresent(String.self, forKey: .text)) ?? ""
+  }
 }
 
 public struct ScenarioInteractiveOptionDTO: Decodable {

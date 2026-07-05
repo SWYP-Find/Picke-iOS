@@ -30,6 +30,8 @@ public struct ChatRoomFeature {
     public var isLoadingScenario: Bool = false
     /// 오디오 로딩 실패 시 상단 floating 오류 배너 노출 여부.
     public var hasAudioError: Bool = false
+    /// 시나리오 로드(디코딩/네트워크) 실패 여부. true 면 목업 대신 오류+재시도 UI 를 노출한다.
+    public var scenarioLoadFailed: Bool = false
     /// 한 번 끝까지 재생된 콘텐츠는 이후 재진입 시 시킹/건너뛰기를 허용한다.
     public var hasFinishedListening: Bool = false
     public var hasPresentedFinalVoteAlert: Bool = false
@@ -54,7 +56,9 @@ public struct ChatRoomFeature {
     public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
 
     public var messages: [ChatMessage] {
-      guard let scenario else { return bundle.messages }
+      // scenario 가 nil(미로드/로드 실패)이면 목업을 노출하지 않는다.
+      // 과거엔 bundle.messages(목업 전체)를 반환해 "재생 안 됨 + 전체 내용 노출" 버그가 있었다.
+      guard let scenario else { return [] }
       let nodes = visibleNodes(in: scenario)
       let currentMs = Int(currentTime * 1000)
       return nodes.flatMap { node -> [ChatMessage] in
@@ -181,6 +185,7 @@ public struct ChatRoomFeature {
     case onDisappear
     case backButtonTapped
     case refreshTapped
+    case retryTapped
     case togglePlayTapped
     case seekBackwardTapped
     case seekForwardTapped
@@ -349,6 +354,9 @@ extension ChatRoomFeature {
         await player.seek(to: 0)
       }
 
+    case .retryTapped:
+      return .send(.async(.fetchScenario))
+
     case .togglePlayTapped:
       analyticsUseCase.track(.uiAction(action: .chatroomPlay, screen: .chatroom))
       state.isPlaying.toggle()
@@ -414,6 +422,7 @@ extension ChatRoomFeature {
     switch action {
     case .fetchScenario:
       state.isLoadingScenario = true
+      state.scenarioLoadFailed = false
       let battleId = state.battleId
       return .run { [repository = battleUseCase] send in
         let result = await Result {
@@ -462,6 +471,7 @@ extension ChatRoomFeature {
       switch result {
       case let .success(scenario):
         state.scenario = scenario
+        state.scenarioLoadFailed = false
         if state.currentNodeId == nil {
           state.currentNodeId = scenario.startNodeId
         }
@@ -478,7 +488,8 @@ extension ChatRoomFeature {
         }
         return .none
       case let .failure(error):
-        Log.error("[ChatRoomFeature] fetchScenario failed: \(error.localizedDescription)")
+        state.scenarioLoadFailed = true
+        Log.error("[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)")
         return .none
       }
 
