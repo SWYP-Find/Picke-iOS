@@ -52,7 +52,7 @@ extension NewBattleCardView {
     HStack(spacing: 10) {
       if let tag = battle.tags.first {
         Text("#\(tag.name)")
-          .pretendardFont(family: .SemiBold, size: 12)
+          .pretendardCustomFont(textStyle: .semiBold12)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
@@ -155,7 +155,7 @@ extension NewBattleCardView {
   private var vsBadge: some View {
     // Figma(4037:4233 VS) 매핑: 24×24 secondary200(#F3E3C7) 원형 + Pretendard Bold 8 neutral900(#131212) 글자.
     Text("VS")
-      .pretendardFont(family: .Bold, size: 8)
+      .pretendardCustomFont(textStyle: .bold8)
       .foregroundStyle(.neutral900)
       .frame(width: 24, height: 24)
       .background(.secondary200, in: Circle())

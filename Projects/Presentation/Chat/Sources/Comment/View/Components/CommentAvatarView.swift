@@ -53,7 +53,7 @@ private extension CommentAvatarView {
         .scaleEffect(imageScale)
     } else {
       Text(String(fallback.prefix(1)))
-        .pretendardFont(family: .SemiBold, size: size <= 36 ? 13 : 14)
+        .pretendardCustomFont(textStyle: size <= 36 ? .semiBold13 : .headingSmall)
         .foregroundStyle(.primary500)
     }
   }

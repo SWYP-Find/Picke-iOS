@@ -68,7 +68,7 @@ extension LoginView {
         .frame(width: 12)
 
       Text("SNS 계정으로 로그인")
-        .pretendardFont(family: .Medium, size: 15)
+        .pretendardCustomFont(textStyle: .medium15)
         .foregroundStyle(.neutral300)
 
       Rectangle()

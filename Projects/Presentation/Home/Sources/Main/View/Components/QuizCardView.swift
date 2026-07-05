@@ -43,7 +43,7 @@ struct QuizCardView: View {
       TagBadgeView(text: "퀴즈")
       Spacer()
       Text("\(question.participantCount.formatted())명 참여")
-        .pretendardFont(family: .Medium, size: 11)
+        .pretendardCustomFont(textStyle: .medium11)
         .foregroundStyle(.neutral300)
     }
   }
@@ -52,7 +52,7 @@ struct QuizCardView: View {
   private func titleBlock() -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(question.title)
-        .pretendardFont(family: .SemiBold, size: 15)
+        .pretendardCustomFont(textStyle: .semiBold15)
         .foregroundStyle(.neutral900)
         .kerning(-0.375)
       Text(question.summary)
@@ -86,10 +86,10 @@ struct QuizCardView: View {
       VStack(spacing: 2) {
         resultBadge(isSelected: isSelected, isCorrect: isCorrect)
         Text(label)
-          .pretendardFont(family: .SemiBold, size: 13)
+          .pretendardCustomFont(textStyle: .semiBold13)
           .foregroundStyle(.neutral900)
         Text(desc)
-          .pretendardFont(family: .Medium, size: 10)
+          .pretendardCustomFont(textStyle: .medium10)
           .foregroundStyle(.neutral300)
       }
       .frame(maxWidth: .infinity)

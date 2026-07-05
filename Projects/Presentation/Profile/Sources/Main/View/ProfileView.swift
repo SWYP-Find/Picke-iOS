@@ -103,7 +103,7 @@ private extension ProfileView {
             .foregroundStyle(.gray800)
 
           Text("@\(store.userCode)")
-            .pretendardFont(family: .Regular, size: 13)
+            .pretendardCustomFont(textStyle: .regular13)
             .foregroundStyle(.gray300)
         }
 
@@ -147,13 +147,13 @@ private extension ProfileView {
           ZStack {
             Circle().fill(.secondary300)
             Text("P")
-              .pretendardFont(family: .Bold, size: 11)
+              .pretendardCustomFont(textStyle: .bold11)
               .foregroundStyle(.gray800)
           }
           .frame(width: 24, height: 24)
 
           Text("내 포인트 \(store.point)")
-            .pretendardFont(family: .SemiBold, size: 12)
+            .pretendardCustomFont(textStyle: .semiBold12)
             .foregroundStyle(.beige50)
 
           Spacer(minLength: 8)
@@ -167,7 +167,7 @@ private extension ProfileView {
         send(.freeChargeTapped)
       } label: {
         Text("무료 충전")
-          .pretendardFont(family: .Medium, size: 11)
+          .pretendardCustomFont(textStyle: .medium11)
           .foregroundStyle(.gray800)
           .padding(.vertical, 4)
           .padding(.horizontal, 6)
@@ -214,7 +214,7 @@ private extension ProfileView {
 
         VStack(alignment: .leading, spacing: 4) {
           Text("나의 철학자 유형")
-            .pretendardFont(family: .Medium, size: 11)
+            .pretendardCustomFont(textStyle: .medium11)
             .foregroundStyle(.gray300)
 
           Text(store.philosopherDisplay)

@@ -142,11 +142,11 @@ private extension BattleProposalView {
     ZStack(alignment: .leading) {
       if text.wrappedValue.isEmpty {
         Text(placeholder)
-          .pretendardFont(family: .Medium, size: 13)
+          .pretendardCustomFont(textStyle: .medium13)
           .foregroundStyle(.gray300)
       }
       TextField("", text: text)
-        .pretendardFont(family: .Medium, size: 13)
+        .pretendardCustomFont(textStyle: .medium13)
         .foregroundStyle(.gray800)
         .focused($isInputFocused)
     }
@@ -171,13 +171,13 @@ private extension BattleProposalView {
         ZStack(alignment: .topLeading) {
           if store.description.isEmpty {
             Text("이 주제를 제안하는 이유나 배경을 자유롭게 써주세요")
-              .pretendardFont(family: .Regular, size: 13)
+              .pretendardCustomFont(textStyle: .regular13)
               .foregroundStyle(.gray300)
               .padding(.top, 8)
               .padding(.leading, 4)
           }
           TextEditor(text: $store.description)
-            .pretendardFont(family: .Regular, size: 13)
+            .pretendardCustomFont(textStyle: .regular13)
             .foregroundStyle(.gray800)
             .scrollContentBackground(.hidden)
             .frame(height: 60)

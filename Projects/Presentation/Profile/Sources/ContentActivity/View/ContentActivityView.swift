@@ -168,7 +168,7 @@ private extension ContentActivityView {
       }
 
       Text(item.content)
-        .pretendardFont(family: .Regular, size: 13)
+        .pretendardCustomFont(textStyle: .regular13)
         .foregroundStyle(.gray400)
         .lineLimit(4)
         .multilineTextAlignment(.leading)

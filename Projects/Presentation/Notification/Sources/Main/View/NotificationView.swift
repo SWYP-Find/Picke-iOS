@@ -93,7 +93,7 @@ private extension NotificationView {
       send(.tabSelected(tab))
     } label: {
       Text(tab.title)
-        .pretendardFont(family: .Medium, size: 13)
+        .pretendardCustomFont(textStyle: .medium13)
         .foregroundStyle(isSelected ? .beige50 : .primary500)
         .padding(.vertical, 6)
         .padding(.horizontal, 12)

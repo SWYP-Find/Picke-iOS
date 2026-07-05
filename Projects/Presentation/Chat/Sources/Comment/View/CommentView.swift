@@ -76,7 +76,7 @@ public struct CommentView: View {
             Image(systemName: item.systemImage)
               .font(.system(size: 13, weight: .medium))
             Text(item.title)
-              .pretendardFont(family: .Medium, size: 13)
+              .pretendardCustomFont(textStyle: .medium13)
           }
           .foregroundStyle(.beige50)
           .padding(.horizontal, 14)
@@ -206,7 +206,7 @@ private extension CommentView {
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(.primary500)
       Text(store.changeBadgeTitle)
-        .pretendardFont(family: .SemiBold, size: 11)
+        .pretendardCustomFont(textStyle: .semiBold11)
         .foregroundStyle(.primary500)
     }
     .padding(.horizontal, 4)
@@ -318,7 +318,7 @@ private extension CommentView {
       send(.sortTapped(sort))
     } label: {
       Text(sort.title)
-        .pretendardFont(family: .Medium, size: 13)
+        .pretendardCustomFont(textStyle: .medium13)
         .foregroundStyle(isSelected ? .beige50 : .primary500)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -402,7 +402,7 @@ private extension CommentView {
   func commentBody(_ comment: CommentItem) -> some View {
     Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       Text(comment.content)
-        .pretendardFont(family: .Regular, size: 13)
+        .pretendardCustomFont(textStyle: .regular13)
         .foregroundStyle(.neutral400)
         .lineSpacing(13 * 0.4)
         .fixedSize(horizontal: false, vertical: true)
@@ -572,7 +572,7 @@ private extension CommentView {
     // 입력 텍스트는 상단, 글자수 카운터는 하단 우측에 배치.
     VStack(alignment: .leading, spacing: 6) {
       TextField("댓글을 입력해주세요", text: $store.commentText, axis: .vertical)
-        .pretendardFont(family: .Regular, size: 13)
+        .pretendardCustomFont(textStyle: .regular13)
         .foregroundStyle(.neutral400)
         .focused($isCommentFocused)
         .frame(maxWidth: .infinity, alignment: .topLeading)

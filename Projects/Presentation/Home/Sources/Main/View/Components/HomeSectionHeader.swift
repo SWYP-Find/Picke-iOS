@@ -17,12 +17,12 @@ struct HomeSectionHeader: View {
   var body: some View {
     HStack(spacing: 12) {
       Text(attributedTitle)
-        .pretendardFont(family: .Bold, size: 18)
+        .pretendardCustomFont(textStyle: .bold18)
         .kerning(-0.45)
       Spacer(minLength: 0)
       Button(action: onSeeMoreTapped) {
         Text("더 보기")
-          .pretendardFont(family: .Medium, size: 13)
+          .pretendardCustomFont(textStyle: .medium13)
           .foregroundStyle(.neutral300)
       }
     }

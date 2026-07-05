@@ -134,7 +134,7 @@ private extension CurationView {
       HStack(spacing: 10) {
         if let tag = battle.tags.first {
           Text("#\(tag.name)")
-            .pretendardFont(family: .SemiBold, size: 12)
+            .pretendardCustomFont(textStyle: .semiBold12)
             .foregroundStyle(.primary500)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -204,11 +204,11 @@ private extension CurationView {
       // 철학자 이름 / 대표 의견은 모두 좌측 정렬.
       VStack(alignment: .leading, spacing: 2) {
         Text(option?.title ?? "")
-          .pretendardFont(family: .SemiBold, size: 11)
+          .pretendardCustomFont(textStyle: .semiBold11)
           .foregroundStyle(.neutral500)
           .frame(maxWidth: .infinity, alignment: .leading)
         Text(option?.representative ?? "")
-          .pretendardFont(family: .Regular, size: 10)
+          .pretendardCustomFont(textStyle: .regular10)
           .foregroundStyle(.neutral300)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
@@ -225,7 +225,7 @@ private extension CurationView {
   @ViewBuilder
   func versusBadge() -> some View {
     Text("VS")
-      .pretendardFont(family: .Bold, size: 8)
+      .pretendardCustomFont(textStyle: .bold8)
       .foregroundStyle(.neutral900)
       .frame(width: 24, height: 24)
       .background(.secondary200, in: Circle())

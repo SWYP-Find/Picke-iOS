@@ -22,7 +22,7 @@ struct HotBattleCardView: View {
       VStack(alignment: .leading, spacing: 6) {
         if let tag = battle.tags.first {
           Text("#\(tag.name)")
-            .pretendardFont(family: .Medium, size: 11)
+            .pretendardCustomFont(textStyle: .medium11)
             .foregroundStyle(.primary500)
         }
         Text(battle.title)

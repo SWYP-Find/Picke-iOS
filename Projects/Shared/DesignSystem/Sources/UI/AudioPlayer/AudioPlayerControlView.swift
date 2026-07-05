@@ -92,7 +92,7 @@ public struct AudioPlayerControlView: View {
         .contentShape(Rectangle())
 
       Text(caption ?? " ")
-        .pretendardFont(family: .Medium, size: 11)
+        .pretendardCustomFont(textStyle: .medium11)
         .foregroundStyle(.neutral300)
         .opacity(caption == nil ? 0 : 1)
     }

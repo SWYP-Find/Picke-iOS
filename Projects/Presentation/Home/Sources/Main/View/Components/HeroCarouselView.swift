@@ -74,7 +74,7 @@ struct HeroCardView: View {
   private func controlRow() -> some View {
     HStack {
       Text(hero.badge)
-        .pretendardFont(family: .SemiBold, size: 11)
+        .pretendardCustomFont(textStyle: .semiBold11)
         .foregroundStyle(.secondary200)
         .padding(.horizontal, 8)
         .padding(.vertical, 2)
@@ -155,7 +155,7 @@ struct HeroCardView: View {
         HStack(spacing: 4) {
           ForEach(hero.tags) { tag in
             Text("#\(tag.name)")
-              .pretendardFont(family: .Medium, size: 11)
+              .pretendardCustomFont(textStyle: .medium11)
               .foregroundStyle(.neutral200)
           }
         }

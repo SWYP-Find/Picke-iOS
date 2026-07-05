@@ -63,13 +63,13 @@ extension OnBoardingView {
   private func titleBlock(_ page: OnBoardingFeature.Page) -> some View {
     VStack(spacing: 12) {
       Text(page.title)
-        .pretendardFont(family: .SemiBold, size: 24)
+        .pretendardCustomFont(textStyle: .semiBold24)
         .kerning(-0.6)
         .multilineTextAlignment(.center)
         .foregroundStyle(.neutral900)
 
       Text(page.subtitle)
-        .pretendardFont(family: .Medium, size: 15)
+        .pretendardCustomFont(textStyle: .medium15)
         .lineSpacing(4)
         .multilineTextAlignment(.center)
         .foregroundStyle(.neutral300)

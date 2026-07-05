@@ -215,7 +215,7 @@ extension ChatRoomView {
     let alignment: HorizontalAlignment = speaker.side == .left ? .leading : .trailing
     VStack(alignment: alignment, spacing: 6) {
       Text(speaker.name)
-        .pretendardFont(family: .SemiBold, size: 13)
+        .pretendardCustomFont(textStyle: .semiBold13)
         .foregroundStyle(.neutral500)
         .padding(.horizontal, 4)
 
@@ -246,7 +246,7 @@ extension ChatRoomView {
     let background: Color = isActive ? .beige50 : (side == .left ? .beige300 : .beige400)
     let border: Color = side == .left ? .beige600 : .beige700
     Text(text)
-      .pretendardFont(family: .Regular, size: 13)
+      .pretendardCustomFont(textStyle: .regular13)
       .foregroundStyle(isActive ? .neutral800 : .neutral500)
       .lineSpacing(13 * 0.4)
       .multilineTextAlignment(.leading)
@@ -312,7 +312,7 @@ extension ChatRoomView {
         .fill(.neutral200)
         .frame(height: 0.5)
       Text("당신의 입장을 선택해주세요")
-        .pretendardFont(family: .Bold, size: 13)
+        .pretendardCustomFont(textStyle: .bold13)
         .foregroundStyle(.neutral800)
         .fixedSize()
       Rectangle()
@@ -422,7 +422,7 @@ extension ChatRoomView {
         Spacer()
         Text(timeString(store.totalDuration))
       }
-      .pretendardFont(family: .Medium, size: 11)
+      .pretendardCustomFont(textStyle: .medium11)
       .foregroundStyle(.neutral300)
     }
   }

@@ -56,7 +56,7 @@ public struct BottomActionSheet: View {
               Image(systemName: item.systemImage)
                 .font(.system(size: 14, weight: .medium))
               Text(item.title)
-                .pretendardFont(family: .Medium, size: 13)
+                .pretendardCustomFont(textStyle: .medium13)
             }
             .foregroundStyle(.beige50)
             .padding(.horizontal, 16)

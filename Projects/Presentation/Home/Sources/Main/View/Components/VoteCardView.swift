@@ -64,7 +64,7 @@ struct VoteCardView: View {
       Spacer()
 
       Text("\(question.participantCount.formatted())명 참여")
-        .pretendardFont(family: .Medium, size: 11)
+        .pretendardCustomFont(textStyle: .medium11)
         .foregroundStyle(.neutral300)
     }
   }
@@ -74,13 +74,13 @@ struct VoteCardView: View {
     VStack(spacing: 6) {
       HStack(spacing: 4) {
         Text(question.titlePrefix)
-          .pretendardFont(family: .SemiBold, size: 15)
+          .pretendardCustomFont(textStyle: .semiBold15)
           .foregroundStyle(.neutral500)
 
         answerSlot()
 
         Text(question.titleSuffix)
-          .pretendardFont(family: .SemiBold, size: 15)
+          .pretendardCustomFont(textStyle: .semiBold15)
           .foregroundStyle(.neutral500)
       }
 
@@ -98,7 +98,7 @@ struct VoteCardView: View {
   private func answerSlot() -> some View {
     if let label = selectedLabel {
       Text(label)
-        .pretendardFont(family: .SemiBold, size: 15)
+        .pretendardCustomFont(textStyle: .semiBold15)
         .foregroundStyle(.primary500)
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
@@ -142,7 +142,7 @@ struct VoteCardView: View {
       }
     } label: {
       Text(label)
-        .pretendardFont(family: .SemiBold, size: 13)
+        .pretendardCustomFont(textStyle: .semiBold13)
         .foregroundStyle(.neutral900)
         .frame(maxWidth: .infinity, minHeight: 44)
         .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
@@ -185,7 +185,7 @@ struct VoteCardView: View {
   ) -> some View {
     HStack(spacing: 6) {
       Text(label)
-        .pretendardFont(family: .Medium, size: 10)
+        .pretendardCustomFont(textStyle: .medium10)
         .foregroundStyle(.neutral400)
       ZStack(alignment: .leading) {
         RoundedRectangle(cornerRadius: 1)
@@ -197,7 +197,7 @@ struct VoteCardView: View {
       }
       Spacer(minLength: 0)
       Text("\(percentage)%")
-        .pretendardFont(family: .Bold, size: 11)
+        .pretendardCustomFont(textStyle: .bold11)
         .foregroundStyle(.neutral500)
     }
   }

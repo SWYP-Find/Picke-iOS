@@ -23,7 +23,7 @@ public struct RecapScoreBar: View {
   public var body: some View {
     HStack(spacing: 8) {
       Text(axis.label)
-        .pretendardFont(family: .Medium, size: 10)
+        .pretendardCustomFont(textStyle: .medium10)
         .foregroundStyle(.neutral900)
         .fixedSize()
 
@@ -40,7 +40,7 @@ public struct RecapScoreBar: View {
       .frame(width: trackWidth)
 
       Text("\(Int(axis.value.rounded()))")
-        .pretendardFont(family: .SemiBold, size: 11)
+        .pretendardCustomFont(textStyle: .semiBold11)
         .foregroundStyle(.neutral900)
         .fixedSize()
         .frame(minWidth: 18, alignment: .trailing)

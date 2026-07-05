@@ -106,7 +106,7 @@ public struct CommentReplyView: View {
         Image(systemName: systemImage)
           .font(.system(size: 13, weight: .medium))
         Text(title)
-          .pretendardFont(family: .Medium, size: 13)
+          .pretendardCustomFont(textStyle: .medium13)
       }
       .foregroundStyle(.beige50)
       .padding(.horizontal, 14)
@@ -190,7 +190,7 @@ private extension CommentReplyView {
   func replyCountHeader() -> some View {
     // Figma: "답글 N개" 헤더 — beige200 배경, 하단 구분선, gray800 SemiBold 13
     Text("답글 \(store.replies.count)개")
-      .pretendardFont(family: .SemiBold, size: 13)
+      .pretendardCustomFont(textStyle: .semiBold13)
       .foregroundStyle(.gray800)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(12)
@@ -263,7 +263,7 @@ private extension CommentReplyView {
       optionBadge(label: optionLabel, option: option)
 
       Text(content)
-        .pretendardFont(family: .Regular, size: 13)
+        .pretendardCustomFont(textStyle: .regular13)
         .foregroundStyle(.gray400)
         .lineSpacing(13 * 0.4)
         .fixedSize(horizontal: false, vertical: true)
@@ -390,7 +390,7 @@ private extension CommentReplyView {
       VStack(alignment: .leading, spacing: 6) {
         // Figma textarea: 텍스트/플레이스홀더 gray300, Pretendard Regular 13
         TextField("내 의견은 어쩌구 저쩌구", text: $store.replyText, axis: .vertical)
-          .pretendardFont(family: .Regular, size: 13)
+          .pretendardCustomFont(textStyle: .regular13)
           .foregroundStyle(.gray300)
           .lineLimit(1 ... 3)
           .focused($isReplyFocused)

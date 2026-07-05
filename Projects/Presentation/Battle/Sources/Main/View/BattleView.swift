@@ -204,7 +204,7 @@ private extension BattleView {
         VStack(spacing: 20) {
           tagsRow(battle.tags)
           Text(battle.title)
-            .pretendardFont(family: .Bold, size: 24)
+            .pretendardCustomFont(textStyle: .bold24)
             .foregroundStyle(.beige50)
             .kerning(-0.6)
             .multilineTextAlignment(.center)
@@ -232,7 +232,7 @@ private extension BattleView {
     HStack(spacing: 9) {
       ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
         Text("#\(tag)")
-          .pretendardFont(family: .SemiBold, size: 12)
+          .pretendardCustomFont(textStyle: .semiBold12)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
@@ -247,7 +247,7 @@ private extension BattleView {
       Image(systemName: "clock")
         .font(.system(size: 11, weight: .semibold))
       Text(text)
-        .pretendardFont(family: .SemiBold, size: 12)
+        .pretendardCustomFont(textStyle: .semiBold12)
     }
     .foregroundStyle(.gray300)
     .padding(.horizontal, 12)
@@ -294,13 +294,13 @@ private extension BattleView {
     Button(action: onTap) {
       VStack(spacing: 0) {
         Text(option.representative)
-          .pretendardFont(family: .Bold, size: 10)
+          .pretendardCustomFont(textStyle: .bold10)
           .foregroundStyle(.secondary500)
           .kerning(1.5)
           .padding(.bottom, 8)
 
         Text(option.stance)
-          .pretendardFont(family: .Bold, size: 18)
+          .pretendardCustomFont(textStyle: .bold18)
           .foregroundStyle(.beige50)
           .kerning(-0.45)
           .multilineTextAlignment(.center)

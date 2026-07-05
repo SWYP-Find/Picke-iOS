@@ -68,7 +68,7 @@ struct TermsAgreementView: View {
   private func header() -> some View {
     VStack(spacing: 6) {
       Text("픽케 약관 동의서")
-        .pretendardFont(family: .SemiBold, size: 24)
+        .pretendardCustomFont(textStyle: .semiBold24)
         .foregroundStyle(.neutral900)
       Text("편리한 서비스 이용을 위해 약관에 동의해 주세요")
         .pretendardCustomFont(textStyle: .bodyMedium)

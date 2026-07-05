@@ -53,7 +53,7 @@ private extension NotificationSettingView {
   func sectionView(_ section: NotificationSettingSection) -> some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(section.title)
-        .pretendardFont(family: .SemiBold, size: 12)
+        .pretendardCustomFont(textStyle: .semiBold12)
         .foregroundStyle(.gray300)
 
       VStack(spacing: 0) {
@@ -69,11 +69,11 @@ private extension NotificationSettingView {
     HStack(spacing: 4) {
       VStack(alignment: .leading, spacing: 4) {
         Text(key.title)
-          .pretendardFont(family: .Medium, size: 13)
+          .pretendardCustomFont(textStyle: .medium13)
           .foregroundStyle(.gray800)
 
         Text(key.subtitle)
-          .pretendardFont(family: .Regular, size: 11)
+          .pretendardCustomFont(textStyle: .regular11)
           .foregroundStyle(.gray300)
       }
 

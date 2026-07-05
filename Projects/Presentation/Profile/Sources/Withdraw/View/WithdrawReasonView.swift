@@ -44,7 +44,7 @@ private extension WithdrawReasonView {
   @ViewBuilder
   func title() -> some View {
     Text("\(store.nickname.isEmpty ? "회원" : store.nickname)님 정말 떠나시나요? 아쉬워요 🥲")
-      .pretendardFont(family: .Bold, size: 18)
+      .pretendardCustomFont(textStyle: .bold18)
       .foregroundStyle(.primary500)
       .kerning(-0.45)
       .padding(.horizontal, 20)

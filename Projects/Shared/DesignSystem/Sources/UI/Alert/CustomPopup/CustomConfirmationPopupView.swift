@@ -317,7 +317,7 @@ struct CustomConfirmationPopup: View {
 
         if !message.isEmpty {
           Text(message)
-            .pretendardFont(family: .Medium, size: 13)
+            .pretendardCustomFont(textStyle: .medium13)
             .foregroundStyle(.neutral400)
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20)
@@ -360,13 +360,13 @@ struct CustomConfirmationPopup: View {
     VStack(spacing: 24) {
       VStack(spacing: 8) {
         Text(title)
-          .pretendardFont(family: .Bold, size: 18)
+          .pretendardCustomFont(textStyle: .bold18)
           .foregroundStyle(.neutral800)
           .multilineTextAlignment(.center)
 
         if !message.isEmpty {
           Text(message)
-            .pretendardFont(family: .Regular, size: 13)
+            .pretendardCustomFont(textStyle: .regular13)
             .foregroundStyle(.neutral400)
             .lineSpacing(13 * 0.4)
             .multilineTextAlignment(.center)

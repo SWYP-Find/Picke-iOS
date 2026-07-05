@@ -158,7 +158,7 @@ private extension HifiView {
         let isSelected = store.selectedSort == sort
         Button { send(.sortTapped(sort)) } label: {
           Text(sort.title)
-            .pretendardFont(family: isSelected ? .SemiBold : .Medium, size: 12)
+            .pretendardCustomFont(textStyle: isSelected ? .semiBold12 : .labelSmall)
             .foregroundStyle(isSelected ? Color.beige50 : Color.primary500)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -191,7 +191,7 @@ private extension HifiView {
           VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 6) {
               Text("#\(item.category)")
-                .pretendardFont(family: .SemiBold, size: 12)
+                .pretendardCustomFont(textStyle: .semiBold12)
                 .foregroundStyle(.primary500)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -208,7 +208,7 @@ private extension HifiView {
             }
 
             Text(item.summary)
-              .pretendardFont(family: .Regular, size: 13)
+              .pretendardCustomFont(textStyle: .regular13)
               .foregroundStyle(.neutral400)
               .lineSpacing(13 * 0.4)
               .lineLimit(1)

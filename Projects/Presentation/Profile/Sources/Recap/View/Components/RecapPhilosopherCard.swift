@@ -27,11 +27,11 @@ public struct RecapPhilosopherCard: View {
     VStack(spacing: 24) {
       VStack(spacing: 6) {
         Text("나의 철학자 유형")
-          .pretendardFont(family: .SemiBold, size: 13)
+          .pretendardCustomFont(textStyle: .semiBold13)
           .foregroundStyle(.primary500)
 
         Text(card.typeName)
-          .pretendardFont(family: .SemiBold, size: 24)
+          .pretendardCustomFont(textStyle: .semiBold24)
           .foregroundStyle(.gray500)
       }
 
@@ -48,7 +48,7 @@ public struct RecapPhilosopherCard: View {
           HStack(spacing: 8) {
             ForEach(card.keywordTags, id: \.self) { tag in
               Text(tag)
-                .pretendardFont(family: .SemiBold, size: 12)
+                .pretendardCustomFont(textStyle: .semiBold12)
                 .foregroundStyle(.primary500)
                 .padding(.vertical, 2)
                 .padding(.horizontal, 6)

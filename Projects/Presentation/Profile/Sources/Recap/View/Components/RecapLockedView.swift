@@ -44,10 +44,10 @@ private extension RecapLockedView {
     VStack(spacing: 24) {
       VStack(spacing: 6) {
         Text("나의 철학자 유형")
-          .pretendardFont(family: .SemiBold, size: 13)
+          .pretendardCustomFont(textStyle: .semiBold13)
           .foregroundStyle(.primary500)
         Text("??형")
-          .pretendardFont(family: .SemiBold, size: 24)
+          .pretendardCustomFont(textStyle: .semiBold24)
           .foregroundStyle(.gray800)
       }
 
@@ -86,7 +86,7 @@ private extension RecapLockedView {
   var tendencyLockedSection: some View {
     VStack(spacing: 12) {
       Text("성향 분석")
-        .pretendardFont(family: .SemiBold, size: 13)
+        .pretendardCustomFont(textStyle: .semiBold13)
         .foregroundStyle(.gray800)
 
       ZStack {

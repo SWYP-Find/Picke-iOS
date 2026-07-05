@@ -17,13 +17,13 @@ struct BestBattleCardView: View {
   var body: some View {
     HStack(alignment: .center, spacing: 16) {
       Text("\(battle.rank)")
-        .pretendardFont(family: .Bold, size: 28)
+        .pretendardCustomFont(textStyle: .bold28)
         .foregroundStyle(battle.rank == 1 ? .primary500 : .neutral300)
         .frame(width: 28, alignment: .center) // QA-41: 순위 숫자(1,2,3) 중앙정렬
 
       VStack(alignment: .leading, spacing: 8) {
         Text(battle.pair)
-          .pretendardFont(family: .SemiBold, size: 11)
+          .pretendardCustomFont(textStyle: .semiBold11)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
@@ -39,7 +39,7 @@ struct BestBattleCardView: View {
         HStack(spacing: 8) {
           ForEach(battle.tags) { tag in
             Text("#\(tag.name)")
-              .pretendardFont(family: .Medium, size: 11)
+              .pretendardCustomFont(textStyle: .medium11)
               .foregroundStyle(.neutral300)
           }
           Spacer(minLength: 8)

@@ -28,7 +28,7 @@ public struct RecapMatchCard: View {
           .font(.system(size: 11, weight: .semibold))
           .foregroundStyle(isBest ? .secondary500 : .gray400)
         Text(isBest ? "BEST" : "WORST")
-          .pretendardFont(family: .Bold, size: 10)
+          .pretendardCustomFont(textStyle: .bold10)
           .foregroundStyle(isBest ? .secondary500 : .gray400)
       }
 
@@ -36,11 +36,11 @@ public struct RecapMatchCard: View {
 
       VStack(spacing: 6) {
         Text(card.typeName)
-          .pretendardFont(family: .SemiBold, size: 13)
+          .pretendardCustomFont(textStyle: .semiBold13)
           .foregroundStyle(.gray500)
 
         Text(card.description)
-          .pretendardFont(family: .Regular, size: 11)
+          .pretendardCustomFont(textStyle: .regular11)
           .foregroundStyle(.gray300)
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
