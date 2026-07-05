@@ -77,25 +77,7 @@ public struct ChatRoomView: View {
   private func scenarioErrorView() -> some View {
     VStack(spacing: 0) {
       navigationBar()
-      Spacer()
-      VStack(spacing: 16) {
-        Text("대화를 불러오지 못했어요")
-          .pretendardFont(family: .SemiBold, size: 16)
-          .foregroundStyle(.neutral800)
-        Button { send(.retryTapped) } label: {
-          Text("다시 시도")
-            .pretendardFont(family: .SemiBold, size: 14)
-            .foregroundStyle(.neutral800)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .overlay(
-              RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.beige600, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-      }
-      Spacer()
+      PickeRetryErrorView(message: "대화를 불러오지 못했어요") { send(.retryTapped) }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
