@@ -15,6 +15,8 @@ public enum PickeDeeplink: Equatable, Sendable {
   case perspective(perspectiveId: Int, commentId: Int?)
   /// CREDIT_EARNED → 마이페이지 포인트 내역.
   case point
+  /// POLICY_CHANGE → 서비스 약관 웹뷰.
+  case terms
 
   /// 콜드 스타트 대기 딥링크 저장용 문자열 인코딩 (PickeDeeplinkParser.parse(urlString:) 로 복원).
   public var encoded: String {
@@ -28,6 +30,8 @@ public enum PickeDeeplink: Equatable, Sendable {
       return "perspective/\(perspectiveId)"
     case .point:
       return "point"
+    case .terms:
+      return "terms"
     }
   }
 }
@@ -73,6 +77,10 @@ public enum PickeDeeplinkParser {
     if let first = path.first, ["point", "points", "credit", "credits"].contains(first) {
       return .point
     }
+    // 약관도 단일 경로(picke://terms).
+    if let first = path.first, ["terms", "policy"].contains(first) {
+      return .terms
+    }
     guard path.count >= 2 else { return nil }
 
     switch path[0] {
@@ -104,8 +112,10 @@ public enum PickeDeeplinkParser {
       return perspectiveId.map { .perspective(perspectiveId: $0, commentId: referenceId) }
     case "CREDIT_EARNED":
       return .point
+    case "POLICY_CHANGE":
+      return .terms
     default:
-      // POLICY_CHANGE / PROMOTION 등은 이동 없음(텍스트만).
+      // PROMOTION 등은 이동 없음(텍스트만).
       return nil
     }
   }

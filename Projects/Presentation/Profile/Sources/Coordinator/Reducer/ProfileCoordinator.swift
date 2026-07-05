@@ -41,6 +41,8 @@ public struct ProfileCoordinator {
     case backToRootAction
     /// 딥링크(알림) → 포인트 내역 진입.
     case openPointHistory
+    /// 딥링크(알림 POLICY_CHANGE) → 서비스 약관 웹뷰 진입.
+    case openTerms
   }
 
   public enum AsyncAction: Equatable {}
@@ -193,6 +195,11 @@ extension ProfileCoordinator {
       // 중복 스택 방지 후 포인트 내역 진입.
       state.routes.goBackToRoot()
       state.routes.push(.pointHistory(.init()))
+      return .none
+    case .openTerms:
+      // 중복 스택 방지 후 서비스 약관 웹뷰 진입.
+      state.routes.goBackToRoot()
+      state.routes.push(.web(.init(url: TermsDocument.service.urlString)))
       return .none
     }
   }

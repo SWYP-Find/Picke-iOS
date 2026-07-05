@@ -213,6 +213,12 @@ public struct AppReducer: Sendable {
           .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
           .send(.scope(.mainTab(.myPage(.view(.openPointHistory)))))
         )
+      case .terms:
+        // 마이페이지 탭 전환 후 서비스 약관 웹뷰 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.myPage(.view(.openTerms)))))
+        )
       }
     }
   }
