@@ -78,10 +78,10 @@ public struct CommentView: View {
             Text(item.title)
               .pretendardFont(family: .Medium, size: 13)
           }
-          .foregroundStyle(Color.beige50)
+          .foregroundStyle(.beige50)
           .padding(.horizontal, 14)
           .padding(.vertical, 7)
-          .background(Color.primary500, in: Capsule())
+          .background(.primary500, in: Capsule())
         }
         .buttonStyle(.plain)
       }
@@ -328,7 +328,7 @@ private extension CommentView {
         )
         .overlay {
           RoundedRectangle(cornerRadius: 2)
-            .stroke(Color.primary500, lineWidth: isSelected ? 0 : 1)
+            .stroke(.primary500, lineWidth: isSelected ? 0 : 1)
         }
     }
     .buttonStyle(.plain)

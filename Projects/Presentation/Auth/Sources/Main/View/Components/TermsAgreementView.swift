@@ -44,7 +44,7 @@ struct TermsAgreementView: View {
     .frame(maxWidth: .infinity)
     .background(
       UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
-        .fill(Color.beige50)
+        .fill(.beige50)
         .ignoresSafeArea(edges: .bottom)
     )
   }

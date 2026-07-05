@@ -58,10 +58,10 @@ public struct BottomActionSheet: View {
               Text(item.title)
                 .pretendardFont(family: .Medium, size: 13)
             }
-            .foregroundStyle(Color.beige50)
+            .foregroundStyle(.beige50)
             .padding(.horizontal, 16)
             .padding(.vertical, 9)
-            .background(Color.primary500, in: Capsule())
+            .background(.primary500, in: Capsule())
           }
           .buttonStyle(.plain)
         }

@@ -264,6 +264,6 @@ private extension RecapView {
     RecapPhilosopherCard(card: card, avatarOverride: avatar)
       .padding(20)
       .frame(width: 340)
-      .background(Color.beige200)
+      .background(.beige200)
   }
 }

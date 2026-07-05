@@ -125,7 +125,7 @@ private extension WithdrawReasonView {
           .foregroundStyle(.primary500)
           .frame(maxWidth: .infinity)
           .frame(height: 60)
-          .background(Color.secondary50)
+          .background(.secondary50)
       }
       .buttonStyle(.plain)
       .disabled(store.isProcessing)
@@ -138,7 +138,7 @@ private extension WithdrawReasonView {
           .foregroundStyle(.beige50)
           .frame(maxWidth: .infinity)
           .frame(height: 60)
-          .background(Color.primary500)
+          .background(.primary500)
       }
       .buttonStyle(.plain)
     }

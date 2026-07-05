@@ -32,6 +32,6 @@ struct HifiHeaderView: View {
     .padding(.horizontal, 24)
     .padding(.vertical, 8)
     .frame(height: 56)
-    .background(Color.beige50)
+    .background(.beige50)
   }
 }

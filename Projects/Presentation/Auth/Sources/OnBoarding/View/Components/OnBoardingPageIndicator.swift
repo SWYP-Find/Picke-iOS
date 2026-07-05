@@ -27,7 +27,7 @@ public struct OnBoardingPageIndicator: View {
       ForEach(0 ..< pageCount, id: \.self) { index in
         let isActive = index == currentIndex
         RoundedRectangle(cornerRadius: 4, style: .continuous)
-          .fill(Color.neutral800)
+          .fill(.neutral800)
           .opacity(isActive ? 1 : 0.4)
           .frame(width: isActive ? 20 : 8, height: 8)
           .animation(.easeInOut(duration: 0.2), value: currentIndex)

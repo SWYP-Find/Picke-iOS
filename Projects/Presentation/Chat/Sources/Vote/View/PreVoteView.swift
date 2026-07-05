@@ -44,7 +44,7 @@ public struct PreVoteView: View {
     .overlay(alignment: .top) {
       if !shouldShowSkeleton, !shouldShowLoadError {
         navigationBar()
-          .background(Color.clear)
+          .background(.clear)
           .padding(.top, 12)
           .frame(maxWidth: .infinity)
           .contentShape(Rectangle())
@@ -390,7 +390,7 @@ extension PreVoteView {
     }
     .padding(16)
     .frame(width: PreVoteLayout.snapshotWidth)
-    .background(Color.beige50)
+    .background(.beige50)
   }
 }
 

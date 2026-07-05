@@ -44,7 +44,7 @@ struct HomeHeaderView: View {
     .padding(.horizontal, 24)
     .padding(.vertical, 8)
     .frame(height: 56)
-    .background(Color.beige50)
+    .background(.beige50)
     .overlay(alignment: .bottom) {
       Rectangle()
         .fill(.beige600)
