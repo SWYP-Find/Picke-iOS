@@ -103,7 +103,7 @@ struct TermsAgreementView: View {
       .buttonStyle(.plain)
     }
     .padding(16)
-    .background(.beige300, in: RoundedRectangle(cornerRadius: 6))
+    .roundedBackground(.beige300, radius: 6)
     .overlay {
       RoundedRectangle(cornerRadius: 6).stroke(.beige600, lineWidth: 1)
     }

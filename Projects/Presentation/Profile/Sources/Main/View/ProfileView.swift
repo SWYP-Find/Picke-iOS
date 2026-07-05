@@ -179,7 +179,7 @@ private extension ProfileView {
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
     .frame(maxWidth: .infinity)
-    .background(.primary800, in: RoundedRectangle(cornerRadius: 8))
+    .roundedBackground(.primary800, radius: 8)
   }
 
   // MARK: 나의 철학자 유형
@@ -230,7 +230,7 @@ private extension ProfileView {
       }
       .padding(16)
       .frame(maxWidth: .infinity)
-      .background(.beige400, in: RoundedRectangle(cornerRadius: 8))
+      .roundedBackground(.beige400, radius: 8)
       .overlay(
         RoundedRectangle(cornerRadius: 8)
           .stroke(.beige600, lineWidth: 1)

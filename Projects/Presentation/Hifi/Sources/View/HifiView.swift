@@ -162,7 +162,7 @@ private extension HifiView {
             .foregroundStyle(isSelected ? .beige50 : .primary500)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(isSelected ? .primary500 : .bgDefault, in: RoundedRectangle(cornerRadius: 4))
+            .roundedBackground(isSelected ? .primary500 : .bgDefault, radius: 4)
             .overlay(
               RoundedRectangle(cornerRadius: 4)
                 .stroke(.primary500, lineWidth: 1)

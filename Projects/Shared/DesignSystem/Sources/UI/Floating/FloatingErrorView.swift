@@ -30,7 +30,7 @@ public struct FloatingErrorView: View {
     }
     .padding(.vertical, 12)
     .padding(.horizontal, 16)
-    .background(.errorStrong, in: RoundedRectangle(cornerRadius: 9))
+    .roundedBackground(.errorStrong, radius: 9)
     .shadow(color: Color(hex: "5B0604").opacity(0.28), radius: 5.25, x: 0, y: 0)
   }
 }

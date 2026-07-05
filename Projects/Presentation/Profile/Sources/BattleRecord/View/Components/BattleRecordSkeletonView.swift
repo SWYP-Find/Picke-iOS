@@ -24,7 +24,7 @@ struct BattleRecordSkeletonView: View {
           }
           .padding(12)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .background(.beige50, in: RoundedRectangle(cornerRadius: 8))
+          .roundedBackground(.beige50, radius: 8)
           .overlay(
             RoundedRectangle(cornerRadius: 8)
               .stroke(.beige600, lineWidth: 1)
