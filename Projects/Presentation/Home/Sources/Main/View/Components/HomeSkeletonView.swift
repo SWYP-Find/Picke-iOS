@@ -78,7 +78,7 @@ private struct HomeHotBattlesSkeletonView: View {
             }
             .padding(12)
             .frame(width: 220, alignment: .leading)
-            .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+            .roundedBackground(.beige50)
             .overlay(
               RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
             )
@@ -156,7 +156,7 @@ private struct HomeTodayPickeSkeletonView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige400)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
     )
@@ -188,7 +188,7 @@ private struct HomeTodayPickeSkeletonView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
     )
@@ -216,7 +216,7 @@ private struct HomeNewBattlesSkeletonView: View {
             }
           }
           .padding(12)
-          .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+          .roundedBackground(.beige50)
           .overlay(
             RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
           )
@@ -239,7 +239,7 @@ private struct SkeletonBattleOption: View {
     }
     .padding(8)
     .frame(maxWidth: .infinity)
-    .background(.beige300, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige300)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     )

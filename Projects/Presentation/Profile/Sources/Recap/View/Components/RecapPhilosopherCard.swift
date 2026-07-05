@@ -52,7 +52,7 @@ public struct RecapPhilosopherCard: View {
                 .foregroundStyle(.primary500)
                 .padding(.vertical, 2)
                 .padding(.horizontal, 6)
-                .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+                .roundedBackground(.beige50)
                 .overlay(
                   RoundedRectangle(cornerRadius: .radiusDefault)
                     .stroke(.primary100, lineWidth: 1)
@@ -65,7 +65,7 @@ public struct RecapPhilosopherCard: View {
     .padding(.vertical, 16)
     .padding(.horizontal, 20)
     .frame(maxWidth: .infinity)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.beige600, lineWidth: 1)

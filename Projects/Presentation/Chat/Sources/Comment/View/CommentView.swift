@@ -211,7 +211,7 @@ private extension CommentView {
     }
     .padding(.horizontal, 4)
     .padding(.vertical, 2)
-    .background(.primary50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.primary50)
     .frame(maxWidth: .infinity, alignment: .center)
   }
 
@@ -391,7 +391,7 @@ private extension CommentView {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay {
       RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.beige600, lineWidth: 1)
@@ -451,7 +451,7 @@ private extension CommentView {
       .foregroundStyle(.beige50)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
-      .background(.primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
+      .roundedBackground(.primary500)
   }
 
   @ViewBuilder
@@ -474,7 +474,7 @@ private extension CommentView {
       .foregroundStyle(.primary500)
       .padding(.horizontal, 4)
       .padding(.vertical, 2)
-      .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
+      .roundedBackground(.beige600)
   }
 
   @ViewBuilder

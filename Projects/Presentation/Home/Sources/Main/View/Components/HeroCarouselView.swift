@@ -78,7 +78,7 @@ struct HeroCardView: View {
         .foregroundStyle(.secondary200)
         .padding(.horizontal, 8)
         .padding(.vertical, 2)
-        .background(.primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
+        .roundedBackground(.primary500)
 
       Spacer()
 

@@ -132,7 +132,7 @@ struct TermsAgreementView: View {
         .foregroundStyle(.beige50)
         .frame(maxWidth: .infinity)
         .frame(height: 52)
-        .background(.primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
+        .roundedBackground(.primary500)
     }
     .buttonStyle(.plain)
     .disabled(!store.canAgree)

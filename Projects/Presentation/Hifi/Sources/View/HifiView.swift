@@ -195,7 +195,7 @@ private extension HifiView {
                 .foregroundStyle(.primary500)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
+                .roundedBackground(.beige600)
 
               Text(item.title)
                 .pretendardFont(.headingSmall)

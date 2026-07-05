@@ -171,7 +171,7 @@ private extension ProfileView {
           .foregroundStyle(.gray800)
           .padding(.vertical, 4)
           .padding(.horizontal, 6)
-          .background(.secondary300, in: RoundedRectangle(cornerRadius: .radiusDefault))
+          .roundedBackground(.secondary300)
           .contentShape(Rectangle())
       }
       .buttonStyle(.plain)

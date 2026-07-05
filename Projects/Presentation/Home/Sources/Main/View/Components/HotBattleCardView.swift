@@ -39,7 +39,7 @@ struct HotBattleCardView: View {
     }
     .padding(12)
     .frame(width: 220, alignment: .leading)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     )

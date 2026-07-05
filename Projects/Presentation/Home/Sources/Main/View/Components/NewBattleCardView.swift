@@ -21,7 +21,7 @@ struct NewBattleCardView: View {
       content
     }
     .padding(12)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     )
@@ -56,7 +56,7 @@ extension NewBattleCardView {
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
-          .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
+          .roundedBackground(.beige600)
       }
       Spacer()
       MetaLabelView(systemImage: "clock", text: "\(battle.durationMinutes)분")
@@ -124,7 +124,7 @@ extension NewBattleCardView {
     }
     .padding(8)
     .frame(maxWidth: .infinity)
-    .background(.beige300, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige300)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     )

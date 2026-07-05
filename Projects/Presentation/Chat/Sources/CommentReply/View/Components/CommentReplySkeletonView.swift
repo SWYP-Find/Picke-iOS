@@ -65,7 +65,7 @@ struct CommentReplySkeletonView: View {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay {
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     }

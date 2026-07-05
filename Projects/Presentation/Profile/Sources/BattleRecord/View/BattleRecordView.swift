@@ -82,7 +82,7 @@ private extension BattleRecordView {
               .foregroundStyle(.primary500)
               .padding(.vertical, 2)
               .padding(.horizontal, 6)
-              .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
+              .roundedBackground(.beige600)
           }
 
           Text(record.title)

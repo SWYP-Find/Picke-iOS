@@ -97,7 +97,7 @@ private extension NotificationView {
         .foregroundStyle(isSelected ? .beige50 : .primary500)
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
-        .background(isSelected ? .primary500 : .primary50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+        .roundedBackground(isSelected ? .primary500 : .primary50)
         .overlay(
           RoundedRectangle(cornerRadius: .radiusDefault)
             .stroke(isSelected ? .clear : .primary500, lineWidth: 1)
@@ -172,7 +172,7 @@ private extension NotificationView {
       }
       .padding(16)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+      .roundedBackground(.beige50)
       .overlay(
         RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)

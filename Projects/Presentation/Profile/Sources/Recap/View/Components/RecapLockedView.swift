@@ -70,7 +70,7 @@ private extension RecapLockedView {
     .frame(maxWidth: .infinity)
     .padding(.vertical, 16)
     .padding(.horizontal, 24)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige50)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.beige600, lineWidth: 1)
@@ -104,7 +104,7 @@ private extension RecapLockedView {
       .padding(.vertical, 16)
       .padding(.horizontal, 20)
       .frame(maxWidth: .infinity)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+      .roundedBackground(.beige50)
       .overlay(
         RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)

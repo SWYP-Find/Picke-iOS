@@ -31,7 +31,7 @@ struct QuizCardView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
+    .roundedBackground(.beige400)
     .overlay(
       RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
     )
@@ -94,7 +94,7 @@ struct QuizCardView: View {
       }
       .frame(maxWidth: .infinity)
       .padding(12)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
+      .roundedBackground(.beige50)
       .overlay(
         RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige500, lineWidth: 1)
       )
