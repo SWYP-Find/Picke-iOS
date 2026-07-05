@@ -95,12 +95,8 @@ extension OnBoardingView {
         currentIndex: store.currentIndex
       )
 
-      CustomButton(
-        action: { store.send(.view(.primaryButtonTapped)) },
-        title: store.primaryButtonTitle,
-        config: CustomButtonConfig.primary(.large),
-        isEnable: true
-      )
+      Button(store.primaryButtonTitle) { store.send(.view(.primaryButtonTapped)) }
+        .ctaButtonStyle(.primary, size: .large)
     }
   }
 }

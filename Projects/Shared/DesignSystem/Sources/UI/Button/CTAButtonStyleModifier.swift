@@ -12,15 +12,21 @@ import SwiftUI
 public struct CTAButtonStyle: ButtonStyle {
   private let variant: CTAButtonVariant
   private let size: CTAButtonSize
+  private let height: CGFloat?
+  private let cornerRadius: CGFloat
   private let trailingIcon: Image?
 
   public init(
     variant: CTAButtonVariant = .primary,
     size: CTAButtonSize = .large,
+    height: CGFloat? = nil,
+    cornerRadius: CGFloat = .radiusDefault,
     trailingIcon: Image? = nil
   ) {
     self.variant = variant
     self.size = size
+    self.height = height
+    self.cornerRadius = cornerRadius
     self.trailingIcon = trailingIcon
   }
 
@@ -29,6 +35,8 @@ public struct CTAButtonStyle: ButtonStyle {
       configuration: configuration,
       variant: variant,
       size: size,
+      height: height,
+      cornerRadius: cornerRadius,
       trailingIcon: trailingIcon
     )
   }
@@ -37,6 +45,8 @@ public struct CTAButtonStyle: ButtonStyle {
     let configuration: Configuration
     let variant: CTAButtonVariant
     let size: CTAButtonSize
+    let height: CGFloat?
+    let cornerRadius: CGFloat
     let trailingIcon: Image?
 
     @Environment(\.isEnabled) private var isEnabled
@@ -51,13 +61,11 @@ public struct CTAButtonStyle: ButtonStyle {
       }
       .foregroundStyle(variant.foregroundColor(isEnabled: isEnabled))
       .padding(.horizontal, size.horizontalPadding)
-      .frame(
-        maxWidth: size.fillsWidth ? .infinity : nil,
-        minHeight: size.height
-      )
+      .frame(maxWidth: size.fillsWidth ? .infinity : nil)
+      .frame(height: height ?? size.height)
       .background(
         variant.backgroundColor(isEnabled: isEnabled, isPressed: configuration.isPressed),
-        in: Capsule()
+        in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
       )
       .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
@@ -75,10 +83,18 @@ public extension View {
   func ctaButtonStyle(
     _ variant: CTAButtonVariant = .primary,
     size: CTAButtonSize = .large,
+    height: CGFloat? = nil,
+    cornerRadius: CGFloat = .radiusDefault,
     icon: Image? = nil
   ) -> some View {
     buttonStyle(
-      CTAButtonStyle(variant: variant, size: size, trailingIcon: icon)
+      CTAButtonStyle(
+        variant: variant,
+        size: size,
+        height: height,
+        cornerRadius: cornerRadius,
+        trailingIcon: icon
+      )
     )
   }
 }

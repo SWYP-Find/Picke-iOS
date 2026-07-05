@@ -365,12 +365,9 @@ extension PreVoteView {
 extension PreVoteView {
   @ViewBuilder
   private func primaryButton() -> some View {
-    CustomButton(
-      action: { send(.primaryButtonTapped) },
-      title: store.primaryButtonTitle,
-      config: CustomButtonConfig.primary(.large, height: PreVoteLayout.ctaHeight),
-      isEnable: store.isPrimaryButtonEnabled
-    )
+    Button(store.primaryButtonTitle) { send(.primaryButtonTapped) }
+      .ctaButtonStyle(.primary, size: .large, height: PreVoteLayout.ctaHeight)
+      .disabled(!store.isPrimaryButtonEnabled)
   }
 }
 

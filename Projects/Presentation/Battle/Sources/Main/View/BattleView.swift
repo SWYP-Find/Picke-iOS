@@ -345,12 +345,9 @@ private extension BattleView {
 private extension BattleView {
   @ViewBuilder
   func enterButton(_ battle: DailyBattle) -> some View {
-    CustomButton(
-      action: { send(.enterBattleTapped(battleId: battle.battleId)) },
-      title: "배틀 입장하기",
-      config: CustomButtonConfig.primary(.large, height: 52),
-      isEnable: store.selectedOptionByBattle[battle.battleId] != nil
-    )
+    Button("배틀 입장하기") { send(.enterBattleTapped(battleId: battle.battleId)) }
+      .ctaButtonStyle(.primary, size: .large, height: 52)
+      .disabled(store.selectedOptionByBattle[battle.battleId] == nil)
   }
 }
 

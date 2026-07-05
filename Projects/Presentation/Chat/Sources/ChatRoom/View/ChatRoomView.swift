@@ -355,12 +355,9 @@ extension ChatRoomView {
 
   @ViewBuilder
   private func confirmButton() -> some View {
-    CustomButton(
-      action: { send(.confirmOptionTapped) },
-      title: "입장 선택하기",
-      config: CustomButtonConfig.primary(.large, height: 42),
-      isEnable: store.isConfirmEnabled
-    )
+    Button("입장 선택하기") { send(.confirmOptionTapped) }
+      .ctaButtonStyle(.primary, size: .large, height: 42)
+      .disabled(!store.isConfirmEnabled)
   }
 }
 
