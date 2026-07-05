@@ -105,7 +105,7 @@ struct CustomConfirmationPopup: View {
         // 확정(로그아웃/탈퇴) — 왼쪽 밝은 버튼.
         Button(action: onConfirm) {
           Text(confirmTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.primary800)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
@@ -118,7 +118,7 @@ struct CustomConfirmationPopup: View {
         // 취소(유지) — 오른쪽 primary 버튼.
         Button(action: onCancel) {
           Text(cancelTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.secondary50)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
@@ -147,7 +147,7 @@ struct CustomConfirmationPopup: View {
       VStack(spacing: 16) {
         VStack(spacing: 10) {
           Text(title)
-            .pretendardFont(family: .SemiBold, size: 16)
+            .pretendardCustomFont(textStyle: .headingMedium)
             .foregroundStyle(.primary800)
             .multilineTextAlignment(.center)
 
@@ -187,7 +187,7 @@ struct CustomConfirmationPopup: View {
   /// 본문 텍스트 (14/Medium, primary800, 가운데, 좌우 20).
   private func pickeBodyText(_ text: String) -> some View {
     Text(text)
-      .pretendardFont(family: .Medium, size: 14)
+      .pretendardCustomFont(textStyle: .labelMedium)
       .foregroundStyle(.primary800)
       .lineSpacing(14 * 0.4)
       .multilineTextAlignment(.center)
@@ -227,7 +227,7 @@ struct CustomConfirmationPopup: View {
   ) -> some View {
     Button(action: action) {
       Text(title)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.primary800)
         .lineLimit(1)
         .minimumScaleFactor(0.85)
@@ -245,7 +245,7 @@ struct CustomConfirmationPopup: View {
   ) -> some View {
     Button(action: action) {
       Text(title)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.secondary50)
         .lineLimit(1)
         .minimumScaleFactor(0.85)
@@ -259,7 +259,7 @@ struct CustomConfirmationPopup: View {
   private var deleteConfirmContent: some View {
     VStack(spacing: 16) {
       Text(title)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.neutral900)
         .lineSpacing(14 * 0.4)
         .multilineTextAlignment(.center)
@@ -270,7 +270,7 @@ struct CustomConfirmationPopup: View {
         // 삭제하기 (왼쪽·밝은 버튼) = 확정(삭제)
         Button(action: onConfirm) {
           Text(confirmTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.primary500)
             .lineSpacing(14 * 0.4)
             .frame(maxWidth: .infinity)
@@ -282,7 +282,7 @@ struct CustomConfirmationPopup: View {
         // 뒤로가기 (오른쪽·어두운 버튼) = 취소
         Button(action: onCancel) {
           Text(cancelTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.secondary50)
             .lineSpacing(14 * 0.4)
             .frame(maxWidth: .infinity)
@@ -309,7 +309,7 @@ struct CustomConfirmationPopup: View {
     VStack(spacing: 12) {
       VStack(spacing: 8) {
         Text(title)
-          .pretendardFont(family: .SemiBold, size: 16)
+          .pretendardCustomFont(textStyle: .headingMedium)
           .foregroundStyle(.primary800)
           .kerning(-0.4)
           .multilineTextAlignment(.center)
@@ -327,7 +327,7 @@ struct CustomConfirmationPopup: View {
       HStack(spacing: 0) {
         Button(action: onCancel) {
           Text(cancelTitle.isEmpty ? "취소" : cancelTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.primary500)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
@@ -337,7 +337,7 @@ struct CustomConfirmationPopup: View {
 
         Button(action: onConfirm) {
           Text(confirmTitle.isEmpty ? "다시" : confirmTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.secondary50)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
@@ -377,7 +377,7 @@ struct CustomConfirmationPopup: View {
         if !cancelTitle.isEmpty {
           Button(action: onCancel) {
             Text(cancelTitle)
-              .pretendardFont(family: .Medium, size: 14)
+              .pretendardCustomFont(textStyle: .labelMedium)
               .foregroundStyle(.neutral500)
               .frame(maxWidth: .infinity)
               .frame(height: 48)
@@ -388,7 +388,7 @@ struct CustomConfirmationPopup: View {
 
         Button(action: onConfirm) {
           Text(confirmTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.beige50)
             .frame(maxWidth: .infinity)
             .frame(height: 48)
@@ -414,7 +414,7 @@ struct CustomConfirmationPopup: View {
   private var finalVoteContent: some View {
     VStack(spacing: 16) {
       Text(title)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.neutral900)
         .lineSpacing(14 * 0.4)
         .multilineTextAlignment(.center)
@@ -424,7 +424,7 @@ struct CustomConfirmationPopup: View {
       HStack(spacing: 0) {
         Button(action: onCancel) {
           Text(cancelTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.primary500)
             .lineSpacing(14 * 0.4)
             .frame(maxWidth: .infinity)
@@ -435,7 +435,7 @@ struct CustomConfirmationPopup: View {
 
         Button(action: onConfirm) {
           Text(confirmTitle)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.secondary50)
             .lineSpacing(14 * 0.4)
             .frame(maxWidth: .infinity)
@@ -479,7 +479,7 @@ struct CustomConfirmationPopup: View {
   @ViewBuilder
   private var reportHeader: some View {
     Text("신고사유")
-      .pretendardFont(family: .SemiBold, size: 16)
+      .pretendardCustomFont(textStyle: .headingMedium)
       .foregroundStyle(.primary800)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.horizontal, 20)
@@ -520,7 +520,7 @@ struct CustomConfirmationPopup: View {
       HStack(spacing: 6) {
         reasonRadio(isSelected: selectedReason == reason)
         Text(reason.title)
-          .pretendardFont(family: .Medium, size: 14)
+          .pretendardCustomFont(textStyle: .labelMedium)
           .foregroundStyle(.neutral900)
       }
     }
@@ -553,7 +553,7 @@ struct CustomConfirmationPopup: View {
   private var reportSubmitButton: some View {
     Button(action: onConfirm) {
       Text(confirmTitle.isEmpty ? "신고하기" : confirmTitle)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.primary800)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -568,7 +568,7 @@ struct CustomConfirmationPopup: View {
   private var reportCancelButton: some View {
     Button(action: onCancel) {
       Text(cancelTitle.isEmpty ? "뒤로가기" : cancelTitle)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.secondary50)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
