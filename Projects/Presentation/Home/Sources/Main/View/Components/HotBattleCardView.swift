@@ -28,7 +28,9 @@ struct HotBattleCardView: View {
         Text(battle.title)
           .pretendardFont(family: .SemiBold, size: 14)
           .foregroundStyle(.neutral900)
-          .lineLimit(2)
+          // 제목 1줄이어도 2줄 높이를 확보해 카드 높이를 통일. 2줄 초과는 말줄임(...) 처리.
+          .lineLimit(2, reservesSpace: true)
+          .truncationMode(.tail)
         HStack(spacing: 8) {
           MetaLabelView(systemImage: "clock", text: "\(battle.durationMinutes)분")
           MetaLabelView(systemImage: "eye", text: "\(battle.viewCount.formatted())")
