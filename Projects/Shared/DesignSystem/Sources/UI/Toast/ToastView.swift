@@ -21,19 +21,20 @@ public struct ToastView: View {
       // 메시지
       Text(toast.message)
         .pretendardFont(.bodyMedium)
-        .foregroundColor(.black)
+        .foregroundStyle(.black)
         .multilineTextAlignment(.leading)
         .fixedSize(horizontal: false, vertical: true)
     }
     .padding(.horizontal, 20)
     .padding(.vertical, 11)
     .background(toast.backgroundColor)
-    .cornerRadius(12)
+    .clipShape(RoundedRectangle(cornerRadius: 12))
     .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
   }
 }
 
 // MARK: - Toast Overlay Modifier
+
 public struct ToastOverlay: ViewModifier {
   @ObservedObject private var toastManager = ToastManager.shared
   let position: ToastPosition
@@ -106,6 +107,7 @@ public enum ToastPosition: Equatable {
 }
 
 // MARK: - View Extension
+
 public extension View {
   func toastOverlay(
     position: ToastPosition = .top,
@@ -125,27 +127,29 @@ public extension View {
 }
 
 // MARK: - Private views
+
 private extension ToastView {
   @ViewBuilder
   var leadingView: some View {
     switch toast {
-      case .loading:
-        ProgressView()
-          .progressViewStyle(.circular)
-          .tint(toast.iconColor)
-          .frame(width: 16, height: 16)
-      default:
-        if let iconName = toast.iconName {
-          Image(assetName: iconName)
-            .resizable()
-            .scaledToFit()
-            .frame(width: 12, height: 12)
-        }
+    case .loading:
+      ProgressView()
+        .progressViewStyle(.circular)
+        .tint(toast.iconColor)
+        .frame(width: 16, height: 16)
+    default:
+      if let iconName = toast.iconName {
+        Image(assetName: iconName)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 12, height: 12)
+      }
     }
   }
 }
 
 // MARK: - Preview
+
 #Preview {
   VStack(spacing: 20) {
     Button("성공 토스트") {
