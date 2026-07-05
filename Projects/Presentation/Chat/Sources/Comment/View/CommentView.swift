@@ -76,7 +76,7 @@ public struct CommentView: View {
             Image(systemName: item.systemImage)
               .font(.system(size: 13, weight: .medium))
             Text(item.title)
-              .pretendardCustomFont(textStyle: .medium13)
+              .pretendardFont(.medium13)
           }
           .foregroundStyle(.beige50)
           .padding(.horizontal, 14)
@@ -134,7 +134,7 @@ private extension CommentView {
       Spacer()
 
       Text(store.title)
-        .pretendardCustomFont(textStyle: .headingMedium)
+        .pretendardFont(.headingMedium)
         .foregroundStyle(.neutral500)
         .lineLimit(1)
 
@@ -177,14 +177,14 @@ private extension CommentView {
             name: store.voteSummary.optionA.representative
           )
           Text(percentText(store.voteSummary.optionA.percentage))
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.neutral500)
             .fixedSize()
         }
         voteProgress()
         HStack(spacing: 4) {
           Text(percentText(store.voteSummary.optionB.percentage))
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.neutral500)
             .fixedSize()
           avatarCircle(
@@ -206,7 +206,7 @@ private extension CommentView {
         .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(.primary500)
       Text(store.changeBadgeTitle)
-        .pretendardCustomFont(textStyle: .semiBold11)
+        .pretendardFont(.semiBold11)
         .foregroundStyle(.primary500)
     }
     .padding(.horizontal, 4)
@@ -294,7 +294,7 @@ private extension CommentView {
       send(.filterTapped(filter))
     } label: {
       Text(title)
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(isSelected ? .primary500 : .neutral300)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
@@ -318,7 +318,7 @@ private extension CommentView {
       send(.sortTapped(sort))
     } label: {
       Text(sort.title)
-        .pretendardCustomFont(textStyle: .medium13)
+        .pretendardFont(.medium13)
         .foregroundStyle(isSelected ? .beige50 : .primary500)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -375,7 +375,7 @@ private extension CommentView {
         .font(.system(size: 32, weight: .light))
         .foregroundStyle(.neutral300)
       Text("아직 등록된 의견이 없어요")
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(.neutral400)
     }
     .frame(maxWidth: .infinity)
@@ -402,7 +402,7 @@ private extension CommentView {
   func commentBody(_ comment: CommentItem) -> some View {
     Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       Text(comment.content)
-        .pretendardCustomFont(textStyle: .regular13)
+        .pretendardFont(.regular13)
         .foregroundStyle(.neutral400)
         .lineSpacing(13 * 0.4)
         .fixedSize(horizontal: false, vertical: true)
@@ -427,7 +427,7 @@ private extension CommentView {
     VStack(alignment: .leading, spacing: 4) {
       HStack(spacing: 6) {
         Text(comment.isMine ? "나" : comment.author)
-          .pretendardCustomFont(textStyle: .labelMedium)
+          .pretendardFont(.labelMedium)
           .foregroundStyle(.neutral500)
           .lineLimit(1)
 
@@ -436,7 +436,7 @@ private extension CommentView {
         }
 
         Text(comment.timeAgo)
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.neutral300)
       }
 
@@ -447,7 +447,7 @@ private extension CommentView {
   @ViewBuilder
   func myBadge() -> some View {
     Text("나")
-      .pretendardCustomFont(textStyle: .labelXSmall)
+      .pretendardFont(.labelXSmall)
       .foregroundStyle(.beige50)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
@@ -470,7 +470,7 @@ private extension CommentView {
     let summary = comment.option == .a ? store.voteSummary.optionA : store.voteSummary.optionB
     let label = comment.optionLabel ?? summary.title
     Text(label)
-      .pretendardCustomFont(textStyle: .labelSmall)
+      .pretendardFont(.labelSmall)
       .foregroundStyle(.primary500)
       .padding(.horizontal, 4)
       .padding(.vertical, 2)
@@ -492,7 +492,7 @@ private extension CommentView {
   func moreButton(commentId: UUID) -> some View {
     Button { send(.commentRow(id: commentId, action: .openReply)) } label: {
       Text("더보기")
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
         .foregroundStyle(.neutral300)
     }
     .buttonStyle(.plain)
@@ -527,7 +527,7 @@ private extension CommentView {
         .font(.system(size: 14, weight: .medium))
         .frame(width: 16, height: 16)
       Text(text)
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
     }
   }
 
@@ -572,7 +572,7 @@ private extension CommentView {
     // 입력 텍스트는 상단, 글자수 카운터는 하단 우측에 배치.
     VStack(alignment: .leading, spacing: 6) {
       TextField("댓글을 입력해주세요", text: $store.commentText, axis: .vertical)
-        .pretendardCustomFont(textStyle: .regular13)
+        .pretendardFont(.regular13)
         .foregroundStyle(.neutral400)
         .focused($isCommentFocused)
         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -580,7 +580,7 @@ private extension CommentView {
       Spacer(minLength: 0)
 
       Text("\(store.commentText.count)/200")
-        .pretendardCustomFont(textStyle: .labelXSmall)
+        .pretendardFont(.labelXSmall)
         .foregroundStyle(.neutral400)
         .frame(maxWidth: .infinity, alignment: .trailing)
     }

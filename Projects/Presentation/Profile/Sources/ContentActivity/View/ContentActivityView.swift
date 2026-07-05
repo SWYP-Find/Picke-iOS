@@ -85,7 +85,7 @@ private extension ContentActivityView {
       send(.tabSelected(tab))
     } label: {
       Text(tab.title)
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(isSelected ? .primary500 : .gray300)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -145,13 +145,13 @@ private extension ContentActivityView {
         VStack(alignment: .leading, spacing: 4) {
           HStack(spacing: 4) {
             Text(item.author.nickname)
-              .pretendardCustomFont(textStyle: .labelMedium)
+              .pretendardFont(.labelMedium)
               .foregroundStyle(.gray500)
               .lineLimit(1)
 
             if !item.stanceText.isEmpty {
               Text(item.stanceText)
-                .pretendardCustomFont(textStyle: .labelSmall)
+                .pretendardFont(.labelSmall)
                 .foregroundStyle(.primary500)
                 .padding(.vertical, 2)
                 .padding(.horizontal, 6)
@@ -160,7 +160,7 @@ private extension ContentActivityView {
           }
 
           Text(item.createdAt.relativeKoreanString)
-            .pretendardCustomFont(textStyle: .labelXSmall)
+            .pretendardFont(.labelXSmall)
             .foregroundStyle(.gray300)
         }
 
@@ -168,7 +168,7 @@ private extension ContentActivityView {
       }
 
       Text(item.content)
-        .pretendardCustomFont(textStyle: .regular13)
+        .pretendardFont(.regular13)
         .foregroundStyle(.gray400)
         .lineLimit(4)
         .multilineTextAlignment(.leading)
@@ -180,7 +180,7 @@ private extension ContentActivityView {
           .font(.system(size: 13))
           .foregroundStyle(.gray300)
         Text("\(item.likeCount)")
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.gray300)
       }
     }

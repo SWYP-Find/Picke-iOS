@@ -44,7 +44,7 @@ private extension WithdrawReasonView {
   @ViewBuilder
   func title() -> some View {
     Text("\(store.nickname.isEmpty ? "회원" : store.nickname)님 정말 떠나시나요? 아쉬워요 🥲")
-      .pretendardCustomFont(textStyle: .bold18)
+      .pretendardFont(.bold18)
       .foregroundStyle(.primary500)
       .kerning(-0.45)
       .padding(.horizontal, 20)
@@ -55,7 +55,7 @@ private extension WithdrawReasonView {
   @ViewBuilder
   func subtitle() -> some View {
     Text("지금까지 픽케를 이용해주셔서 감사합니다.\n더 나은 서비스를 만들기 위해, 탈퇴 이유를 알려주세요.")
-      .pretendardCustomFont(textStyle: .labelMedium)
+      .pretendardFont(.labelMedium)
       .foregroundStyle(.gray400)
       .lineSpacing(4)
       .padding(.horizontal, 20)
@@ -84,7 +84,7 @@ private extension WithdrawReasonView {
         checkbox(isSelected: isSelected)
 
         Text(reason.rawValue)
-          .pretendardCustomFont(textStyle: .labelMedium)
+          .pretendardFont(.labelMedium)
           .foregroundStyle(isSelected ? .gray800 : .gray300)
 
         Spacer(minLength: 0)
@@ -121,7 +121,7 @@ private extension WithdrawReasonView {
         send(.submitTapped)
       } label: {
         Text("제출하기")
-          .pretendardCustomFont(textStyle: .headingMedium)
+          .pretendardFont(.headingMedium)
           .foregroundStyle(.primary500)
           .frame(maxWidth: .infinity)
           .frame(height: 60)
@@ -134,7 +134,7 @@ private extension WithdrawReasonView {
         send(.backTapped)
       } label: {
         Text("픽케로 다시 돌아가기")
-          .pretendardCustomFont(textStyle: .headingMedium)
+          .pretendardFont(.headingMedium)
           .foregroundStyle(.beige50)
           .frame(maxWidth: .infinity)
           .frame(height: 60)

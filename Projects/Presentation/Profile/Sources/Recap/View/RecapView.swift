@@ -78,7 +78,7 @@ private extension RecapView {
   @ViewBuilder
   func sectionHeading(_ title: String) -> some View {
     Text(title)
-      .pretendardCustomFont(textStyle: .semiBold13)
+      .pretendardFont(.semiBold13)
       .foregroundStyle(.gray800)
       .frame(maxWidth: .infinity, alignment: .center)
   }
@@ -151,10 +151,10 @@ private extension RecapView {
   func statCell(value: String, label: String, divider: Bool) -> some View {
     VStack(spacing: 0) {
       Text(value)
-        .pretendardCustomFont(textStyle: .labelLarge)
+        .pretendardFont(.labelLarge)
         .foregroundStyle(.gray800)
       Text(label)
-        .pretendardCustomFont(textStyle: .medium10)
+        .pretendardFont(.medium10)
         .foregroundStyle(.gray300)
     }
     .frame(maxWidth: .infinity)
@@ -169,14 +169,14 @@ private extension RecapView {
   func topicRow(_ topic: FavoriteTopic) -> some View {
     HStack(spacing: 6) {
       Text(String(format: "%02d", topic.rank))
-        .pretendardCustomFont(textStyle: .bold10)
+        .pretendardFont(.bold10)
         .foregroundStyle(.secondary500)
       Text(topic.tagText)
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
         .foregroundStyle(.gray800)
       Spacer(minLength: 6)
       Text("\(topic.participationCount)회")
-        .pretendardCustomFont(textStyle: .medium10)
+        .pretendardFont(.medium10)
         .foregroundStyle(.gray300)
     }
     .padding(.vertical, 12)
@@ -208,7 +208,7 @@ private extension RecapView {
     } label: {
       HStack(spacing: 6) {
         Text("공유하기")
-          .pretendardCustomFont(textStyle: .headingMedium)
+          .pretendardFont(.headingMedium)
           .foregroundStyle(.beige50)
         Image(systemName: "square.and.arrow.up")
           .font(.system(size: 16, weight: .semibold))

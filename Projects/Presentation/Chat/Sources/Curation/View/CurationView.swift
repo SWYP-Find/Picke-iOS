@@ -65,7 +65,7 @@ private extension CurationView {
       Spacer()
 
       Text("더 흥미로운 배틀도 있어요!")
-        .pretendardCustomFont(textStyle: .headingMedium)
+        .pretendardFont(.headingMedium)
         .foregroundStyle(.neutral500)
 
       Spacer()
@@ -99,7 +99,7 @@ private extension CurationView {
         .font(.system(size: 28, weight: .regular))
         .foregroundStyle(.neutral300)
       Text("추천할 배틀이 없어요")
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(.neutral300)
     }
     .frame(maxWidth: .infinity)
@@ -134,7 +134,7 @@ private extension CurationView {
       HStack(spacing: 10) {
         if let tag = battle.tags.first {
           Text("#\(tag.name)")
-            .pretendardCustomFont(textStyle: .semiBold12)
+            .pretendardFont(.semiBold12)
             .foregroundStyle(.primary500)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
@@ -147,7 +147,7 @@ private extension CurationView {
           Image(systemName: "clock")
             .font(.system(size: 11, weight: .regular))
           Text(battle.audioDuration.roundedMinuteText)
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
         }
         .foregroundStyle(.neutral300)
 
@@ -155,14 +155,14 @@ private extension CurationView {
           Image(systemName: "eye")
             .font(.system(size: 11, weight: .regular))
           Text("\(battle.viewCount)")
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
         }
         .foregroundStyle(.neutral300)
       }
 
       VStack(alignment: .leading, spacing: 4) {
         Text(battle.title)
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.neutral500)
           .lineSpacing(14 * 0.3)
           .fixedSize(horizontal: false, vertical: true)
@@ -170,7 +170,7 @@ private extension CurationView {
 
         if !battle.summary.isEmpty {
           Text(battle.summary)
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.neutral200)
             .lineSpacing(12 * 0.4)
             .fixedSize(horizontal: false, vertical: true)
@@ -204,11 +204,11 @@ private extension CurationView {
       // 철학자 이름 / 대표 의견은 모두 좌측 정렬.
       VStack(alignment: .leading, spacing: 2) {
         Text(option?.title ?? "")
-          .pretendardCustomFont(textStyle: .semiBold11)
+          .pretendardFont(.semiBold11)
           .foregroundStyle(.neutral500)
           .frame(maxWidth: .infinity, alignment: .leading)
         Text(option?.representative ?? "")
-          .pretendardCustomFont(textStyle: .regular10)
+          .pretendardFont(.regular10)
           .foregroundStyle(.neutral300)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
@@ -225,7 +225,7 @@ private extension CurationView {
   @ViewBuilder
   func versusBadge() -> some View {
     Text("VS")
-      .pretendardCustomFont(textStyle: .bold8)
+      .pretendardFont(.bold8)
       .foregroundStyle(.neutral900)
       .frame(width: 24, height: 24)
       .background(.secondary200, in: Circle())

@@ -10,7 +10,7 @@ import SwiftUI
 public struct PretendardFont: ViewModifier {
   public let family: PretendardFontFamily
   public let size: CGFloat
-  
+
   public func body(content: Content) -> some View {
     return content.font(.custom("PretendardVariable-\(family)", fixedSize: size))
   }
@@ -21,11 +21,11 @@ public extension View {
     family: PretendardFontFamily,
     size: CGFloat
   ) -> some View {
-    return self.modifier(PretendardFont(family: family, size: size))
+    return modifier(PretendardFont(family: family, size: size))
   }
-  
-  func pretendardCustomFont(textStyle: CustomSizeFont) -> some View {
-    return self.modifier(PretendardFont(family: textStyle.fontFamily, size: textStyle.size))
+
+  func pretendardFont(_ textStyle: CustomSizeFont) -> some View {
+    return modifier(PretendardFont(family: textStyle.fontFamily, size: textStyle.size))
   }
 }
 
@@ -43,7 +43,7 @@ public extension Font {
   static func pretendardFontFamily(
     family: PretendardFontFamily,
     size: CGFloat
-  ) -> Font{
+  ) -> Font {
     let font = Font.custom("PretendardVariable-\(family)", size: size)
     return font
   }

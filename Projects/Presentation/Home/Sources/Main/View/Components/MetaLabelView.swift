@@ -21,7 +21,7 @@ struct MetaLabelView: View {
         .frame(width: 12, height: 12)
         .foregroundStyle(.neutral300)
       Text(text)
-        .pretendardCustomFont(textStyle: .medium11)
+        .pretendardFont(.medium11)
         .foregroundStyle(.neutral300)
     }
   }
@@ -33,7 +33,7 @@ struct TagBadgeView: View {
 
   var body: some View {
     Text(text)
-      .pretendardCustomFont(textStyle: .semiBold11)
+      .pretendardFont(.semiBold11)
       .foregroundStyle(.primary500)
       .padding(.horizontal, 8)
       .padding(.vertical, 2)

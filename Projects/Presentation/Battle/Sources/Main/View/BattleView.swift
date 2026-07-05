@@ -204,7 +204,7 @@ private extension BattleView {
         VStack(spacing: 20) {
           tagsRow(battle.tags)
           Text(battle.title)
-            .pretendardCustomFont(textStyle: .bold24)
+            .pretendardFont(.bold24)
             .foregroundStyle(.beige50)
             .kerning(-0.6)
             .multilineTextAlignment(.center)
@@ -216,7 +216,7 @@ private extension BattleView {
 
         if !battle.question.isEmpty {
           Text(battle.question)
-            .pretendardCustomFont(textStyle: .bodyMedium)
+            .pretendardFont(.bodyMedium)
             .foregroundStyle(.gray300)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -232,7 +232,7 @@ private extension BattleView {
     HStack(spacing: 9) {
       ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
         Text("#\(tag)")
-          .pretendardCustomFont(textStyle: .semiBold12)
+          .pretendardFont(.semiBold12)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
@@ -247,7 +247,7 @@ private extension BattleView {
       Image(systemName: "clock")
         .font(.system(size: 11, weight: .semibold))
       Text(text)
-        .pretendardCustomFont(textStyle: .semiBold12)
+        .pretendardFont(.semiBold12)
     }
     .foregroundStyle(.gray300)
     .padding(.horizontal, 12)
@@ -294,13 +294,13 @@ private extension BattleView {
     Button(action: onTap) {
       VStack(spacing: 0) {
         Text(option.representative)
-          .pretendardCustomFont(textStyle: .bold10)
+          .pretendardFont(.bold10)
           .foregroundStyle(.secondary500)
           .kerning(1.5)
           .padding(.bottom, 8)
 
         Text(option.stance)
-          .pretendardCustomFont(textStyle: .bold18)
+          .pretendardFont(.bold18)
           .foregroundStyle(.beige50)
           .kerning(-0.45)
           .multilineTextAlignment(.center)
@@ -310,7 +310,7 @@ private extension BattleView {
 
         if !option.quote.isEmpty {
           Text(option.quote)
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.gray300)
             .multilineTextAlignment(.center)
             .lineLimit(2)
@@ -332,7 +332,7 @@ private extension BattleView {
   @ViewBuilder
   func vsBadge() -> some View {
     Text("VS")
-      .pretendardCustomFont(textStyle: .headingSmall)
+      .pretendardFont(.headingSmall)
       .foregroundStyle(.neutral900)
       .frame(width: 40, height: 40)
       .background(.secondary200, in: Circle())
@@ -363,7 +363,7 @@ private extension BattleView {
         .frame(width: 135, height: 90)
 
       Text("아직 빠른 배틀이 선정되지 않았어요\n 조금만 기다려주세요!")
-        .pretendardCustomFont(textStyle: .bodyMedium)
+        .pretendardFont(.bodyMedium)
         .foregroundStyle(.beige300)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -22,11 +22,11 @@ struct HotBattleCardView: View {
       VStack(alignment: .leading, spacing: 6) {
         if let tag = battle.tags.first {
           Text("#\(tag.name)")
-            .pretendardCustomFont(textStyle: .medium11)
+            .pretendardFont(.medium11)
             .foregroundStyle(.primary500)
         }
         Text(battle.title)
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.neutral900)
           // 제목 1줄이어도 2줄 높이를 확보해 카드 높이를 통일. 2줄 초과는 말줄임(...) 처리.
           .lineLimit(2, reservesSpace: true)

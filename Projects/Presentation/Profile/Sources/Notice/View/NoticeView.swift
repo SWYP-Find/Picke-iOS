@@ -75,7 +75,7 @@ private extension NoticeView {
       send(.tabSelected(tab))
     } label: {
       Text(tab.title)
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(isSelected ? .primary500 : .gray300)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)

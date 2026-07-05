@@ -30,7 +30,7 @@ public struct PickeEmptyStateView: View {
         .frame(width: imageSize.width, height: imageSize.height)
 
       Text(message)
-        .pretendardCustomFont(textStyle: .bodyMedium)
+        .pretendardFont(.bodyMedium)
         .foregroundStyle(.gray300)
         .multilineTextAlignment(.center)
     }

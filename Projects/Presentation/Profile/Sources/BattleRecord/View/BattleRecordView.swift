@@ -78,7 +78,7 @@ private extension BattleRecordView {
         HStack(spacing: 8) {
           if !record.categoryTag.isEmpty {
             Text(record.categoryTag)
-              .pretendardCustomFont(textStyle: .semiBold12)
+              .pretendardFont(.semiBold12)
               .foregroundStyle(.primary500)
               .padding(.vertical, 2)
               .padding(.horizontal, 6)
@@ -86,13 +86,13 @@ private extension BattleRecordView {
           }
 
           Text(record.title)
-            .pretendardCustomFont(textStyle: .labelMedium)
+            .pretendardFont(.labelMedium)
             .foregroundStyle(.gray500)
             .lineLimit(1)
         }
 
         Text(record.summary)
-          .pretendardCustomFont(textStyle: .regular13)
+          .pretendardFont(.regular13)
           .foregroundStyle(.gray400)
           .lineLimit(2)
           .multilineTextAlignment(.leading)
@@ -100,7 +100,7 @@ private extension BattleRecordView {
           .padding(.vertical, 6)
 
         Text(record.createdAt.yearMonthDayDot)
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.gray300)
       }
       .padding(12)

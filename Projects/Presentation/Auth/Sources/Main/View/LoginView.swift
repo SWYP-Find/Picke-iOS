@@ -47,7 +47,7 @@ extension LoginView {
       Spacer()
 
       Text(" 당신의 생각을")
-        .pretendardCustomFont(textStyle: .headingMedium)
+        .pretendardFont(.headingMedium)
         .foregroundStyle(.neutral200)
 
       Image(asset: .loginLogo)
@@ -68,7 +68,7 @@ extension LoginView {
         .frame(width: 12)
 
       Text("SNS 계정으로 로그인")
-        .pretendardCustomFont(textStyle: .medium15)
+        .pretendardFont(.medium15)
         .foregroundStyle(.neutral300)
 
       Rectangle()

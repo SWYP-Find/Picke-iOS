@@ -56,7 +56,7 @@ struct VoteCardView: View {
   private func header() -> some View {
     HStack {
       Text("투표")
-        .pretendardCustomFont(textStyle: .headingSmall)
+        .pretendardFont(.headingSmall)
         .foregroundStyle(.primary500)
         .frame(width: 35, height: 21)
         .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
@@ -64,7 +64,7 @@ struct VoteCardView: View {
       Spacer()
 
       Text("\(question.participantCount.formatted())명 참여")
-        .pretendardCustomFont(textStyle: .medium11)
+        .pretendardFont(.medium11)
         .foregroundStyle(.neutral300)
     }
   }
@@ -74,18 +74,18 @@ struct VoteCardView: View {
     VStack(spacing: 6) {
       HStack(spacing: 4) {
         Text(question.titlePrefix)
-          .pretendardCustomFont(textStyle: .semiBold15)
+          .pretendardFont(.semiBold15)
           .foregroundStyle(.neutral500)
 
         answerSlot()
 
         Text(question.titleSuffix)
-          .pretendardCustomFont(textStyle: .semiBold15)
+          .pretendardFont(.semiBold15)
           .foregroundStyle(.neutral500)
       }
 
       Text(question.summary)
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
         .foregroundStyle(.neutral300)
     }
     .frame(maxWidth: .infinity)
@@ -98,7 +98,7 @@ struct VoteCardView: View {
   private func answerSlot() -> some View {
     if let label = selectedLabel {
       Text(label)
-        .pretendardCustomFont(textStyle: .semiBold15)
+        .pretendardFont(.semiBold15)
         .foregroundStyle(.primary500)
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
@@ -142,7 +142,7 @@ struct VoteCardView: View {
       }
     } label: {
       Text(label)
-        .pretendardCustomFont(textStyle: .semiBold13)
+        .pretendardFont(.semiBold13)
         .foregroundStyle(.neutral900)
         .frame(maxWidth: .infinity, minHeight: 44)
         .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
@@ -185,7 +185,7 @@ struct VoteCardView: View {
   ) -> some View {
     HStack(spacing: 6) {
       Text(label)
-        .pretendardCustomFont(textStyle: .medium10)
+        .pretendardFont(.medium10)
         .foregroundStyle(.neutral400)
       ZStack(alignment: .leading) {
         RoundedRectangle(cornerRadius: 1)
@@ -197,7 +197,7 @@ struct VoteCardView: View {
       }
       Spacer(minLength: 0)
       Text("\(percentage)%")
-        .pretendardCustomFont(textStyle: .bold11)
+        .pretendardFont(.bold11)
         .foregroundStyle(.neutral500)
     }
   }

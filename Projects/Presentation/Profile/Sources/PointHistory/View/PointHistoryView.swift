@@ -92,11 +92,11 @@ private extension PointHistoryView {
     HStack(spacing: 16) {
       VStack(alignment: .leading, spacing: 6) {
         Text(item.title)
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.neutral900)
 
         Text(item.createdAt.yearMonthDayDot)
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.gray300)
       }
 
@@ -104,11 +104,11 @@ private extension PointHistoryView {
 
       VStack(alignment: .trailing, spacing: 6) {
         Text(item.amountText)
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(item.isEarned ? .primary500 : .gray500)
 
         Text(item.statusText)
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.gray300)
       }
     }

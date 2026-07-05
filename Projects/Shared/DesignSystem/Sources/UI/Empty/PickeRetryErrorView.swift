@@ -26,13 +26,13 @@ public struct PickeRetryErrorView: View {
   public var body: some View {
     VStack(spacing: 16) {
       Text(message)
-        .pretendardCustomFont(textStyle: .headingMedium)
+        .pretendardFont(.headingMedium)
         .foregroundStyle(.neutral800)
         .multilineTextAlignment(.center)
 
       Button(action: onRetry) {
         Text(retryTitle)
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.neutral800)
           .padding(.horizontal, 20)
           .padding(.vertical, 10)

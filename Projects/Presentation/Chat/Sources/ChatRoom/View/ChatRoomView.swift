@@ -100,7 +100,7 @@ extension ChatRoomView {
     }
     .overlay(alignment: .center) {
       Text(store.battleTitle)
-        .pretendardCustomFont(textStyle: .headingMedium)
+        .pretendardFont(.headingMedium)
         .foregroundStyle(.neutral800)
         .lineLimit(1)
         .padding(.horizontal, 56)
@@ -215,7 +215,7 @@ extension ChatRoomView {
     let alignment: HorizontalAlignment = speaker.side == .left ? .leading : .trailing
     VStack(alignment: alignment, spacing: 6) {
       Text(speaker.name)
-        .pretendardCustomFont(textStyle: .semiBold13)
+        .pretendardFont(.semiBold13)
         .foregroundStyle(.neutral500)
         .padding(.horizontal, 4)
 
@@ -246,7 +246,7 @@ extension ChatRoomView {
     let background: Color = isActive ? .beige50 : (side == .left ? .beige300 : .beige400)
     let border: Color = side == .left ? .beige600 : .beige700
     Text(text)
-      .pretendardCustomFont(textStyle: .regular13)
+      .pretendardFont(.regular13)
       .foregroundStyle(isActive ? .neutral800 : .neutral500)
       .lineSpacing(13 * 0.4)
       .multilineTextAlignment(.leading)
@@ -271,7 +271,7 @@ extension ChatRoomView {
   @ViewBuilder
   private func narratorBubble(text: String) -> some View {
     Text(text)
-      .pretendardCustomFont(textStyle: .bodySmall)
+      .pretendardFont(.bodySmall)
       .italic()
       .foregroundStyle(.neutral400)
       .lineSpacing(12 * 0.4)
@@ -312,7 +312,7 @@ extension ChatRoomView {
         .fill(.neutral200)
         .frame(height: 0.5)
       Text("당신의 입장을 선택해주세요")
-        .pretendardCustomFont(textStyle: .bold13)
+        .pretendardFont(.bold13)
         .foregroundStyle(.neutral800)
         .fixedSize()
       Rectangle()
@@ -338,7 +338,7 @@ extension ChatRoomView {
       send(.optionTapped(option.label))
     } label: {
       Text(option.label)
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
         .foregroundStyle(isSelected ? .neutral800 : .neutral300)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -422,7 +422,7 @@ extension ChatRoomView {
         Spacer()
         Text(timeString(store.totalDuration))
       }
-      .pretendardCustomFont(textStyle: .medium11)
+      .pretendardFont(.medium11)
       .foregroundStyle(.neutral300)
     }
   }

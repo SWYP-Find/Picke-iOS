@@ -59,7 +59,7 @@ private extension BattleProposalView {
   @ViewBuilder
   func fieldLabel(_ text: String) -> some View {
     Text(text)
-      .pretendardCustomFont(textStyle: .labelSmall)
+      .pretendardFont(.labelSmall)
       .foregroundStyle(.gray400)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
@@ -78,7 +78,7 @@ private extension BattleProposalView {
             send(.categorySelected(category))
           } label: {
             Text(category.title)
-              .pretendardCustomFont(textStyle: .labelMedium)
+              .pretendardFont(.labelMedium)
               .foregroundStyle(isSelected ? .beige50 : .gray300)
               .frame(maxWidth: .infinity)
               .padding(.vertical, 8)
@@ -119,7 +119,7 @@ private extension BattleProposalView {
 
       HStack(spacing: 8) {
         Text("A")
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.primary500)
           .frame(width: 20)
         inputField(text: $store.positionA, placeholder: "첫 번째 입장을 입력하세요")
@@ -127,7 +127,7 @@ private extension BattleProposalView {
 
       HStack(spacing: 8) {
         Text("B")
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.neutral900)
           .frame(width: 20)
         inputField(text: $store.positionB, placeholder: "두 번째 입장을 입력하세요")
@@ -142,11 +142,11 @@ private extension BattleProposalView {
     ZStack(alignment: .leading) {
       if text.wrappedValue.isEmpty {
         Text(placeholder)
-          .pretendardCustomFont(textStyle: .medium13)
+          .pretendardFont(.medium13)
           .foregroundStyle(.gray300)
       }
       TextField("", text: text)
-        .pretendardCustomFont(textStyle: .medium13)
+        .pretendardFont(.medium13)
         .foregroundStyle(.gray800)
         .focused($isInputFocused)
     }
@@ -171,13 +171,13 @@ private extension BattleProposalView {
         ZStack(alignment: .topLeading) {
           if store.description.isEmpty {
             Text("이 주제를 제안하는 이유나 배경을 자유롭게 써주세요")
-              .pretendardCustomFont(textStyle: .regular13)
+              .pretendardFont(.regular13)
               .foregroundStyle(.gray300)
               .padding(.top, 8)
               .padding(.leading, 4)
           }
           TextEditor(text: $store.description)
-            .pretendardCustomFont(textStyle: .regular13)
+            .pretendardFont(.regular13)
             .foregroundStyle(.gray800)
             .scrollContentBackground(.hidden)
             .frame(height: 60)
@@ -185,7 +185,7 @@ private extension BattleProposalView {
         }
 
         Text("\(store.description.count)/200")
-          .pretendardCustomFont(textStyle: .labelXSmall)
+          .pretendardFont(.labelXSmall)
           .foregroundStyle(.gray400)
       }
       .padding(.vertical, 8)
@@ -207,7 +207,7 @@ private extension BattleProposalView {
       send(.submitTapped)
     } label: {
       Text("제안하기 (-30P)")
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(.beige50)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 17)

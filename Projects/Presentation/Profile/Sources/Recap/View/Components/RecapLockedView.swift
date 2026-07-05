@@ -44,10 +44,10 @@ private extension RecapLockedView {
     VStack(spacing: 24) {
       VStack(spacing: 6) {
         Text("나의 철학자 유형")
-          .pretendardCustomFont(textStyle: .semiBold13)
+          .pretendardFont(.semiBold13)
           .foregroundStyle(.primary500)
         Text("??형")
-          .pretendardCustomFont(textStyle: .semiBold24)
+          .pretendardFont(.semiBold24)
           .foregroundStyle(.gray800)
       }
 
@@ -61,7 +61,7 @@ private extension RecapLockedView {
       .frame(width: 68, height: 68)
 
       Text("아직 분석할 기록이 부족해요.\n배틀에 참여하면 성향을 확인할 수 있어요!")
-        .pretendardCustomFont(textStyle: .headingSmall)
+        .pretendardFont(.headingSmall)
         .foregroundStyle(.gray800)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -86,7 +86,7 @@ private extension RecapLockedView {
   var tendencyLockedSection: some View {
     VStack(spacing: 12) {
       Text("성향 분석")
-        .pretendardCustomFont(textStyle: .semiBold13)
+        .pretendardFont(.semiBold13)
         .foregroundStyle(.gray800)
 
       ZStack {
@@ -97,7 +97,7 @@ private extension RecapLockedView {
           .allowsHitTesting(false)
 
         Text("배틀 5개에 참여하시면\n잠금을 풀 수 있어요!")
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.gray800)
           .multilineTextAlignment(.center)
       }

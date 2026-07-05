@@ -54,7 +54,7 @@ public struct CTAButtonStyle: ButtonStyle {
     var body: some View {
       HStack(spacing: size.iconSpacing) {
         configuration.label
-          .pretendardCustomFont(textStyle: size.font)
+          .pretendardFont(size.font)
         if let trailingIcon {
           trailingIcon
         }

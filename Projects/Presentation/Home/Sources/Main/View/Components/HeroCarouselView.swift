@@ -74,7 +74,7 @@ struct HeroCardView: View {
   private func controlRow() -> some View {
     HStack {
       Text(hero.badge)
-        .pretendardCustomFont(textStyle: .semiBold11)
+        .pretendardFont(.semiBold11)
         .foregroundStyle(.secondary200)
         .padding(.horizontal, 8)
         .padding(.vertical, 2)
@@ -84,10 +84,10 @@ struct HeroCardView: View {
 
       HStack(spacing: 0) {
         Text("\(position)")
-          .pretendardCustomFont(textStyle: .labelXSmall)
+          .pretendardFont(.labelXSmall)
           .foregroundStyle(.secondary50)
         Text("/\(total)")
-          .pretendardCustomFont(textStyle: .labelXSmall)
+          .pretendardFont(.labelXSmall)
           .foregroundStyle(.secondary50)
           .opacity(0.4)
       }
@@ -122,14 +122,14 @@ struct HeroCardView: View {
 
         HStack(spacing: 24) {
           Text(hero.optionA)
-            .pretendardCustomFont(textStyle: .headingSmall)
+            .pretendardFont(.headingSmall)
             .foregroundStyle(.beige100)
           Image(asset: .vs)
             .resizable()
             .scaledToFit()
             .frame(width: 18, height: 32)
           Text(hero.optionB)
-            .pretendardCustomFont(textStyle: .headingSmall)
+            .pretendardFont(.headingSmall)
             .foregroundStyle(.beige100)
         }
         .opacity(0.85)
@@ -144,18 +144,18 @@ struct HeroCardView: View {
     HStack(alignment: .bottom) {
       VStack(alignment: .leading, spacing: 0) {
         Text(hero.title)
-          .pretendardCustomFont(textStyle: .headingMedium)
+          .pretendardFont(.headingMedium)
           .foregroundStyle(.beige100)
           .padding(.bottom, 4)
         Text(hero.summary)
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.neutral200)
           .lineLimit(2)
 
         HStack(spacing: 4) {
           ForEach(hero.tags) { tag in
             Text("#\(tag.name)")
-              .pretendardCustomFont(textStyle: .medium11)
+              .pretendardFont(.medium11)
               .foregroundStyle(.neutral200)
           }
         }

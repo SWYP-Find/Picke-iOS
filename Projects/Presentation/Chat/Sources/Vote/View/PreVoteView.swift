@@ -248,7 +248,7 @@ extension PreVoteView {
     HStack(spacing: 9) {
       ForEach(battle.tags, id: \.self) { tag in
         Text(tag)
-          .pretendardCustomFont(textStyle: .semiBold12)
+          .pretendardFont(.semiBold12)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
@@ -260,7 +260,7 @@ extension PreVoteView {
   @ViewBuilder
   private func titleText(_ battle: PreVoteBattle) -> some View {
     Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
-      .pretendardCustomFont(textStyle: .bold24)
+      .pretendardFont(.bold24)
       .foregroundStyle(.neutral500)
       .kerning(-0.6)
       .lineSpacing(24 * 0.4)
@@ -272,7 +272,7 @@ extension PreVoteView {
   @ViewBuilder
   private func summaryText(_ battle: PreVoteBattle) -> some View {
     Text(battle.summary)
-      .pretendardCustomFont(textStyle: .regular13)
+      .pretendardFont(.regular13)
       .foregroundStyle(.neutral400)
       .lineSpacing(13 * 0.4)
       .multilineTextAlignment(.leading)
@@ -308,7 +308,7 @@ extension PreVoteView {
 
         VStack(spacing: 2) {
           Text(option.stance)
-            .pretendardCustomFont(textStyle: .headingSmall)
+            .pretendardFont(.headingSmall)
             .foregroundStyle(.neutral600)
             .kerning(-0.35)
             .lineLimit(2)
@@ -316,7 +316,7 @@ extension PreVoteView {
             .multilineTextAlignment(.center)
 
           Text(option.representative)
-            .pretendardCustomFont(textStyle: .labelSmall)
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.neutral300)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
@@ -352,7 +352,7 @@ extension PreVoteView {
   @ViewBuilder
   private func vsBadge() -> some View {
     Text("VS")
-      .pretendardCustomFont(textStyle: .bold11)
+      .pretendardFont(.bold11)
       .foregroundStyle(.neutral800)
       .frame(width: 28, height: 28)
       .background(.secondary200, in: Circle())

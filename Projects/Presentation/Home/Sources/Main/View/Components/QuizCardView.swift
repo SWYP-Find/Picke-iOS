@@ -43,7 +43,7 @@ struct QuizCardView: View {
       TagBadgeView(text: "퀴즈")
       Spacer()
       Text("\(question.participantCount.formatted())명 참여")
-        .pretendardCustomFont(textStyle: .medium11)
+        .pretendardFont(.medium11)
         .foregroundStyle(.neutral300)
     }
   }
@@ -52,11 +52,11 @@ struct QuizCardView: View {
   private func titleBlock() -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(question.title)
-        .pretendardCustomFont(textStyle: .semiBold15)
+        .pretendardFont(.semiBold15)
         .foregroundStyle(.neutral900)
         .kerning(-0.375)
       Text(question.summary)
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
         .foregroundStyle(.neutral200)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -86,10 +86,10 @@ struct QuizCardView: View {
       VStack(spacing: 2) {
         resultBadge(isSelected: isSelected, isCorrect: isCorrect)
         Text(label)
-          .pretendardCustomFont(textStyle: .semiBold13)
+          .pretendardFont(.semiBold13)
           .foregroundStyle(.neutral900)
         Text(desc)
-          .pretendardCustomFont(textStyle: .medium10)
+          .pretendardFont(.medium10)
           .foregroundStyle(.neutral300)
       }
       .frame(maxWidth: .infinity)
@@ -110,7 +110,7 @@ struct QuizCardView: View {
   ) -> some View {
     if isSelected {
       Text(isCorrect ? "O 정답" : "X 오답")
-        .pretendardCustomFont(textStyle: .labelXSmall)
+        .pretendardFont(.labelXSmall)
         .foregroundStyle(isCorrect ? .secondary500 : .primary500)
     } else {
       Color.clear.frame(height: 14)

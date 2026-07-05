@@ -63,7 +63,7 @@ private extension HifiView {
         .frame(width: 135, height: 90)
 
       Text("새로운 콘텐츠가 없습니다")
-        .pretendardCustomFont(textStyle: .bodyMedium)
+        .pretendardFont(.bodyMedium)
         .foregroundStyle(.beige800)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -134,7 +134,7 @@ private extension HifiView {
       // 폰트 웨이트는 고정(Medium)해 글자 폭 변화로 인한 흔들림 제거.
       // 밑줄은 항상 자리(4px) 확보하고 색만 토글해 세로 레이아웃 재계산 방지.
       Text(category.title)
-        .pretendardCustomFont(textStyle: .labelMedium)
+        .pretendardFont(.labelMedium)
         .foregroundStyle(isSelected ? .primary500 : .gray300)
         .frame(maxWidth: .infinity)
         .frame(maxHeight: .infinity)
@@ -158,7 +158,7 @@ private extension HifiView {
         let isSelected = store.selectedSort == sort
         Button { send(.sortTapped(sort)) } label: {
           Text(sort.title)
-            .pretendardCustomFont(textStyle: isSelected ? .semiBold12 : .labelSmall)
+            .pretendardFont(isSelected ? .semiBold12 : .labelSmall)
             .foregroundStyle(isSelected ? Color.beige50 : Color.primary500)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -191,14 +191,14 @@ private extension HifiView {
           VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 6) {
               Text("#\(item.category)")
-                .pretendardCustomFont(textStyle: .semiBold12)
+                .pretendardFont(.semiBold12)
                 .foregroundStyle(.primary500)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
 
               Text(item.title)
-                .pretendardCustomFont(textStyle: .headingSmall)
+                .pretendardFont(.headingSmall)
                 .foregroundStyle(.neutral500)
                 .kerning(-0.35)
                 .lineSpacing(14 * 0.28)
@@ -208,7 +208,7 @@ private extension HifiView {
             }
 
             Text(item.summary)
-              .pretendardCustomFont(textStyle: .regular13)
+              .pretendardFont(.regular13)
               .foregroundStyle(.neutral400)
               .lineSpacing(13 * 0.4)
               .lineLimit(1)
@@ -255,7 +255,7 @@ private extension HifiView {
         Image(systemName: "clock")
           .font(.system(size: 11, weight: .regular))
         Text("\(item.minutes)분")
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
       }
       .foregroundStyle(.neutral300)
 
@@ -263,7 +263,7 @@ private extension HifiView {
         Image(systemName: "eye")
           .font(.system(size: 11, weight: .regular))
         Text(item.viewCount.decimalFormatted)
-          .pretendardCustomFont(textStyle: .labelSmall)
+          .pretendardFont(.labelSmall)
       }
       .foregroundStyle(.neutral300)
     }

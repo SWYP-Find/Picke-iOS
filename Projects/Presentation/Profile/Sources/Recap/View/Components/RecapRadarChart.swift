@@ -72,7 +72,7 @@ public struct RecapRadarChart: View {
         // 축 라벨 (원칙: 600/neutral900, 나머지: 500/gray400)
         ForEach(Array(axes.enumerated()), id: \.offset) { index, axis in
           Text(axis.label)
-            .pretendardCustomFont(textStyle: index == 0 ? .labelXSmall : .medium10)
+            .pretendardFont(index == 0 ? .labelXSmall : .medium10)
             .foregroundStyle(index == 0 ? .neutral900 : .gray400)
             .fixedSize()
             .position(labelPosition(center: center, radius: radius, index: index))

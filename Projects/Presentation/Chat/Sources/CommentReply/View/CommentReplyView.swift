@@ -106,7 +106,7 @@ public struct CommentReplyView: View {
         Image(systemName: systemImage)
           .font(.system(size: 13, weight: .medium))
         Text(title)
-          .pretendardCustomFont(textStyle: .medium13)
+          .pretendardFont(.medium13)
       }
       .foregroundStyle(.beige50)
       .padding(.horizontal, 14)
@@ -134,7 +134,7 @@ private extension CommentReplyView {
 
       // 타이틀 "댓글" — heading/sm Pretendard SemiBold 16, gray500
       Text("댓글")
-        .pretendardCustomFont(textStyle: .headingMedium)
+        .pretendardFont(.headingMedium)
         .foregroundStyle(.gray500)
 
       Spacer()
@@ -190,7 +190,7 @@ private extension CommentReplyView {
   func replyCountHeader() -> some View {
     // Figma: "답글 N개" 헤더 — beige200 배경, 하단 구분선, gray800 SemiBold 13
     Text("답글 \(store.replies.count)개")
-      .pretendardCustomFont(textStyle: .semiBold13)
+      .pretendardFont(.semiBold13)
       .foregroundStyle(.gray800)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(12)
@@ -263,7 +263,7 @@ private extension CommentReplyView {
       optionBadge(label: optionLabel, option: option)
 
       Text(content)
-        .pretendardCustomFont(textStyle: .regular13)
+        .pretendardFont(.regular13)
         .foregroundStyle(.gray400)
         .lineSpacing(13 * 0.4)
         .fixedSize(horizontal: false, vertical: true)
@@ -314,7 +314,7 @@ private extension CommentReplyView {
       VStack(alignment: .leading, spacing: 0) {
         HStack(spacing: 4) {
           Text(author)
-            .pretendardCustomFont(textStyle: .labelMedium)
+            .pretendardFont(.labelMedium)
             .foregroundStyle(.gray500)
             .lineLimit(1)
 
@@ -325,7 +325,7 @@ private extension CommentReplyView {
 
         // 시간 — caption/sm/semibold Pretendard SemiBold 10, gray300
         Text(timeAgo)
-          .pretendardCustomFont(textStyle: .labelXSmall)
+          .pretendardFont(.labelXSmall)
           .foregroundStyle(.gray300)
       }
 
@@ -347,7 +347,7 @@ private extension CommentReplyView {
   @ViewBuilder
   func myBadge() -> some View {
     Text("나")
-      .pretendardCustomFont(textStyle: .labelXSmall)
+      .pretendardFont(.labelXSmall)
       .foregroundStyle(.beige50)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
@@ -356,7 +356,7 @@ private extension CommentReplyView {
 
   func optionBadge(label: String, option: CommentOption) -> some View {
     Text(label)
-      .pretendardCustomFont(textStyle: .labelSmall)
+      .pretendardFont(.labelSmall)
       .foregroundStyle(option == .a ? .primary500 : .beige50)
       .padding(.horizontal, option == .a ? 4 : 6)
       .padding(.vertical, 2)
@@ -374,7 +374,7 @@ private extension CommentReplyView {
         .frame(width: 16, height: 16)
 
       Text(text)
-        .pretendardCustomFont(textStyle: .labelSmall)
+        .pretendardFont(.labelSmall)
     }
     .padding(.horizontal, 6)
     .padding(.vertical, 4)
@@ -390,13 +390,13 @@ private extension CommentReplyView {
       VStack(alignment: .leading, spacing: 6) {
         // Figma textarea: 텍스트/플레이스홀더 gray300, Pretendard Regular 13
         TextField("내 의견은 어쩌구 저쩌구", text: $store.replyText, axis: .vertical)
-          .pretendardCustomFont(textStyle: .regular13)
+          .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
           .lineLimit(1 ... 3)
           .focused($isReplyFocused)
 
         Text("\(store.replyText.count)/200")
-          .pretendardCustomFont(textStyle: .labelXSmall)
+          .pretendardFont(.labelXSmall)
           .foregroundStyle(.gray300)
           .frame(maxWidth: .infinity, alignment: .trailing)
       }

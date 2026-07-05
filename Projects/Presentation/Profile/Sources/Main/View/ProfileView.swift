@@ -99,11 +99,11 @@ private extension ProfileView {
 
         VStack(alignment: .leading, spacing: 2) {
           Text(store.nickname)
-            .pretendardCustomFont(textStyle: .headingMedium)
+            .pretendardFont(.headingMedium)
             .foregroundStyle(.gray800)
 
           Text("@\(store.userCode)")
-            .pretendardCustomFont(textStyle: .regular13)
+            .pretendardFont(.regular13)
             .foregroundStyle(.gray300)
         }
 
@@ -147,13 +147,13 @@ private extension ProfileView {
           ZStack {
             Circle().fill(.secondary300)
             Text("P")
-              .pretendardCustomFont(textStyle: .bold11)
+              .pretendardFont(.bold11)
               .foregroundStyle(.gray800)
           }
           .frame(width: 24, height: 24)
 
           Text("내 포인트 \(store.point)")
-            .pretendardCustomFont(textStyle: .semiBold12)
+            .pretendardFont(.semiBold12)
             .foregroundStyle(.beige50)
 
           Spacer(minLength: 8)
@@ -167,7 +167,7 @@ private extension ProfileView {
         send(.freeChargeTapped)
       } label: {
         Text("무료 충전")
-          .pretendardCustomFont(textStyle: .medium11)
+          .pretendardFont(.medium11)
           .foregroundStyle(.gray800)
           .padding(.vertical, 4)
           .padding(.horizontal, 6)
@@ -214,11 +214,11 @@ private extension ProfileView {
 
         VStack(alignment: .leading, spacing: 4) {
           Text("나의 철학자 유형")
-            .pretendardCustomFont(textStyle: .medium11)
+            .pretendardFont(.medium11)
             .foregroundStyle(.gray300)
 
           Text(store.philosopherDisplay)
-            .pretendardCustomFont(textStyle: .headingSmall)
+            .pretendardFont(.headingSmall)
             .foregroundStyle(.gray700)
         }
 
@@ -257,7 +257,7 @@ private extension ProfileView {
     } label: {
       HStack {
         Text(item.rawValue)
-          .pretendardCustomFont(textStyle: .headingSmall)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.gray800)
 
         Spacer()
