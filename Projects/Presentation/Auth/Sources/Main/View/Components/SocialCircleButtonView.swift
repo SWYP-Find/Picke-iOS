@@ -5,18 +5,18 @@
 //  Created by Wonji Suh  on 5/14/26.
 //
 
-import SwiftUI
 import AuthenticationServices
 import ComposableArchitecture
 import Entity
+import SwiftUI
 
 struct SocialCircleButtonView: View {
   @State var store: StoreOf<LoginFeature>
   let type: SocialType
   let onTap: () -> Void
-  
+
   private let circleSize: CGFloat = 72
-  
+
   @ViewBuilder
   var body: some View {
     switch type {
@@ -25,13 +25,13 @@ struct SocialCircleButtonView: View {
         Circle()
           .fill(.black)
           .frame(width: circleSize, height: circleSize)
-        
+
         Image(systemName: type.image)
           .resizable()
           .scaledToFit()
           .frame(width: 32, height: 32)
-          .foregroundColor(.white)
-        
+          .foregroundStyle(.white)
+
         SignInWithAppleButton(.signIn) { request in
           store.send(.async(.prepareAppleRequest(request)))
         } onCompletion: { result in
@@ -42,7 +42,7 @@ struct SocialCircleButtonView: View {
         .opacity(0.02)
         .allowsHitTesting(true)
       }
-      
+
     case .google:
       Button(action: onTap) {
         Circle()
@@ -57,7 +57,7 @@ struct SocialCircleButtonView: View {
           )
       }
       .buttonStyle(.plain)
-      
+
     case .kakao:
       Button(action: onTap) {
         Circle()
@@ -72,7 +72,6 @@ struct SocialCircleButtonView: View {
           )
       }
       .buttonStyle(.plain)
-      
     }
   }
 }
