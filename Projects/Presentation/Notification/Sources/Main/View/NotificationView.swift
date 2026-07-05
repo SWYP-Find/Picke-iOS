@@ -97,10 +97,10 @@ private extension NotificationView {
         .foregroundStyle(isSelected ? .beige50 : .primary500)
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
-        .background(isSelected ? Color.primary500 : Color.primary50, in: RoundedRectangle(cornerRadius: 2))
+        .background(isSelected ? .primary500 : .primary50, in: RoundedRectangle(cornerRadius: 2))
         .overlay(
           RoundedRectangle(cornerRadius: 2)
-            .stroke(isSelected ? Color.clear : Color.primary500, lineWidth: 1)
+            .stroke(isSelected ? .clear : .primary500, lineWidth: 1)
         )
     }
     .buttonStyle(.plain)

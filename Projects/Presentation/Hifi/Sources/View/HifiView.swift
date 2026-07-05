@@ -159,7 +159,7 @@ private extension HifiView {
         Button { send(.sortTapped(sort)) } label: {
           Text(sort.title)
             .pretendardFont(isSelected ? .semiBold12 : .labelSmall)
-            .foregroundStyle(isSelected ? Color.beige50 : Color.primary500)
+            .foregroundStyle(isSelected ? .beige50 : .primary500)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(isSelected ? .primary500 : .bgDefault, in: RoundedRectangle(cornerRadius: 4))

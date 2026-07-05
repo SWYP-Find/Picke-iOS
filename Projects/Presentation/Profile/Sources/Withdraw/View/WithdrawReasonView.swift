@@ -98,9 +98,9 @@ private extension WithdrawReasonView {
   func checkbox(isSelected: Bool) -> some View {
     ZStack {
       Circle()
-        .fill(isSelected ? Color.primary500 : Color.primary50)
+        .fill(isSelected ? .primary500 : .primary50)
         .overlay(
-          Circle().stroke(isSelected ? Color.primary700 : Color.primary100, lineWidth: 1)
+          Circle().stroke(isSelected ? .primary700 : .primary100, lineWidth: 1)
         )
 
       if isSelected {

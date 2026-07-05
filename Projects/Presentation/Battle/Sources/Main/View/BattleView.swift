@@ -320,7 +320,7 @@ private extension BattleView {
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 24)
-      .background(isSelected ? Color.neutral900 : Color.gray700, in: RoundedRectangle(cornerRadius: 2))
+      .background(isSelected ? .neutral900 : .gray700, in: RoundedRectangle(cornerRadius: 2))
       .overlay(
         RoundedRectangle(cornerRadius: 2)
           .stroke(isSelected ? .secondary500 : .clear, lineWidth: 1)

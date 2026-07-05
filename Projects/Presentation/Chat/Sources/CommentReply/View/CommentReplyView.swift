@@ -410,7 +410,7 @@ private extension CommentReplyView {
           .font(.system(size: 16, weight: .semibold))
           .foregroundStyle(.beige50)
           .frame(width: 36, height: 36)
-          .background(store.isSendEnabled ? Color.primary500 : Color.primary200, in: Circle())
+          .background(store.isSendEnabled ? .primary500 : .primary200, in: Circle())
       }
       .buttonStyle(.plain)
       .disabled(!store.isSendEnabled)

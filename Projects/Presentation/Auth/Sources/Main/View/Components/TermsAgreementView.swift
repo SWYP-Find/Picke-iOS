@@ -113,8 +113,8 @@ struct TermsAgreementView: View {
   private func checkbox(isChecked: Bool) -> some View {
     ZStack {
       Circle()
-        .fill(isChecked ? Color.primary500 : Color.primary50)
-        .overlay { Circle().stroke(isChecked ? Color.primary500 : Color.primary100, lineWidth: 1) }
+        .fill(isChecked ? .primary500 : .primary50)
+        .overlay { Circle().stroke(isChecked ? .primary500 : .primary100, lineWidth: 1) }
       if isChecked {
         Image(systemName: "checkmark")
           .font(.system(size: 12, weight: .bold))

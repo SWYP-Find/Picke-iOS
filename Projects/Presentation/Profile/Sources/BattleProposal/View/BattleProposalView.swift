@@ -82,7 +82,7 @@ private extension BattleProposalView {
               .foregroundStyle(isSelected ? .beige50 : .gray300)
               .frame(maxWidth: .infinity)
               .padding(.vertical, 8)
-              .background(isSelected ? Color.primary500 : Color.beige50)
+              .background(isSelected ? .primary500 : .beige50)
               .overlay(alignment: .trailing) {
                 if !isSelected, index < BattleProposalCategory.allCases.count - 1 {
                   Rectangle().fill(.beige600).frame(width: 1)
@@ -212,7 +212,7 @@ private extension BattleProposalView {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 17)
         .background(
-          store.isSubmitEnabled ? Color.primary500 : Color.primary200,
+          store.isSubmitEnabled ? .primary500 : .primary200,
           in: RoundedRectangle(cornerRadius: 2)
         )
     }

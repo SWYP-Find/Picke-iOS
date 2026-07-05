@@ -100,7 +100,7 @@ private struct NotificationToggle: View {
   var body: some View {
     ZStack(alignment: isOn ? .trailing : .leading) {
       Capsule()
-        .fill(isOn ? Color.primary500 : Color.neutral200)
+        .fill(isOn ? .primary500 : .neutral200)
 
       Circle()
         .fill(.beige50)

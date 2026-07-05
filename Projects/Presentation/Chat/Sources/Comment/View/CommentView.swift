@@ -304,7 +304,7 @@ private extension CommentView {
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) {
           Rectangle()
-            .fill(isSelected ? Color.primary500 : Color.clear)
+            .fill(isSelected ? .primary500 : .clear)
             .frame(height: 2.5)
         }
     }
@@ -323,7 +323,7 @@ private extension CommentView {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
-          isSelected ? Color.primary500 : Color.primary50,
+          isSelected ? .primary500 : .primary50,
           in: RoundedRectangle(cornerRadius: 2)
         )
         .overlay {
@@ -597,7 +597,7 @@ private extension CommentView {
         .font(.system(size: 16, weight: .semibold))
         .foregroundStyle(.beige50)
         .frame(width: 36, height: 36)
-        .background(store.isSendEnabled ? Color.primary500 : Color.primary200, in: Circle())
+        .background(store.isSendEnabled ? .primary500 : .primary200, in: Circle())
     }
     .buttonStyle(.plain)
     .disabled(!store.isSendEnabled)

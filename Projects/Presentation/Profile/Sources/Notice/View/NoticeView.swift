@@ -82,7 +82,7 @@ private extension NoticeView {
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) {
           Rectangle()
-            .fill(isSelected ? Color.primary500 : Color.clear)
+            .fill(isSelected ? .primary500 : .clear)
             .frame(height: 3)
         }
     }
