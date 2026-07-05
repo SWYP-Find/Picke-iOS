@@ -241,8 +241,16 @@ extension NotificationFeature {
   /// 로드된 항목 기준 미읽음 존재 여부를 전역 빨간점 플래그에 반영.
   /// 개별 읽음/모두 읽음 즉시 반영용. (카테고리 탭은 부분 정보라 다음 전체 조회/새 푸시 때 보정됨)
   private func updateUnreadBadge(state: inout State) {
-    let hasUnread = state.hasUnread
-    state.$hasUnreadNotification.withLock { $0 = hasUnread }
+    // QA-47: 방금 모두읽음(readAllPending) 했는데 서버가 아직 미읽음으로 지연되면 빨간점을 되살리지 않는다.
+    // 서버가 읽음을 반영(미읽음 없음)하면 점을 끄고 pending 을 해제한다. (HomeFeature 와 동일 가드)
+    if state.hasUnread {
+      if !state.readAllPending {
+        state.$hasUnreadNotification.withLock { $0 = true }
+      }
+    } else {
+      state.$hasUnreadNotification.withLock { $0 = false }
+      state.$readAllPending.withLock { $0 = false }
+    }
   }
 
   private func handleDelegateAction(
