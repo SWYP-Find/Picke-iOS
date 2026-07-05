@@ -253,9 +253,9 @@ extension ChatRoomView {
       .fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
-      .background(background, in: RoundedRectangle(cornerRadius: 2))
+      .background(background, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(border, lineWidth: 1)
       )
   }
@@ -344,9 +344,9 @@ extension ChatRoomView {
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
-        .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
+        .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
         .overlay(
-          RoundedRectangle(cornerRadius: 2)
+          RoundedRectangle(cornerRadius: .radiusDefault)
             .stroke(isSelected ? .borderSecondarySelected : .borderBeigeDefault, lineWidth: 1)
         )
     }

@@ -70,15 +70,15 @@ private extension RecapLockedView {
     .frame(maxWidth: .infinity)
     .padding(.vertical, 16)
     .padding(.horizontal, 24)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.beige600, lineWidth: 1)
     )
     .overlay(alignment: .top) {
       Rectangle().fill(.primary500).frame(height: 3)
     }
-    .clipShape(RoundedRectangle(cornerRadius: 2))
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
   // MARK: 성향 분석 (블러 + 잠금 안내)
@@ -104,12 +104,12 @@ private extension RecapLockedView {
       .padding(.vertical, 16)
       .padding(.horizontal, 20)
       .frame(maxWidth: .infinity)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: 2))
+      .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
     }
   }
 }

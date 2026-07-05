@@ -48,7 +48,7 @@ public struct RecapScoreBar: View {
     .padding(.vertical, 8)
     .padding(.horizontal, 10)
     .frame(maxWidth: .infinity)
-    .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .onAppear {
       progress = 0
       withAnimation(.easeOut(duration: 0.7)) { progress = 1 }

@@ -87,9 +87,9 @@ private extension RecapView {
   func card(@ViewBuilder _ content: () -> some View) -> some View {
     content()
       .frame(maxWidth: .infinity)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)
       )
   }
@@ -216,7 +216,7 @@ private extension RecapView {
       }
       .frame(maxWidth: .infinity)
       .frame(height: 52)
-      .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
+      .background(.primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
     }
     .buttonStyle(.plain)
   }

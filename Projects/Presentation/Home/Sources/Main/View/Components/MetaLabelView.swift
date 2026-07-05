@@ -37,6 +37,6 @@ struct TagBadgeView: View {
       .foregroundStyle(.primary500)
       .padding(.horizontal, 8)
       .padding(.vertical, 2)
-      .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+      .background(.primary50, in: RoundedRectangle(cornerRadius: .radiusDefault))
   }
 }

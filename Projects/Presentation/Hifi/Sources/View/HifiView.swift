@@ -195,7 +195,7 @@ private extension HifiView {
                 .foregroundStyle(.primary500)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+                .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
 
               Text(item.title)
                 .pretendardFont(.headingSmall)
@@ -244,7 +244,7 @@ private extension HifiView {
     }
     .frame(width: 76)
     .frame(maxHeight: .infinity)
-    .clipShape(RoundedRectangle(cornerRadius: 2))
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
   @ViewBuilder

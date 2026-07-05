@@ -23,13 +23,13 @@ struct ExploreSkeletonView: View {
   @ViewBuilder
   private func row() -> some View {
     HStack(alignment: .center, spacing: 8) {
-      SkeletonView(cornerRadius: 2)
+      SkeletonView(cornerRadius: .radiusDefault)
         .frame(width: 76, height: 76)
 
       VStack(alignment: .leading, spacing: 24) {
         VStack(alignment: .leading, spacing: 8) {
           HStack(spacing: 6) {
-            SkeletonView(cornerRadius: 2).frame(width: 44, height: 18)
+            SkeletonView(cornerRadius: .radiusDefault).frame(width: 44, height: 18)
             SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 14)
           }
           SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 12)

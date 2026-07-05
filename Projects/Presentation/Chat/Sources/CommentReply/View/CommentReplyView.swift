@@ -351,7 +351,7 @@ private extension CommentReplyView {
       .foregroundStyle(.beige50)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
-      .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
+      .background(.primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
   func optionBadge(label: String, option: CommentOption) -> some View {
@@ -360,7 +360,7 @@ private extension CommentReplyView {
       .foregroundStyle(option == .a ? .primary500 : .beige50)
       .padding(.horizontal, option == .a ? 4 : 6)
       .padding(.vertical, 2)
-      .background(option == .a ? .beige600 : .primary500, in: RoundedRectangle(cornerRadius: 2))
+      .background(option == .a ? .beige600 : .primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
   func actionLabel(

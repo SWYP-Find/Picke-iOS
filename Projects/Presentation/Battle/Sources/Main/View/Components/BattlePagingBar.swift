@@ -42,7 +42,7 @@ private extension BattlePagingBar {
   @ViewBuilder
   func segment(_ index: Int) -> some View {
     let isFilled = index <= currentIndex
-    RoundedRectangle(cornerRadius: 2, style: .continuous)
+    RoundedRectangle(cornerRadius: .radiusDefault, style: .continuous)
       .fill(isFilled ? .beige50 : .gray300)
       .frame(maxWidth: .infinity)
       .frame(height: 4)

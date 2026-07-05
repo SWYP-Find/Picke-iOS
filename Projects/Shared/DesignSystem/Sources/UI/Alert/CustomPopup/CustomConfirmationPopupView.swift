@@ -131,13 +131,13 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.top, 20)
     .frame(maxWidth: 313)
-    .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige500, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.primary500, lineWidth: 1.5)
     )
     .opacity(0.9)
-    .clipShape(RoundedRectangle(cornerRadius: 2))
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
     .onTapGesture {}
   }
 
@@ -174,13 +174,13 @@ struct CustomConfirmationPopup: View {
     content()
       .padding(.top, 20)
       .frame(maxWidth: 313)
-      .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige500, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.primary500, lineWidth: 1.5)
       )
       .opacity(opacity)
-      .clipShape(RoundedRectangle(cornerRadius: 2))
+      .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
       .onTapGesture {}
   }
 
@@ -294,13 +294,13 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.top, 20)
     .frame(maxWidth: 313)
-    .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige500, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.primary500, lineWidth: 1.5)
     )
     .opacity(0.9)
-    .clipShape(RoundedRectangle(cornerRadius: 2))
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
     .onTapGesture {}
   }
 
@@ -381,7 +381,7 @@ struct CustomConfirmationPopup: View {
               .foregroundStyle(.neutral500)
               .frame(maxWidth: .infinity)
               .frame(height: 48)
-              .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+              .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
           }
           .buttonStyle(.plain)
         }
@@ -394,7 +394,7 @@ struct CustomConfirmationPopup: View {
             .frame(height: 48)
             .background(
               isDestructive ? Color.errorDefault : Color.primary500,
-              in: RoundedRectangle(cornerRadius: 2)
+              in: RoundedRectangle(cornerRadius: .radiusDefault)
             )
         }
         .buttonStyle(.plain)
@@ -403,9 +403,9 @@ struct CustomConfirmationPopup: View {
     .padding(.vertical, 28)
     .padding(.horizontal, 20)
     .frame(maxWidth: 320)
-    .background(ComponentToken.Popup.background, in: RoundedRectangle(cornerRadius: 2))
+    .background(ComponentToken.Popup.background, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(ComponentToken.Popup.border, lineWidth: 1)
     )
     .onTapGesture {}
@@ -447,9 +447,9 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.top, 20)
     .frame(maxWidth: 313)
-    .background(.beige500, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige500, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.primary500, lineWidth: 1.5)
     )
     .opacity(0.9)

@@ -31,9 +31,9 @@ struct QuizCardView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige700, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
     )
   }
 
@@ -94,9 +94,9 @@ struct QuizCardView: View {
       }
       .frame(maxWidth: .infinity)
       .padding(12)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2).stroke(.beige500, lineWidth: 1)
+        RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige500, lineWidth: 1)
       )
       .opacity(hasAnswered && !isSelected ? 0.5 : 1)
     }

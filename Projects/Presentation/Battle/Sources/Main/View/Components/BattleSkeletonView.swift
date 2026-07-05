@@ -37,7 +37,7 @@ struct BattleSkeletonView: View {
     maxWidth: Bool = false,
     height: CGFloat
   ) -> some View {
-    DarkSkeletonBlock(cornerRadius: 2)
+    DarkSkeletonBlock(cornerRadius: .radiusDefault)
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)

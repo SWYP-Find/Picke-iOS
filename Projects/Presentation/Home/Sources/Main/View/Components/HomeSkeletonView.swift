@@ -27,7 +27,7 @@ private struct HomeHeroSkeletonView: View {
   var body: some View {
     VStack(spacing: 0) {
       HStack {
-        SkeletonBlock(width: 82, height: 18, cornerRadius: 2, color: .primary500.opacity(0.45))
+        SkeletonBlock(width: 82, height: 18, cornerRadius: .radiusDefault, color: .primary500.opacity(0.45))
         Spacer()
         SkeletonBlock(width: 36, height: 18, cornerRadius: 9, color: .neutral500.opacity(0.5))
       }
@@ -78,9 +78,9 @@ private struct HomeHotBattlesSkeletonView: View {
             }
             .padding(12)
             .frame(width: 220, alignment: .leading)
-            .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+            .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
             .overlay(
-              RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+              RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
             )
           }
         }
@@ -156,9 +156,9 @@ private struct HomeTodayPickeSkeletonView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige700, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
     )
   }
 
@@ -188,9 +188,9 @@ private struct HomeTodayPickeSkeletonView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige700, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
     )
   }
 }
@@ -216,9 +216,9 @@ private struct HomeNewBattlesSkeletonView: View {
             }
           }
           .padding(12)
-          .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+          .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
           .overlay(
-            RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+            RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
           )
         }
       }
@@ -239,9 +239,9 @@ private struct SkeletonBattleOption: View {
     }
     .padding(8)
     .frame(maxWidth: .infinity)
-    .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige300, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     )
   }
 }

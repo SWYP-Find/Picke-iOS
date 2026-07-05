@@ -236,7 +236,7 @@ private extension BattleView {
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
-          .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+          .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
       }
     }
   }
@@ -253,7 +253,7 @@ private extension BattleView {
     .padding(.horizontal, 12)
     .padding(.vertical, 6)
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.gray500, lineWidth: 1)
     )
   }
@@ -320,9 +320,9 @@ private extension BattleView {
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 24)
-      .background(isSelected ? .neutral900 : .gray700, in: RoundedRectangle(cornerRadius: 2))
+      .background(isSelected ? .neutral900 : .gray700, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(isSelected ? .secondary500 : .clear, lineWidth: 1)
       )
     }

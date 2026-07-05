@@ -252,7 +252,7 @@ extension PreVoteView {
           .foregroundStyle(.primary500)
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
-          .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+          .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
       }
     }
   }
@@ -326,9 +326,9 @@ extension PreVoteView {
       .padding(8)
       .frame(maxWidth: .infinity)
       .frame(height: PreVoteLayout.optionCardHeight)
-      .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige300, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(isSelected ? .beige700 : .beige500, lineWidth: 1)
       )
       .opacity(isSelected ? 1.0 : 0.88)

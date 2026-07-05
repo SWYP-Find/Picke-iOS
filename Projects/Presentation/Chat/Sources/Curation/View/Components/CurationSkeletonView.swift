@@ -25,7 +25,7 @@ struct CurationSkeletonView: View {
     VStack(alignment: .leading, spacing: 16) {
       // meta
       HStack(spacing: 10) {
-        SkeletonView(cornerRadius: 2).frame(width: 44, height: 18)
+        SkeletonView(cornerRadius: .radiusDefault).frame(width: 44, height: 18)
         Spacer()
         SkeletonView(cornerRadius: 4).frame(width: 36, height: 12)
         SkeletonView(cornerRadius: 4).frame(width: 36, height: 12)
@@ -43,9 +43,9 @@ struct CurationSkeletonView: View {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay {
-      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     }
   }
 
@@ -60,9 +60,9 @@ struct CurationSkeletonView: View {
     }
     .frame(maxWidth: .infinity)
     .padding(8)
-    .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige300, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay {
-      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     }
   }
 }

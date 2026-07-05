@@ -46,9 +46,9 @@ struct VoteCardView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1)
+      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
     )
   }
 
@@ -59,7 +59,7 @@ struct VoteCardView: View {
         .pretendardFont(.headingSmall)
         .foregroundStyle(.primary500)
         .frame(width: 35, height: 21)
-        .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+        .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
 
       Spacer()
 
@@ -104,17 +104,17 @@ struct VoteCardView: View {
         .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 8)
         .frame(minWidth: 52, minHeight: 24)
-        .background(.beige200, in: RoundedRectangle(cornerRadius: 2))
+        .background(.beige200, in: RoundedRectangle(cornerRadius: .radiusDefault))
         .overlay(
-          RoundedRectangle(cornerRadius: 2)
+          RoundedRectangle(cornerRadius: .radiusDefault)
             .stroke(.primary500, lineWidth: 1)
         )
     } else {
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .fill(.beige200)
         .frame(width: 52, height: 24)
         .overlay(
-          RoundedRectangle(cornerRadius: 2)
+          RoundedRectangle(cornerRadius: .radiusDefault)
             .stroke(.beige600, lineWidth: 1)
         )
     }
@@ -145,9 +145,9 @@ struct VoteCardView: View {
         .pretendardFont(.semiBold13)
         .foregroundStyle(.neutral900)
         .frame(maxWidth: .infinity, minHeight: 44)
-        .background(.beige400, in: RoundedRectangle(cornerRadius: 2))
+        .background(.beige400, in: RoundedRectangle(cornerRadius: .radiusDefault))
         .overlay(
-          RoundedRectangle(cornerRadius: 2)
+          RoundedRectangle(cornerRadius: .radiusDefault)
             .stroke(isSelected ? .primary500 : .beige600, lineWidth: isSelected ? 1.5 : 1)
         )
     }

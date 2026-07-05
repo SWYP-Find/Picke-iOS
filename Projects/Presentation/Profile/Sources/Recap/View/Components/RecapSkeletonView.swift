@@ -77,7 +77,7 @@ struct RecapSkeletonView: View {
           }
         }
 
-        SkeletonBlock(cornerRadius: 2, tone: .light).frame(height: 52)
+        SkeletonBlock(cornerRadius: .radiusDefault, tone: .light).frame(height: 52)
       }
       .padding(.top, 20)
       .padding(.horizontal, 16)
@@ -90,9 +90,9 @@ struct RecapSkeletonView: View {
   private func cardBox(@ViewBuilder _ content: () -> some View) -> some View {
     content()
       .frame(maxWidth: .infinity)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)
       )
   }

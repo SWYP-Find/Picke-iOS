@@ -48,9 +48,9 @@ public struct RecapMatchCard: View {
     }
     .padding(16)
     .frame(maxWidth: .infinity)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.beige600, lineWidth: 1)
     )
   }

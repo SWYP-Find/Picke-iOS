@@ -51,7 +51,7 @@ struct TermsAgreementView: View {
 
   @ViewBuilder
   private func grabber() -> some View {
-    RoundedRectangle(cornerRadius: 2)
+    RoundedRectangle(cornerRadius: .radiusDefault)
       .fill(.beige600)
       .frame(width: 40, height: 4)
   }
@@ -132,7 +132,7 @@ struct TermsAgreementView: View {
         .foregroundStyle(.beige50)
         .frame(maxWidth: .infinity)
         .frame(height: 52)
-        .background(.primary500, in: RoundedRectangle(cornerRadius: 2))
+        .background(.primary500, in: RoundedRectangle(cornerRadius: .radiusDefault))
     }
     .buttonStyle(.plain)
     .disabled(!store.canAgree)

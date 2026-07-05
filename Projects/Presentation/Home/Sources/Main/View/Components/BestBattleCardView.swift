@@ -27,7 +27,7 @@ struct BestBattleCardView: View {
           .foregroundStyle(.primary500)
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
-          .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+          .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
 
         Text(battle.title)
           .pretendardFont(.headingSmall)

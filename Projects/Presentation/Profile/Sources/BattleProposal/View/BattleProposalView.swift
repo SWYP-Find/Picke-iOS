@@ -92,9 +92,9 @@ private extension BattleProposalView {
           .buttonStyle(.plain)
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 2))
+      .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)
       )
     }
@@ -153,9 +153,9 @@ private extension BattleProposalView {
     .padding(.leading, 8)
     .frame(height: 44)
     .frame(maxWidth: .infinity)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
     .overlay(
-      RoundedRectangle(cornerRadius: 2)
+      RoundedRectangle(cornerRadius: .radiusDefault)
         .stroke(.beige600, lineWidth: 1)
     )
   }
@@ -191,9 +191,9 @@ private extension BattleProposalView {
       .padding(.vertical, 8)
       .padding(.horizontal, 12)
       .frame(maxWidth: .infinity)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
       .overlay(
-        RoundedRectangle(cornerRadius: 2)
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .stroke(.beige600, lineWidth: 1)
       )
     }
@@ -213,7 +213,7 @@ private extension BattleProposalView {
         .padding(.vertical, 17)
         .background(
           store.isSubmitEnabled ? .primary500 : .primary200,
-          in: RoundedRectangle(cornerRadius: 2)
+          in: RoundedRectangle(cornerRadius: .radiusDefault)
         )
     }
     .buttonStyle(.plain)
