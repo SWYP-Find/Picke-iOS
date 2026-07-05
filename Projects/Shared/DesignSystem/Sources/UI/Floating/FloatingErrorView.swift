@@ -22,7 +22,7 @@ public struct FloatingErrorView: View {
         .foregroundStyle(.beige50)
 
       Text(message)
-        .pretendardFont(family: .SemiBold, size: 14)
+        .pretendardCustomFont(textStyle: .headingSmall)
         .foregroundStyle(.beige50)
         .kerning(-0.35)
         .lineSpacing(14 * 0.28)
