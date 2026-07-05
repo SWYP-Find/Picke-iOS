@@ -216,7 +216,7 @@ private extension BattleView {
 
         if !battle.question.isEmpty {
           Text(battle.question)
-            .pretendardFont(family: .Regular, size: 14)
+            .pretendardCustomFont(textStyle: .bodyMedium)
             .foregroundStyle(.gray300)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
@@ -310,7 +310,7 @@ private extension BattleView {
 
         if !option.quote.isEmpty {
           Text(option.quote)
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
             .foregroundStyle(.gray300)
             .multilineTextAlignment(.center)
             .lineLimit(2)
@@ -332,7 +332,7 @@ private extension BattleView {
   @ViewBuilder
   func vsBadge() -> some View {
     Text("VS")
-      .pretendardFont(family: .SemiBold, size: 14)
+      .pretendardCustomFont(textStyle: .headingSmall)
       .foregroundStyle(.neutral900)
       .frame(width: 40, height: 40)
       .background(.secondary200, in: Circle())

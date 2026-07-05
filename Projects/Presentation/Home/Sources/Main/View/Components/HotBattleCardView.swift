@@ -26,7 +26,7 @@ struct HotBattleCardView: View {
             .foregroundStyle(.primary500)
         }
         Text(battle.title)
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.neutral900)
           // 제목 1줄이어도 2줄 높이를 확보해 카드 높이를 통일. 2줄 초과는 말줄임(...) 처리.
           .lineLimit(2, reservesSpace: true)

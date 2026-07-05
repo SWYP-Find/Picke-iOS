@@ -61,7 +61,7 @@ private extension RecapLockedView {
       .frame(width: 68, height: 68)
 
       Text("아직 분석할 기록이 부족해요.\n배틀에 참여하면 성향을 확인할 수 있어요!")
-        .pretendardFont(family: .SemiBold, size: 14)
+        .pretendardCustomFont(textStyle: .headingSmall)
         .foregroundStyle(.gray800)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -97,7 +97,7 @@ private extension RecapLockedView {
           .allowsHitTesting(false)
 
         Text("배틀 5개에 참여하시면\n잠금을 풀 수 있어요!")
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.gray800)
           .multilineTextAlignment(.center)
       }

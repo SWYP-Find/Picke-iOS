@@ -61,7 +61,7 @@ private extension SettingsView {
     } label: {
       HStack {
         Text(item.rawValue)
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(item == .withdraw ? .gray500 : .gray800)
 
         Spacer()

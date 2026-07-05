@@ -151,7 +151,7 @@ private extension RecapView {
   func statCell(value: String, label: String, divider: Bool) -> some View {
     VStack(spacing: 0) {
       Text(value)
-        .pretendardFont(family: .Bold, size: 16)
+        .pretendardCustomFont(textStyle: .labelLarge)
         .foregroundStyle(.gray800)
       Text(label)
         .pretendardFont(family: .Medium, size: 10)
@@ -172,7 +172,7 @@ private extension RecapView {
         .pretendardFont(family: .Bold, size: 10)
         .foregroundStyle(.secondary500)
       Text(topic.tagText)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(.gray800)
       Spacer(minLength: 6)
       Text("\(topic.participationCount)회")
@@ -208,7 +208,7 @@ private extension RecapView {
     } label: {
       HStack(spacing: 6) {
         Text("공유하기")
-          .pretendardFont(family: .SemiBold, size: 16)
+          .pretendardCustomFont(textStyle: .headingMedium)
           .foregroundStyle(.beige50)
         Image(systemName: "square.and.arrow.up")
           .font(.system(size: 16, weight: .semibold))

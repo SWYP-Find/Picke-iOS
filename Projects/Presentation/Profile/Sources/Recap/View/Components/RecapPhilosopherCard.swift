@@ -39,7 +39,7 @@ public struct RecapPhilosopherCard: View {
 
       VStack(spacing: 32) {
         Text(card.description)
-          .pretendardFont(family: .Regular, size: 14)
+          .pretendardCustomFont(textStyle: .bodyMedium)
           .foregroundStyle(.gray400)
           .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)

@@ -134,7 +134,7 @@ private extension CommentReplyView {
 
       // 타이틀 "댓글" — heading/sm Pretendard SemiBold 16, gray500
       Text("댓글")
-        .pretendardFont(family: .SemiBold, size: 16)
+        .pretendardCustomFont(textStyle: .headingMedium)
         .foregroundStyle(.gray500)
 
       Spacer()
@@ -314,7 +314,7 @@ private extension CommentReplyView {
       VStack(alignment: .leading, spacing: 0) {
         HStack(spacing: 4) {
           Text(author)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.gray500)
             .lineLimit(1)
 
@@ -325,7 +325,7 @@ private extension CommentReplyView {
 
         // 시간 — caption/sm/semibold Pretendard SemiBold 10, gray300
         Text(timeAgo)
-          .pretendardFont(family: .SemiBold, size: 10)
+          .pretendardCustomFont(textStyle: .labelXSmall)
           .foregroundStyle(.gray300)
       }
 
@@ -347,7 +347,7 @@ private extension CommentReplyView {
   @ViewBuilder
   func myBadge() -> some View {
     Text("나")
-      .pretendardFont(family: .SemiBold, size: 10)
+      .pretendardCustomFont(textStyle: .labelXSmall)
       .foregroundStyle(.beige50)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
@@ -356,7 +356,7 @@ private extension CommentReplyView {
 
   func optionBadge(label: String, option: CommentOption) -> some View {
     Text(label)
-      .pretendardFont(family: .Medium, size: 12)
+      .pretendardCustomFont(textStyle: .labelSmall)
       .foregroundStyle(option == .a ? .primary500 : .beige50)
       .padding(.horizontal, option == .a ? 4 : 6)
       .padding(.vertical, 2)
@@ -374,7 +374,7 @@ private extension CommentReplyView {
         .frame(width: 16, height: 16)
 
       Text(text)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
     }
     .padding(.horizontal, 6)
     .padding(.vertical, 4)
@@ -396,7 +396,7 @@ private extension CommentReplyView {
           .focused($isReplyFocused)
 
         Text("\(store.replyText.count)/200")
-          .pretendardFont(family: .SemiBold, size: 10)
+          .pretendardCustomFont(textStyle: .labelXSmall)
           .foregroundStyle(.gray300)
           .frame(maxWidth: .infinity, alignment: .trailing)
       }

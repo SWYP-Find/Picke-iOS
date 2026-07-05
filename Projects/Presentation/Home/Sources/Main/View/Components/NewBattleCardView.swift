@@ -68,13 +68,13 @@ extension NewBattleCardView {
   private var titleBlock: some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(battle.title)
-        .pretendardFont(family: .SemiBold, size: 14)
+        .pretendardCustomFont(textStyle: .headingSmall)
         .foregroundStyle(.neutral500)
         .kerning(-0.35)
         .lineLimit(2)
         .frame(maxWidth: .infinity, alignment: .leading)
       Text(battle.summary)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(.neutral200)
         .lineSpacing(12 * 0.4)
         .lineLimit(2)
@@ -113,11 +113,11 @@ extension NewBattleCardView {
       avatar(for: sub, imageURL: imageURL)
       VStack(alignment: .leading, spacing: 2) {
         Text(label)
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.neutral600)
           .kerning(-0.35)
         Text(sub)
-          .pretendardFont(family: .Medium, size: 12)
+          .pretendardCustomFont(textStyle: .labelSmall)
           .foregroundStyle(.neutral300)
       }
       Spacer(minLength: 0)

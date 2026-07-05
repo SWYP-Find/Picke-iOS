@@ -27,7 +27,7 @@ struct BattlePagingBar: View {
 
       // Figma: Pretendard Medium 12, white opacity 0.6, 우측 정렬.
       Text("\(currentIndex + 1)/\(pageCount)")
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(.white)
         .opacity(0.6)
         .kerning(-0.264)

@@ -56,7 +56,7 @@ struct VoteCardView: View {
   private func header() -> some View {
     HStack {
       Text("투표")
-        .pretendardFont(family: .SemiBold, size: 14)
+        .pretendardCustomFont(textStyle: .headingSmall)
         .foregroundStyle(.primary500)
         .frame(width: 35, height: 21)
         .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
@@ -85,7 +85,7 @@ struct VoteCardView: View {
       }
 
       Text(question.summary)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(.neutral300)
     }
     .frame(maxWidth: .infinity)

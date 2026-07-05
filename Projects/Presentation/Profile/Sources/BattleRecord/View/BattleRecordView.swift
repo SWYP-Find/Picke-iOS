@@ -86,7 +86,7 @@ private extension BattleRecordView {
           }
 
           Text(record.title)
-            .pretendardFont(family: .Medium, size: 14)
+            .pretendardCustomFont(textStyle: .labelMedium)
             .foregroundStyle(.gray500)
             .lineLimit(1)
         }
@@ -100,7 +100,7 @@ private extension BattleRecordView {
           .padding(.vertical, 6)
 
         Text(record.createdAt.yearMonthDayDot)
-          .pretendardFont(family: .Medium, size: 12)
+          .pretendardCustomFont(textStyle: .labelSmall)
           .foregroundStyle(.gray300)
       }
       .padding(12)

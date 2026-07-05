@@ -30,7 +30,7 @@ struct BestBattleCardView: View {
           .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
 
         Text(battle.title)
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.neutral900)
           .lineLimit(2)
           .truncationMode(.tail)

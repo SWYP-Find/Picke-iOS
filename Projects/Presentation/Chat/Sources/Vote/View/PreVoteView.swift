@@ -308,7 +308,7 @@ extension PreVoteView {
 
         VStack(spacing: 2) {
           Text(option.stance)
-            .pretendardFont(family: .SemiBold, size: 14)
+            .pretendardCustomFont(textStyle: .headingSmall)
             .foregroundStyle(.neutral600)
             .kerning(-0.35)
             .lineLimit(2)
@@ -316,7 +316,7 @@ extension PreVoteView {
             .multilineTextAlignment(.center)
 
           Text(option.representative)
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
             .foregroundStyle(.neutral300)
             .lineLimit(1)
             .minimumScaleFactor(0.85)

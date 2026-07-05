@@ -92,7 +92,7 @@ extension MainTabView {
   private func tabLabel(for tab: TabItem) -> some View {
     Label {
       Text(tab.title)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
     } icon: {
       tabIcon(for: tab)
     }

@@ -84,10 +84,10 @@ struct HeroCardView: View {
 
       HStack(spacing: 0) {
         Text("\(position)")
-          .pretendardFont(family: .SemiBold, size: 10)
+          .pretendardCustomFont(textStyle: .labelXSmall)
           .foregroundStyle(.secondary50)
         Text("/\(total)")
-          .pretendardFont(family: .SemiBold, size: 10)
+          .pretendardCustomFont(textStyle: .labelXSmall)
           .foregroundStyle(.secondary50)
           .opacity(0.4)
       }
@@ -122,14 +122,14 @@ struct HeroCardView: View {
 
         HStack(spacing: 24) {
           Text(hero.optionA)
-            .pretendardFont(family: .SemiBold, size: 14)
+            .pretendardCustomFont(textStyle: .headingSmall)
             .foregroundStyle(.beige100)
           Image(asset: .vs)
             .resizable()
             .scaledToFit()
             .frame(width: 18, height: 32)
           Text(hero.optionB)
-            .pretendardFont(family: .SemiBold, size: 14)
+            .pretendardCustomFont(textStyle: .headingSmall)
             .foregroundStyle(.beige100)
         }
         .opacity(0.85)
@@ -144,11 +144,11 @@ struct HeroCardView: View {
     HStack(alignment: .bottom) {
       VStack(alignment: .leading, spacing: 0) {
         Text(hero.title)
-          .pretendardFont(family: .SemiBold, size: 16)
+          .pretendardCustomFont(textStyle: .headingMedium)
           .foregroundStyle(.beige100)
           .padding(.bottom, 4)
         Text(hero.summary)
-          .pretendardFont(family: .Medium, size: 12)
+          .pretendardCustomFont(textStyle: .labelSmall)
           .foregroundStyle(.neutral200)
           .lineLimit(2)
 

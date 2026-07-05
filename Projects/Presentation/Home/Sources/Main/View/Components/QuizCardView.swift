@@ -56,7 +56,7 @@ struct QuizCardView: View {
         .foregroundStyle(.neutral900)
         .kerning(-0.375)
       Text(question.summary)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(.neutral200)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -110,7 +110,7 @@ struct QuizCardView: View {
   ) -> some View {
     if isSelected {
       Text(isCorrect ? "O 정답" : "X 오답")
-        .pretendardFont(family: .SemiBold, size: 10)
+        .pretendardCustomFont(textStyle: .labelXSmall)
         .foregroundStyle(isCorrect ? .secondary500 : .primary500)
     } else {
       Color.clear.frame(height: 14)

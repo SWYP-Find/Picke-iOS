@@ -99,7 +99,7 @@ private extension ProfileView {
 
         VStack(alignment: .leading, spacing: 2) {
           Text(store.nickname)
-            .pretendardFont(family: .SemiBold, size: 16)
+            .pretendardCustomFont(textStyle: .headingMedium)
             .foregroundStyle(.gray800)
 
           Text("@\(store.userCode)")
@@ -218,7 +218,7 @@ private extension ProfileView {
             .foregroundStyle(.gray300)
 
           Text(store.philosopherDisplay)
-            .pretendardFont(family: .SemiBold, size: 14)
+            .pretendardCustomFont(textStyle: .headingSmall)
             .foregroundStyle(.gray700)
         }
 
@@ -257,7 +257,7 @@ private extension ProfileView {
     } label: {
       HStack {
         Text(item.rawValue)
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.gray800)
 
         Spacer()

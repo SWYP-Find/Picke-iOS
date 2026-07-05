@@ -59,7 +59,7 @@ private extension BattleProposalView {
   @ViewBuilder
   func fieldLabel(_ text: String) -> some View {
     Text(text)
-      .pretendardFont(family: .Medium, size: 12)
+      .pretendardCustomFont(textStyle: .labelSmall)
       .foregroundStyle(.gray400)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
@@ -78,7 +78,7 @@ private extension BattleProposalView {
             send(.categorySelected(category))
           } label: {
             Text(category.title)
-              .pretendardFont(family: .Medium, size: 14)
+              .pretendardCustomFont(textStyle: .labelMedium)
               .foregroundStyle(isSelected ? .beige50 : .gray300)
               .frame(maxWidth: .infinity)
               .padding(.vertical, 8)
@@ -119,7 +119,7 @@ private extension BattleProposalView {
 
       HStack(spacing: 8) {
         Text("A")
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.primary500)
           .frame(width: 20)
         inputField(text: $store.positionA, placeholder: "첫 번째 입장을 입력하세요")
@@ -127,7 +127,7 @@ private extension BattleProposalView {
 
       HStack(spacing: 8) {
         Text("B")
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.neutral900)
           .frame(width: 20)
         inputField(text: $store.positionB, placeholder: "두 번째 입장을 입력하세요")
@@ -185,7 +185,7 @@ private extension BattleProposalView {
         }
 
         Text("\(store.description.count)/200")
-          .pretendardFont(family: .SemiBold, size: 10)
+          .pretendardCustomFont(textStyle: .labelXSmall)
           .foregroundStyle(.gray400)
       }
       .padding(.vertical, 8)
@@ -207,7 +207,7 @@ private extension BattleProposalView {
       send(.submitTapped)
     } label: {
       Text("제안하기 (-30P)")
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.beige50)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 17)

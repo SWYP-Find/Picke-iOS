@@ -134,7 +134,7 @@ private extension HifiView {
       // 폰트 웨이트는 고정(Medium)해 글자 폭 변화로 인한 흔들림 제거.
       // 밑줄은 항상 자리(4px) 확보하고 색만 토글해 세로 레이아웃 재계산 방지.
       Text(category.title)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(isSelected ? .primary500 : .gray300)
         .frame(maxWidth: .infinity)
         .frame(maxHeight: .infinity)
@@ -198,7 +198,7 @@ private extension HifiView {
                 .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
 
               Text(item.title)
-                .pretendardFont(family: .SemiBold, size: 14)
+                .pretendardCustomFont(textStyle: .headingSmall)
                 .foregroundStyle(.neutral500)
                 .kerning(-0.35)
                 .lineSpacing(14 * 0.28)
@@ -255,7 +255,7 @@ private extension HifiView {
         Image(systemName: "clock")
           .font(.system(size: 11, weight: .regular))
         Text("\(item.minutes)분")
-          .pretendardFont(family: .Medium, size: 12)
+          .pretendardCustomFont(textStyle: .labelSmall)
       }
       .foregroundStyle(.neutral300)
 
@@ -263,7 +263,7 @@ private extension HifiView {
         Image(systemName: "eye")
           .font(.system(size: 11, weight: .regular))
         Text(item.viewCount.decimalFormatted)
-          .pretendardFont(family: .Medium, size: 12)
+          .pretendardCustomFont(textStyle: .labelSmall)
       }
       .foregroundStyle(.neutral300)
     }

@@ -134,7 +134,7 @@ private extension CommentView {
       Spacer()
 
       Text(store.title)
-        .pretendardFont(family: .SemiBold, size: 16)
+        .pretendardCustomFont(textStyle: .headingMedium)
         .foregroundStyle(.neutral500)
         .lineLimit(1)
 
@@ -177,14 +177,14 @@ private extension CommentView {
             name: store.voteSummary.optionA.representative
           )
           Text(percentText(store.voteSummary.optionA.percentage))
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
             .foregroundStyle(.neutral500)
             .fixedSize()
         }
         voteProgress()
         HStack(spacing: 4) {
           Text(percentText(store.voteSummary.optionB.percentage))
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
             .foregroundStyle(.neutral500)
             .fixedSize()
           avatarCircle(
@@ -294,7 +294,7 @@ private extension CommentView {
       send(.filterTapped(filter))
     } label: {
       Text(title)
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(isSelected ? .primary500 : .neutral300)
         .lineLimit(1)
         .minimumScaleFactor(0.7)
@@ -375,7 +375,7 @@ private extension CommentView {
         .font(.system(size: 32, weight: .light))
         .foregroundStyle(.neutral300)
       Text("아직 등록된 의견이 없어요")
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.neutral400)
     }
     .frame(maxWidth: .infinity)
@@ -427,7 +427,7 @@ private extension CommentView {
     VStack(alignment: .leading, spacing: 4) {
       HStack(spacing: 6) {
         Text(comment.isMine ? "나" : comment.author)
-          .pretendardFont(family: .Medium, size: 14)
+          .pretendardCustomFont(textStyle: .labelMedium)
           .foregroundStyle(.neutral500)
           .lineLimit(1)
 
@@ -436,7 +436,7 @@ private extension CommentView {
         }
 
         Text(comment.timeAgo)
-          .pretendardFont(family: .Medium, size: 12)
+          .pretendardCustomFont(textStyle: .labelSmall)
           .foregroundStyle(.neutral300)
       }
 
@@ -447,7 +447,7 @@ private extension CommentView {
   @ViewBuilder
   func myBadge() -> some View {
     Text("나")
-      .pretendardFont(family: .SemiBold, size: 10)
+      .pretendardCustomFont(textStyle: .labelXSmall)
       .foregroundStyle(.beige50)
       .padding(.horizontal, 5)
       .padding(.vertical, 2)
@@ -470,7 +470,7 @@ private extension CommentView {
     let summary = comment.option == .a ? store.voteSummary.optionA : store.voteSummary.optionB
     let label = comment.optionLabel ?? summary.title
     Text(label)
-      .pretendardFont(family: .Medium, size: 12)
+      .pretendardCustomFont(textStyle: .labelSmall)
       .foregroundStyle(.primary500)
       .padding(.horizontal, 4)
       .padding(.vertical, 2)
@@ -492,7 +492,7 @@ private extension CommentView {
   func moreButton(commentId: UUID) -> some View {
     Button { send(.commentRow(id: commentId, action: .openReply)) } label: {
       Text("더보기")
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(.neutral300)
     }
     .buttonStyle(.plain)
@@ -527,7 +527,7 @@ private extension CommentView {
         .font(.system(size: 14, weight: .medium))
         .frame(width: 16, height: 16)
       Text(text)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
     }
   }
 
@@ -580,7 +580,7 @@ private extension CommentView {
       Spacer(minLength: 0)
 
       Text("\(store.commentText.count)/200")
-        .pretendardFont(family: .SemiBold, size: 10)
+        .pretendardCustomFont(textStyle: .labelXSmall)
         .foregroundStyle(.neutral400)
         .frame(maxWidth: .infinity, alignment: .trailing)
     }

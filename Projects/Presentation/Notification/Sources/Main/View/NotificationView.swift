@@ -28,7 +28,7 @@ public struct NotificationView: View {
       ) {
         Button { send(.readAllTapped) } label: {
           Text("모두 읽음")
-            .pretendardFont(family: .Regular, size: 14)
+            .pretendardCustomFont(textStyle: .bodyMedium)
             .foregroundStyle(.gray300)
         }
         .buttonStyle(.plain)
@@ -151,20 +151,20 @@ private extension NotificationView {
         VStack(alignment: .leading, spacing: 6) {
           HStack(spacing: 6) {
             Text(item.title)
-              .pretendardFont(family: .Medium, size: 12)
+              .pretendardCustomFont(textStyle: .labelSmall)
               .foregroundStyle(.gray300)
               .lineLimit(1)
 
             Spacer(minLength: 0)
 
             Text(item.createdAt.relativeKoreanString)
-              .pretendardFont(family: .Medium, size: 12)
+              .pretendardCustomFont(textStyle: .labelSmall)
               .foregroundStyle(.gray300)
               .fixedSize()
           }
 
           Text(item.body)
-            .pretendardFont(family: .SemiBold, size: 14)
+            .pretendardCustomFont(textStyle: .headingSmall)
             .foregroundStyle(.gray500)
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)

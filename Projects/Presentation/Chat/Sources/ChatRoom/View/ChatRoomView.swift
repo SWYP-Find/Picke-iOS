@@ -100,7 +100,7 @@ extension ChatRoomView {
     }
     .overlay(alignment: .center) {
       Text(store.battleTitle)
-        .pretendardFont(family: .SemiBold, size: 16)
+        .pretendardCustomFont(textStyle: .headingMedium)
         .foregroundStyle(.neutral800)
         .lineLimit(1)
         .padding(.horizontal, 56)
@@ -271,7 +271,7 @@ extension ChatRoomView {
   @ViewBuilder
   private func narratorBubble(text: String) -> some View {
     Text(text)
-      .pretendardFont(family: .Regular, size: 12)
+      .pretendardCustomFont(textStyle: .bodySmall)
       .italic()
       .foregroundStyle(.neutral400)
       .lineSpacing(12 * 0.4)
@@ -338,7 +338,7 @@ extension ChatRoomView {
       send(.optionTapped(option.label))
     } label: {
       Text(option.label)
-        .pretendardFont(family: .Medium, size: 12)
+        .pretendardCustomFont(textStyle: .labelSmall)
         .foregroundStyle(isSelected ? .neutral800 : .neutral300)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, alignment: .center)

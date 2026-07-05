@@ -65,7 +65,7 @@ private extension CurationView {
       Spacer()
 
       Text("더 흥미로운 배틀도 있어요!")
-        .pretendardFont(family: .SemiBold, size: 16)
+        .pretendardCustomFont(textStyle: .headingMedium)
         .foregroundStyle(.neutral500)
 
       Spacer()
@@ -99,7 +99,7 @@ private extension CurationView {
         .font(.system(size: 28, weight: .regular))
         .foregroundStyle(.neutral300)
       Text("추천할 배틀이 없어요")
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardCustomFont(textStyle: .labelMedium)
         .foregroundStyle(.neutral300)
     }
     .frame(maxWidth: .infinity)
@@ -147,7 +147,7 @@ private extension CurationView {
           Image(systemName: "clock")
             .font(.system(size: 11, weight: .regular))
           Text(battle.audioDuration.roundedMinuteText)
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
         }
         .foregroundStyle(.neutral300)
 
@@ -155,14 +155,14 @@ private extension CurationView {
           Image(systemName: "eye")
             .font(.system(size: 11, weight: .regular))
           Text("\(battle.viewCount)")
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
         }
         .foregroundStyle(.neutral300)
       }
 
       VStack(alignment: .leading, spacing: 4) {
         Text(battle.title)
-          .pretendardFont(family: .SemiBold, size: 14)
+          .pretendardCustomFont(textStyle: .headingSmall)
           .foregroundStyle(.neutral500)
           .lineSpacing(14 * 0.3)
           .fixedSize(horizontal: false, vertical: true)
@@ -170,7 +170,7 @@ private extension CurationView {
 
         if !battle.summary.isEmpty {
           Text(battle.summary)
-            .pretendardFont(family: .Medium, size: 12)
+            .pretendardCustomFont(textStyle: .labelSmall)
             .foregroundStyle(.neutral200)
             .lineSpacing(12 * 0.4)
             .fixedSize(horizontal: false, vertical: true)

@@ -71,7 +71,7 @@ struct TermsAgreementView: View {
         .pretendardFont(family: .SemiBold, size: 24)
         .foregroundStyle(.neutral900)
       Text("편리한 서비스 이용을 위해 약관에 동의해 주세요")
-        .pretendardFont(family: .Regular, size: 14)
+        .pretendardCustomFont(textStyle: .bodyMedium)
         .foregroundStyle(.neutral400)
     }
     .frame(maxWidth: .infinity)
@@ -85,7 +85,7 @@ struct TermsAgreementView: View {
         HStack(spacing: 12) {
           checkbox(isChecked: isChecked)
           Text(document.title)
-            .pretendardFont(family: .Regular, size: 14)
+            .pretendardCustomFont(textStyle: .bodyMedium)
             .foregroundStyle(.neutral900)
         }
       }
@@ -128,7 +128,7 @@ struct TermsAgreementView: View {
   private func agreeButton() -> some View {
     Button { store.send(.view(.agreeTapped)) } label: {
       Text("동의")
-        .pretendardFont(family: .SemiBold, size: 16)
+        .pretendardCustomFont(textStyle: .headingMedium)
         .foregroundStyle(.beige50)
         .frame(maxWidth: .infinity)
         .frame(height: 52)
