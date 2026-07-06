@@ -99,6 +99,7 @@ private extension BattleView {
       }
       .scrollTargetBehavior(.paging)
       .scrollPosition(id: $currentBattleId)
+      .scrollDisabled(store.battles.count <= 1)
     }
     .ignoresSafeArea()
   }
