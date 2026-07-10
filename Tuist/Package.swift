@@ -29,7 +29,16 @@
       "GoogleMobileAds": .framework,
       "Sentry": .framework,
       "SentrySwiftUI": .framework,
-    ]
+    ],
+    // 외부 SPM 패키지 타깃(Sentry/WebKit 등)에도 Explicitly Built Modules 비활성화.
+    // (Xcode 26 에서 Sentry→WebKit 빌드 시 system Network 모듈의 os_object 미제공 +
+    //  "implicit use of module files is disabled" 에러가 나므로 패키지 레벨에서 끈다)
+    baseSettings: .settings(
+      base: [
+        "SWIFT_ENABLE_EXPLICIT_MODULES": "NO",
+        "CLANG_ENABLE_EXPLICIT_MODULES": "NO",
+      ]
+    )
   )
 #endif
 
