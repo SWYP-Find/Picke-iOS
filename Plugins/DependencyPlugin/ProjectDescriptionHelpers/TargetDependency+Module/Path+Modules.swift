@@ -17,6 +17,20 @@ public extension ProjectDescription.Path {
   static func Presentation(implementation module: ModulePath.Presentations) -> Self {
       return .relativeToRoot("Projects/\(ModulePath.Presentations.name)/\(module.rawValue)")
   }
+
+  static func Presentation(
+    _ module: ModulePath.Presentations,
+    _ target: ModuleTarget
+  ) -> Self {
+    switch target {
+    case .interface:
+      return .relativeToRoot("Projects/\(ModulePath.Presentations.name)/\(module.rawValue)/Interface")
+    case .implementation:
+      return .Presentation(implementation: module)
+    case .testing:
+      return .relativeToRoot("Projects/\(ModulePath.Presentations.name)/\(module.rawValue)/Testing")
+    }
+  }
 }
 
 

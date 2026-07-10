@@ -4,10 +4,9 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeAppModule(
-  name: "Chat",
+let project = Project.configure(
+  moduleType: .feature(name: "Chat"),
   bundleId: .appBundleID(name: ".Chat"),
-  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .Domain(implements: .UseCase),
@@ -16,6 +15,5 @@ let project = Project.makeAppModule(
     .SPM.tcaFlow,
     .SPM.kingfisher,
     .SPM.logMarco,
-  ],
-  sources: ["Sources/**"]
+  ]
 )

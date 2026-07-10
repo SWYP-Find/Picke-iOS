@@ -38,7 +38,6 @@ let project = Project.makeAppModule(
     .SPM.mixpanel,
     .SPM.mixpanelSessionReplay,
     .SPM.kingfisher,
-    .SPM.sentry,
     .SPM.sentrySwiftUI,
 
   ],

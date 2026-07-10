@@ -1,26 +1,36 @@
-//
-//  HomeTests.swift
-//  Presentation.HomeTests
-//
-//  Created by Roy on 2026-05-15.
-//
-
+import ComposableArchitecture
+import Entity
+import Foundation
 import Testing
+
 @testable import Home
 
 struct HomeTests {
+  @Test
+  @MainActor
+  func homeResponseDoesNotReviveNotificationBadgeFromNewNotice() async {
+    UserDefaults.standard.set(false, forKey: "HasUnreadNotification")
+    UserDefaults.standard.set(false, forKey: "NotificationReadAllPending")
 
-    @Test
-    func homeExample() {
-        // This is an example of a test case.
-        #expect(true)
+    let store = TestStore(initialState: HomeFeature.State()) {
+      HomeFeature()
     }
 
-    @Test
-    func homeLogicTest() {
-        // Add your test logic here.
-        let result = true
-        #expect(result == true)
+    await store.send(.inner(.homeResponse(.success(.badgeStaleMock)))) {
+      $0.hasLoadedHome = true
+      $0.newNotice = true
     }
+  }
+}
 
+private extension HomeBundle {
+  static let badgeStaleMock = HomeBundle(
+    newNotice: true,
+    heroes: [],
+    hotBattles: [],
+    bestBattles: [],
+    quizzes: [],
+    votes: [],
+    newBattles: []
+  )
 }

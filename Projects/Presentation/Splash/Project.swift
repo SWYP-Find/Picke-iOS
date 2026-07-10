@@ -4,15 +4,13 @@ import DependencyPlugin
 import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
-let project = Project.makeAppModule(
-  name: "Splash",
+let project = Project.configure(
+  moduleType: .feature(name: "Splash"),
   bundleId: .appBundleID(name: ".Splash"),
-  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
-  ],
-  sources: ["Sources/**"]
+  ]
 )

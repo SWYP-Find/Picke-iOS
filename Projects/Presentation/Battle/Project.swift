@@ -4,18 +4,16 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeAppModule(
-  name: "Battle",
+let project = Project.configure(
+  moduleType: .feature(name: "Battle"),
   bundleId: .appBundleID(name: ".Battle"),
-  product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Presentation(implements: .Chat),
+    .Presentation(.Chat, .implementation),
     .Shared(implements: .Shared),
     .Domain(implements: .UseCase),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,
-  ],
-  sources: ["Sources/**"]
+  ]
 )

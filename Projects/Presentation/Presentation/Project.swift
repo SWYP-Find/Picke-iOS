@@ -13,7 +13,13 @@ let project = Project.makeModule(
     .Presentation(implements: .Splash),
     .Presentation(implements: .Auth),
     .Presentation(implements: .MainTab),
-    .Presentation(implements: .Web)
+    .Presentation(implements: .Web),
+    .Presentation(implements: .Home),
+    .Presentation(implements: .Chat),
+    .Presentation(implements: .Hifi),
+    .Presentation(implements: .Battle),
+    .Presentation(implements: .Profile),
+    .Presentation(implements: .Notification),
   ],
   sources: ["Sources/**"]
 )

@@ -31,7 +31,7 @@ public struct HomeFeature {
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (알림 화면과 전역 공유).
     @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
-    /// QA-47: 모두읽음 직후, 서버 newNotice 가 아직 미읽음으로 지연될 때 빨간점이 되살아나는 것을 막는 가드.
+    /// QA-47: 모두읽음 직후, 서버 미읽음 상태 반영이 지연될 때 빨간점이 되살아나는 것을 막는 가드.
     @Shared(.appStorage("NotificationReadAllPending")) public var readAllPending: Bool = false
 
     public var currentQuiz: QuizQuestion? { quizzes.first }
@@ -215,17 +215,6 @@ extension HomeFeature {
       case let .success(bundle):
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
-        // QA-47: 홈 진입/재진입 시 서버의 미읽음 여부를 종 아이콘 빨간점(전역 공유 플래그)에 반영.
-        // 단, 방금 모두읽음(readAllPending) 했는데 서버가 아직 미읽음으로 지연되면 되살리지 않는다.
-        // 서버가 읽음을 반영(newNotice=false)하면 점을 끄고 pending 을 해제한다.
-        if home.newNotice {
-          if !state.readAllPending {
-            state.$hasUnreadNotification.withLock { $0 = true }
-          }
-        } else {
-          state.$hasUnreadNotification.withLock { $0 = false }
-          state.$readAllPending.withLock { $0 = false }
-        }
         state.heroes = home.heroes
         state.heroIndex = 0
         state.hotBattles = home.hotBattles

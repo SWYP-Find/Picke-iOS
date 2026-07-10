@@ -4,17 +4,15 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeAppModule(
-  name: "Auth",
+let project = Project.configure(
+  moduleType: .feature(name: "Auth"),
   bundleId: .appBundleID(name: ".Auth"),
-  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
-    .Presentation(implements: .Web)
-  ],
-  sources: ["Sources/**"]
+    .Presentation(.Web, .implementation),
+  ]
 )

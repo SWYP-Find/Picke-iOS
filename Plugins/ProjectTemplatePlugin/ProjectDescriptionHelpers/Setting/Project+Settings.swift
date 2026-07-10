@@ -18,11 +18,12 @@ extension Settings {
     return SettingsDictionary()
       .setProductName(appName)
       .setCFBundleDisplayName(displayName)
-      // GoogleMobileAds(GAD*) 등 정적 프레임워크의 ObjC 심볼을 강제 로드하려면 -all_load 필요.
-      // 추가로, GAD 클래스가 든 binary xcframework(GoogleMobileAds)는 래퍼(GoogleMobileAdsTarget)만
+      // GAD 클래스가 든 binary xcframework(GoogleMobileAds)는 래퍼(GoogleMobileAdsTarget)만
       // 링크될 뿐 최종 실행파일에 -framework 로 전파되지 않아, 명시적으로 링크해 심볼을 끌어온다.
-      // (누락 시 GADMobileAds/GADRequest/GADRewardedAd 등이 링크에서 undefined)
-      .setOtherLdFlags("-ObjC -all_load -framework GoogleMobileAds")
+      // -ObjC 가 링크라인의 정적 아카이브에서 ObjC 클래스를 로드하므로 -all_load 는 불필요.
+      // (-all_load 를 쓰면 동적 프레임워크 Sentry/Moya/CA 심볼이 앱 바이너리에 이중 등록되어
+      //  "Class ... implemented in both" 경고 + 런타임 abort 발생)
+      .setOtherLdFlags("-ObjC -framework GoogleMobileAds")
       .setDebugInformationFormat("dwarf-with-dsym")
       .setProvisioningProfileSpecifier(provisioningProfile)
       .setSkipInstall(setSkipInstall)
@@ -34,7 +35,7 @@ extension Settings {
   ) -> SettingsDictionary {
     return SettingsDictionary()
       .setProductName(appName)
-      .setOtherLdFlags("-ObjC -all_load")
+      .setOtherLdFlags()
       .setStripStyle()
   }
 

@@ -20,7 +20,49 @@ private let suppressWarningsSettings: ProjectDescription.Settings = .settings(
   ]
 )
 
+public enum ProjectModuleType {
+  case module(name: String)
+  case feature(name: String)
+}
+
 public extension Project {
+  static func configure(
+    moduleType: ProjectModuleType,
+    bundleId: String,
+    product: Product = .staticFramework,
+    settings: ProjectDescription.Settings,
+    dependencies: [ProjectDescription.TargetDependency] = [],
+    interfaceDependencies: [ProjectDescription.TargetDependency] = [],
+    testingDependencies: [ProjectDescription.TargetDependency] = [],
+    resources: ProjectDescription.ResourceFileElements? = nil,
+    schemes: [ProjectDescription.Scheme] = []
+  ) -> Project {
+    switch moduleType {
+    case let .module(name):
+      return makeModule(
+        name: name,
+        bundleId: bundleId,
+        product: product,
+        settings: settings,
+        dependencies: dependencies,
+        resources: resources,
+        schemes: schemes
+      )
+    case let .feature(name):
+      return makeMicroFeature(
+        name: name,
+        bundleId: bundleId,
+        product: product,
+        settings: settings,
+        interfaceDependencies: interfaceDependencies,
+        dependencies: dependencies,
+        testingDependencies: testingDependencies,
+        resources: resources,
+        schemes: schemes
+      )
+    }
+  }
+
   static func makeAppModule(
     name: String = Environment.appName,
     bundleId: String,
@@ -139,6 +181,91 @@ public extension Project {
       packages: packages,
       settings: settings,
       targets: targets,
+      schemes: schemes
+    )
+  }
+
+  static func makeMicroFeature(
+    name: String,
+    bundleId: String,
+    platform _: Platform = .iOS,
+    product: Product = .staticFramework,
+    deploymentTarget: ProjectDescription.DeploymentTargets = Environment.deploymentTarget,
+    destinations: ProjectDescription.Destinations = Environment.deploymentDestination,
+    settings: ProjectDescription.Settings,
+    interfaceDependencies: [ProjectDescription.TargetDependency] = [],
+    dependencies: [ProjectDescription.TargetDependency] = [],
+    testingDependencies: [ProjectDescription.TargetDependency] = [],
+    resources: ProjectDescription.ResourceFileElements? = nil,
+    schemes: [ProjectDescription.Scheme] = []
+  ) -> Project {
+    let interfaceTargetName = "\(name)Interface"
+    let testingTargetName = "\(name)Testing"
+
+    let interfaceTarget: Target = .target(
+      name: interfaceTargetName,
+      destinations: destinations,
+      product: product,
+      bundleId: "\(bundleId).Interface",
+      deploymentTargets: deploymentTarget,
+      infoPlist: .default,
+      sources: ["Interface/Sources/**"],
+      dependencies: interfaceDependencies,
+      settings: suppressWarningsSettings
+    )
+
+    let featureTarget: Target = .target(
+      name: name,
+      destinations: destinations,
+      product: product,
+      bundleId: bundleId,
+      deploymentTargets: deploymentTarget,
+      infoPlist: .default,
+      sources: ["Sources/**"],
+      resources: resources,
+      dependencies: [.target(name: interfaceTargetName)] + dependencies,
+      settings: suppressWarningsSettings
+    )
+
+    let testingTarget: Target = .target(
+      name: testingTargetName,
+      destinations: destinations,
+      product: product,
+      bundleId: "\(bundleId).Testing",
+      deploymentTargets: deploymentTarget,
+      infoPlist: .default,
+      sources: ["Testing/Sources/**"],
+      dependencies: [
+        .target(name: interfaceTargetName),
+        .target(name: name),
+      ] + testingDependencies,
+      settings: suppressWarningsSettings
+    )
+
+    let testTarget: Target = .target(
+      name: "\(name)Tests",
+      destinations: destinations,
+      product: .unitTests,
+      bundleId: "\(bundleId).Tests",
+      deploymentTargets: deploymentTarget,
+      infoPlist: .default,
+      sources: ["Tests/Sources/**"],
+      dependencies: [
+        .target(name: name),
+        .target(name: testingTargetName),
+      ],
+      settings: suppressWarningsSettings
+    )
+
+    return Project(
+      name: name,
+      settings: settings,
+      targets: [
+        interfaceTarget,
+        featureTarget,
+        testingTarget,
+        testTarget,
+      ],
       schemes: schemes
     )
   }

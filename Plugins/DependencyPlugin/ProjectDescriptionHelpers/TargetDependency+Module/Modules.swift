@@ -8,6 +8,12 @@
 import Foundation
 import ProjectDescription
 
+public enum ModuleTarget {
+  case interface
+  case implementation
+  case testing
+}
+
 public enum ModulePath {
   case Presentation(Presentations)
   case Network(Networks)
