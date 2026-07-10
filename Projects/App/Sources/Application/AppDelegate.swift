@@ -3,11 +3,12 @@ import GoogleMobileAds
 import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
+import Sentry
 import UIKit
 import UserNotifications
 import WeaveDI
 
-import DomainInterface
+import Domain
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
   let mixPanelKey = Bundle.main.object(forInfoDictionaryKey: "MIXPANEL_TOKEN") as? String
@@ -16,6 +17,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _: UIApplication,
     didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    configureSentry()
     FirebaseApp.configure()
     #logDebug(
       "Mixpanel initialize",
@@ -70,6 +72,53 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     _: UIApplication,
     didDiscardSceneSessions _: Set<UISceneSession>
   ) {}
+
+  // MARK: - Sentry
+
+  /// Sentry 크래시/에러 리포팅 + 성능 트레이싱 + 프로파일링 + 세션 리플레이 초기화.
+  /// 가장 먼저 호출해 초기 크래시까지 포착한다.
+  /// DSN·환경은 xcconfig → Info.plist 로 주입된 값을 읽는다(BASE_URL/MIXPANEL_TOKEN 과 동일 패턴).
+  private func configureSentry() {
+    let info = Bundle.main.infoDictionary
+    // SENTRY_DSN 은 xcconfig 에서 스킴(https://)을 제외하고 저장 → 코드에서 붙인다.
+    let dsnHost = (info?["SENTRY_DSN"] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
+    guard !dsnHost.isEmpty else {
+      #logError("[Sentry] SENTRY_DSN 미설정 — 초기화 스킵")
+      return
+    }
+    let environment = (info?["SENTRY_ENVIRONMENT"] as? String)?
+      .trimmingCharacters(in: .whitespaces) ?? "production"
+
+    SentrySDK.start { options in
+      options.dsn = "https://\(dsnHost)"
+      options.environment = environment
+
+      #if DEBUG
+        options.debug = true
+      #else
+        options.debug = false
+      #endif
+
+      options.releaseName = (info?["CFBundleShortVersionString"] as? String).map {
+        "picke-ios@\($0)+\((info?["CFBundleVersion"] as? String) ?? "")"
+      }
+
+      // 구조화 로그.
+      options.experimental.enableLogs = true
+
+      // 성능 트레이싱 + 프로파일링(트레이싱에 종속).
+      options.tracesSampleRate = 1.0
+      options.profilesSampleRate = 1.0
+
+      // 크래시 컨텍스트 첨부.
+      options.attachScreenshot = true
+      options.attachViewHierarchy = true
+
+      // 세션 리플레이 — 텍스트/이미지는 SDK 기본 마스킹(개인정보 보호).
+      options.sessionReplay.sessionSampleRate = 0.1
+      options.sessionReplay.onErrorSampleRate = 1.0
+    }
+  }
 
   // MARK: - Push Notifications (APNs)
 

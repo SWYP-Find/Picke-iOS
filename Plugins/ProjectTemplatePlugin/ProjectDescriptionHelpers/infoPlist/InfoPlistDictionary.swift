@@ -206,6 +206,16 @@ extension InfoPlistDictionary {
     merging(["MIXPANEL_TOKEN": .string(value)]) { _, new in new }
   }
 
+  /// Sentry DSN — xcconfig(SENTRY_DSN)에서 스킴 제외 값 주입, 코드에서 https:// 를 붙인다.
+  func setSentryDSN(_ value: String) -> InfoPlistDictionary {
+    merging(["SENTRY_DSN": .string(value)]) { _, new in new }
+  }
+
+  /// Sentry 환경 이름 — xcconfig(SENTRY_ENVIRONMENT)에서 env 별 주입(development/staging/production).
+  func setSentryEnvironment(_ value: String) -> InfoPlistDictionary {
+    merging(["SENTRY_ENVIRONMENT": .string(value)]) { _, new in new }
+  }
+
   func setBaseURL(_ value: String) -> InfoPlistDictionary {
     merging(["BASE_URL": .string(value)]) { _, new in new }
   }

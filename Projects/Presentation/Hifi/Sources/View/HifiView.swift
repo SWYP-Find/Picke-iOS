@@ -45,8 +45,9 @@ public struct HifiView: View {
       .contentShape(Rectangle())
       .simultaneousGesture(categorySwipe)
     }
+    .background(Color.beige50.ignoresSafeArea())
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
+    .scrollBounceBehavior(.basedOnSize)
     .onAppear { send(.onAppear) }
   }
 }

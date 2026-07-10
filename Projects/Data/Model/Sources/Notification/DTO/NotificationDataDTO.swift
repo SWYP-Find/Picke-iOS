@@ -40,5 +40,11 @@ public struct NotificationDetailDTO: Decodable {
   public let readAt: String?
 }
 
+/// `GET /api/v1/notifications/unread` — 벨 배지용 미읽음 존재 여부.
+public struct NotificationUnreadDTO: Decodable {
+  public let hasUnread: Bool?
+}
+
 public typealias NotificationResponseDTO = BaseResponseDTO<NotificationDataDTO>
 public typealias NotificationDetailResponseDTO = BaseResponseDTO<NotificationDetailDTO>
+public typealias NotificationUnreadResponseDTO = BaseResponseDTO<NotificationUnreadDTO>

@@ -6,7 +6,7 @@
 //
 
 import ComposableArchitecture
-import Entity
+import Domain
 import LogMacro
 import Presentation
 

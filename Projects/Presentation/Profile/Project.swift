@@ -14,6 +14,7 @@ let project = Project.makeAppModule(
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
+    .SPM.kingfisher,
     .Presentation(implements: .Web),
     .Presentation(implements: .Notification),
   ],

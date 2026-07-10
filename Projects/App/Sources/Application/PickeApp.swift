@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import SentrySwiftUI
 import SwiftUI
 
 @main
@@ -19,11 +20,13 @@ struct PickeApp: App {
         #endif
       }
 
-      AppView(store: store)
-        .onOpenURL { url in
-          // picke://... 커스텀 스킴 / 유니버설 링크 → 딥링크 라우팅.
-          PushDeeplinkBridge.handleURL(url)
-        }
+      SentryTracedView("AppRoot") {
+        AppView(store: store)
+      }
+      .onOpenURL { url in
+        // picke://... 커스텀 스킴 / 유니버설 링크 → 딥링크 라우팅.
+        PushDeeplinkBridge.handleURL(url)
+      }
     }
   }
 }

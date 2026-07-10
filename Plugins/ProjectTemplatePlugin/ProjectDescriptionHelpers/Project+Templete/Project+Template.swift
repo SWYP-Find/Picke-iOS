@@ -10,7 +10,14 @@ import ProjectDescription
 // MARK: - Suppress Warnings Setting
 
 private let suppressWarningsSettings: ProjectDescription.Settings = .settings(
-  base: ["OTHER_SWIFT_FLAGS": "$(inherited) -suppress-warnings"]
+  base: [
+    "OTHER_SWIFT_FLAGS": "$(inherited) -suppress-warnings",
+    // Xcode 16 Explicitly Built Modules 비활성화.
+    // (system 모듈(os_object)/WebKit pcm emit 실패 및 "implicit use of module files is disabled" 에러 회피)
+    "SWIFT_ENABLE_EXPLICIT_MODULES": "NO",
+    "_EXPERIMENTAL_SWIFT_EXPLICIT_MODULES": "NO",
+    "CLANG_ENABLE_EXPLICIT_MODULES": "NO",
+  ]
 )
 
 public extension Project {
@@ -46,49 +53,9 @@ public extension Project {
       settings: suppressWarningsSettings
     )
 
-    let appProdTarget: Target = .target(
-      name: "\(name)-Prod",
-      destinations: destinations,
-      product: product,
-      bundleId: "\(bundleId)",
-      deploymentTargets: deploymentTarget,
-      infoPlist: infoPlist,
-      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
-      entitlements: entitlements,
-      scripts: scripts,
-      dependencies: dependencies,
-      settings: suppressWarningsSettings
-    )
-
-    let appStageTarget: Target = .target(
-      name: "\(name)-Stage",
-      destinations: destinations,
-      product: product,
-      bundleId: "\(bundleId)",
-      deploymentTargets: deploymentTarget,
-      infoPlist: infoPlist,
-      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
-      entitlements: entitlements,
-      scripts: scripts,
-      dependencies: dependencies,
-      settings: suppressWarningsSettings
-    )
-
-    let appDevTarget: Target = .target(
-      name: "\(name)-Debug",
-      destinations: destinations,
-      product: product,
-      bundleId: "\(bundleId)",
-      deploymentTargets: deploymentTarget,
-      infoPlist: infoPlist,
-      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
-      entitlements: entitlements,
-      scripts: scripts,
-      dependencies: dependencies,
-      settings: suppressWarningsSettings
-    )
-
-    var targets: [Target] = [appTarget, appDevTarget, appStageTarget, appProdTarget]
+    // 환경(dev/stage/prod)은 build configuration(xcconfig)으로 갈리므로 타깃은 1개면 충분하다.
+    // (과거엔 이름만 다른 동일 타깃을 4개 만들어 스킴/타깃이 중복 노출됐다.)
+    var targets: [Target] = [appTarget]
 
     if hasTests {
       let appTestTarget: Target = .target(

@@ -41,6 +41,7 @@ public extension ModulePath {
 
 public extension ModulePath {
   enum Networks: String, CaseIterable {
+    case NetworkModule
     case Networking
     case Foundations
     case ThirdPartys

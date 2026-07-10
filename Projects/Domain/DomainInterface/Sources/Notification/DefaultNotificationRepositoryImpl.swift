@@ -32,6 +32,8 @@ public struct DefaultNotificationRepositoryImpl: NotificationInterface {
     )
   }
 
+  public func hasUnreadNotifications() async throws -> Bool { false }
+
   public func markAsRead(notificationId _: Int) async throws {}
 
   public func markAllAsRead() async throws {}

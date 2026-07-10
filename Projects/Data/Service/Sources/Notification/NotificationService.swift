@@ -12,6 +12,7 @@ import AsyncMoya
 
 public enum NotificationService {
   case list(query: NotificationsQueryRequest)
+  case unread
   case detail(notificationId: Int)
   case read(notificationId: Int)
   case readAll
@@ -26,6 +27,8 @@ extension NotificationService: BaseTargetType {
     switch self {
     case .list:
       return NotificationAPI.list.description
+    case .unread:
+      return NotificationAPI.unread.description
     case let .detail(notificationId):
       return NotificationAPI.detail(notificationId: notificationId).description
     case let .read(notificationId):
@@ -39,7 +42,7 @@ extension NotificationService: BaseTargetType {
 
   public var method: Moya.Method {
     switch self {
-    case .list, .detail:
+    case .list, .unread, .detail:
       return .get
     case .read, .readAll:
       return .patch
@@ -51,7 +54,7 @@ extension NotificationService: BaseTargetType {
     case let .list(query):
       guard let dict = query.toDictionary else { return nil }
       return dict.isEmpty ? nil : dict
-    case .detail, .read, .readAll:
+    case .unread, .detail, .read, .readAll:
       return nil
     }
   }

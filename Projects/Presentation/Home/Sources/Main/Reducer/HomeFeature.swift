@@ -70,10 +70,13 @@ public struct HomeFeature {
 
   public enum AsyncAction: Equatable {
     case fetchHome
+    /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
+    case syncUnreadBadge
   }
 
   public enum InnerAction: Equatable {
     case homeResponse(Result<HomeBundle, AuthError>)
+    case unreadBadgeResponse(Bool)
   }
 
   public enum DelegateAction: Equatable {
@@ -86,9 +89,11 @@ public struct HomeFeature {
 
   nonisolated enum CancelID: Hashable {
     case fetchHome
+    case syncUnreadBadge
   }
 
   @Dependency(\.homeUseCase) private var homeUseCase
+  @Dependency(\.notificationUseCase) private var notificationUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
@@ -118,8 +123,10 @@ extension HomeFeature {
     switch action {
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .home, referrer: nil))
-      guard !state.hasLoadedHome, !state.isLoading else { return .none }
-      return .send(.async(.fetchHome))
+      // 벨 배지는 진입/재진입마다 서버(/unread)로 갱신 — fetchHome 이 스킵돼도 stale 방지.
+      let syncBadge: Effect<Action> = .send(.async(.syncUnreadBadge))
+      guard !state.hasLoadedHome, !state.isLoading else { return syncBadge }
+      return .merge(syncBadge, .send(.async(.fetchHome)))
 
     case .pullToRefresh:
       guard !state.isLoading else { return .none }
@@ -186,6 +193,13 @@ extension HomeFeature {
         return await send(.inner(.homeResponse(result)))
       }
       .cancellable(id: CancelID.fetchHome, cancelInFlight: true)
+
+    case .syncUnreadBadge:
+      return .run { [useCase = notificationUseCase] send in
+        guard let hasUnread = try? await useCase.hasUnreadNotifications() else { return }
+        await send(.inner(.unreadBadgeResponse(hasUnread)))
+      }
+      .cancellable(id: CancelID.syncUnreadBadge, cancelInFlight: true)
     }
   }
 
@@ -221,6 +235,18 @@ extension HomeFeature {
         state.newBattles = home.newBattles
       case let .failure(error):
         Log.error("[HomeFeature] fetchHome failed: \(error.localizedDescription)")
+      }
+      return .none
+
+    case let .unreadBadgeResponse(hasUnread):
+      // fetchHome 의 newNotice 반영과 동일한 QA-47 가드 — 방금 모두읽음 상태면 되살리지 않는다.
+      if hasUnread {
+        if !state.readAllPending {
+          state.$hasUnreadNotification.withLock { $0 = true }
+        }
+      } else {
+        state.$hasUnreadNotification.withLock { $0 = false }
+        state.$readAllPending.withLock { $0 = false }
       }
       return .none
     }

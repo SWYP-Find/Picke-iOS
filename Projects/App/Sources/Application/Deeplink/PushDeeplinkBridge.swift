@@ -8,7 +8,7 @@
 
 import Foundation
 
-import Entity
+import Domain
 import LogMacro
 
 enum PushDeeplinkBridge {

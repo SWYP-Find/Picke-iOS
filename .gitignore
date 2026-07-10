@@ -171,3 +171,6 @@ Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
 fastlane/.env
 fastlane/.env.*
 Config/*.xcconfig
+
+# Sentry
+.sentryclirc

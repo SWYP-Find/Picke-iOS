@@ -1,0 +1,11 @@
+//
+//  DataExported.swift
+//  Data
+//
+
+// MARK: - Data 레이어 한번에 노출
+
+@_exported import API
+@_exported import Model
+@_exported import Repository
+@_exported import Service

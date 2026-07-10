@@ -10,17 +10,21 @@ import Foundation
 public enum NotificationAPI {
   /// GET /api/v1/notifications
   case list
+  /// GET /api/v1/notifications/unread
+  case unread
   /// GET /api/v1/notifications/{notificationId}
   case detail(notificationId: Int)
-  /// POST /api/v1/notifications/{notificationId}/read
+  /// PATCH /api/v1/notifications/{notificationId}/read
   case read(notificationId: Int)
-  /// POST /api/v1/notifications/read-all
+  /// PATCH /api/v1/notifications/read-all
   case readAll
 
   public var description: String {
     switch self {
     case .list:
       return ""
+    case .unread:
+      return "/unread"
     case let .detail(notificationId):
       return "/\(notificationId)"
     case let .read(notificationId):

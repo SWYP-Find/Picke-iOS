@@ -62,6 +62,11 @@ public final class NotificationRepositoryImpl: NotificationInterface, @unchecked
     return data.toDomain()
   }
 
+  public func hasUnreadNotifications() async throws -> Bool {
+    let dto: NotificationUnreadResponseDTO = try await provider.request(.unread)
+    return dto.data?.hasUnread ?? false
+  }
+
   public func markAsRead(notificationId: Int) async throws {
     let _: BaseResponseDTO<String> = try await provider.request(
       .read(notificationId: notificationId)

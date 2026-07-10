@@ -31,6 +31,10 @@ public struct NotificationUseCaseImpl: NotificationInterface {
     return try await notificationRepository.fetchNotificationDetail(notificationId: notificationId)
   }
 
+  public func hasUnreadNotifications() async throws -> Bool {
+    return try await notificationRepository.hasUnreadNotifications()
+  }
+
   public func markAsRead(notificationId: Int) async throws {
     try await notificationRepository.markAsRead(notificationId: notificationId)
   }

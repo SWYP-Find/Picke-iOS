@@ -45,6 +45,8 @@ public extension InfoPlist {
       .setGoogleClientID("${GOOGLE_CLIENT_ID}")
       .setGoogleClientiOSID("${GOOGLE_IOS_CLIENT_ID}")
       .setMixpanelToken("$(MIXPANEL_TOKEN)")
+      .setSentryDSN("$(SENTRY_DSN)")
+      .setSentryEnvironment("$(SENTRY_ENVIRONMENT)")
       .setGIDClientID("${GOOGLE_CLIENT_ID}")
       .setAdmobToken("${ADMOB_TOKEN}")
       .setGADApplicationId("${ADMOB_TOKEN}")
