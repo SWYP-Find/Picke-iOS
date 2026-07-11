@@ -11,6 +11,7 @@
 @_exported import Auth
 @_exported import MainTab
 @_exported import Web
+@_exported import Notification
 @_exported import Home
 @_exported import Hifi
 @_exported import Battle

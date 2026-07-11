@@ -96,6 +96,20 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 9. Profile-Web/Notification 조립 책임 App 레이어 이동
+
+- App 타깃에 `AppProfileCoordinator` / `AppProfileCoordinatorView` 를 추가했다.
+- 마이페이지의 알림 목록 / 약관 WebView / 탈퇴 화면 라우팅 동작은 App 조립 레이어에서 그대로 처리한다.
+- `AppMainTabCoordinator` / `AppMainTabView` 의 myPage 탭은 `ProfileCoordinator` 대신 `AppProfileCoordinator` 를 사용한다.
+- Profile 모듈의 `ProfileCoordinator` 는 Profile 내부 화면만 보도록 낮췄다.
+- Profile 모듈의 `.Presentation(.Web, .implementation)` / `.Presentation(.Notification, .implementation)` 의존을 제거했다.
+- App 조립 레이어에서 사용할 수 있도록 Presentation umbrella 가 Notification 구현도 re-export 한다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
@@ -106,7 +120,6 @@
 Battle -> Chat
 Hifi -> Chat, Notification
 Home -> Chat, Notification
-Profile -> Web, Notification
 ```
 
 진행 순서:
@@ -127,8 +140,8 @@ Profile -> Web, Notification
 
 완료 조건:
 
-- `Auth`, `Profile` 은 `WebInterface` 만 의존한다.
-- `Home`, `Hifi`, `Profile` 은 `NotificationInterface` 만 의존한다.
+- `Auth`, `Profile` 의 Web/Notification 구현 조립은 App 레이어에만 존재한다.
+- `Home`, `Hifi` 는 `NotificationInterface` 만 의존한다.
 - `Battle`, `Home`, `Hifi` 는 `ChatInterface` 만 의존한다.
 
 ### 3. Presentation feature enum 과 DependencyPlugin catalog 통합

@@ -1,19 +1,20 @@
 //
-//  ProfileCoordinatorView.swift
-//  Profile
+//  AppProfileCoordinatorView.swift
+//  Picke
 //
-
-import Foundation
+//  App 레이어의 마이페이지 조립 화면.
+//
 
 import SwiftUI
 
 import ComposableArchitecture
+import Presentation
 import TCAFlow
 
-public struct ProfileCoordinatorView: View {
-  @Bindable private var store: StoreOf<ProfileCoordinator>
+public struct AppProfileCoordinatorView: View {
+  @Bindable private var store: StoreOf<AppProfileCoordinator>
 
-  public init(store: StoreOf<ProfileCoordinator>) {
+  public init(store: StoreOf<AppProfileCoordinator>) {
     self.store = store
   }
 
@@ -40,6 +41,11 @@ public struct ProfileCoordinatorView: View {
         BattleProposalView(store: battleProposalStore)
       case let .recap(recapStore):
         RecapView(store: recapStore)
+      case let .notification(notificationStore):
+        NotificationCoordinatorView(store: notificationStore)
+          .toolbar(.hidden, for: .tabBar)
+      case let .web(webStore):
+        WebView(store: webStore)
       }
     }
   }

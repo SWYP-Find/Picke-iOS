@@ -145,7 +145,7 @@ private extension AppMainTabView {
       )
 
     case .myPage:
-      ProfileCoordinatorView(
+      AppProfileCoordinatorView(
         store: store.scope(state: \.myPageState, action: \.myPage)
       )
 

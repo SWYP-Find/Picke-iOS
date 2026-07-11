@@ -1,22 +1,25 @@
 //
-//  ProfileCoordinator.swift
-//  Profile
+//  AppProfileCoordinator.swift
+//  Picke
 //
-//  마이 탭 코디네이터. 루트는 ProfileFeature, 편집/세부 화면은 추후 push.
+//  App 레이어의 마이페이지 조립 코디네이터.
+//  Profile feature 와 Notification/Web feature 를 앱 조립 레이어에서 연결한다.
 //
 
 import Foundation
 
 import ComposableArchitecture
+import Entity
+import Presentation
 import TCAFlow
 
-@FlowCoordinator(screen: "ProfileScreen", navigation: true)
-public struct ProfileCoordinator {
+@FlowCoordinator(screen: "AppProfileScreen", navigation: true)
+public struct AppProfileCoordinator {
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<ProfileScreen.State>]
+    public var routes: [Route<AppProfileScreen.State>]
 
     public init() {
       routes = [.root(.profile(.init()), embedInNavigationView: true)]
@@ -25,7 +28,7 @@ public struct ProfileCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<ProfileScreen>)
+    case router(IndexedRouterActionOf<AppProfileScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -36,8 +39,8 @@ public struct ProfileCoordinator {
   public enum View {
     case backAction
     case backToRootAction
-    /// 딥링크(알림) → 포인트 내역 진입.
     case openPointHistory
+    case openTerms
   }
 
   public enum AsyncAction: Equatable {}
@@ -59,71 +62,75 @@ public struct ProfileCoordinator {
   }
 }
 
-extension ProfileCoordinator {
-  private func routerAction(
+private extension AppProfileCoordinator {
+  func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<ProfileScreen>
+    action: IndexedRouterActionOf<AppProfileScreen>
   ) -> Effect<Action> {
     switch action {
-    // 프로필 편집 / 포인트 충전 / 철학자 / 메뉴 — 세부 화면 추가 시 분기 확장.
     case .routeAction(_, action: .profile(.delegate(.editProfile))):
       return .none
 
-    // 포인트(크레딧) 충전 영역 탭 → 포인트 내역 화면 진입.
     case .routeAction(_, action: .profile(.delegate(.chargePoint))):
       state.routes.push(.pointHistory(.init()))
       return .none
 
-    // 포인트 내역에서 주제 제안 → 배틀 만들기 화면 진입.
     case .routeAction(_, action: .pointHistory(.delegate(.suggestTopic))):
       state.routes.push(.battleProposal(.init()))
       return .none
 
-    // 배틀 만들기 닫기(취소/제안 완료) → 뒤로.
     case .routeAction(_, action: .battleProposal(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 포인트 내역 상단 백탭 → 뒤로.
     case .routeAction(_, action: .pointHistory(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 나의 철학자 유형 카드 탭 → 리캡 화면 진입.
     case .routeAction(_, action: .profile(.delegate(.openPhilosopher))):
       state.routes.push(.recap(.init()))
       return .none
 
-    // 리캡 백탭 → 뒤로.
     case .routeAction(_, action: .recap(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 설정 아이콘 → 설정 화면 진입.
     case let .routeAction(_, action: .profile(.delegate(.openSettings(nickname)))):
       state.routes.push(.settings(.init(nickname: nickname)))
       return .none
 
-    // 설정 상단 백탭 → 뒤로.
+    case .routeAction(_, action: .profile(.delegate(.openNotification))):
+      state.routes.push(.notification(.init()))
+      return .none
+
+    case .routeAction(_, action: .notification(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     case .routeAction(_, action: .settings(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 알림 설정 → 알림 설정 화면.
     case .routeAction(_, action: .settings(.delegate(.openNotificationSettings))):
       state.routes.push(.notificationSetting(.init()))
       return .none
 
-    // 알림 설정 백탭 → 뒤로.
     case .routeAction(_, action: .notificationSetting(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 회원 탈퇴 → 탈퇴 사유 화면 진입.
+    case .routeAction(_, action: .settings(.delegate(.openPrivacy))):
+      state.routes.push(.web(.init(url: TermsDocument.privacy.urlString)))
+      return .none
+
+    case .routeAction(_, action: .settings(.delegate(.openTerms))):
+      state.routes.push(.web(.init(url: TermsDocument.service.urlString)))
+      return .none
+
     case let .routeAction(_, action: .settings(.delegate(.openWithdraw(nickname)))):
       state.routes.push(.withdraw(.init(nickname: nickname)))
       return .none
 
-    // 탈퇴 사유 "픽케로 다시 돌아가기" → 뒤로.
     case .routeAction(_, action: .withdraw(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 메뉴 선택 — 화면 진입 분기.
+    case .routeAction(_, action: .web(.backToRoot)):
+      return .send(.view(.backAction))
+
     case let .routeAction(_, action: .profile(.delegate(.menuSelected(item)))):
       switch item {
       case .battleHistory:
@@ -135,15 +142,12 @@ extension ProfileCoordinator {
       }
       return .none
 
-    // 내 배틀 기록 백탭 → 뒤로.
     case .routeAction(_, action: .battleRecord(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 내 콘텐츠 활동 백탭 → 뒤로.
     case .routeAction(_, action: .contentActivity(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    // 공지사항·이벤트 백탭 → 뒤로.
     case .routeAction(_, action: .notice(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
@@ -152,7 +156,7 @@ extension ProfileCoordinator {
     }
   }
 
-  private func handleViewAction(
+  func handleViewAction(
     state: inout State,
     action: View
   ) -> Effect<Action> {
@@ -160,22 +164,28 @@ extension ProfileCoordinator {
     case .backAction:
       state.routes.goBack()
       return .none
+
     case .backToRootAction:
       state.routes.goBackToRoot()
       return .none
+
     case .openPointHistory:
-      // 중복 스택 방지 후 포인트 내역 진입.
       state.routes.goBackToRoot()
       state.routes.push(.pointHistory(.init()))
+      return .none
+
+    case .openTerms:
+      state.routes.goBackToRoot()
+      state.routes.push(.web(.init(url: TermsDocument.service.urlString)))
       return .none
     }
   }
 }
 
 // swiftformat:disable extensionAccessControl
-extension ProfileCoordinator {
+extension AppProfileCoordinator {
   @Reducer
-  public enum ProfileScreen {
+  public enum AppProfileScreen {
     case profile(ProfileFeature)
     case pointHistory(PointHistoryFeature)
     case settings(SettingsFeature)
@@ -186,9 +196,11 @@ extension ProfileCoordinator {
     case withdraw(WithdrawReasonFeature)
     case battleProposal(BattleProposalFeature)
     case recap(RecapFeature)
+    case notification(NotificationCoordinator)
+    case web(WebReducer)
   }
 }
 
 // swiftformat:enable extensionAccessControl
 
-extension ProfileCoordinator.ProfileScreen.State: Equatable {}
+extension AppProfileCoordinator.AppProfileScreen.State: Equatable {}

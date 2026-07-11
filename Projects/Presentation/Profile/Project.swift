@@ -15,7 +15,5 @@ let project = Project.configure(
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,
-    .Presentation(implements: .Web),
-    .Presentation(implements: .Notification),
   ]
 )
