@@ -15,29 +15,6 @@ private extension TargetDependency {
   }
 }
 
-// Presentation
-public extension TargetDependency {
-  static func Presentation(
-    _ module: ModulePath.Presentations,
-    _ target: ModuleTarget = .interface
-  ) -> Self {
-    let targetName = switch target {
-    case .interface:
-      "\(module.rawValue)Interface"
-    case .implementation:
-      module.rawValue
-    case .testing:
-      "\(module.rawValue)Testing"
-    }
-
-    return projectTarget(targetName, path: .Presentation(module, target))
-  }
-
-  static func Presentation(implements module: ModulePath.Presentations) -> Self {
-    Presentation(module, .implementation)
-  }
-}
-
 // Shared
 public extension TargetDependency {
   static func Shared(implements module: ModulePath.Shareds) -> Self {

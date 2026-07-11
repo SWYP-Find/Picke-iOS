@@ -7,7 +7,14 @@
 
 import ProjectDescription
 
+public enum ModuleTarget {
+  case interface
+  case implementation
+  case testing
+}
+
 public enum PresentationFeatureModule: String, CaseIterable {
+  case Presentation
   case Splash
   case Auth
   case MainTab

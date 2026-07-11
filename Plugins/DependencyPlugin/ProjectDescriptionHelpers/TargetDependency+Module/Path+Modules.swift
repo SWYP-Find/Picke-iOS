@@ -8,33 +8,6 @@
 import Foundation
 import ProjectDescription
 
-
-// MARK: - Presentation
-public extension ProjectDescription.Path {
-  static var Presentation: Self {
-      return .relativeToRoot("Projects/\(ModulePath.Presentations.name)")
-  }
-  static func Presentation(implementation module: ModulePath.Presentations) -> Self {
-      return .relativeToRoot("Projects/\(ModulePath.Presentations.name)/\(module.rawValue)")
-  }
-
-  static func Presentation(
-    _ module: ModulePath.Presentations,
-    _ target: ModuleTarget
-  ) -> Self {
-    switch target {
-    case .interface:
-      return .relativeToRoot("Projects/\(ModulePath.Presentations.name)/\(module.rawValue)/Interface")
-    case .implementation:
-      return .Presentation(implementation: module)
-    case .testing:
-      return .relativeToRoot("Projects/\(ModulePath.Presentations.name)/\(module.rawValue)/Testing")
-    }
-  }
-}
-
-
-
 // MARK: ProjectDescription.Path + DesignSystem
 public extension ProjectDescription.Path {
   static var Shared: Self {

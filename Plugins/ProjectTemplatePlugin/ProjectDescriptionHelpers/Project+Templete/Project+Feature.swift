@@ -33,7 +33,7 @@ extension Project {
       bundleId: "\(bundleId).Interface",
       deploymentTargets: deploymentTarget,
       infoPlist: .default,
-      sources: ["Interface/Sources/**"],
+      buildableFolders: ["Interface"],
       dependencies: interfaceDependencies,
       settings: suppressWarningsSettings
     )
@@ -45,8 +45,7 @@ extension Project {
       bundleId: bundleId,
       deploymentTargets: deploymentTarget,
       infoPlist: .default,
-      sources: ["Sources/**"],
-      resources: resources,
+      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
       dependencies: [.target(name: interfaceTargetName)] + dependencies,
       settings: suppressWarningsSettings
     )
@@ -58,7 +57,7 @@ extension Project {
       bundleId: "\(bundleId).Testing",
       deploymentTargets: deploymentTarget,
       infoPlist: .default,
-      sources: ["Testing/Sources/**"],
+      buildableFolders: ["Testing"],
       dependencies: [
         .target(name: interfaceTargetName),
         .target(name: name),

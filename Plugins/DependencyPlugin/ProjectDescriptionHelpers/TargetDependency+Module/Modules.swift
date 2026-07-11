@@ -8,39 +8,11 @@
 import Foundation
 import ProjectDescription
 
-public enum ModuleTarget {
-  case interface
-  case implementation
-  case testing
-}
-
 public enum ModulePath {
-  case Presentation(Presentations)
   case Network(Networks)
   case Domain(Domains)
   case Data(Datas)
   case Shared(Shareds)
-}
-
-// MARK: FeatureModule
-
-public extension ModulePath {
-  enum Presentations: String, CaseIterable {
-    case Presentation
-    case Splash
-    case Auth
-    case MainTab
-    case Home
-    case Chat
-    case Hifi
-    case Web
-    case Battle
-    case Profile
-
-    public static let name: String = "Presentation"
-
-    case Notification
-  }
 }
 
 // MARK: -  CoreDomainModule

@@ -138,6 +138,20 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 12. Joongna식 helper catalog/buildableFolders 정리
+
+- Presentation feature catalog 를 `PresentationFeatureModule` 한 곳으로 모았다.
+- `.Presentation(...)` dependency/path helper 를 `ProjectTemplatePlugin` 으로 옮겨 `Project.configure(.feature(...))` 와 같은 catalog 를 사용하게 했다.
+- `DependencyPlugin` 의 `ModulePath.Presentations` / Presentation 전용 path/dependency helper 를 제거했다.
+- App 스킴 생성 규칙을 `Scheme.appSchemes(appName:)` helper 로 옮겨 App `Project.swift` 에서 로컬 함수를 제거했다.
+- App / 일반 module / feature implementation / Interface / Testing / Tests target 을 `buildableFolders` 기반으로 생성한다.
+- Feature Interface target 은 `Interface`, Testing target 은 `Testing`, Tests target 은 `Tests` 루트 폴더를 buildable folder 로 사용한다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
@@ -150,8 +164,7 @@
 
 남은 정리:
 
-1. Presentation umbrella 의 re-export 목록과 DependencyPlugin catalog 를 단일 출처로 정리한다.
-2. 실제 시뮬레이터에서 각 탭의 Chat / Notification / Web 이동을 수동 smoke test 한다.
+1. 실제 시뮬레이터에서 각 탭의 Chat / Notification / Web 이동을 수동 smoke test 한다.
 
 완료 조건:
 
@@ -169,17 +182,7 @@
 - `Home`, `Hifi` 의 Notification 이동 계약은 `NotificationInterface` 에 있다.
 - `Battle`, `Home`, `Hifi` 의 Chat 이동 계약은 `ChatInterface` 에 있다.
 
-### 3. Presentation feature enum 과 DependencyPlugin catalog 통합
-
-- 현재 `PresentationFeatureModule` 은 ProjectTemplatePlugin 에, `ModulePath.Presentations` 는 DependencyPlugin 에 따로 있다.
-- 최종적으로는 단일 카탈로그만 유지해 feature 추가 시 case 한 곳만 수정하도록 줄인다.
-
-완료 조건:
-
-- Presentation feature 목록의 단일 출처가 하나다.
-- `Project.configure(.feature(...))` 와 `.Presentation(...)` 의 카탈로그가 불일치할 수 없다.
-
-### 4. 검증 루틴
+### 3. 검증 루틴
 
 각 단계마다 아래 순서로 검증한다.
 

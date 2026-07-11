@@ -33,7 +33,7 @@ extension Project {
       bundleId: "\(bundleId).\(name)Tests",
       deploymentTargets: deploymentTarget,
       infoPlist: .default,
-      sources: ["Tests/Sources/**"],
+      buildableFolders: ["Tests"],
       dependencies: dependencies,
       settings: suppressWarningsSettings
     )
