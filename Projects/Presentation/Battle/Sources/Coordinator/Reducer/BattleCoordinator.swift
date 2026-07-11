@@ -7,10 +7,7 @@
 
 import Foundation
 
-import Chat
 import ComposableArchitecture
-import DesignSystem
-import Shared
 import TCAFlow
 
 @FlowCoordinator(screen: "BattleScreen", navigation: true)
@@ -66,33 +63,6 @@ extension BattleCoordinator {
     action: IndexedRouterActionOf<BattleScreen>
   ) -> Effect<Action> {
     switch action {
-    // 오늘의 배틀에서 선택 후 입장 → ChatRoom(채팅방) 직접 진입.
-    case let .routeAction(_, action: .battle(.delegate(.openBattle(battleId)))):
-      state.routes.push(.chatRoom(.init(battleId: battleId)))
-      return .none
-
-    case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
-      return .send(.view(.backAction))
-
-    // 채팅방 다 들으면 → ChatCoordinator(초기 PreVote) 흐름으로 연결.
-    case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
-      // QA-38: 투표 안정화 전까지 진입 차단. 플래그가 켜지면 기존 흐름 그대로 동작.
-      guard FeatureFlag.isVotingEnabled else {
-        return .run { _ in
-          await MainActor.run {
-            ToastManager.shared.showInfo(FeatureFlag.votingDisabledMessage)
-          }
-        }
-      }
-      state.routes.push(.chat(.init(battleId: battleId)))
-      return .none
-
-    case .routeAction(_, action: .chat(.delegate(.dismiss))):
-      return .send(.view(.backAction))
-
-    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
-      return .send(.view(.backToRootAction))
-
     default:
       return .none
     }
@@ -118,8 +88,6 @@ extension BattleCoordinator {
   @Reducer
   public enum BattleScreen {
     case battle(BattleFeature)
-    case chatRoom(ChatRoomFeature)
-    case chat(ChatCoordinator)
   }
 }
 

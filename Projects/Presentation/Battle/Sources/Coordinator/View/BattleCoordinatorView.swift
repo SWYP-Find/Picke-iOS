@@ -7,7 +7,6 @@ import Foundation
 
 import SwiftUI
 
-import Chat
 import ComposableArchitecture
 import TCAFlow
 
@@ -23,10 +22,6 @@ public struct BattleCoordinatorView: View {
       switch screen.case {
       case let .battle(battleStore):
         BattleView(store: battleStore)
-      case let .chatRoom(chatRoomStore):
-        ChatRoomView(store: chatRoomStore)
-      case let .chat(chatStore):
-        ChatCoordinatorView(store: chatStore)
       }
     }
   }

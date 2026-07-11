@@ -9,7 +9,6 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Battle"),
   settings: .settings(),
   dependencies: [
-    .Presentation(.Chat, .implementation),
     .Shared(implements: .Shared),
     .Domain(implements: .UseCase),
     .SPM.composableArchitecture,

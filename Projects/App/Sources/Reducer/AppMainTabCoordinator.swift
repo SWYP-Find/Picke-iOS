@@ -45,9 +45,9 @@ public struct AppMainTabCoordinator {
   public struct State: Equatable {
     public var selectedTab: Int
     public var previousTab: Int = Tab.home.rawValue
-    public var homeState: HomeCoordinator.State
-    public var exploreState: HifiCoordinator.State
-    public var quickBattleState: BattleCoordinator.State
+    public var homeState: AppHomeCoordinator.State
+    public var exploreState: AppHifiCoordinator.State
+    public var quickBattleState: AppBattleCoordinator.State
     public var myPageState: AppProfileCoordinator.State
 
     public init(selectedTab: Int = Tab.home.rawValue) {
@@ -63,9 +63,9 @@ public struct AppMainTabCoordinator {
   public enum Action {
     case selectTab(Int)
     case tabReselected(Int)
-    case home(HomeCoordinator.Action)
-    case explore(HifiCoordinator.Action)
-    case quickBattle(BattleCoordinator.Action)
+    case home(AppHomeCoordinator.Action)
+    case explore(AppHifiCoordinator.Action)
+    case quickBattle(AppBattleCoordinator.Action)
     case myPage(AppProfileCoordinator.Action)
     case delegate(DelegateAction)
   }
@@ -78,13 +78,13 @@ public struct AppMainTabCoordinator {
 
   public var body: some ReducerOf<Self> {
     Scope(state: \.homeState, action: \.home) {
-      HomeCoordinator()
+      AppHomeCoordinator()
     }
     Scope(state: \.exploreState, action: \.explore) {
-      HifiCoordinator()
+      AppHifiCoordinator()
     }
     Scope(state: \.quickBattleState, action: \.quickBattle) {
-      BattleCoordinator()
+      AppBattleCoordinator()
     }
     Scope(state: \.myPageState, action: \.myPage) {
       AppProfileCoordinator()

@@ -1,22 +1,23 @@
 //
-//  HifiCoordinator.swift
-//  Hifi
+//  AppHifiCoordinator.swift
+//  Picke
 //
-//  Hi-Fi 탭 코디네이터. 루트는 HifiFeature, 후속 화면이 필요하면 HifiScreen 에 case 추가.
+//  App 레이어의 Hi-Fi 탭 조립 코디네이터.
 //
 
 import Foundation
 
 import ComposableArchitecture
+import Presentation
 import TCAFlow
 
-@FlowCoordinator(screen: "HifiScreen", navigation: true)
-public struct HifiCoordinator {
+@FlowCoordinator(screen: "AppHifiScreen", navigation: true)
+public struct AppHifiCoordinator {
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<HifiScreen.State>]
+    public var routes: [Route<AppHifiScreen.State>]
 
     public init() {
       routes = [.root(.hifi(.init()), embedInNavigationView: true)]
@@ -25,7 +26,7 @@ public struct HifiCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<HifiScreen>)
+    case router(IndexedRouterActionOf<AppHifiScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -57,18 +58,35 @@ public struct HifiCoordinator {
   }
 }
 
-extension HifiCoordinator {
-  private func routerAction(
+private extension AppHifiCoordinator {
+  func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<HifiScreen>
+    action: IndexedRouterActionOf<AppHifiScreen>
   ) -> Effect<Action> {
     switch action {
+    case let .routeAction(_, action: .hifi(.delegate(.openBattle(battleId)))):
+      state.routes.push(.chat(.init(battleId: battleId)))
+      return .none
+
+    case .routeAction(_, action: .chat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
+      return .send(.view(.backToRootAction))
+
+    case .routeAction(_, action: .hifi(.delegate(.openNotification))):
+      state.routes.push(.notification(.init()))
+      return .none
+
+    case .routeAction(_, action: .notification(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     default:
       return .none
     }
   }
 
-  private func handleViewAction(
+  func handleViewAction(
     state: inout State,
     action: View
   ) -> Effect<Action> {
@@ -76,6 +94,7 @@ extension HifiCoordinator {
     case .backAction:
       state.routes.goBack()
       return .none
+
     case .backToRootAction:
       state.routes.goBackToRoot()
       return .none
@@ -84,13 +103,15 @@ extension HifiCoordinator {
 }
 
 // swiftformat:disable extensionAccessControl
-extension HifiCoordinator {
+extension AppHifiCoordinator {
   @Reducer
-  public enum HifiScreen {
+  public enum AppHifiScreen {
     case hifi(HifiFeature)
+    case chat(ChatCoordinator)
+    case notification(NotificationCoordinator)
   }
 }
 
 // swiftformat:enable extensionAccessControl
 
-extension HifiCoordinator.HifiScreen.State: Equatable {}
+extension AppHifiCoordinator.AppHifiScreen.State: Equatable {}

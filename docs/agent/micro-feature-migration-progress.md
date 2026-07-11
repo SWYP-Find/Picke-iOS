@@ -110,39 +110,53 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 10. Home/Hifi/Battle-Chat/Notification 조립 책임 App 레이어 이동
+
+- App 타깃에 `AppHomeCoordinator` / `AppHomeCoordinatorView` 를 추가했다.
+- App 타깃에 `AppHifiCoordinator` / `AppHifiCoordinatorView` 를 추가했다.
+- App 타깃에 `AppBattleCoordinator` / `AppBattleCoordinatorView` 를 추가했다.
+- Home / Hifi / Battle 탭에서 Chat, ChatRoom, Notification 으로 이동하는 기존 라우팅 동작은 App 조립 레이어에서 그대로 처리한다.
+- `AppMainTabCoordinator` / `AppMainTabView` 는 Home / Hifi / Battle 탭도 App 조립 코디네이터를 사용한다.
+- Home / Hifi / Battle 모듈의 coordinator 는 각 모듈 내부 루트 화면만 보도록 낮췄다.
+- Home / Hifi / Battle 모듈의 Chat / Notification implementation 의존을 제거했다.
+- App 조립 레이어에서 사용할 수 있도록 Presentation umbrella 가 Chat 구현도 re-export 한다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
 
-현재 남은 직접 implementation 의존:
+현재 feature 모듈의 직접 implementation 의존:
 
 ```text
-Battle -> Chat
-Hifi -> Chat, Notification
-Home -> Chat, Notification
+없음
 ```
 
-진행 순서:
+남은 정리:
 
-1. route/delegate/input contract 를 각 `FeatureInterface` 로 이동한다.
-2. 구현 모듈은 상대 feature 의 interface 만 의존하도록 바꾼다.
-3. 실제 reducer/view/coordinator 조립은 Presentation umbrella 또는 App 조립 레이어에 둔다.
+1. route/delegate/input contract 를 각 `FeatureInterface` 로 이동해 App 조립자와 구현 feature 사이의 계약을 명시한다.
+2. Presentation umbrella 의 re-export 목록과 DependencyPlugin catalog 를 단일 출처로 정리한다.
+3. 실제 시뮬레이터에서 각 탭의 Chat / Notification / Web 이동을 수동 smoke test 한다.
 
 완료 조건:
 
-- 마이그레이션 완료 feature 의 implementation 이 다른 feature implementation 을 직접 import 하지 않는다.
+- feature implementation 이 다른 feature implementation 을 직접 import 하지 않는다.
 - 기존 navigation/deeplink/로그아웃/알림 badge 동작이 유지된다.
 
 ### 2. Micro-feature 계약 실제 적용
 
 - `WebRoute`, `WebDelegate`, `NotificationDelegate` 를 실제 reducer/coordinator 액션과 연결한다.
-- 이후 `ChatInterface` 를 추가해 `Battle`, `Home`, `Hifi` 가 Chat 구현 모듈을 직접 보지 않게 한다.
+- `ChatInterface` 에 battle/chat/perspective 진입 계약을 추가하고 App 조립자가 해당 계약을 기준으로 Chat 구현을 생성하도록 정리한다.
 
 완료 조건:
 
 - `Auth`, `Profile` 의 Web/Notification 구현 조립은 App 레이어에만 존재한다.
-- `Home`, `Hifi` 는 `NotificationInterface` 만 의존한다.
-- `Battle`, `Home`, `Hifi` 는 `ChatInterface` 만 의존한다.
+- `Home`, `Hifi` 의 Notification 이동 계약은 `NotificationInterface` 에 있다.
+- `Battle`, `Home`, `Hifi` 의 Chat 이동 계약은 `ChatInterface` 에 있다.
 
 ### 3. Presentation feature enum 과 DependencyPlugin catalog 통합
 

@@ -9,9 +9,7 @@ import Foundation
 
 import SwiftUI
 
-import Chat
 import ComposableArchitecture
-import Notification
 import TCAFlow
 
 public struct HomeCoordinatorView: View {
@@ -26,12 +24,6 @@ public struct HomeCoordinatorView: View {
       switch screen.case {
       case let .home(homeStore):
         HomeView(store: homeStore)
-      case let .chat(chatStore):
-        ChatCoordinatorView(store: chatStore)
-          .toolbar(.hidden, for: .tabBar)
-      case let .notification(notificationStore):
-        NotificationCoordinatorView(store: notificationStore)
-          .toolbar(.hidden, for: .tabBar)
       }
     }
   }

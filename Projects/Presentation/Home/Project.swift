@@ -14,7 +14,5 @@ let project = Project.configure(
     .SPM.kingfisher,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
-    .Presentation(implements: .Chat),
-    .Presentation(implements: .Notification),
   ]
 )

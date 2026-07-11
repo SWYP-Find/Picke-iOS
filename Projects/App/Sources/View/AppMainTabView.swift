@@ -130,17 +130,17 @@ private extension AppMainTabView {
   func tabContent(for tab: Int) -> some View {
     switch AppMainTabCoordinator.Tab(rawValue: tab) {
     case .home:
-      HomeCoordinatorView(
+      AppHomeCoordinatorView(
         store: store.scope(state: \.homeState, action: \.home)
       )
 
     case .explore:
-      HifiCoordinatorView(
+      AppHifiCoordinatorView(
         store: store.scope(state: \.exploreState, action: \.explore)
       )
 
     case .quickBattle:
-      BattleCoordinatorView(
+      AppBattleCoordinatorView(
         store: store.scope(state: \.quickBattleState, action: \.quickBattle)
       )
 
