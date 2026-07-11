@@ -166,6 +166,18 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 14. 시뮬레이터 launch smoke
+
+- 빌드된 `Picke.app` 을 iOS 26.3 iPhone 13 mini 시뮬레이터에 설치했다.
+- `io.Picke.co` bundle id 로 앱 launch 를 확인했다.
+- launch 후 홈 화면 스크린샷을 확인했다.
+
+검증:
+
+- `xcrun simctl install 1A3C0DA4-CE3F-4F0C-8E8D-149F6BEE55AA .../Picke.app` 성공.
+- `xcrun simctl launch 1A3C0DA4-CE3F-4F0C-8E8D-149F6BEE55AA io.Picke.co` 성공. PID `43924`.
+- `xcrun simctl io ... screenshot /private/tmp/picke-launch-smoke.png` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
@@ -179,6 +191,7 @@
 남은 정리:
 
 1. 실제 시뮬레이터에서 각 탭의 Chat / Notification / Web 이동을 수동 smoke test 한다.
+2. 알림함 전체 읽음 후 홈 상단 badge 가 사라지는지 실제 계정/데이터로 확인한다.
 
 완료 조건:
 
