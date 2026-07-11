@@ -128,7 +128,7 @@ private extension AppProfileCoordinator {
     case .routeAction(_, action: .withdraw(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case .routeAction(_, action: .web(.backToRoot)):
+    case .routeAction(_, action: .web(.delegate(.backToRoot))):
       return .send(.view(.backAction))
 
     case let .routeAction(_, action: .profile(.delegate(.menuSelected(item)))):

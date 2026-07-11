@@ -52,7 +52,7 @@ public struct ChatCoordinator {
     case async(AsyncAction)
     case inner(InnerAction)
     case navigation(NavigationAction)
-    case delegate(DelegateAction)
+    case delegate(ChatDelegate)
   }
 
   @CasePathable
@@ -64,12 +64,6 @@ public struct ChatCoordinator {
   public enum AsyncAction: Equatable {}
   public enum InnerAction: Equatable {}
   public enum NavigationAction: Equatable {}
-
-  public enum DelegateAction: Equatable {
-    case dismiss
-    /// 큐레이팅 X — 채팅 디투어 전체를 빠져나가 부모 스택 최상위(root)로 복귀.
-    case popToRoot
-  }
 
   func handleRoute(
     state: inout State,
@@ -192,7 +186,7 @@ extension ChatCoordinator {
 
   private func handleDelegateAction(
     state _: inout State,
-    action: DelegateAction
+    action: ChatDelegate
   ) -> Effect<Action> {
     switch action {
     case .dismiss, .popToRoot:

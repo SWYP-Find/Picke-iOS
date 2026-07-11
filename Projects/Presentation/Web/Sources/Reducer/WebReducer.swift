@@ -28,15 +28,14 @@ public struct WebReducer {
   }
 
   public enum Action {
-    case backToRoot
-
+    case delegate(WebDelegate)
   }
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-        case .backToRoot:
-          return .none
+      case .delegate:
+        return .none
       }
     }
   }

@@ -39,7 +39,7 @@ public struct NotificationCoordinator {
     case async(AsyncAction)
     case inner(InnerAction)
     case navigation(NavigationAction)
-    case delegate(DelegateAction)
+    case delegate(NotificationDelegate)
   }
 
   @CasePathable
@@ -51,11 +51,6 @@ public struct NotificationCoordinator {
   public enum AsyncAction: Equatable {}
   public enum InnerAction: Equatable {}
   public enum NavigationAction: Equatable {}
-
-  public enum DelegateAction: Equatable {
-    /// 알림 모듈 전체를 빠져나가 부모 스택으로 복귀.
-    case dismiss
-  }
 
   func handleRoute(
     state: inout State,
@@ -105,7 +100,7 @@ extension NotificationCoordinator {
 
   private func handleDelegateAction(
     state _: inout State,
-    action: DelegateAction
+    action: NotificationDelegate
   ) -> Effect<Action> {
     switch action {
     case .dismiss:

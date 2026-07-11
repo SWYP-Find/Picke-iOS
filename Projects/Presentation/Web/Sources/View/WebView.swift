@@ -27,7 +27,7 @@ public struct WebView: View {
         Spacer()
           .frame(height: 12)
 
-        PickeNavigationBar(onBack: { store.send(.backToRoot) }) {
+        PickeNavigationBar(onBack: { store.send(.delegate(.backToRoot)) }) {
           Color.clear.frame(width: 24, height: 24)
         }
         .foregroundStyle(.neutral900)

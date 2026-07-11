@@ -79,7 +79,7 @@ private extension AppAuthCoordinator {
       state.routes.push(.web(.init(route: .init(url: urlString))))
       return .none
 
-    case .routeAction(_, action: .web(.backToRoot)):
+    case .routeAction(_, action: .web(.delegate(.backToRoot))):
       return .send(.view(.backAction))
 
     default:

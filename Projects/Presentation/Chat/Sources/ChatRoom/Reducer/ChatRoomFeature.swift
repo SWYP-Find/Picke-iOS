@@ -181,7 +181,7 @@ public struct ChatRoomFeature {
     case async(AsyncAction)
     case inner(InnerAction)
     case scope(ScopeAction)
-    case delegate(DelegateAction)
+    case delegate(ChatRoomDelegate)
   }
 
   @CasePathable
@@ -216,11 +216,6 @@ public struct ChatRoomFeature {
   @CasePathable
   public enum ScopeAction: Equatable {
     case customAlert(PresentationAction<CustomAlertAction>)
-  }
-
-  public enum DelegateAction: Equatable {
-    case dismiss
-    case requestFinalVote(battleId: Int)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -612,7 +607,7 @@ extension ChatRoomFeature {
 
   private func handleDelegateAction(
     state _: inout State,
-    action: DelegateAction
+    action: ChatRoomDelegate
   ) -> Effect<Action> {
     switch action {
     case .dismiss, .requestFinalVote:

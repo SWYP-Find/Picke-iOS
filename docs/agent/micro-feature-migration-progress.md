@@ -152,6 +152,20 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 13. Interface delegate 계약 실제 연결
+
+- `WebReducer.Action` 을 구현 전용 `.backToRoot` 액션에서 `.delegate(WebDelegate)` 로 전환했다.
+- `WebView` 의 뒤로가기 버튼은 `WebDelegate.backToRoot` 를 발행한다.
+- `AppAuthCoordinator` / `AppProfileCoordinator` 는 Web 구현 액션명이 아니라 `WebDelegate.backToRoot` 를 처리한다.
+- `NotificationCoordinator.Action.delegate` 는 `NotificationDelegate` 를 직접 사용한다.
+- `ChatCoordinator.Action.delegate` 는 `ChatDelegate` 를 직접 사용한다.
+- `ChatRoomFeature.Action.delegate` 는 `ChatRoomDelegate` 를 직접 사용한다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
@@ -173,8 +187,7 @@
 
 ### 2. Micro-feature 계약 확장
 
-- `WebDelegate`, `NotificationDelegate` 를 실제 reducer/coordinator 액션과 연결한다.
-- 각 feature 의 delegate/output contract 를 App 조립자에서 처리할 수 있는 형태로 확장한다.
+- 각 feature 의 delegate/output contract 를 App 조립자에서 처리할 수 있는 형태로 더 세분화한다.
 
 완료 조건:
 
