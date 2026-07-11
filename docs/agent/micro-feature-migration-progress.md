@@ -47,23 +47,22 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 5. MainTab 모듈 낮추기
+
+- MainTab 모듈에서 기존 `MainTabCoordinator` / `MainTabView` 구현을 제거했다.
+- `MainTabInterface`, `MainTab`, `MainTabTesting` placeholder target 구조로 낮췄다.
+- MainTab implementation 이 더 이상 `Home`, `Hifi`, `Battle`, `Profile` implementation 을 직접 의존하지 않는다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
-### 1. MainTab 모듈 낮추기
+### 1. 남은 feature 의 micro-feature Project 전환
 
-- 현재 MainTab 모듈에는 기존 coordinator/view 구현이 남아 있다.
-- 다음 단계에서 MainTab 을 feature implementation 조립자가 아니라 tab shell/interface 모듈로 낮춘다.
-- App 조립 타입과 중복되는 기존 MainTab 구현을 제거하거나 interface-only contract 로 분리한다.
-
-완료 조건:
-
-- App 은 `AppMainTabCoordinator` / `AppMainTabView` 만 사용한다.
-- MainTab implementation 이 `Home`, `Hifi`, `Battle`, `Profile` implementation 을 직접 의존하지 않는다.
-- `tuist generate` 와 `xcodebuild` 가 통과한다.
-
-### 2. 남은 feature 의 micro-feature Project 전환
-
-- `Home`, `Hifi`, `Profile`, `MainTab` Project 를 `Project.configure(moduleType: .feature(...))` 구조로 전환한다.
+- `Home`, `Hifi`, `Profile` Project 를 `Project.configure(moduleType: .feature(...))` 구조로 전환한다.
 - 각 feature 에 Interface/Testing placeholder 를 추가한다.
 
 완료 조건:
@@ -71,7 +70,7 @@
 - 모든 Presentation feature 가 `Interface` / implementation / `Testing` target 을 가진다.
 - `tuist generate` 가 통과한다.
 
-### 3. Feature 간 implementation 직접 의존 제거
+### 2. Feature 간 implementation 직접 의존 제거
 
 현재 남은 직접 implementation 의존:
 
@@ -94,7 +93,7 @@ Profile -> Web, Notification
 - 마이그레이션 완료 feature 의 implementation 이 다른 feature implementation 을 직접 import 하지 않는다.
 - 기존 navigation/deeplink/로그아웃/알림 badge 동작이 유지된다.
 
-### 4. 검증 루틴
+### 3. 검증 루틴
 
 각 단계마다 아래 순서로 검증한다.
 
