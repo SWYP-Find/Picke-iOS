@@ -65,7 +65,7 @@ private extension AppHifiCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .hifi(.delegate(.openBattle(battleId)))):
-      state.routes.push(.chat(.init(battleId: battleId)))
+      state.routes.push(.chat(.init(route: .preVote(battleId: battleId))))
       return .none
 
     case .routeAction(_, action: .chat(.delegate(.dismiss))):
@@ -75,7 +75,7 @@ private extension AppHifiCoordinator {
       return .send(.view(.backToRootAction))
 
     case .routeAction(_, action: .hifi(.delegate(.openNotification))):
-      state.routes.push(.notification(.init()))
+      state.routes.push(.notification(.init(route: .inbox)))
       return .none
 
     case .routeAction(_, action: .notification(.delegate(.dismiss))):

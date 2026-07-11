@@ -97,7 +97,7 @@ private extension AppProfileCoordinator {
       return .none
 
     case .routeAction(_, action: .profile(.delegate(.openNotification))):
-      state.routes.push(.notification(.init()))
+      state.routes.push(.notification(.init(route: .inbox)))
       return .none
 
     case .routeAction(_, action: .notification(.delegate(.dismiss))):
@@ -114,11 +114,11 @@ private extension AppProfileCoordinator {
       return .send(.view(.backAction))
 
     case .routeAction(_, action: .settings(.delegate(.openPrivacy))):
-      state.routes.push(.web(.init(url: TermsDocument.privacy.urlString)))
+      state.routes.push(.web(.init(route: .init(url: TermsDocument.privacy.urlString))))
       return .none
 
     case .routeAction(_, action: .settings(.delegate(.openTerms))):
-      state.routes.push(.web(.init(url: TermsDocument.service.urlString)))
+      state.routes.push(.web(.init(route: .init(url: TermsDocument.service.urlString))))
       return .none
 
     case let .routeAction(_, action: .settings(.delegate(.openWithdraw(nickname)))):
@@ -176,7 +176,7 @@ private extension AppProfileCoordinator {
 
     case .openTerms:
       state.routes.goBackToRoot()
-      state.routes.push(.web(.init(url: TermsDocument.service.urlString)))
+      state.routes.push(.web(.init(route: .init(url: TermsDocument.service.urlString))))
       return .none
     }
   }

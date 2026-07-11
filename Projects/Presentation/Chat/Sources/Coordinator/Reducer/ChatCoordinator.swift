@@ -8,6 +8,7 @@
 
 import Foundation
 
+import ChatInterface
 import ComposableArchitecture
 import DesignSystem
 import LogMacro
@@ -32,6 +33,15 @@ public struct ChatCoordinator {
         .commentReply(.init(perspectiveId: perspectiveId, targetCommentId: commentId)),
         embedInNavigationView: true
       )]
+    }
+
+    public init(route: ChatRoute) {
+      switch route {
+      case let .preVote(battleId):
+        self.init(battleId: battleId)
+      case let .perspective(perspectiveId, commentId):
+        self.init(perspectiveId: perspectiveId, commentId: commentId)
+      }
     }
   }
 

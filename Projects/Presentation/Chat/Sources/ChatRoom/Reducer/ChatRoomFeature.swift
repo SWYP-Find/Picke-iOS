@@ -7,6 +7,7 @@
 
 import Foundation
 
+import ChatInterface
 import ComposableArchitecture
 import DesignSystem
 import DomainInterface
@@ -151,6 +152,10 @@ public struct ChatRoomFeature {
     public init(battleId: Int = 0) {
       self.battleId = battleId
       hasFinishedListening = Self.hasListenedBefore(battleId: battleId)
+    }
+
+    public init(route: ChatRoomRoute) {
+      self.init(battleId: route.battleId)
     }
 
     private static func hasListenedBefore(battleId: Int) -> Bool {

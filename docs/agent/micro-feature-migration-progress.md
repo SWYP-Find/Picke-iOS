@@ -126,6 +126,18 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 11. Interface route 계약 실제 연결
+
+- `ChatInterface` 에 `ChatRoute`, `ChatRoomRoute`, `ChatDelegate`, `ChatRoomDelegate` 를 추가했다.
+- `NotificationInterface` 에 `NotificationRoute` 를 추가했다.
+- `WebReducer.State`, `NotificationCoordinator.State`, `ChatCoordinator.State`, `ChatRoomFeature.State` 가 Interface route 로 초기화될 수 있게 했다.
+- App 조립자는 Web / Notification / Chat 구현 State 를 primitive 값 대신 Interface route 계약으로 생성한다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
@@ -138,19 +150,18 @@
 
 남은 정리:
 
-1. route/delegate/input contract 를 각 `FeatureInterface` 로 이동해 App 조립자와 구현 feature 사이의 계약을 명시한다.
-2. Presentation umbrella 의 re-export 목록과 DependencyPlugin catalog 를 단일 출처로 정리한다.
-3. 실제 시뮬레이터에서 각 탭의 Chat / Notification / Web 이동을 수동 smoke test 한다.
+1. Presentation umbrella 의 re-export 목록과 DependencyPlugin catalog 를 단일 출처로 정리한다.
+2. 실제 시뮬레이터에서 각 탭의 Chat / Notification / Web 이동을 수동 smoke test 한다.
 
 완료 조건:
 
 - feature implementation 이 다른 feature implementation 을 직접 import 하지 않는다.
 - 기존 navigation/deeplink/로그아웃/알림 badge 동작이 유지된다.
 
-### 2. Micro-feature 계약 실제 적용
+### 2. Micro-feature 계약 확장
 
-- `WebRoute`, `WebDelegate`, `NotificationDelegate` 를 실제 reducer/coordinator 액션과 연결한다.
-- `ChatInterface` 에 battle/chat/perspective 진입 계약을 추가하고 App 조립자가 해당 계약을 기준으로 Chat 구현을 생성하도록 정리한다.
+- `WebDelegate`, `NotificationDelegate` 를 실제 reducer/coordinator 액션과 연결한다.
+- 각 feature 의 delegate/output contract 를 App 조립자에서 처리할 수 있는 형태로 확장한다.
 
 완료 조건:
 

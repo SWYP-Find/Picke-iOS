@@ -76,7 +76,7 @@ private extension AppAuthCoordinator {
       return .send(.navigation(.presentMainTab))
 
     case let .routeAction(_, action: .login(.delegate(.presentTermsWeb(urlString)))):
-      state.routes.push(.web(.init(url: urlString)))
+      state.routes.push(.web(.init(route: .init(url: urlString))))
       return .none
 
     case .routeAction(_, action: .web(.backToRoot)):

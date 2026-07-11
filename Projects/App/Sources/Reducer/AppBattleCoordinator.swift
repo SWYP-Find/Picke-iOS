@@ -67,7 +67,7 @@ private extension AppBattleCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .battle(.delegate(.openBattle(battleId)))):
-      state.routes.push(.chatRoom(.init(battleId: battleId)))
+      state.routes.push(.chatRoom(.init(route: .init(battleId: battleId))))
       return .none
 
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
@@ -81,7 +81,7 @@ private extension AppBattleCoordinator {
           }
         }
       }
-      state.routes.push(.chat(.init(battleId: battleId)))
+      state.routes.push(.chat(.init(route: .preVote(battleId: battleId))))
       return .none
 
     case .routeAction(_, action: .chat(.delegate(.dismiss))):

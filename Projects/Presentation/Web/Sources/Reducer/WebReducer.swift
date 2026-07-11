@@ -7,6 +7,7 @@
 
 import Foundation
 import ComposableArchitecture
+import WebInterface
 
 
 @Reducer
@@ -19,6 +20,10 @@ public struct WebReducer {
 
     public init(url: String) {
       self.url = url
+    }
+
+    public init(route: WebRoute) {
+      self.url = route.url
     }
   }
 
@@ -36,4 +41,3 @@ public struct WebReducer {
     }
   }
 }
-

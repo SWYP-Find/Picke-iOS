@@ -76,7 +76,7 @@ private extension AppHomeCoordinator {
           }
         }
       }
-      state.routes.push(.chat(.init(battleId: battleId)))
+      state.routes.push(.chat(.init(route: .preVote(battleId: battleId))))
       return .none
 
     case .routeAction(_, action: .chat(.delegate(.dismiss))):
@@ -86,7 +86,7 @@ private extension AppHomeCoordinator {
       return .send(.view(.backToRootAction))
 
     case .routeAction(_, action: .home(.delegate(.openNotification))):
-      state.routes.push(.notification(.init()))
+      state.routes.push(.notification(.init(route: .inbox)))
       return .none
 
     case .routeAction(_, action: .notification(.delegate(.dismiss))):
@@ -112,12 +112,15 @@ private extension AppHomeCoordinator {
 
     case let .openBattle(battleId):
       state.routes.goBackToRoot()
-      state.routes.push(.chat(.init(battleId: battleId)))
+      state.routes.push(.chat(.init(route: .preVote(battleId: battleId))))
       return .none
 
     case let .openPerspective(perspectiveId, commentId):
       state.routes.goBackToRoot()
-      state.routes.push(.chat(.init(perspectiveId: perspectiveId, commentId: commentId)))
+      state.routes.push(.chat(.init(route: .perspective(
+        perspectiveId: perspectiveId,
+        commentId: commentId
+      ))))
       return .none
     }
   }

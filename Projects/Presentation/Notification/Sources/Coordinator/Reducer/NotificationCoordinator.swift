@@ -9,6 +9,7 @@
 import Foundation
 
 import ComposableArchitecture
+import NotificationInterface
 import TCAFlow
 
 @FlowCoordinator(screen: "NotificationScreen", navigation: true)
@@ -21,6 +22,13 @@ public struct NotificationCoordinator {
 
     public init() {
       routes = [.root(.notification(.init()), embedInNavigationView: true)]
+    }
+
+    public init(route: NotificationRoute) {
+      switch route {
+      case .inbox:
+        routes = [.root(.notification(.init()), embedInNavigationView: true)]
+      }
     }
   }
 
