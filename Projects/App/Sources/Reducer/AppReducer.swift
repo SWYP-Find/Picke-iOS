@@ -18,7 +18,7 @@ public struct AppReducer: Sendable {
   public enum State {
     case splash(SplashFeature.State)
     case auth(AuthCoordinator.State)
-    case mainTab(MainTabCoordinator.State)
+    case mainTab(AppMainTabCoordinator.State)
 
     public init() {
       self = .splash(SplashFeature.State())
@@ -77,7 +77,7 @@ public struct AppReducer: Sendable {
   public enum ScopeAction {
     case splash(SplashFeature.Action)
     case auth(AuthCoordinator.Action)
-    case mainTab(MainTabCoordinator.Action)
+    case mainTab(AppMainTabCoordinator.Action)
   }
 
   @Dependency(\.continuousClock) var clock
@@ -147,7 +147,7 @@ public struct AppReducer: Sendable {
       AuthCoordinator()
     }
     .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
-      MainTabCoordinator()
+      AppMainTabCoordinator()
     }
   }
 
@@ -198,25 +198,25 @@ public struct AppReducer: Sendable {
       case let .battle(battleId):
         // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 배틀 상세 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.home.rawValue)))),
           .send(.scope(.mainTab(.home(.view(.openBattle(battleId: battleId))))))
         )
       case let .perspective(perspectiveId, commentId):
         // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 관점(답글) 화면 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.home.rawValue)))),
           .send(.scope(.mainTab(.home(.view(.openPerspective(perspectiveId: perspectiveId, commentId: commentId))))))
         )
       case .point:
         // 마이페이지 탭 전환 후 포인트 내역 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
           .send(.scope(.mainTab(.myPage(.view(.openPointHistory)))))
         )
       case .terms:
         // 마이페이지 탭 전환 후 서비스 약관 웹뷰 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
           .send(.scope(.mainTab(.myPage(.view(.openTerms)))))
         )
       }

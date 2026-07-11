@@ -39,7 +39,7 @@ struct AppView: View {
 
         case .mainTab:
           if let store = store.scope(state: \.mainTab, action: \.scope.mainTab) {
-            MainTabView(store: store)
+            AppMainTabView(store: store)
               .transition(.asymmetric(
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)
