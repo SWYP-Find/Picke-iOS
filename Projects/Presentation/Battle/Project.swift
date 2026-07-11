@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(name: "Battle"),
+  moduleType: .feature(.Battle),
   bundleId: .appBundleID(name: ".Battle"),
   settings: .settings(),
   dependencies: [

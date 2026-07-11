@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeModule(
-  name: "Domain",
+let project = Project.configure(
+  moduleType: .module(name: "Domain"),
   bundleId: .appBundleID(name: ".Domain"),
   product: .staticFramework,
   settings: .settings(),

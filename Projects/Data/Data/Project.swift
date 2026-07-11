@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeModule(
-  name: "Data",
+let project = Project.configure(
+  moduleType: .module(name: "Data"),
   bundleId: .appBundleID(name: ".Data"),
   product: .staticFramework,
   settings: .settings(),

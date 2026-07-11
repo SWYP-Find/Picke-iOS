@@ -4,8 +4,8 @@ import DependencyPlugin
 import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
-let project = Project.makeModule(
-  name: "Networking",
+let project = Project.configure(
+  moduleType: .module(name: "Networking"),
   bundleId: .appBundleID(name: ".Networking"),
   product: .staticFramework,
   settings:  .settings(),

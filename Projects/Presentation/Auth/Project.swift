@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(name: "Auth"),
+  moduleType: .feature(.Auth),
   bundleId: .appBundleID(name: ".Auth"),
   settings: .settings(),
   dependencies: [

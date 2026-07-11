@@ -4,8 +4,8 @@ import DependencyPlugin
 import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
-let project = Project.makeAppModule(
-  name: "ThirdParty",
+let project = Project.configure(
+  moduleType: .module(name: "ThirdParty"),
   bundleId: .appBundleID(name: ".ThirdParty"),
   product: .staticFramework,
   settings: .settings(),

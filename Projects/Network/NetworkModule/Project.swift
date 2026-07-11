@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeModule(
-  name: "NetworkModule",
+let project = Project.configure(
+  moduleType: .module(name: "NetworkModule"),
   bundleId: .appBundleID(name: ".NetworkModule"),
   product: .staticFramework,
   settings: .settings(),

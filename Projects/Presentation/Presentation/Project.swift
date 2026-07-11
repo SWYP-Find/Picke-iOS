@@ -4,8 +4,8 @@ import DependencyPlugin
 import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
-let project = Project.makeModule(
-  name: "Presentation",
+let project = Project.configure(
+  moduleType: .module(name: "Presentation"),
   bundleId: .appBundleID(name: ".Presentation"),
   product: .staticFramework,
   settings:  .settings(),

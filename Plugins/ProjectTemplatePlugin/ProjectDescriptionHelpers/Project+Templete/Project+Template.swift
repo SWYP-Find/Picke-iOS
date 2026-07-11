@@ -20,39 +20,94 @@ private let suppressWarningsSettings: ProjectDescription.Settings = .settings(
   ]
 )
 
-public enum ProjectModuleType {
+public enum PresentationFeatureModule: String, CaseIterable {
+  case Splash
+  case Auth
+  case MainTab
+  case Home
+  case Chat
+  case Hifi
+  case Web
+  case Battle
+  case Profile
+  case Notification
+}
+
+public enum ModuleType {
+  case app
+  case feature(PresentationFeatureModule)
   case module(name: String)
-  case feature(name: String)
 }
 
 public extension Project {
   static func configure(
-    moduleType: ProjectModuleType,
+    moduleType: ModuleType,
+    name: String = Environment.appName,
     bundleId: String,
+    platform: Platform = .iOS,
     product: Product = .staticFramework,
+    packages: [Package] = [],
+    deploymentTarget: ProjectDescription.DeploymentTargets = Environment.deploymentTarget,
+    destinations: ProjectDescription.Destinations = Environment.deploymentDestination,
     settings: ProjectDescription.Settings,
+    scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
     interfaceDependencies: [ProjectDescription.TargetDependency] = [],
     testingDependencies: [ProjectDescription.TargetDependency] = [],
+    sources: ProjectDescription.SourceFilesList = ["Sources/**"],
     resources: ProjectDescription.ResourceFileElements? = nil,
-    schemes: [ProjectDescription.Scheme] = []
+    infoPlist: ProjectDescription.InfoPlist = .default,
+    entitlements: ProjectDescription.Entitlements? = nil,
+    schemes: [ProjectDescription.Scheme] = [],
+    hasTests: Bool = false
   ) -> Project {
     switch moduleType {
+    case .app:
+      return makeAppModule(
+        name: name,
+        bundleId: bundleId,
+        platform: platform,
+        product: product,
+        packages: packages,
+        deploymentTarget: deploymentTarget,
+        destinations: destinations,
+        settings: settings,
+        scripts: scripts,
+        dependencies: dependencies,
+        sources: sources,
+        resources: resources,
+        infoPlist: infoPlist,
+        entitlements: entitlements,
+        schemes: schemes,
+        hasTests: hasTests
+      )
     case let .module(name):
       return makeModule(
         name: name,
         bundleId: bundleId,
+        platform: platform,
         product: product,
+        packages: packages,
+        deploymentTarget: deploymentTarget,
+        destinations: destinations,
         settings: settings,
+        scripts: scripts,
         dependencies: dependencies,
+        sources: sources,
         resources: resources,
-        schemes: schemes
+        infoPlist: infoPlist,
+        entitlements: entitlements,
+        schemes: schemes,
+        hasTests: hasTests
       )
-    case let .feature(name):
+    case let .feature(module):
       return makeMicroFeature(
-        name: name,
+        name: module.rawValue,
         bundleId: bundleId,
+        platform: platform,
         product: product,
+        deploymentTarget: deploymentTarget,
+        destinations: destinations,
         settings: settings,
         interfaceDependencies: interfaceDependencies,
         dependencies: dependencies,

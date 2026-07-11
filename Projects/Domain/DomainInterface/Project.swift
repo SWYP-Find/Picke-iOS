@@ -4,8 +4,8 @@ import DependencyPlugin
 import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
-let project = Project.makeModule(
-  name: "DomainInterface",
+let project = Project.configure(
+  moduleType: .module(name: "DomainInterface"),
   bundleId: .appBundleID(name: ".DomainInterface"),
   product: .staticFramework,
   settings:  .settings(),

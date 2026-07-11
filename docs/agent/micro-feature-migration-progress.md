@@ -58,17 +58,30 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 6. Joongna 스타일 `Project.configure` 단일 진입점 정렬
+
+- `ProjectModuleType` 을 `ModuleType` 으로 정리하고, App / feature / 일반 module 을 모두 `Project.configure(...)` 로 생성하도록 맞췄다.
+- Presentation feature 는 문자열 기반 `.feature(name: "Home")` 대신 카탈로그 기반 `.feature(.Home)` 형태로 변경했다.
+- App, Domain, Data, Network, Shared, Presentation umbrella 의 `Project.swift` 도 `makeModule` / `makeAppModule` 직접 호출 대신 `Project.configure` 를 사용한다.
+- `Home`, `Hifi`, `Profile` 에 `Interface` / `Testing` placeholder target 을 추가해 모든 Presentation feature 가 micro-feature target 구조를 갖게 했다.
+- `WebInterface`, `NotificationInterface` 에 route/delegate 계약의 첫 타입을 추가했다. 구현 전환은 아직 하지 않고, 다음 단계에서 implementation 직접 의존 제거에 사용한다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
-### 1. 남은 feature 의 micro-feature Project 전환
+### 1. Tuist helper 파일 분리 정리
 
-- `Home`, `Hifi`, `Profile` Project 를 `Project.configure(moduleType: .feature(...))` 구조로 전환한다.
-- 각 feature 에 Interface/Testing placeholder 를 추가한다.
+- 현재는 Picke 기존 helper 파일과 충돌을 줄이기 위해 `Project+Template.swift` 안에 `ModuleType`, `PresentationFeatureModule`, `configure`, target builder 를 함께 둔다.
+- Joongna처럼 `ModuleType.swift`, `Project+Feature.swift`, `Project+Target.swift`, `Project+Module.swift`, `Project+App.swift` 로 파일을 나눠 책임을 분리한다.
 
 완료 조건:
 
-- 모든 Presentation feature 가 `Interface` / implementation / `Testing` target 을 가진다.
-- `tuist generate` 가 통과한다.
+- public API 는 현재처럼 `Project.configure(...)` 단일 진입점을 유지한다.
+- `./tuisttool generate` 와 앱 빌드가 그대로 통과한다.
 
 ### 2. Feature 간 implementation 직접 의존 제거
 
@@ -93,7 +106,18 @@ Profile -> Web, Notification
 - 마이그레이션 완료 feature 의 implementation 이 다른 feature implementation 을 직접 import 하지 않는다.
 - 기존 navigation/deeplink/로그아웃/알림 badge 동작이 유지된다.
 
-### 3. 검증 루틴
+### 3. Micro-feature 계약 실제 적용
+
+- `WebRoute`, `WebDelegate`, `NotificationDelegate` 를 실제 reducer/coordinator 액션과 연결한다.
+- 이후 `ChatInterface` 를 추가해 `Battle`, `Home`, `Hifi` 가 Chat 구현 모듈을 직접 보지 않게 한다.
+
+완료 조건:
+
+- `Auth`, `Profile` 은 `WebInterface` 만 의존한다.
+- `Home`, `Hifi`, `Profile` 은 `NotificationInterface` 만 의존한다.
+- `Battle`, `Home`, `Hifi` 는 `ChatInterface` 만 의존한다.
+
+### 4. 검증 루틴
 
 각 단계마다 아래 순서로 검증한다.
 

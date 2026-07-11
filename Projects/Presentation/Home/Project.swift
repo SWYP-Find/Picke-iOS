@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeAppModule(
-  name: "Home",
+let project = Project.configure(
+  moduleType: .feature(.Home),
   bundleId: .appBundleID(name: ".Home"),
   product: .staticFramework,
   settings: .settings(),
@@ -16,6 +16,5 @@ let project = Project.makeAppModule(
     .Shared(implements: .Shared),
     .Presentation(implements: .Chat),
     .Presentation(implements: .Notification),
-  ],
-  sources: ["Sources/**"]
+  ]
 )

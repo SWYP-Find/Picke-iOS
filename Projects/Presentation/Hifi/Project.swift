@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeAppModule(
-  name: "Hifi",
+let project = Project.configure(
+  moduleType: .feature(.Hifi),
   bundleId: .appBundleID(name: ".Hifi"),
   product: .staticFramework,
   settings: .settings(),
@@ -17,6 +17,5 @@ let project = Project.makeAppModule(
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,
-  ],
-  sources: ["Sources/**"]
+  ]
 )

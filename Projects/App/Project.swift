@@ -21,7 +21,8 @@ private func appScheme(name: String, configuration: ConfigurationName) -> Scheme
   )
 }
 
-let project = Project.makeAppModule(
+let project = Project.configure(
+  moduleType: .app,
   name: appName,
   bundleId: .mainBundleID(),
   product: .app,

@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeAppModule(
-  name: "Profile",
+let project = Project.configure(
+  moduleType: .feature(.Profile),
   bundleId: .appBundleID(name: ".Profile"),
   product: .staticFramework,
   settings: .settings(),
@@ -17,6 +17,5 @@ let project = Project.makeAppModule(
     .SPM.kingfisher,
     .Presentation(implements: .Web),
     .Presentation(implements: .Notification),
-  ],
-  sources: ["Sources/**"]
+  ]
 )

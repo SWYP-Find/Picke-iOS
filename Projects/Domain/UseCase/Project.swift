@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeModule(
-  name: "UseCase",
+let project = Project.configure(
+  moduleType: .module(name: "UseCase"),
   bundleId: .appBundleID(name: ".UseCase"),
   product: .staticFramework,
   settings: .settings(),

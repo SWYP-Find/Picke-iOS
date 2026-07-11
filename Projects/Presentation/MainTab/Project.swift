@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(name: "MainTab"),
+  moduleType: .feature(.MainTab),
   bundleId: .appBundleID(name: ".MainTab"),
   product: .staticFramework,
   settings: .settings(),

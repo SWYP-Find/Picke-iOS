@@ -4,8 +4,8 @@ import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let project = Project.makeModule(
-  name: "DesignSystem",
+let project = Project.configure(
+  moduleType: .module(name: "DesignSystem"),
   bundleId: .appBundleID(name: ".DesignSystem"),
   product: .staticFramework,
   settings: .settings(),
