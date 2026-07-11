@@ -71,19 +71,20 @@
 - `./tuisttool generate` 성공.
 - `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
 
+### 7. Tuist helper 파일 분리 정리
+
+- Joongna 구조처럼 `ModuleType.swift`, `Project+Template.swift`, `Project+App.swift`, `Project+Feature.swift`, `Project+Module.swift`, `Project+Target.swift` 로 helper 책임을 분리했다.
+- `Project+Template.swift` 는 `Project.configure(...)` 단일 진입점만 유지한다.
+- App / 일반 module / feature target 생성 로직은 각각 별도 파일로 이동했다.
+- 기존 Picke 설정인 `bundleId`, `settings`, `resources`, `scripts`, `hasTests`, `schemes` 전달 방식은 그대로 보존했다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+
 ## 남은 작업
 
-### 1. Tuist helper 파일 분리 정리
-
-- 현재는 Picke 기존 helper 파일과 충돌을 줄이기 위해 `Project+Template.swift` 안에 `ModuleType`, `PresentationFeatureModule`, `configure`, target builder 를 함께 둔다.
-- Joongna처럼 `ModuleType.swift`, `Project+Feature.swift`, `Project+Target.swift`, `Project+Module.swift`, `Project+App.swift` 로 파일을 나눠 책임을 분리한다.
-
-완료 조건:
-
-- public API 는 현재처럼 `Project.configure(...)` 단일 진입점을 유지한다.
-- `./tuisttool generate` 와 앱 빌드가 그대로 통과한다.
-
-### 2. Feature 간 implementation 직접 의존 제거
+### 1. Feature 간 implementation 직접 의존 제거
 
 현재 남은 직접 implementation 의존:
 
@@ -106,7 +107,7 @@ Profile -> Web, Notification
 - 마이그레이션 완료 feature 의 implementation 이 다른 feature implementation 을 직접 import 하지 않는다.
 - 기존 navigation/deeplink/로그아웃/알림 badge 동작이 유지된다.
 
-### 3. Micro-feature 계약 실제 적용
+### 2. Micro-feature 계약 실제 적용
 
 - `WebRoute`, `WebDelegate`, `NotificationDelegate` 를 실제 reducer/coordinator 액션과 연결한다.
 - 이후 `ChatInterface` 를 추가해 `Battle`, `Home`, `Hifi` 가 Chat 구현 모듈을 직접 보지 않게 한다.
@@ -116,6 +117,16 @@ Profile -> Web, Notification
 - `Auth`, `Profile` 은 `WebInterface` 만 의존한다.
 - `Home`, `Hifi`, `Profile` 은 `NotificationInterface` 만 의존한다.
 - `Battle`, `Home`, `Hifi` 는 `ChatInterface` 만 의존한다.
+
+### 3. Presentation feature enum 과 DependencyPlugin catalog 통합
+
+- 현재 `PresentationFeatureModule` 은 ProjectTemplatePlugin 에, `ModulePath.Presentations` 는 DependencyPlugin 에 따로 있다.
+- 최종적으로는 단일 카탈로그만 유지해 feature 추가 시 case 한 곳만 수정하도록 줄인다.
+
+완료 조건:
+
+- Presentation feature 목록의 단일 출처가 하나다.
+- `Project.configure(.feature(...))` 와 `.Presentation(...)` 의 카탈로그가 불일치할 수 없다.
 
 ### 4. 검증 루틴
 
