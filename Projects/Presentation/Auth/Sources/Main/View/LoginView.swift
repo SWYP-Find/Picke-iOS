@@ -14,6 +14,10 @@ import Entity
 public struct LoginView: View {
   @Bindable var store: StoreOf<LoginFeature>
 
+  public init(store: StoreOf<LoginFeature>) {
+    self.store = store
+  }
+
   public var body: some View {
     ZStack {
       Color.gray50

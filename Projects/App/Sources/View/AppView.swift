@@ -30,7 +30,7 @@ struct AppView: View {
 
         case .auth:
           if let store = store.scope(state: \.auth, action: \.scope.auth) {
-            AuthCoordinatorView(store: store)
+            AppAuthCoordinatorView(store: store)
               .transition(.asymmetric(
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)

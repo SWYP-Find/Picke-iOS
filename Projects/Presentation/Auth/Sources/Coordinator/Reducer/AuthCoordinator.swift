@@ -11,7 +11,6 @@ import ComposableArchitecture
 import TCAFlow
 
 import Entity
-import Web
 
 @FlowCoordinator(screen: "AuthScreen", navigation: true)
 public struct AuthCoordinator {
@@ -107,15 +106,6 @@ extension AuthCoordinator {
     case .routeAction(_, action: .onboarding(.delegate(.presentMainTab))):
       return .send(.navigation(.presentMainTab))
 
-    // MARK: - 약관 상세 보기 → WebView 화면 푸시
-
-    case let .routeAction(_, action: .login(.delegate(.presentTermsWeb(urlString)))):
-      state.routes.push(.web(.init(url: urlString)))
-      return .none
-
-    case .routeAction(_, action: .web(.backToRoot)):
-      return .send(.view(.backAction))
-
     default:
       return .none
     }
@@ -167,7 +157,6 @@ extension AuthCoordinator {
   public enum AuthScreen {
     case login(LoginFeature)
     case onboarding(OnBoardingFeature)
-    case web(WebReducer)
   }
 }
 

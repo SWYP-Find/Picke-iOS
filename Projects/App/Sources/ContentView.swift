@@ -1,7 +1,5 @@
 import SwiftUI
 import Presentation
-import Auth
-import Web
 
 public struct ContentView: View {
     public init() {}
@@ -18,9 +16,8 @@ public struct ContentView: View {
 }
 
 #Preview {
-  AuthCoordinatorView(store: .init(initialState: AuthCoordinator.State(), reducer: {
-    AuthCoordinator()
+  AppAuthCoordinatorView(store: .init(initialState: AppAuthCoordinator.State(), reducer: {
+    AppAuthCoordinator()
   }))
 }
-
 

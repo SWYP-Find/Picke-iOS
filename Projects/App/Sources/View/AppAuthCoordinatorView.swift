@@ -1,23 +1,20 @@
 //
-//  AuthCoordinatorView.swift
-//  Auth
+//  AppAuthCoordinatorView.swift
+//  Picke
 //
-//  Created by Wonji Suh  on 5/11/26.
+//  App 레이어의 인증 조립 화면.
 //
-
-import Foundation
 
 import SwiftUI
 
 import ComposableArchitecture
+import Presentation
 import TCAFlow
 
-public struct AuthCoordinatorView: View {
-  @Bindable private var store: StoreOf<AuthCoordinator>
+public struct AppAuthCoordinatorView: View {
+  @Bindable private var store: StoreOf<AppAuthCoordinator>
 
-  public init(
-    store: StoreOf<AuthCoordinator>
-  ) {
+  public init(store: StoreOf<AppAuthCoordinator>) {
     self.store = store
   }
 
@@ -30,6 +27,10 @@ public struct AuthCoordinatorView: View {
 
       case let .onboarding(onboardingStore):
         OnBoardingView(store: onboardingStore)
+          .navigationBarBackButtonHidden()
+
+      case let .web(webStore):
+        WebView(store: webStore)
           .navigationBarBackButtonHidden()
       }
     }

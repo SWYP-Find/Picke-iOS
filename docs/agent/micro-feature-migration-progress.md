@@ -82,6 +82,20 @@
 
 - `./tuisttool generate` 성공.
 
+### 8. Auth-Web 조립 책임 App 레이어 이동
+
+- App 타깃에 `AppAuthCoordinator` / `AppAuthCoordinatorView` 를 추가했다.
+- 로그인 / 온보딩 / 약관 WebView 라우팅 동작은 App 조립 레이어에서 그대로 처리한다.
+- `AppReducer` / `AppView` 는 인증 플로우에서 `AuthCoordinator` 대신 `AppAuthCoordinator` 를 사용한다.
+- Auth 모듈의 `AuthCoordinator` 는 `LoginFeature` / `OnBoardingFeature` 만 보도록 낮췄다.
+- Auth 모듈의 `.Presentation(.Web, .implementation)` 의존을 제거했다.
+- App 조립 레이어에서 `LoginView` 를 생성할 수 있도록 `LoginView.init(store:)` 를 public 으로 열었다.
+
+검증:
+
+- `./tuisttool generate` 성공.
+- `xcodebuild -workspace Picke.xcworkspace -scheme Picke-Debug -configuration Debug -destination 'generic/platform=iOS Simulator' build` 성공.
+
 ## 남은 작업
 
 ### 1. Feature 간 implementation 직접 의존 제거
@@ -89,7 +103,6 @@
 현재 남은 직접 implementation 의존:
 
 ```text
-Auth -> Web
 Battle -> Chat
 Hifi -> Chat, Notification
 Home -> Chat, Notification

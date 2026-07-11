@@ -13,6 +13,5 @@ let project = Project.configure(
     .SPM.tcaFlow,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
-    .Presentation(.Web, .implementation),
   ]
 )

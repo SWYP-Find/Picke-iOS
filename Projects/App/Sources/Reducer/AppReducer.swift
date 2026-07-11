@@ -17,7 +17,7 @@ public struct AppReducer: Sendable {
   @ObservableState
   public enum State {
     case splash(SplashFeature.State)
-    case auth(AuthCoordinator.State)
+    case auth(AppAuthCoordinator.State)
     case mainTab(AppMainTabCoordinator.State)
 
     public init() {
@@ -76,7 +76,7 @@ public struct AppReducer: Sendable {
   @CasePathable
   public enum ScopeAction {
     case splash(SplashFeature.Action)
-    case auth(AuthCoordinator.Action)
+    case auth(AppAuthCoordinator.Action)
     case mainTab(AppMainTabCoordinator.Action)
   }
 
@@ -144,7 +144,7 @@ public struct AppReducer: Sendable {
       SplashFeature()
     }
     .ifCaseLet(\.auth, action: \.scope.auth) {
-      AuthCoordinator()
+      AppAuthCoordinator()
     }
     .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
       AppMainTabCoordinator()
