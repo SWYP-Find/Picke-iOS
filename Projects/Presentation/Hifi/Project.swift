@@ -11,6 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Shared(implements: .Shared),
+    .Domain(.Home, .interface),
     .Domain(implements: .UseCase),
     .Domain(.Search),
     .SPM.composableArchitecture,

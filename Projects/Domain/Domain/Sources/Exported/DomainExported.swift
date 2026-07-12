@@ -15,6 +15,8 @@
 @_exported import CommonDomainInterface
 @_exported import DomainInterface
 @_exported import Entity
+@_exported import HomeDomain
+@_exported import HomeDomainInterface
 @_exported import NotificationDomain
 @_exported import NotificationDomainInterface
 @_exported import PerspectiveDomain

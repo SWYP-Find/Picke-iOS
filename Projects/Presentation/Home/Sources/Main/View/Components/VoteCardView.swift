@@ -9,8 +9,9 @@
 
 import SwiftUI
 
-import PickeDesignKit
 import Entity
+import HomeDomainInterface
+import PickeDesignKit
 
 /// "오늘의 Pické — 투표" 카드. 옵션 탭 시 result 모드로 전환되어
 /// 빈칸에 선택지 텍스트가 채워지고 옵션 박스 아래에 percentage bar 들이 표시된다.

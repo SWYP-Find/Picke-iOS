@@ -9,6 +9,8 @@
 @_exported import AuthData
 @_exported import BattleData
 @_exported import CommentData
+@_exported import CommentData
+@_exported import HomeData
 @_exported import Model
 @_exported import NotificationData
 @_exported import PerspectiveData

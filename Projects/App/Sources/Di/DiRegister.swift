@@ -15,6 +15,8 @@ import CommentData
 import CommentDomain
 import CommentDomainInterface
 import DomainInterface
+import HomeData
+import HomeDomainInterface
 import NetworkToken
 import NotificationData
 import NotificationDomainInterface

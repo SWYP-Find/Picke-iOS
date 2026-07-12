@@ -13,6 +13,7 @@ let project = Project.configure(
     .SPM.tcaFlow,
     .SPM.kingfisher,
     .Domain(.Battle, .interface),
+    .Domain(.Home),
     .Domain(implements: .UseCase),
     .Domain(.Notification),
     .Shared(implements: .Shared),

@@ -6,6 +6,7 @@
 import Foundation
 
 import Entity
+import HomeDomainInterface
 import Model
 import Repository
 import SearchDomainInterface

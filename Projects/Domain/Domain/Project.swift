@@ -23,6 +23,8 @@ let project = Project.configure(
     .Domain(.Search),
     .Domain(.Comment, .interface),
     .Domain(.Comment),
+    .Domain(.Home, .interface),
+    .Domain(.Home),
     .Domain(.Notification, .interface),
     .Domain(.Notification),
     .Domain(.Perspective, .interface),

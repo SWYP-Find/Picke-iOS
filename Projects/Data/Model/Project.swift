@@ -13,6 +13,7 @@ let project = Project.configure(
     .Domain(.Common, .interface),
     .Domain(.Comment, .interface),
     .Domain(.Battle, .interface),
+    .Domain(.Home, .interface),
     .Domain(implements: .Entity),
   ],
   sources: ["Sources/**"],

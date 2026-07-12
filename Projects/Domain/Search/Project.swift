@@ -10,11 +10,13 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Home, .interface),
     .Domain(implements: .Entity),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ],
   interfaceDependencies: [
+    .Domain(.Home, .interface),
     .Domain(implements: .Entity),
     .SPM.weaveDI,
     .SPM.composableArchitecture,

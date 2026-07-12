@@ -6,6 +6,7 @@
 import CommonDomainInterface
 import Entity
 import Foundation
+import HomeDomainInterface
 
 public struct DefaultBattleRepositoryImpl: BattleInterface {
   public init() {}

@@ -13,6 +13,7 @@ import DomainInterface
 import Entity
 import BattleDomain
 import BattleDomainInterface
+import HomeDomainInterface
 import LogMacro
 import PickeDesignKit
 import UseCase
