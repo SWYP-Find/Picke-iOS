@@ -12,6 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Domain(.Common, .interface),
     .Domain(.Comment, .interface),
+    .Domain(.Home, .interface),
     .Domain(implements: .DomainInterface),
     .Domain(.Profile),
     .SPM.composableArchitecture,

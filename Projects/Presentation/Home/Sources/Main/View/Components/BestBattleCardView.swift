@@ -7,8 +7,9 @@
 
 import SwiftUI
 
-import PickeDesignKit
 import Entity
+import HomeDomainInterface
+import PickeDesignKit
 
 /// "Best 배틀" 랭킹 카드 (랭크 번호 + 페어 + 카테고리).
 struct BestBattleCardView: View {

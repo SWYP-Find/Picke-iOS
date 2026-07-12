@@ -5,18 +5,18 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.Chat),
-  bundleId: .appBundleID(name: ".Chat"),
+  moduleType: .microModule(name: "HomeDomain"),
+  bundleId: .appBundleID(name: ".HomeDomain"),
   settings: .settings(),
   dependencies: [
     .Domain(.Common, .interface),
-    .Domain(.Home, .interface),
-    .Domain(implements: .UseCase),
-    .Domain(.Comment),
-    .Shared(implements: .Shared),
+    .Domain(.Notification),
+    .SPM.weaveDI,
     .SPM.composableArchitecture,
-    .SPM.tcaFlow,
-    .SPM.kingfisher,
-    .SPM.logMarco,
+  ],
+  interfaceDependencies: [
+    .Domain(.Common, .interface),
+    .SPM.weaveDI,
+    .SPM.composableArchitecture,
   ]
 )

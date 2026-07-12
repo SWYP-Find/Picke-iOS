@@ -1,6 +1,7 @@
 import ComposableArchitecture
 import Entity
 import Foundation
+import HomeDomainInterface
 import Testing
 
 @testable import Home

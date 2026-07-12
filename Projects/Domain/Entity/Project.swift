@@ -11,6 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Common, .interface),
+    .Domain(.Home, .interface),
     .Domain(.Profile, .interface),
   ],
   sources: ["Sources/**"],

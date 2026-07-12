@@ -5,10 +5,9 @@
 //  Created by Wonji Suh on 5/16/26.
 //
 
-import Entity
 import Foundation
 
-import DomainInterface
+import HomeDomainInterface
 
 public final class MockHomeRepository: HomeInterface, @unchecked Sendable {
   public enum Configuration {

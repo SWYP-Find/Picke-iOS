@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import HomeDomainInterface
 
 /// 사전 투표창 (.pen `U5WO4`) 에 표시되는 배틀 모델.
 /// 홈 카드의 `VoteQuestion` 과 달리 2지선다 + 철학자 아바타 기반.

@@ -7,10 +7,10 @@
 
 import Foundation
 
-import DomainInterface
 import Entity
+import HomeDomainInterface
 import Model
-import Service
+import Repository
 
 import LogMacro
 import Moya

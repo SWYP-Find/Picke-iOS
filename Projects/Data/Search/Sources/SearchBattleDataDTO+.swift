@@ -5,6 +5,7 @@
 
 import Entity
 import Foundation
+import HomeDomainInterface
 
 public extension SearchBattlePageDataDTO {
   func toDomain() -> ExploreItemPage {

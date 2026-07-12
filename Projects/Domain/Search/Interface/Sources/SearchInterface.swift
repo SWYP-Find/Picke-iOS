@@ -5,6 +5,7 @@
 
 import Entity
 import Foundation
+import HomeDomainInterface
 import WeaveDI
 
 public protocol SearchInterface: Sendable {

@@ -5,6 +5,7 @@
 
 import Entity
 import Foundation
+import HomeDomainInterface
 
 public struct DefaultSearchRepositoryImpl: SearchInterface {
   public init() {}

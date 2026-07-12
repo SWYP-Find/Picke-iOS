@@ -5,9 +5,9 @@
 //  Created by Wonji Suh on 5/16/26.
 //
 
-import Entity
 import CommonDomainInterface
 import Foundation
+import HomeDomainInterface
 
 public extension TagDTO {
   func toDomain() -> BattleTag {
