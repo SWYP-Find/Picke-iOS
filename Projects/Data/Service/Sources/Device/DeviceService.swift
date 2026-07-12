@@ -10,7 +10,7 @@
 import Foundation
 
 import API
-import Foundations
+import NetworkHeader
 
 import AsyncMoya
 

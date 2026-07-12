@@ -5,15 +5,13 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Service"),
-  bundleId: .appBundleID(name: ".Service"),
+  moduleType: .module(name: "NetworkToken"),
+  bundleId: .appBundleID(name: ".NetworkToken"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Data(implements: .API),
-    .Domain(implements: .Entity),
-    .Network(implements: .NetworkHeader),
-    .SPM.asyncMoya,
+    .SPM.weaveDI,
+    .SPM.dependencies,
   ],
   sources: ["Sources/**"],
   hasTests: false

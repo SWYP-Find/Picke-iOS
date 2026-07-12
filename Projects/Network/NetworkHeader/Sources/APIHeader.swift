@@ -1,19 +1,19 @@
 //
 //  APIHeader.swift
-//  Foundations
+//  NetworkHeader
 //
 //  Created by Wonji Suh  on 5/7/25.
 //
 
 import Foundation
+import NetworkToken
 import WeaveDI
 
 public struct APIHeader {
-
-  public static let contentType   = "Content-Type"
-  public static let accessToken   = "Authorization"
-  public static let refreshToken  = "X-Refresh-Token"
-  public static let accept        = "accept"
+  public static let contentType = "Content-Type"
+  public static let accessToken = "Authorization"
+  public static let refreshToken = "X-Refresh-Token"
+  public static let accept = "accept"
 
   @Dependency(\.tokenProvider) private static var tokenProvider
 
@@ -36,41 +36,41 @@ public struct APIHeader {
   public init() {}
 }
 
-extension APIHeader {
-  static func baseHeaders(_ headers: [String: String]?) -> [String: String] {
+public extension APIHeader {
+  internal static func baseHeaders(_ headers: [String: String]?) -> [String: String] {
     var baseHeaders = baseHeader
-    if let headers = headers {
+    if let headers {
       baseHeaders.merge(headers) { $1 }
     }
     return baseHeaders
   }
 
-  public static var baseHeader: Dictionary<String, String> {
+  static var baseHeader: [String: String] {
     [
       contentType: APIHeaderManger.contentType,
       accessToken: "Bearer \(accessTokenKeyChain)",
-      accept: APIHeaderManger.contentType
+      accept: APIHeaderManger.contentType,
     ]
   }
 
-  public static var notAccessTokenHeader: Dictionary<String, String> {
+  static var notAccessTokenHeader: [String: String] {
     [
       contentType: APIHeaderManger.contentType,
-      accept: APIHeaderManger.contentType
+      accept: APIHeaderManger.contentType,
     ]
   }
 
-  public static var mutiPartbaseHeader: Dictionary<String, String> {
+  static var mutiPartbaseHeader: [String: String] {
     [
       contentType: APIHeaderManger.multipartContentType,
       accessToken: "Bearer \(accessTokenKeyChain)",
     ]
   }
 
-  public static var applebaseHeader: Dictionary<String, String> {
+  static var applebaseHeader: [String: String] {
     [
       contentType: APIHeaderManger.contentType,
-      accept: APIHeaderManger.contentType
+      accept: APIHeaderManger.contentType,
     ]
   }
 }

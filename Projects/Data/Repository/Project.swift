@@ -11,7 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Network(implements: .Networking),
-    .Network(implements: .Foundations),
+    .Network(implements: .NetworkHeader),
     .Data(implements: .Service),
     .Data(implements: .Model),
     .Domain(implements: .DomainInterface),

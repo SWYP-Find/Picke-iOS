@@ -1,6 +1,6 @@
 //
 //  APIHeaderManger.swift
-//  Foundations
+//  NetworkHeader
 //
 //  Created by Wonji Suh  on 5/7/25.
 //

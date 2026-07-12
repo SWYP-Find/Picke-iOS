@@ -8,7 +8,6 @@
 import Foundation
 
 import AsyncMoya
-import Foundations
 
 public extension MoyaProvider {
   /// 인증된 세션(인터셉터 부착) 기반의 Provider

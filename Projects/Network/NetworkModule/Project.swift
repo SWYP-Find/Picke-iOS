@@ -10,7 +10,8 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Network(implements: .Foundations),
+    .Network(implements: .NetworkToken),
+    .Network(implements: .NetworkHeader),
     .Network(implements: .Networking),
     .Network(implements: .ThirdPartys),
   ],

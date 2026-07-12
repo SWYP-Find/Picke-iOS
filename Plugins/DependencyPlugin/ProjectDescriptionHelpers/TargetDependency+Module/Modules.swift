@@ -21,7 +21,8 @@ public extension ModulePath {
   enum Networks: String, CaseIterable {
     case NetworkModule
     case Networking
-    case Foundations
+    case NetworkToken
+    case NetworkHeader
     case ThirdPartys
 
     public static let name: String = "Network"

@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings:  .settings(),
   dependencies: [
-    .Network(implements: .Foundations)
+    .Network(implements: .NetworkHeader)
   ],
   sources: ["Sources/**"],
   hasTests: false

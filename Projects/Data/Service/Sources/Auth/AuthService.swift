@@ -9,7 +9,7 @@ import Foundation
 
 import API
 import Entity
-import Foundations
+import NetworkHeader
 
 import AsyncMoya
 

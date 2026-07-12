@@ -135,7 +135,8 @@ Picke-iOS/
 │   │
 │   ├── Network/                   # 🌐 Network Layer
 │   │   ├── Networking/            # 네트워크 클라이언트 export
-│   │   ├── Foundations/           # APIHeader / TokenProviding / KeychainTokenProvider
+│   │   ├── NetworkToken/          # TokenProviding / InMemoryTokenProvider (토큰 추상화)
+│   │   ├── NetworkHeader/         # APIHeader / APIHeaderManger (HTTP 헤더 조립, NetworkToken 의존)
 │   │   └── ThirdPartys/           # AsyncMoya / WeaveDI 등 SPM 재노출
 │   │
 │   └── Shared/                    # 🔧 Shared Layer
@@ -194,7 +195,7 @@ Data/Repository → Domain (Entity + Repository Protocol)
        ↓
 Data/Model → Domain (Entity 변환)
        ↓
-Data/Service → Data/API + Network/Foundations
+Data/Service → Data/API + Network/NetworkHeader
 ```
 
 **핵심 설계 원칙**

@@ -1,6 +1,6 @@
 //
 //  TokenProviding.swift
-//  Foundations
+//  NetworkToken
 //
 //  Created by Wonji Suh  on 1/2/26.
 //

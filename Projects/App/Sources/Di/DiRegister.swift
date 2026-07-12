@@ -8,7 +8,7 @@
 import Foundation
 
 import DomainInterface
-import Foundations
+import NetworkToken
 import Repository
 import UseCase
 
