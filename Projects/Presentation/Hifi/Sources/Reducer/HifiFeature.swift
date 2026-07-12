@@ -11,6 +11,7 @@ import Foundation
 import ComposableArchitecture
 import Entity
 import LogMacro
+import SearchDomain
 import UseCase
 
 @Reducer

@@ -7,4 +7,6 @@
 
 @_exported import DomainInterface
 @_exported import Entity
+@_exported import SearchDomain
+@_exported import SearchDomainInterface
 @_exported import UseCase

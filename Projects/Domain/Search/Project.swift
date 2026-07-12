@@ -5,16 +5,18 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Domain"),
-  bundleId: .appBundleID(name: ".Domain"),
+  moduleType: .microModule(name: "SearchDomain"),
+  bundleId: .appBundleID(name: ".SearchDomain"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .Domain(implements: .Entity),
-    .Domain(implements: .DomainInterface),
-    .Domain(implements: .UseCase),
-    .Domain(.Search, .interface),
-    .Domain(.Search),
+    .SPM.weaveDI,
+    .SPM.composableArchitecture,
   ],
-  sources: ["Sources/**"]
+  interfaceDependencies: [
+    .Domain(implements: .Entity),
+    .SPM.weaveDI,
+    .SPM.composableArchitecture,
+  ]
 )

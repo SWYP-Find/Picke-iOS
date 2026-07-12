@@ -12,6 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Shared(implements: .Shared),
     .Domain(implements: .UseCase),
+    .Domain(.Search),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

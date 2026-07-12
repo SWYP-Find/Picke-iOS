@@ -10,6 +10,8 @@ import Foundation
 import DomainInterface
 import NetworkToken
 import Repository
+import SearchData
+import SearchDomainInterface
 import UseCase
 
 import ComposableArchitecture

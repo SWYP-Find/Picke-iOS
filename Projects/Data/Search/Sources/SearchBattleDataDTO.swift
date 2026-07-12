@@ -5,6 +5,8 @@
 
 import Foundation
 
+import Model
+
 public struct SearchBattlePageDataDTO: Decodable {
   public let items: [SearchBattleDTO]
   public let nextOffset: Int?
