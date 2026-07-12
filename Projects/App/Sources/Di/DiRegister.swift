@@ -9,6 +9,7 @@ import Foundation
 
 import DomainInterface
 import NetworkToken
+import ProfileData
 import Repository
 import UseCase
 

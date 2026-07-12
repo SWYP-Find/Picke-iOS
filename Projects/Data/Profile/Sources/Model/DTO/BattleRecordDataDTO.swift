@@ -1,0 +1,27 @@
+//
+//  BattleRecordDataDTO.swift
+//  Model
+//
+//  `GET /api/v1/me/battle-records` 응답 DTO.
+//
+
+import Foundation
+import Model
+
+public struct BattleRecordDataDTO: Decodable {
+  public let items: [BattleRecordItemDTO]?
+  public let nextOffset: Int?
+  public let hasNext: Bool?
+}
+
+public struct BattleRecordItemDTO: Decodable {
+  public let battleId: String?
+  public let recordId: String?
+  public let voteSide: String?
+  public let category: String?
+  public let title: String?
+  public let summary: String?
+  public let createdAt: String?
+}
+
+public typealias BattleRecordResponseDTO = BaseResponseDTO<BattleRecordDataDTO>

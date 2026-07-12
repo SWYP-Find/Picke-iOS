@@ -7,4 +7,5 @@
 
 @_exported import DomainInterface
 @_exported import Entity
+@_exported import ProfileDomain
 @_exported import UseCase

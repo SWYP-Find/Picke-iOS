@@ -7,5 +7,6 @@
 
 @_exported import API
 @_exported import Model
+@_exported import ProfileData
 @_exported import Repository
 @_exported import Service

@@ -11,6 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(implements: .DomainInterface),
+    .Domain(.Profile),
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.mixpanel,

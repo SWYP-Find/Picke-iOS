@@ -13,6 +13,7 @@ let project = Project.configure(
     .Domain(implements: .Entity),
     .Domain(implements: .DomainInterface),
     .Domain(implements: .UseCase),
+    .Domain(.Profile),
   ],
   sources: ["Sources/**"]
 )
