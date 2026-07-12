@@ -12,6 +12,7 @@ let project = Project.configure(
   dependencies: [
     .SPM.tcaFlow,
     .SPM.kingfisher,
+    .Domain(.Battle, .interface),
     .Domain(implements: .UseCase),
     .Domain(.Notification),
     .Shared(implements: .Shared),

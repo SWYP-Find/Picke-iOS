@@ -13,6 +13,8 @@ import PickeDesignKit
 import DomainInterface
 import CommonDomainInterface
 import Entity
+import BattleDomain
+import BattleDomainInterface
 import LogMacro
 import UseCase
 

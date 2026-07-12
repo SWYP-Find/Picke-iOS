@@ -5,7 +5,7 @@
 
 import Foundation
 
-import DomainInterface
+import BattleDomainInterface
 import CommonDomainInterface
 import Entity
 

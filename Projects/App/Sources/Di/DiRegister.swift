@@ -9,10 +9,12 @@ import Foundation
 
 import AuthData
 import AuthDomain
-import DomainInterface
+import BattleData
+import BattleDomainInterface
+import CommentData
 import CommentDomain
 import CommentDomainInterface
-import CommentData
+import DomainInterface
 import NetworkToken
 import NotificationData
 import NotificationDomainInterface

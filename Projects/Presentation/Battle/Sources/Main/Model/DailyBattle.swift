@@ -8,6 +8,7 @@
 import Foundation
 
 import Entity
+import BattleDomainInterface
 import Utill
 
 public struct DailyBattle: Equatable, Identifiable {

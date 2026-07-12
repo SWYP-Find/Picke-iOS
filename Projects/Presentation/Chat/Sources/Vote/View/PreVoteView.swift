@@ -9,6 +9,7 @@ import SwiftUI
 
 import ComposableArchitecture
 import Entity
+import BattleDomainInterface
 import Kingfisher
 import PickeDesignKit
 

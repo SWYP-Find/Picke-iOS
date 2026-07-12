@@ -12,6 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Domain(.Common, .interface),
     .Domain(.Comment, .interface),
+    .Domain(.Battle, .interface),
     .Domain(implements: .Entity),
   ],
   sources: ["Sources/**"],
