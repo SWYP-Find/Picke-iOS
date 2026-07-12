@@ -6,14 +6,15 @@
 //
 
 import Alamofire
+import AuthDomainInterface
 import DomainInterface
 import Entity
 import Foundation
 import WeaveDI
 
 /// 네트워킹 성능 최적화된 세션 매니저
-final class OptimizedSessionManager {
-  static let shared = OptimizedSessionManager()
+public final class OptimizedSessionManager {
+  public static let shared = OptimizedSessionManager()
 
   @Dependency(\.keychainManager) var keychainManager
 
@@ -53,14 +54,14 @@ final class OptimizedSessionManager {
     setupInitialCredential()
   }
 
-  func updateCredential(with tokens: AuthTokens) {
+  public func updateCredential(with tokens: AuthTokens) {
     credential = AccessTokenCredential.make(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken
     )
   }
 
-  func clear() {
+  public func clear() {
     credential = nil
     session.session.configuration.urlCache?.removeAllCachedResponses()
   }

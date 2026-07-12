@@ -11,6 +11,8 @@ let project = Project.configure(
   dependencies: [
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
+    .Domain(.Auth),
+    .Domain(implements: .Entity),
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
   ]

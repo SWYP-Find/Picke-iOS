@@ -14,6 +14,7 @@ let project = Project.configure(
     .Data(implements: .Model),
     .Data(implements: .Service),
     .Data(implements: .Repository),
+    .Data(.Auth),
     .Data(.Search),
     .Data(.Notification),
     .Data(.Profile),

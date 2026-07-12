@@ -10,7 +10,7 @@ import SwiftUI
 
 import ComposableArchitecture
 import PickeDesignKit
-import Entity
+import AuthDomainInterface
 
 struct TermsAgreementView: View {
   @Bindable var store: StoreOf<TermsAgreementFeature>

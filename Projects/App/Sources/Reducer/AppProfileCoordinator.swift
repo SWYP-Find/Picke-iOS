@@ -8,6 +8,7 @@
 
 import Foundation
 
+import AuthDomainInterface
 import ComposableArchitecture
 import Entity
 import Presentation
