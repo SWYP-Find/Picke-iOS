@@ -8,9 +8,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import PickeDesignKit
 import Entity
 import Kingfisher
+import PickeDesignKit
 import Utill
 
 @ViewAction(for: HifiFeature.self)
@@ -22,14 +22,15 @@ public struct HifiView: View {
   }
 
   public var body: some View {
-    ZStack {
-      Color.beige50.ignoresSafeArea()
+    // 상단 바는 스크롤 영향 없는 sticky 헤더 — Home 과 동일하게 VStack 최상단에 둔다.
+    // (기존 `.safeAreaInset(edge: .top)` + 바 배경 `.ignoresSafeArea(edges: .top)` 조합은
+    //  iPhone 13 mini / iOS 18.6 에서 상단 안전영역 인셋이 이중 계산돼 헤더가 아래로
+    //  밀리는 기종-한정 오류를 유발했다.)
+    VStack(spacing: 0) {
+      fixedTopBar()
       contentArea()
     }
-    .safeAreaInset(edge: .top, spacing: 0) {
-      fixedTopBar()
-        .background(Color.beige50.ignoresSafeArea(edges: .top))
-    }
+    .background(Color.beige50.ignoresSafeArea())
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
