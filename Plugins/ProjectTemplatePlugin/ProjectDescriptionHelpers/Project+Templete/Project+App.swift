@@ -20,9 +20,9 @@ public extension Scheme {
       name: name,
       shared: true,
       buildAction: .buildAction(targets: ["\(appName)"]),
-      runAction: .runAction(configuration: configuration),
+      runAction: .runAction(configuration: configuration, executable: "\(appName)"),
       archiveAction: .archiveAction(configuration: configuration),
-      profileAction: .profileAction(configuration: configuration),
+      profileAction: .profileAction(configuration: configuration, executable: "\(appName)"),
       analyzeAction: .analyzeAction(configuration: configuration)
     )
   }
@@ -30,7 +30,6 @@ public extension Scheme {
   static func appSchemes(appName: String = Project.Environment.appName) -> [Scheme] {
     return [
       .appScheme(appName: appName, name: appName, configuration: .release),
-      .appScheme(appName: appName, name: "\(appName)-Debug", configuration: .debug),
       .appScheme(appName: appName, name: "\(appName)-Stage", configuration: .stage),
       .appScheme(appName: appName, name: "\(appName)-Prod", configuration: .prod),
     ]

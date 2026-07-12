@@ -78,7 +78,7 @@ extension Project {
 
     return Project(
       name: name,
-      settings: settings,
+      settings: settings.injectingModuleConfigurationsIfNeeded(),
       targets: [
         interfaceTarget,
         featureTarget,

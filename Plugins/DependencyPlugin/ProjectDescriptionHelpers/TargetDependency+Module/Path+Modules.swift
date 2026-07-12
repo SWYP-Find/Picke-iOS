@@ -8,7 +8,7 @@
 import Foundation
 import ProjectDescription
 
-// MARK: ProjectDescription.Path + DesignSystem
+// MARK: ProjectDescription.Path + PickeDesignKit
 public extension ProjectDescription.Path {
   static var Shared: Self {
     return .relativeToRoot("Projects/\(ModulePath.Shareds.name)")

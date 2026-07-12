@@ -6,8 +6,14 @@
 
   let packageSettings = PackageSettings(
     productTypes: [
-      "ComposableArchitecture": .staticFramework,
-      "Dependencies": .staticFramework,
+      // 동적 전환: PickeDesignKit(동적)이 이 라이브러리들을 정적 링크하면 앱 바이너리와
+      // 각각 중복 복사되어 ObjC 클래스가 2벌 등록되고 "spurious casting failures/
+      // mysterious crashes" + NavigationRequestObserver 다중 갱신을 유발한다.
+      // 동적이면 앱·프레임워크가 단일 사본을 공유한다.
+      "ComposableArchitecture": .framework,
+      "Dependencies": .framework,
+      "Perception": .framework,
+      "Sharing": .framework,
       "TCAFlow": .staticFramework,
       "Moya": .staticFramework,
       "LogMacro": .staticFramework,
@@ -16,7 +22,7 @@
       "AppAuthCore": .framework,
       "GTMAppAuth": .framework,
       "GTMSessionFetcherCore": .framework,
-      "IssueReporting": .staticFramework,
+      "IssueReporting": .framework,
       "IssueReportingPackageSupport": .staticFramework,
       "XCTestDynamicOverlay": .staticFramework,
       "Clocks": .staticFramework,
@@ -37,6 +43,15 @@
       base: [
         "SWIFT_ENABLE_EXPLICIT_MODULES": "NO",
         "CLANG_ENABLE_EXPLICIT_MODULES": "NO",
+      ],
+      // 외부 SPM 패키지도 앱과 동일한 커스텀 컨피그(Stage/Prod/Release)를 갖게 한다.
+      // 이게 없으면 패키지는 기본 [Debug, Release]만 생성 → Stage 빌드 시 리소스 번들이
+      // Release-iphonesimulator 에만 만들어져 앱의 Stage-iphonesimulator Copy Bundle Resources
+      // 단계가 lstat 실패(SDWebImage_SDWebImage.bundle 등)로 깨진다.
+      configurations: [
+        .debug(name: "Stage"),
+        .release(name: "Prod"),
+        .release(name: "Release"),
       ]
     )
   )

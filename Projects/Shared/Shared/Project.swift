@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .framework,
   settings:  .settings(),
   dependencies: [
-    .Shared(implements: .DesignSystem),
+    .Shared(implements: .PickeDesignKit),
     .Shared(implements: .Utill),
     .Shared(implements: .ThirdParty)
   ],

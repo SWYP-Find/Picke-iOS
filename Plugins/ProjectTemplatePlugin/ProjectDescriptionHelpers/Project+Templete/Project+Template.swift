@@ -28,7 +28,8 @@ public extension Project {
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
-    hasTests: Bool = false
+    hasTests: Bool = false,
+    demoDisplayName: String? = nil
   ) -> Project {
     switch moduleType {
     case .app:
@@ -67,11 +68,27 @@ public extension Project {
         infoPlist: infoPlist,
         entitlements: entitlements,
         schemes: schemes,
-        hasTests: hasTests
+        hasTests: hasTests,
+        demoDisplayName: demoDisplayName
       )
     case let .feature(module):
       return configureFeature(
         name: module.rawValue,
+        bundleId: bundleId,
+        platform: platform,
+        product: product,
+        deploymentTarget: deploymentTarget,
+        destinations: destinations,
+        settings: settings,
+        interfaceDependencies: interfaceDependencies,
+        dependencies: dependencies,
+        testingDependencies: testingDependencies,
+        resources: resources,
+        schemes: schemes
+      )
+    case let .microModule(name):
+      return configureFeature(
+        name: name,
         bundleId: bundleId,
         platform: platform,
         product: product,
@@ -99,9 +116,9 @@ public extension Scheme {
         configuration: target,
         options: .options(coverage: true, codeCoverageTargets: ["\(name)"])
       ),
-      runAction: .runAction(configuration: target),
+      runAction: .runAction(configuration: target, executable: "\(name)"),
       archiveAction: .archiveAction(configuration: target),
-      profileAction: .profileAction(configuration: target),
+      profileAction: .profileAction(configuration: target, executable: "\(name)"),
       analyzeAction: .analyzeAction(configuration: target)
     )
   }
@@ -112,16 +129,16 @@ public extension Scheme {
     let appName = Project.Environment.appName
     let schemeName = switch environment {
     case .prod: appName
-    case .dev, .stage: "\(appName)-\(environment.name)"
+    case .stage: "\(appName)-\(environment.name)"
     }
 
     return .scheme(
       name: schemeName,
       buildAction: .buildAction(targets: [.target(name)]),
-      runAction: .runAction(configuration: .init(stringLiteral: environment.name)),
+      runAction: .runAction(configuration: .init(stringLiteral: environment.name), executable: "\(name)"),
       archiveAction: .archiveAction(configuration: .release),
-      profileAction: .profileAction(configuration: .release),
-      analyzeAction: .analyzeAction(configuration: .debug)
+      profileAction: .profileAction(configuration: .release, executable: "\(name)"),
+      analyzeAction: .analyzeAction(configuration: .stage)
     )
   }
 }

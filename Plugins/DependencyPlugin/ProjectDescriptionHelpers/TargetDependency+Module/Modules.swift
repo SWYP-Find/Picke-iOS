@@ -37,6 +37,7 @@ public extension ModulePath {
     case Repository
     case API
     case Service
+    case DataTesting
 
     public static let name: String = "Data"
   }
@@ -49,8 +50,8 @@ public extension ModulePath {
     case Entity
     case UseCase
     case Domain
-    case DataInterface
     case DomainInterface
+    case DomainTesting
 
     public static let name: String = "Domain"
   }
@@ -59,7 +60,7 @@ public extension ModulePath {
 public extension ModulePath {
   enum Shareds: String, CaseIterable {
     case Shared
-    case DesignSystem
+    case PickeDesignKit
     case Utill
 
     public static let name: String = "Shared"

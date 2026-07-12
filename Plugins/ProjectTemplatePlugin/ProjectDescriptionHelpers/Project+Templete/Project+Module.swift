@@ -24,7 +24,8 @@ extension Project {
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
-    hasTests: Bool = false
+    hasTests: Bool = false,
+    demoDisplayName: String? = nil
   ) -> Project {
     let moduleTarget: Target = .target(
       name: name,
@@ -54,12 +55,41 @@ extension Project {
       )
     }
 
+    var allSchemes = schemes
+    if let demoDisplayName {
+      let demoName = "\(name)Demo"
+      targets.append(
+        .target(
+          name: demoName,
+          destinations: destinations,
+          product: .app,
+          bundleId: "\(bundleId).Demo",
+          deploymentTargets: deploymentTarget,
+          infoPlist: .extendingDefault(with: [
+            "UILaunchScreen": [:],
+            "CFBundleDisplayName": .string(demoDisplayName),
+          ]),
+          buildableFolders: ["Demo"],
+          dependencies: [.target(name: name)],
+          settings: suppressWarningsSettings
+        )
+      )
+      allSchemes.append(
+        .scheme(
+          name: demoName,
+          shared: true,
+          buildAction: .buildAction(targets: [.target(demoName)]),
+          runAction: .runAction(configuration: .stage, executable: "\(demoName)")
+        )
+      )
+    }
+
     return Project(
       name: name,
       packages: packages,
-      settings: settings,
+      settings: settings.injectingModuleConfigurationsIfNeeded(),
       targets: targets,
-      schemes: schemes
+      schemes: allSchemes
     )
   }
 }

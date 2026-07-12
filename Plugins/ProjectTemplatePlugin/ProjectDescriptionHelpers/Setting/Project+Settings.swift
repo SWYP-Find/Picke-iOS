@@ -23,7 +23,12 @@ extension Settings {
       // -ObjC 가 링크라인의 정적 아카이브에서 ObjC 클래스를 로드하므로 -all_load 는 불필요.
       // (-all_load 를 쓰면 동적 프레임워크 Sentry/Moya/CA 심볼이 앱 바이너리에 이중 등록되어
       //  "Class ... implemented in both" 경고 + 런타임 abort 발생)
-      .setOtherLdFlags("-ObjC -framework GoogleMobileAds")
+      // SDWebImage 의 category-only 파일(NSData+ImageContentType 의 sd_imageFormatForImageData:)은
+      // debug-dylib 분리 링크에서 -ObjC 만으로 누락될 수 있어, SDWebImage 정적 프레임워크만
+      // -force_load 로 강제 로드한다(타깃 한정이라 동적 프레임워크 중복-클래스 문제 없음).
+      .setOtherLdFlags(
+        "-ObjC -framework GoogleMobileAds -force_load $(BUILT_PRODUCTS_DIR)/SDWebImage.framework/SDWebImage"
+      )
       .setDebugInformationFormat("dwarf-with-dsym")
       .setProvisioningProfileSpecifier(provisioningProfile)
       .setSkipInstall(setSkipInstall)
@@ -57,21 +62,8 @@ extension Settings {
       .setCFBundleDevelopmentRegion()
       .setDebugInformationFormat(),
     configurations: [
+      // Stage 는 debug 타입 컨피그(기존 Debug/Dev 컨피그를 대체).
       .debug(
-        name: .debug,
-        settings:
-        commonSettings(
-          appName: Project.Environment.appName,
-          displayName: Project.Environment.appName,
-          provisioningProfile: "match Development \(Project.Environment.bundlePrefix)",
-          setSkipInstall: false
-        )
-        // 디버그는 dSYM 미생성 → 매 빌드 dsymutil 단계 제거로 앱 빌드 가속.
-        // (릴리즈/스테이지/프로드는 Sentry 심볼화를 위해 dwarf-with-dsym 유지)
-        .setDebugInformationFormat("dwarf"),
-        xcconfig: .path(.dev)
-      ),
-      .release(
         name: .stage,
         settings:
         commonSettings(
@@ -121,13 +113,13 @@ extension Settings {
         .setDebugInformationFormat(),
       configurations: [
         .debug(
-          name: .debug,
+          name: .stage,
           settings:
           commonBaseSettings(
             appName: appName
           ),
           xcconfig:
-          .relativeToRoot("./Config/Dev.xcconfig")
+          .relativeToRoot("./Config/Stage.xcconfig")
         ),
         .release(
           name: .release,
