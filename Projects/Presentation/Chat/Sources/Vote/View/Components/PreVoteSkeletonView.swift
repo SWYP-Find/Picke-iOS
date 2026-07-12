@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct PreVoteSkeletonView: View {
   var body: some View {

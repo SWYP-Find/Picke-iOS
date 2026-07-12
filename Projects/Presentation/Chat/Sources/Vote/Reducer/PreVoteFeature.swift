@@ -9,7 +9,7 @@ import Foundation
 import UIKit
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import DomainInterface
 import Entity
 import LogMacro

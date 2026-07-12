@@ -19,7 +19,10 @@ enum PreVoteLayout {
   static let ctaHeight: CGFloat = 52
   static let ctaBottomSpacing: CGFloat = 40
   static let ctaHorizontalPadding: CGFloat = 16
-  static let contentBottomSpacing: CGFloat = ctaHeight + ctaBottomSpacing + rootContentSpacing
+  /// CTA 가 safeAreaInset 으로 스크롤 하단에 예약하는 총 높이(버튼 + 하단 여백).
+  static let ctaReservedHeight: CGFloat = ctaHeight + ctaBottomSpacing
+  /// CTA 는 safeAreaInset 이 예약하므로, 콘텐츠 하단 여백은 옵션과 CTA 사이 간격만 남긴다.
+  static let contentBottomSpacing: CGFloat = rootContentSpacing
   static let snapshotWidth: CGFloat = 360
 
   /// 제목·요약 길이에 따라 그라데이션 여백을 동적으로 결정(3단계).

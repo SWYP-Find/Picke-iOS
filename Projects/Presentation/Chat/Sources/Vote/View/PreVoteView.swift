@@ -8,9 +8,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
 import Entity
 import Kingfisher
+import PickeDesignKit
 
 @ViewAction(for: PreVoteFeature.self)
 public struct PreVoteView: View {
@@ -34,13 +34,6 @@ public struct PreVoteView: View {
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
-    .overlay(alignment: .bottom) {
-      if !shouldShowSkeleton, !shouldShowLoadError {
-        primaryButton()
-          .padding(.horizontal, PreVoteLayout.ctaHorizontalPadding)
-          .padding(.bottom, PreVoteLayout.ctaBottomSpacing)
-      }
-    }
     .overlay(alignment: .top) {
       if !shouldShowSkeleton, !shouldShowLoadError {
         navigationBar()
@@ -95,28 +88,36 @@ public struct PreVoteView: View {
   private func loadedContent() -> some View {
     if let battle = store.battle {
       GeometryReader { proxy in
+        let topInset = PreVoteLayout.contentOverlapTopOffset
+          + PreVoteLayout.contentGradientSpacerHeight(
+            titleLength: battle.titleLine1.count + battle.titleLine2.count,
+            summaryLength: battle.summary.count
+          )
+
         ZStack(alignment: .top) {
           backgroundImage(battle)
             .frame(width: proxy.size.width)
 
-          ScrollView(showsIndicators: false) {
+          ScrollView {
             VStack(spacing: 0) {
               Color.clear
-                .frame(height: PreVoteLayout.contentOverlapTopOffset)
+                .frame(height: topInset)
 
-              Spacer()
-                .frame(height: PreVoteLayout.contentGradientSpacerHeight(
-                  titleLength: battle.titleLine1.count + battle.titleLine2.count,
-                  summaryLength: battle.summary.count
-                ))
-
-              contentArea(battle)
+              contentArea(
+                battle,
+                minHeight: max(0, proxy.size.height - topInset - PreVoteLayout.ctaReservedHeight)
+              )
             }
             .frame(width: proxy.size.width)
-            .frame(minHeight: proxy.size.height, alignment: .top)
           }
+          .scrollIndicators(.hidden)
           .scrollBounceBehavior(.basedOnSize)
-          .scrollDisabled(true)
+          // CTA 를 스크롤 영역 하단에 고정 예약 → 작은 화면에서도 옵션 카드가 버튼에 가리지 않는다.
+          .safeAreaInset(edge: .bottom, spacing: 0) {
+            primaryButton()
+              .padding(.horizontal, PreVoteLayout.ctaHorizontalPadding)
+              .padding(.bottom, PreVoteLayout.ctaBottomSpacing)
+          }
         }
         .ignoresSafeArea(edges: .top)
       }
@@ -205,7 +206,7 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private func contentArea(_ battle: PreVoteBattle) -> some View {
+  private func contentArea(_ battle: PreVoteBattle, minHeight: CGFloat) -> some View {
     VStack(spacing: 0) {
       contentSection(battle)
       // 유연 간격: 콘텐츠는 위(상단 spacer)에 고정, 옵션은 아래로 당겨 CTA 위 40 유지.
@@ -215,7 +216,10 @@ extension PreVoteView {
     .padding(.horizontal, PreVoteLayout.contentHorizontalPadding)
     .padding(.top, PreVoteLayout.contentTopPadding)
     .padding(.bottom, PreVoteLayout.contentBottomSpacing)
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .frame(maxWidth: .infinity)
+    // 큰 화면: 뷰포트를 채워 옵션을 하단 고정(기존 디자인). 작은 화면: 콘텐츠가 넘치면
+    // 이 프레임이 그대로 늘어나 스크롤 영역이 되고, 옵션이 CTA 밑으로 잘리지 않는다.
+    .frame(minHeight: minHeight, alignment: .top)
     .background(
       LinearGradient(
         stops: [
@@ -228,7 +232,6 @@ extension PreVoteView {
         endPoint: .bottom
       )
     )
-    .ignoresSafeArea(edges: .bottom)
   }
 
   @ViewBuilder
