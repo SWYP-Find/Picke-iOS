@@ -10,6 +10,7 @@
 import Foundation
 
 import ComposableArchitecture
+import AuthDomain
 import PickeDesignKit
 import LogMacro
 import UseCase

@@ -7,6 +7,8 @@
 
 import Foundation
 
+import AuthData
+import AuthDomain
 import DomainInterface
 import CommentDomain
 import CommentDomainInterface

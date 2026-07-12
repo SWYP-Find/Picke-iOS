@@ -9,7 +9,7 @@
 import Foundation
 
 import ComposableArchitecture
-import Entity
+import AuthDomainInterface
 
 @Reducer
 public struct TermsAgreementFeature {

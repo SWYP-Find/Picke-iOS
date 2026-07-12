@@ -6,10 +6,12 @@
 //
 
 import ComposableArchitecture
+import Entity
 import SwiftUI
 
 import PickeDesignKit
-import Entity
+import AuthDomain
+import AuthDomainInterface
 
 public struct LoginView: View {
   @Bindable var store: StoreOf<LoginFeature>

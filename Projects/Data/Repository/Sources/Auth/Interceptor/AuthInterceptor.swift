@@ -8,6 +8,7 @@
 import Alamofire
 import ComposableArchitecture
 import Dependencies
+import AuthDomainInterface
 import DomainInterface
 import Entity
 import Foundation

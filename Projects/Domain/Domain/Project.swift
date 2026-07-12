@@ -15,6 +15,8 @@ let project = Project.configure(
     .Domain(implements: .Entity),
     .Domain(implements: .DomainInterface),
     .Domain(implements: .UseCase),
+    .Domain(.Auth, .interface),
+    .Domain(.Auth),
     .Domain(.Search, .interface),
     .Domain(.Search),
     .Domain(.Comment, .interface),

@@ -11,6 +11,7 @@
 import Foundation
 
 import ComposableArchitecture
+import AuthDomain
 import PickeDesignKit
 import Entity
 import LogMacro

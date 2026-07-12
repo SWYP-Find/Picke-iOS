@@ -17,12 +17,12 @@ let project = Project.configure(
     .Data(implements: .Service),
     .Data(implements: .Model),
     .Domain(implements: .DomainInterface),
+    .Domain(.Auth, .interface),
     .SPM.asyncMoya,
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.logMarco,
     .SPM.mixpanel,
-    .SPM.googleSignIn,
   ],
   sources: ["Sources/**"],
   hasTests: true

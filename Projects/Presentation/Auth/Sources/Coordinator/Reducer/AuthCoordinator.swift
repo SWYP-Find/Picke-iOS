@@ -9,9 +9,11 @@ import Foundation
 
 import AuthInterface
 import ComposableArchitecture
+import Entity
 import TCAFlow
 
-import Entity
+import AuthDomain
+import AuthDomainInterface
 
 @FlowCoordinator(screen: "AuthScreen", navigation: true)
 public struct AuthCoordinator {

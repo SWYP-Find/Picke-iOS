@@ -6,14 +6,15 @@
 //
 
 import Alamofire
+import AuthDomainInterface
 import DomainInterface
 import Entity
 import Foundation
 import UIKit
 import WeaveDI
 
-final class AuthSessionManager {
-  static let shared = AuthSessionManager()
+public final class AuthSessionManager {
+  public static let shared = AuthSessionManager()
 
   @Dependency(\.keychainManager) var keychainManager
 
@@ -32,14 +33,14 @@ final class AuthSessionManager {
     memoryCleanupTimer?.invalidate()
   }
 
-  func updateCredential(with tokens: AuthTokens) {
+  public func updateCredential(with tokens: AuthTokens) {
     credential = AccessTokenCredential.make(
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken
     )
   }
 
-  func clear() {
+  public func clear() {
     credential = nil
     forceMemoryCleanup()
   }

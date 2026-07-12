@@ -7,6 +7,8 @@
 
 @_exported import CommonDomain
 @_exported import CommonDomainInterface
+@_exported import AuthDomain
+@_exported import AuthDomainInterface
 @_exported import DomainInterface
 @_exported import Entity
 @_exported import NotificationDomain
