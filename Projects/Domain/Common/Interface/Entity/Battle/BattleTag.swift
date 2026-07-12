@@ -1,6 +1,6 @@
 //
 //  BattleTag.swift
-//  Entity
+//  CommonDomain
 //
 //  Created by Wonji Suh on 5/16/26.
 //

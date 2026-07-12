@@ -1,6 +1,6 @@
 //
 //  TagType.swift
-//  Entity
+//  CommonDomain
 //
 
 import Foundation

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CommonDomainInterface
 
 /// "지금 뜨는 배틀" 가로 스크롤 카드 — API 의 trendingBattles.
 public struct HotBattle: Equatable, Identifiable {

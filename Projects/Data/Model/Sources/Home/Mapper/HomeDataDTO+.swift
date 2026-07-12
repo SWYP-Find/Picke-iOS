@@ -6,6 +6,7 @@
 //
 
 import Entity
+import CommonDomainInterface
 import Foundation
 
 public extension TagDTO {

@@ -11,6 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Search, .interface),
+    .Domain(.Common, .interface),
     .Domain(implements: .Entity),
     .Data(implements: .API),
     .Data(implements: .Model),

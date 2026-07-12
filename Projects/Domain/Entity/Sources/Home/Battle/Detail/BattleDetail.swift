@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CommonDomainInterface
 
 public struct BattleDetail: Equatable, Identifiable {
   public let battleInfo: BattleInfo

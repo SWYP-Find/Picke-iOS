@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import CommonDomainInterface
 
 public struct RecommendedBattle: Equatable, Identifiable, Hashable {
   public let battleId: Int

@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import CommonDomainInterface
 
 public struct BattleDetailDataDTO: Decodable {
   public let battleInfo: BattleInfoDTO
