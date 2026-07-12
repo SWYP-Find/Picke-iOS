@@ -15,6 +15,8 @@ let project = Project.configure(
     .Domain(implements: .UseCase),
     .Domain(.Search, .interface),
     .Domain(.Search),
+    .Domain(.Notification, .interface),
+    .Domain(.Notification),
   ],
   sources: ["Sources/**"]
 )

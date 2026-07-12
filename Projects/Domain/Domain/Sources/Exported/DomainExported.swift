@@ -9,4 +9,6 @@
 @_exported import Entity
 @_exported import SearchDomain
 @_exported import SearchDomainInterface
+@_exported import NotificationDomain
+@_exported import NotificationDomainInterface
 @_exported import UseCase

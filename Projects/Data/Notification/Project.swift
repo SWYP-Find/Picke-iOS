@@ -5,17 +5,20 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Data"),
-  bundleId: .appBundleID(name: ".Data"),
+  moduleType: .module(name: "NotificationData"),
+  bundleId: .appBundleID(name: ".NotificationData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Notification, .interface),
     .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Service),
     .Data(implements: .Repository),
-    .Data(.Search),
-    .Data(.Notification),
+    .Network(implements: .NetworkHeader),
+    .SPM.asyncMoya,
+    .SPM.logMarco,
   ],
-  sources: ["Sources/**"]
+  sources: ["Sources/**"],
+  hasTests: false
 )

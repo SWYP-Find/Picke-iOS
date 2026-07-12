@@ -8,8 +8,8 @@
 import SwiftUI
 
 import ComposableArchitecture
+import NotificationDomainInterface
 import PickeDesignKit
-import Entity
 import Utill
 
 @ViewAction(for: NotificationFeature.self)

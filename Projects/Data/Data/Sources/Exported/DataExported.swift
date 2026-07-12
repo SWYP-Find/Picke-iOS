@@ -7,6 +7,7 @@
 
 @_exported import API
 @_exported import Model
+@_exported import NotificationData
 @_exported import Repository
 @_exported import SearchData
 @_exported import Service

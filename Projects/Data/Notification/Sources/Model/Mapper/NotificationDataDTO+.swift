@@ -3,8 +3,8 @@
 //  Model
 //
 
-import Entity
 import Foundation
+import NotificationDomainInterface
 
 public extension NotificationDataDTO {
   func toDomain() -> NotificationPage {
