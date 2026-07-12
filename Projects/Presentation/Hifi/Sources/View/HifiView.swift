@@ -22,16 +22,13 @@ public struct HifiView: View {
   }
 
   public var body: some View {
-    GeometryReader { proxy in
-      ZStack(alignment: .top) {
-        Color.beige50.ignoresSafeArea()
-
-        contentArea()
-          .padding(.top, proxy.safeAreaInsets.top + Layout.topBarHeight)
-
-        fixedTopBar(topInset: proxy.safeAreaInsets.top)
-      }
-      .ignoresSafeArea(edges: .top)
+    ZStack {
+      Color.beige50.ignoresSafeArea()
+      contentArea()
+    }
+    .safeAreaInset(edge: .top, spacing: 0) {
+      fixedTopBar()
+        .background(Color.beige50.ignoresSafeArea(edges: .top))
     }
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
@@ -40,21 +37,12 @@ public struct HifiView: View {
   }
 }
 
-private enum Layout {
-  static let headerHeight: CGFloat = 56
-  static let categoryTabsHeight: CGFloat = 40
-  static let sortRowHeight: CGFloat = 52
-  static let topBarHeight: CGFloat = headerHeight + categoryTabsHeight + sortRowHeight
-}
-
 // MARK: - Empty
 
 private extension HifiView {
   @ViewBuilder
-  func fixedTopBar(topInset: CGFloat) -> some View {
+  func fixedTopBar() -> some View {
     VStack(spacing: 0) {
-      Color.beige50
-        .frame(height: topInset)
       HifiHeaderView { send(.notificationTapped) }
       categoryTabs()
       sortRow()
@@ -156,7 +144,7 @@ private extension HifiView {
       }
     }
     .padding(.horizontal, 16)
-    .frame(height: Layout.categoryTabsHeight)
+    .frame(height: 40)
     .background(.white)
     .overlay(alignment: .bottom) {
       Rectangle().fill(.beige600).frame(height: 1.5)
@@ -218,7 +206,6 @@ private extension HifiView {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
-    .frame(height: Layout.sortRowHeight)
     .background(.white)
   }
 }
