@@ -11,4 +11,5 @@
 @_exported import ProfileData
 @_exported import Repository
 @_exported import SearchData
+@_exported import CommentData
 @_exported import Service

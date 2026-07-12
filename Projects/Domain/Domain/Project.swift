@@ -17,6 +17,8 @@ let project = Project.configure(
     .Domain(implements: .UseCase),
     .Domain(.Search, .interface),
     .Domain(.Search),
+    .Domain(.Comment, .interface),
+    .Domain(.Comment),
     .Domain(.Notification, .interface),
     .Domain(.Notification),
     .Domain(.Profile),

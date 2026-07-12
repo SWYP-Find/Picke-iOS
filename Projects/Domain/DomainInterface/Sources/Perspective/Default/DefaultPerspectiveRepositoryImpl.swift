@@ -5,6 +5,7 @@
 //  Created by Wonji Suh  on 6/3/26.
 //
 
+import CommentDomainInterface
 import CommonDomainInterface
 import Entity
 import Foundation

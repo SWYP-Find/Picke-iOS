@@ -10,6 +10,7 @@ import Foundation
 
 import ChatInterface
 import ComposableArchitecture
+import CommentDomainInterface
 import DomainInterface
 import LogMacro
 import PickeDesignKit

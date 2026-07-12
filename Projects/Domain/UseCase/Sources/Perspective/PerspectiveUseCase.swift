@@ -5,8 +5,9 @@
 
 import Foundation
 
-import DomainInterface
+import CommentDomainInterface
 import CommonDomainInterface
+import DomainInterface
 import Entity
 
 import ComposableArchitecture

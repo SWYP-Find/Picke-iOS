@@ -14,4 +14,6 @@
 @_exported import ProfileDomain
 @_exported import SearchDomain
 @_exported import SearchDomainInterface
+@_exported import CommentDomain
+@_exported import CommentDomainInterface
 @_exported import UseCase

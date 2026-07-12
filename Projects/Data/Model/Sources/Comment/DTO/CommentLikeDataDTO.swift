@@ -5,6 +5,8 @@
 
 import Foundation
 
+import Model
+
 public struct CommentLikeDataDTO: Decodable {
   public let perspectiveId: Int
   public let likeCount: Int
