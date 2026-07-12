@@ -67,6 +67,7 @@ public struct NotificationFeature {
 
   public enum InnerAction: Equatable {
     case notificationsResponse(Result<NotificationPage, NotificationError>, reset: Bool)
+    case unreadBadgeResponse(Result<Bool, NotificationError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -207,8 +208,13 @@ extension NotificationFeature {
       }
 
     case .markAll:
-      return .run { [useCase = notificationUseCase] _ in
-        try? await useCase.markAllAsRead()
+      return .run { [useCase = notificationUseCase] send in
+        let result = await Result {
+          try await useCase.markAllAsRead()
+          return try await useCase.hasUnreadNotifications()
+        }
+        .mapError(NotificationError.from)
+        return await send(.inner(.unreadBadgeResponse(result)))
       }
     }
   }
@@ -235,15 +241,32 @@ extension NotificationFeature {
         Log.error("[NotificationFeature] fetchNotifications failed: \(error.localizedDescription)")
       }
       return .none
+
+    case let .unreadBadgeResponse(result):
+      switch result {
+      case let .success(hasUnread):
+        updateUnreadBadge(state: &state, hasUnread: hasUnread)
+      case let .failure(error):
+        Log.error("[NotificationFeature] syncUnreadBadge failed: \(error.localizedDescription)")
+      }
+      return .none
     }
   }
 
   /// 로드된 항목 기준 미읽음 존재 여부를 전역 빨간점 플래그에 반영.
   /// 개별 읽음/모두 읽음 즉시 반영용. (카테고리 탭은 부분 정보라 다음 전체 조회/새 푸시 때 보정됨)
   private func updateUnreadBadge(state: inout State) {
+    updateUnreadBadge(state: &state, hasUnread: state.hasUnread)
+  }
+
+  /// 서버의 전체 미읽음 여부를 전역 빨간점 플래그에 반영.
+  private func updateUnreadBadge(
+    state: inout State,
+    hasUnread: Bool
+  ) {
     // QA-47: 방금 모두읽음(readAllPending) 했는데 서버가 아직 미읽음으로 지연되면 빨간점을 되살리지 않는다.
     // 서버가 읽음을 반영(미읽음 없음)하면 점을 끄고 pending 을 해제한다. (HomeFeature 와 동일 가드)
-    if state.hasUnread {
+    if hasUnread {
       if !state.readAllPending {
         state.$hasUnreadNotification.withLock { $0 = true }
       }

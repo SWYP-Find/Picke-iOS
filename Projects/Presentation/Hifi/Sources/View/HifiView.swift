@@ -15,39 +15,24 @@ import Utill
 
 @ViewAction(for: HifiFeature.self)
 public struct HifiView: View {
-  public let store: StoreOf<HifiFeature>
+  @Bindable public var store: StoreOf<HifiFeature>
 
   public init(store: StoreOf<HifiFeature>) {
     self.store = store
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      HifiHeaderView { send(.notificationTapped) }
-
-      categoryTabs()
-
-      sortRow()
-
-      Group {
-        if store.isLoading, store.items.isEmpty {
-          ScrollView {
-            ExploreSkeletonView()
-          }
-        } else if store.items.isEmpty {
-          emptyState()
-        } else {
-          exploreList()
-        }
-      }
-      .scrollIndicators(.hidden)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .contentShape(Rectangle())
-      .simultaneousGesture(categorySwipe)
+    ZStack {
+      Color.beige50.ignoresSafeArea()
+      contentArea()
     }
-    .background(Color.beige50.ignoresSafeArea())
+    .safeAreaInset(edge: .top, spacing: 0) {
+      fixedTopBar()
+        .background(Color.beige50.ignoresSafeArea(edges: .top))
+    }
     .navigationBarHidden(true)
-    .scrollBounceBehavior(.basedOnSize)
+    .toolbar(.hidden, for: .navigationBar)
+    .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
   }
 }
@@ -55,6 +40,35 @@ public struct HifiView: View {
 // MARK: - Empty
 
 private extension HifiView {
+  @ViewBuilder
+  func fixedTopBar() -> some View {
+    VStack(spacing: 0) {
+      HifiHeaderView { send(.notificationTapped) }
+      categoryTabs()
+      sortRow()
+    }
+    .background(.beige50)
+    .frame(maxWidth: .infinity)
+    .zIndex(1)
+  }
+
+  @ViewBuilder
+  func contentArea() -> some View {
+    Group {
+      if store.isLoading, store.items.isEmpty {
+        skeletonList()
+      } else if store.items.isEmpty {
+        emptyState()
+      } else {
+        exploreList()
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .clipped()
+    .contentShape(Rectangle())
+    .simultaneousGesture(categorySwipe)
+  }
+
   @ViewBuilder
   func emptyState() -> some View {
     VStack(spacing: 8) {
@@ -75,6 +89,15 @@ private extension HifiView {
 
 private extension HifiView {
   @ViewBuilder
+  func skeletonList() -> some View {
+    ScrollView {
+      ExploreSkeletonView()
+    }
+    .scrollIndicators(.hidden)
+    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+  }
+
+  @ViewBuilder
   func exploreList() -> some View {
     ScrollView {
       LazyVStack(spacing: 0) {
@@ -89,6 +112,8 @@ private extension HifiView {
         }
       }
     }
+    .scrollIndicators(.hidden)
+    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
   }
 
   /// 좌우 스와이프로 카테고리 전환 (빈 상태/스켈레톤 포함 콘텐츠 영역 전체에 적용).

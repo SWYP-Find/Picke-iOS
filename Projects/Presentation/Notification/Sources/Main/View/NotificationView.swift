@@ -137,15 +137,19 @@ private extension NotificationView {
     }
   }
 
+  func notificationIconName(_ item: NotificationItem) -> String {
+    item.isRead ? "checkmark.circle" : item.iconSystemName
+  }
+
   @ViewBuilder
   func notificationRow(_ item: NotificationItem) -> some View {
     Button {
       send(.notificationTapped(item))
     } label: {
       HStack(alignment: .center, spacing: 16) {
-        Image(systemName: item.iconSystemName)
+        Image(systemName: notificationIconName(item))
           .font(.system(size: 18, weight: .regular))
-          .foregroundStyle(.neutral900)
+          .foregroundStyle(item.isRead ? .gray300 : .primary500)
           .frame(width: 24, height: 24)
 
         VStack(alignment: .leading, spacing: 6) {
