@@ -7,6 +7,7 @@
 
 import Foundation
 
+import AuthInterface
 import ComposableArchitecture
 import TCAFlow
 
@@ -24,6 +25,13 @@ public struct AuthCoordinator {
       @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
       routes = [.root(.login(.init(userSession: userSession)), embedInNavigationView: true)]
     }
+
+    public init(route: AuthRoute) {
+      switch route {
+      case .login:
+        self.init()
+      }
+    }
   }
 
   @CasePathable
@@ -32,7 +40,7 @@ public struct AuthCoordinator {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
-    case navigation(NavigationAction)
+    case delegate(AuthDelegate)
   }
 
   // MARK: - ViewAction
@@ -51,12 +59,6 @@ public struct AuthCoordinator {
 
   public enum InnerAction: Equatable {}
 
-  // MARK: - NavigationAction
-
-  public enum NavigationAction: Equatable {
-    case presentMainTab
-  }
-
   func handleRoute(
     state: inout State,
     action: Action
@@ -74,8 +76,8 @@ public struct AuthCoordinator {
     case let .inner(innerAction):
       handleInnerAction(state: &state, action: innerAction)
 
-    case let .navigation(navigationAction):
-      handleNavigationAction(state: &state, action: navigationAction)
+    case let .delegate(delegateAction):
+      handleDelegateAction(state: &state, action: delegateAction)
     }
   }
 }
@@ -101,10 +103,10 @@ extension AuthCoordinator {
     // MARK: - 온보딩 완료 → 루트로 (다음 플로우 연결 지점)
 
     case .routeAction(id: _, action: .login(.delegate(.presentMainTab))):
-      return .send(.navigation(.presentMainTab))
+      return .send(.delegate(.presentMainTab))
 
     case .routeAction(_, action: .onboarding(.delegate(.presentMainTab))):
-      return .send(.navigation(.presentMainTab))
+      return .send(.delegate(.presentMainTab))
 
     default:
       return .none
@@ -126,9 +128,9 @@ extension AuthCoordinator {
     }
   }
 
-  private func handleNavigationAction(
+  private func handleDelegateAction(
     state _: inout State,
-    action: NavigationAction
+    action: AuthDelegate
   ) -> Effect<Action> {
     switch action {
     case .presentMainTab:

@@ -9,7 +9,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import Entity
 import Kingfisher
 import Utill

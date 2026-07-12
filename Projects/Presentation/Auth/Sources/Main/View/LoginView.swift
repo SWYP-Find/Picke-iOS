@@ -8,7 +8,7 @@
 import ComposableArchitecture
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 
 public struct LoginView: View {

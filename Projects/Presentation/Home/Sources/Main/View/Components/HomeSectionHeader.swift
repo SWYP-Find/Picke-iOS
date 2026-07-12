@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 /// "지금 뜨는 배틀 / 더 보기" 같은 섹션 헤더 공통 컴포넌트.
 struct HomeSectionHeader: View {

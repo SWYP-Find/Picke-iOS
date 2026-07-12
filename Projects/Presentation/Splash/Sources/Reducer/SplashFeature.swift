@@ -7,6 +7,7 @@
 
 import Foundation
 
+import DomainInterface
 import Entity
 import UseCase
 
@@ -51,16 +52,19 @@ public struct SplashFeature {
 
   // MARK: - AsyncAction
 
+  @CasePathable
   public enum AsyncAction: Equatable {
     case checkAppUpdate
   }
 
   // MARK: - InnerAction
 
+  @CasePathable
   public enum InnerAction: Equatable {
     case checkAppUpdateResponse(Result<AppUpdateInfo?, AppUpdateError>)
   }
 
+  @CasePathable
   public enum DelegateAction: Equatable {
     case presentAuth
     case presentMainTab

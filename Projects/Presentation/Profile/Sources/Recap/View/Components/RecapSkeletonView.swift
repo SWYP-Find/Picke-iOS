@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct RecapSkeletonView: View {
   var body: some View {

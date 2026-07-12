@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct BattleRecordSkeletonView: View {
   var body: some View {

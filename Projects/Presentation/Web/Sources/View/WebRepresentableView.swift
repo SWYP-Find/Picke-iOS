@@ -8,7 +8,7 @@
 import SwiftUI
 import WebKit
 
-import DesignSystem
+import PickeDesignKit
 
 public struct WebRepresentableView: UIViewRepresentable {
   // MARK: - URL to load

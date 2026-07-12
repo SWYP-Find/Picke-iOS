@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import Presentation
 import TCAFlow
 

@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 
 public struct RecapScoreBar: View {

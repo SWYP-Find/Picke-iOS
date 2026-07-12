@@ -9,7 +9,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 
 /// "오늘의 Pické — 투표" 카드. 옵션 탭 시 result 모드로 전환되어

@@ -8,7 +8,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 
 /// 홈 화면 최상단 GNB 위 헤더 (PicKé 로고 + 알림 아이콘).
 struct HomeHeaderView: View {

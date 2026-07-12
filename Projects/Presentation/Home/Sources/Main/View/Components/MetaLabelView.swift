@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 /// 시계/눈 같은 메타 정보를 SF Symbol + 12pt 텍스트로 표시.
 struct MetaLabelView: View {

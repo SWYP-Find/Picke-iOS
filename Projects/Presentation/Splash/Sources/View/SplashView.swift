@@ -8,7 +8,7 @@
 import ComposableArchitecture
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 public struct SplashView: View {
   @Bindable var store: StoreOf<SplashFeature>

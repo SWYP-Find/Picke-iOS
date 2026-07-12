@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 /// 온보딩 페이지 인디케이터 — 활성 dot 은 pill (20×8), 비활성은 원형 (8×8)
 public struct OnBoardingPageIndicator: View {

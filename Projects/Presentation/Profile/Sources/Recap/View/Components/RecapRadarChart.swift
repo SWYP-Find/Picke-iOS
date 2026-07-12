@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 
 public struct RecapRadarChart: View {

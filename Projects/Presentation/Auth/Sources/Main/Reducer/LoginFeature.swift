@@ -8,10 +8,11 @@
 import AuthenticationServices
 import Foundation
 
+import AuthInterface
 import ComposableArchitecture
 import LogMacro
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 import UseCase
 
@@ -43,7 +44,7 @@ public struct LoginFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
-    case delegate(DelegateAction)
+    case delegate(LoginDelegate)
     case termsAgreement(PresentationAction<TermsAgreementFeature.Action>)
   }
 
@@ -69,14 +70,6 @@ public struct LoginFeature {
   }
 
   // MARK: - NavigationAction
-
-  public enum DelegateAction: Equatable {
-    /// 로그인이 성공해 토큰을 모두 확보한 시점. 코디네이터에서 다음 화면으로 전환.
-    case presentOnboarding
-    case presentMainTab
-    /// 약관 상세 WebView 화면으로 이동 (코디네이터에서 처리).
-    case presentTermsWeb(urlString: String)
-  }
 
   nonisolated enum CancelID: Hashable {
     case googleOAuth
@@ -243,7 +236,7 @@ extension LoginFeature {
 
   private func handleDelegateAction(
     state _: inout State,
-    action: DelegateAction
+    action: LoginDelegate
   ) -> Effect<Action> {
     switch action {
     case .presentOnboarding:

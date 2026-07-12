@@ -8,7 +8,7 @@
 import Foundation
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import Presentation
 import Shared
 import TCAFlow

@@ -8,7 +8,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct CommentSkeletonView: View {
   var count: Int = 3

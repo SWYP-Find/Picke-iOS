@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 
 /// "Best 배틀" 랭킹 카드 (랭크 번호 + 페어 + 카테고리).

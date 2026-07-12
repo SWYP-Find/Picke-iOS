@@ -9,7 +9,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 
 @ViewAction(for: SettingsFeature.self)
 public struct SettingsView: View {

@@ -9,7 +9,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 import Entity
 
 /// "오늘의 Pické — 퀴즈" 카드. 옵션 탭 → 정답 비교 → O/X 결과 라벨 노출.

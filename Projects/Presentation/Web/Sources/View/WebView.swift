@@ -6,7 +6,7 @@
 //
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import SwiftUI
 
 public struct WebView: View {

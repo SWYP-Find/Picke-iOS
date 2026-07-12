@@ -6,7 +6,8 @@
 //
 
 import ComposableArchitecture
-import DesignSystem
+import AuthInterface
+import PickeDesignKit
 import Foundation
 import LogMacro
 
@@ -89,7 +90,7 @@ public struct OnBoardingFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
-    case delegate(DelegateAction)
+    case delegate(OnBoardingDelegate)
   }
 
   // MARK: - ViewAction
@@ -109,10 +110,6 @@ public struct OnBoardingFeature {
   public enum InnerAction: Equatable {}
 
   // MARK: - DelegateAction
-
-  public enum DelegateAction: Equatable {
-    case presentMainTab
-  }
 
   nonisolated enum CancelID: Hashable {}
 
@@ -174,7 +171,7 @@ extension OnBoardingFeature {
 
   private func handleDelegateAction(
     state _: inout State,
-    action: DelegateAction
+    action: OnBoardingDelegate
   ) -> Effect<Action> {
     switch action {
     case .presentMainTab:

@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct ProfileSkeletonView: View {
   var body: some View {

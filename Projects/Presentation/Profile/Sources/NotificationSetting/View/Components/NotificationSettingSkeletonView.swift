@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct NotificationSettingSkeletonView: View {
   /// 섹션별 행 개수 (기능별 2 / 소셜 3 / 마케팅 1).

@@ -9,7 +9,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import Kingfisher
 
 @ViewAction(for: ProfileFeature.self)

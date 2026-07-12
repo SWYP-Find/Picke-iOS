@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 struct ExploreSkeletonView: View {
   var count: Int = 6

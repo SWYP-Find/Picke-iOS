@@ -10,14 +10,17 @@ import Foundation
 
 import ChatInterface
 import ComposableArchitecture
-import DesignSystem
+import DomainInterface
 import LogMacro
+import PickeDesignKit
 import Shared
 import TCAFlow
 
 @FlowCoordinator(screen: "ChatScreen", navigation: true)
 public struct ChatCoordinator {
   public init() {}
+
+  @Dependency(\.audioPlayer) private var audioPlayer
 
   @ObservableState
   public struct State: Equatable {
@@ -163,6 +166,20 @@ extension ChatCoordinator {
         }
       }
       state.routes.push(.preVote(.init(battleId: battleId)))
+      return .none
+
+    case let .updateRoutes(newRoutes):
+      // 스와이프 뒤로가기 등으로 chatRoom 이 스택에서 사라지면 오디오를 정지한다.
+      // 버튼 뒤로가기는 chatRoom(.delegate(.dismiss)) 경로에서 이미 pause 되지만,
+      // 인터랙티브 pop 은 ChatRoom 의 onDisappear 이펙트가 teardown 시 취소되어 음성이 계속 나므로
+      // 코디네이터 레벨에서 확실히 정지시킨다. (idle player 의 pause 는 no-op 이라 안전)
+      let hasChatRoom = newRoutes.contains { route in
+        if case .chatRoom = route.screen { return true }
+        return false
+      }
+      if !hasChatRoom {
+        return .run { [player = audioPlayer] _ in await player.pause() }
+      }
       return .none
 
     default:

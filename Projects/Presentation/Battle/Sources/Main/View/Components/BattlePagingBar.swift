@@ -9,7 +9,7 @@
 
 import SwiftUI
 
-import DesignSystem
+import PickeDesignKit
 
 /// 상단 paging 바 — 세그먼트 터치로 페이지 전환. 우측에 `현재/전체` 카운트.
 struct BattlePagingBar: View {
