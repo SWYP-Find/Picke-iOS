@@ -1,6 +1,6 @@
 //
 //  PerspectiveError.swift
-//  Entity
+//  PerspectiveDomainInterface
 //
 
 import Foundation

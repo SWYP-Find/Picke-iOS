@@ -7,10 +7,9 @@ import Foundation
 
 import CommentDomainInterface
 import CommonDomainInterface
-import DomainInterface
-import Entity
 import Model
-import Service
+import PerspectiveDomainInterface
+import Repository
 
 import LogMacro
 import Moya

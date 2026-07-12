@@ -1,14 +1,13 @@
 //
 //  PerspectiveUseCase.swift
-//  UseCase
+//  PerspectiveDomain
 //
 
 import Foundation
 
 import CommentDomainInterface
 import CommonDomainInterface
-import DomainInterface
-import Entity
+import PerspectiveDomainInterface
 
 import ComposableArchitecture
 

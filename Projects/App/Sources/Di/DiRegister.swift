@@ -9,13 +9,15 @@ import Foundation
 
 import AuthData
 import AuthDomain
-import DomainInterface
+import CommentData
 import CommentDomain
 import CommentDomainInterface
-import CommentData
+import DomainInterface
 import NetworkToken
 import NotificationData
 import NotificationDomainInterface
+import PerspectiveData
+import PerspectiveDomainInterface
 import ProfileData
 import Repository
 import SearchData

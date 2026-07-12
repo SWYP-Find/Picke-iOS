@@ -7,10 +7,11 @@
 
 @_exported import API
 @_exported import AuthData
+@_exported import CommentData
 @_exported import Model
 @_exported import NotificationData
+@_exported import PerspectiveData
 @_exported import ProfileData
 @_exported import Repository
 @_exported import SearchData
-@_exported import CommentData
 @_exported import Service

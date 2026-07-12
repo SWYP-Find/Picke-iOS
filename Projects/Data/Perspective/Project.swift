@@ -5,21 +5,23 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Data"),
-  bundleId: .appBundleID(name: ".Data"),
+  moduleType: .module(name: "PerspectiveData"),
+  bundleId: .appBundleID(name: ".PerspectiveData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Perspective, .interface),
+    .Domain(.Common, .interface),
+    .Domain(.Comment, .interface),
     .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Service),
     .Data(implements: .Repository),
-    .Data(.Auth),
-    .Data(.Search),
-    .Data(.Comment),
-    .Data(.Notification),
-    .Data(.Perspective),
-    .Data(.Profile),
+    .Network(implements: .NetworkHeader),
+    .SPM.asyncMoya,
+    .SPM.weaveDI,
+    .SPM.logMarco,
   ],
-  sources: ["Sources/**"]
+  sources: ["Sources/**"],
+  hasTests: false
 )

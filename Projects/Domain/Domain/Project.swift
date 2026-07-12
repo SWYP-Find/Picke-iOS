@@ -23,6 +23,8 @@ let project = Project.configure(
     .Domain(.Comment),
     .Domain(.Notification, .interface),
     .Domain(.Notification),
+    .Domain(.Perspective, .interface),
+    .Domain(.Perspective),
     .Domain(.Profile),
   ],
   sources: ["Sources/**"]
