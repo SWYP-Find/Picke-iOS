@@ -5,19 +5,21 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Data"),
-  bundleId: .appBundleID(name: ".Data"),
+  moduleType: .module(name: "CommentData"),
+  bundleId: .appBundleID(name: ".CommentData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Comment, .interface),
+    .Domain(.Common, .interface),
     .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Service),
     .Data(implements: .Repository),
-    .Data(.Search),
-    .Data(.Comment),
-    .Data(.Notification),
-    .Data(.Profile),
+    .Network(implements: .NetworkHeader),
+    .SPM.asyncMoya,
+    .SPM.logMarco,
   ],
-  sources: ["Sources/**"]
+  sources: ["Sources/**"],
+  hasTests: false
 )

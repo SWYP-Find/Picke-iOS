@@ -7,6 +7,8 @@
 import Foundation
 
 import ComposableArchitecture
+import CommentDomain
+import CommentDomainInterface
 import PickeDesignKit
 import DomainInterface
 import CommonDomainInterface

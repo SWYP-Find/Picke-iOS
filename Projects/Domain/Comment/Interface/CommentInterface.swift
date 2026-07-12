@@ -3,9 +3,8 @@
 //  DomainInterface
 //
 
-import Dependencies
 import CommonDomainInterface
-import Entity
+import Dependencies
 import Foundation
 import WeaveDI
 

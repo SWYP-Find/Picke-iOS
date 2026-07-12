@@ -3,6 +3,7 @@
 //  Model
 //
 
+import CommentDomainInterface
 import Entity
 import Foundation
 

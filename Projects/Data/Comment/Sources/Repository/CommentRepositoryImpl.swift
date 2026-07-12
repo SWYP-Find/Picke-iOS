@@ -5,11 +5,10 @@
 
 import Foundation
 
-import DomainInterface
+import CommentDomainInterface
 import CommonDomainInterface
-import Entity
 import Model
-import Service
+import Repository
 
 import LogMacro
 import Moya

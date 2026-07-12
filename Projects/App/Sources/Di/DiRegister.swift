@@ -8,6 +8,9 @@
 import Foundation
 
 import DomainInterface
+import CommentDomain
+import CommentDomainInterface
+import CommentData
 import NetworkToken
 import NotificationData
 import NotificationDomainInterface
