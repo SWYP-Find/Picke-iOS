@@ -8,6 +8,7 @@
 
 import PickeDesignKit
 import Entity
+import BattleDomainInterface
 
 extension PhilosopherAvatar {
   var imageAsset: ImageAsset {

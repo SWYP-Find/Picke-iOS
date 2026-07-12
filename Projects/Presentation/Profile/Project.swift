@@ -12,6 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Domain(.Profile),
     .Domain(.Auth),
+    .Domain(.Battle),
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,

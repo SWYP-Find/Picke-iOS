@@ -4,6 +4,7 @@
 //
 
 import Entity
+import BattleDomainInterface
 import Foundation
 
 public extension TodayBattlePageDataDTO {

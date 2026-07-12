@@ -10,6 +10,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Common, .interface),
+    .Domain(.Battle),
     .Domain(implements: .UseCase),
     .Domain(.Comment),
     .Shared(implements: .Shared),

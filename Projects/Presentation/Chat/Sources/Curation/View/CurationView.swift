@@ -10,6 +10,7 @@ import SwiftUI
 import ComposableArchitecture
 import PickeDesignKit
 import Entity
+import BattleDomainInterface
 import Utill
 
 @ViewAction(for: CurationFeature.self)

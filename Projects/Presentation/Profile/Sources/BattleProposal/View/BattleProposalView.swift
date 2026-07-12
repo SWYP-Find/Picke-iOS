@@ -11,6 +11,7 @@ import SwiftUI
 import ComposableArchitecture
 import PickeDesignKit
 import Entity
+import BattleDomainInterface
 
 @ViewAction(for: BattleProposalFeature.self)
 public struct BattleProposalView: View {

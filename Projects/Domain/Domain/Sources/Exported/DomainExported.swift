@@ -7,6 +7,8 @@
 
 @_exported import AuthDomain
 @_exported import AuthDomainInterface
+@_exported import BattleDomain
+@_exported import BattleDomainInterface
 @_exported import CommentDomain
 @_exported import CommentDomainInterface
 @_exported import CommonDomain

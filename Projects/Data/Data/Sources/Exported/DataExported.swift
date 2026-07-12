@@ -7,6 +7,7 @@
 
 @_exported import API
 @_exported import AuthData
+@_exported import BattleData
 @_exported import CommentData
 @_exported import Model
 @_exported import NotificationData

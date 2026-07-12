@@ -11,6 +11,8 @@ import Foundation
 
 import ComposableArchitecture
 import Entity
+import BattleDomain
+import BattleDomainInterface
 import LogMacro
 import UseCase
 

@@ -9,6 +9,8 @@ import Foundation
 
 import AuthData
 import AuthDomain
+import BattleData
+import BattleDomainInterface
 import CommentData
 import CommentDomain
 import CommentDomainInterface

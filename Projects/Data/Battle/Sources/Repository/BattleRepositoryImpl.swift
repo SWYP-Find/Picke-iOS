@@ -5,10 +5,11 @@
 
 import Foundation
 
-import DomainInterface
+import BattleDomainInterface
 import CommonDomainInterface
 import Entity
 import Model
+import Repository
 import Service
 
 import LogMacro
