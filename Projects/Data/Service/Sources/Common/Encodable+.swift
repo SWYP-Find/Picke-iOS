@@ -7,7 +7,7 @@
 
 import Foundation
 
-extension Encodable {
+public extension Encodable {
   /// `Encodable` 을 API 파라미터용 `[String: Any]` 로 변환.
   /// JSON 표준은 `/` 의 이스케이프를 허용하지만 로그 가독성을 위해 비활성.
   var toDictionary: [String: Any]? {

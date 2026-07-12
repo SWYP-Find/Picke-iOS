@@ -9,6 +9,8 @@ import Foundation
 
 import DomainInterface
 import NetworkToken
+import NotificationData
+import NotificationDomainInterface
 import Repository
 import UseCase
 

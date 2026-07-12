@@ -13,6 +13,8 @@ let project = Project.configure(
     .Domain(implements: .Entity),
     .Domain(implements: .DomainInterface),
     .Domain(implements: .UseCase),
+    .Domain(.Notification, .interface),
+    .Domain(.Notification),
   ],
   sources: ["Sources/**"]
 )

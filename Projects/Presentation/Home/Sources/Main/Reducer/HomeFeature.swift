@@ -10,6 +10,7 @@ import DomainInterface
 import Entity
 import Foundation
 import LogMacro
+import NotificationDomain
 import UseCase
 
 @Reducer

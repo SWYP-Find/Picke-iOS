@@ -7,4 +7,6 @@
 
 @_exported import DomainInterface
 @_exported import Entity
+@_exported import NotificationDomain
+@_exported import NotificationDomainInterface
 @_exported import UseCase

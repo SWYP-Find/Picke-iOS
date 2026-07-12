@@ -7,6 +7,8 @@
 
 import Foundation
 
+import Model
+
 public struct NotificationDataDTO: Decodable {
   public let items: [NotificationItemDTO]?
   public let hasNext: Bool?
