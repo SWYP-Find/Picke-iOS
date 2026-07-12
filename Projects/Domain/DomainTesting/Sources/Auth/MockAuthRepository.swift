@@ -8,6 +8,8 @@
 import Entity
 import Foundation
 
+import DomainInterface
+
 public final class MockAuthRepository: AuthInterface, @unchecked Sendable {
   // MARK: - Configuration
 

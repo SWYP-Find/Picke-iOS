@@ -7,9 +7,9 @@
 
 import Foundation
 
-import DomainInterface
-import Security
 import ComposableArchitecture
+@_exported import DomainInterface
+import Security
 import WeaveDI
 
 public final class KeychainManager: KeychainManaging, @unchecked Sendable {
@@ -65,11 +65,11 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
       kSecAttrService: service,
-      kSecAttrAccount: key
+      kSecAttrAccount: key,
     ]
 
     let attributes: [CFString: Any] = [
-      kSecValueData: data
+      kSecValueData: data,
     ]
 
     let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
@@ -86,7 +86,7 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
       kSecAttrService: service,
       kSecAttrAccount: key,
       kSecReturnData: true,
-      kSecMatchLimit: kSecMatchLimitOne
+      kSecMatchLimit: kSecMatchLimitOne,
     ]
 
     var result: AnyObject?
@@ -101,29 +101,11 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
     let query: [CFString: Any] = [
       kSecClass: kSecClassGenericPassword,
       kSecAttrService: service,
-      kSecAttrAccount: key
+      kSecAttrAccount: key,
     ]
     SecItemDelete(query as CFDictionary)
   }
 }
 
-// MARK: - TCA Dependency
-
-public struct KeychainManagerDependency: DependencyKey {
-  public static var liveValue: KeychainManaging {
-    UnifiedDI.resolve(KeychainManaging.self) ?? KeychainManager()
-  }
-
-  public static var testValue: KeychainManaging {
-    InMemoryKeychainManager()
-  }
-
-  public static var previewValue: KeychainManaging = testValue
-}
-
-public extension DependencyValues {
-  var keychainManager: KeychainManaging {
-    get { self[KeychainManagerDependency.self] }
-    set { self[KeychainManagerDependency.self] = newValue }
-  }
-}
+// keychainManager 의존성(프로토콜/DependencyKey/accessor)은 DomainInterface 에 중앙집중.
+// 여기서는 구현체 KeychainManager 만 제공하고 DI(DiRegister)로 주입한다.

@@ -8,6 +8,8 @@
 import Entity
 import Foundation
 
+import DomainInterface
+
 public final class MockHomeRepository: HomeInterface, @unchecked Sendable {
   public enum Configuration {
     case success(HomeBundle)
