@@ -13,17 +13,21 @@ public struct AudioPlayerControlView: View {
   private let onBackward: () -> Void
   private let onTogglePlay: () -> Void
   private let onForward: () -> Void
+  /// 아이콘 색상. 기본은 기존 동작(회색). 채팅방은 브라운(primary500)을 주입한다.
+  private let tint: Color
 
   public init(
     isPlaying: Binding<Bool>,
     onBackward: @escaping () -> Void,
     onTogglePlay: @escaping () -> Void,
-    onForward: @escaping () -> Void
+    onForward: @escaping () -> Void,
+    tint: Color
   ) {
     _isPlaying = isPlaying
     self.onBackward = onBackward
     self.onTogglePlay = onTogglePlay
     self.onForward = onForward
+    self.tint = tint
   }
 
   public var body: some View {
@@ -40,7 +44,7 @@ public struct AudioPlayerControlView: View {
     Button(action: onBackward) {
       controlColumn(
         systemImage: "backward.end.fill",
-        iconColor: .gray500,
+        iconColor: tint,
         iconSize: CGSize(width: 24, height: 55),
         caption: "15초"
       )
@@ -53,7 +57,7 @@ public struct AudioPlayerControlView: View {
     Button(action: onTogglePlay) {
       controlColumn(
         systemImage: isPlaying ? "pause.fill" : "play.fill",
-        iconColor: .gray500,
+        iconColor: tint,
         iconSize: CGSize(width: 55, height: 55),
         caption: nil
       )
@@ -66,7 +70,7 @@ public struct AudioPlayerControlView: View {
     Button(action: onForward) {
       controlColumn(
         systemImage: "forward.end.fill",
-        iconColor: .gray500,
+        iconColor: tint,
         iconSize: CGSize(width: 24, height: 55),
         caption: "15초"
       )
