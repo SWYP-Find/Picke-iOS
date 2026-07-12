@@ -22,13 +22,16 @@ public struct HifiView: View {
   }
 
   public var body: some View {
-    ZStack {
-      Color.beige50.ignoresSafeArea()
-      contentArea()
-    }
-    .safeAreaInset(edge: .top, spacing: 0) {
-      fixedTopBar()
-        .background(Color.beige50.ignoresSafeArea(edges: .top))
+    GeometryReader { proxy in
+      ZStack(alignment: .top) {
+        Color.beige50.ignoresSafeArea()
+
+        contentArea()
+          .padding(.top, proxy.safeAreaInsets.top + Layout.topBarHeight)
+
+        fixedTopBar(topInset: proxy.safeAreaInsets.top)
+      }
+      .ignoresSafeArea(edges: .top)
     }
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
@@ -37,12 +40,21 @@ public struct HifiView: View {
   }
 }
 
+private enum Layout {
+  static let headerHeight: CGFloat = 56
+  static let categoryTabsHeight: CGFloat = 40
+  static let sortRowHeight: CGFloat = 52
+  static let topBarHeight: CGFloat = headerHeight + categoryTabsHeight + sortRowHeight
+}
+
 // MARK: - Empty
 
 private extension HifiView {
   @ViewBuilder
-  func fixedTopBar() -> some View {
+  func fixedTopBar(topInset: CGFloat) -> some View {
     VStack(spacing: 0) {
+      Color.beige50
+        .frame(height: topInset)
       HifiHeaderView { send(.notificationTapped) }
       categoryTabs()
       sortRow()
@@ -124,9 +136,7 @@ private extension HifiView {
         guard abs(value.translation.width) > abs(value.translation.height),
               abs(value.translation.width) > 50
         else { return }
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-          send(.swipedCategory(forward: value.translation.width < 0))
-        }
+        send(.swipedCategory(forward: value.translation.width < 0))
       }
   }
 }
@@ -142,13 +152,17 @@ private extension HifiView {
     HStack(spacing: 0) {
       ForEach(store.categories, id: \.self) { category in
         categoryTab(category)
+          .frame(maxWidth: .infinity)
       }
     }
     .padding(.horizontal, 16)
-    .frame(height: 40)
+    .frame(height: Layout.categoryTabsHeight)
     .background(.white)
     .overlay(alignment: .bottom) {
       Rectangle().fill(.beige600).frame(height: 1.5)
+    }
+    .transaction { transaction in
+      transaction.animation = nil
     }
   }
 
@@ -171,6 +185,10 @@ private extension HifiView {
         }
     }
     .buttonStyle(.plain)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .transaction { transaction in
+      transaction.animation = nil
+    }
   }
 }
 
@@ -200,6 +218,7 @@ private extension HifiView {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
+    .frame(height: Layout.sortRowHeight)
     .background(.white)
   }
 }
