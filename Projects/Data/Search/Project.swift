@@ -5,16 +5,20 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Data"),
-  bundleId: .appBundleID(name: ".Data"),
+  moduleType: .module(name: "SearchData"),
+  bundleId: .appBundleID(name: ".SearchData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Search, .interface),
+    .Domain(implements: .Entity),
     .Data(implements: .API),
     .Data(implements: .Model),
-    .Data(implements: .Service),
     .Data(implements: .Repository),
-    .Data(.Search),
+    .Network(implements: .NetworkHeader),
+    .SPM.asyncMoya,
+    .SPM.logMarco,
   ],
-  sources: ["Sources/**"]
+  sources: ["Sources/**"],
+  hasTests: false
 )

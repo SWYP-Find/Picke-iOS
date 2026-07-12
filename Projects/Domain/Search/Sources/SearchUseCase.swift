@@ -5,8 +5,8 @@
 
 import Foundation
 
-import DomainInterface
 import Entity
+import SearchDomainInterface
 
 import ComposableArchitecture
 
