@@ -9,10 +9,10 @@ import Foundation
 
 import ChatInterface
 import ComposableArchitecture
-import DesignSystem
 import DomainInterface
 import Entity
 import LogMacro
+import PickeDesignKit
 import UseCase
 import Utill
 
@@ -46,6 +46,9 @@ public struct ChatRoomFeature {
     public var isWaitingForNodeSelection: Bool = false
     /// 선택지 영역에서 사용자가 탭한 옵션 label
     public var selectedOptionLabel: String?
+    /// 수동 seek(분기 선택·구간 이동) 직후 목표 시간. iOS 는 seek 반영 전 stale tick 을
+    /// 흘리므로, 목표 시간 근처에 도달하기 전까지 옵저버 tick 을 무시해 오디오-텍스트 불일치를 막는다.
+    public var pendingSeekTime: TimeInterval?
 
     public var totalDuration: TimeInterval {
       if playerDuration > 0 { return playerDuration }
@@ -370,6 +373,7 @@ extension ChatRoomFeature {
       // 15초 되감기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
       let target = max(0, state.currentTime - 15)
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
         await player.seek(to: target)
       }
@@ -379,6 +383,7 @@ extension ChatRoomFeature {
       // 15초 넘기기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
       let target = min(state.totalDuration, state.currentTime + 15)
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
         await player.seek(to: target)
       }
@@ -387,6 +392,7 @@ extension ChatRoomFeature {
       guard state.canScrub else { return .none }
       let target = min(max(0, time), state.totalDuration)
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
         await player.seek(to: target)
       }
@@ -407,6 +413,7 @@ extension ChatRoomFeature {
       state.isWaitingForNodeSelection = false
       let targetTime = state.nodeStartTime(for: option.nextNodeId)
       state.currentTime = targetTime
+      state.pendingSeekTime = targetTime
       state.isPlaying = true
       return .run { [player = audioPlayer] _ in
         await player.seek(to: targetTime)
@@ -494,6 +501,12 @@ extension ChatRoomFeature {
       }
 
     case let .playerTimeUpdated(time):
+      // 수동 seek(분기 선택·구간 이동) 직후, iOS 는 seek 반영 전 stale tick 을 흘린다.
+      // 목표 시간 근처에 도달하기 전까지 tick 을 무시해 노드가 어긋나지 않게 한다(오디오-텍스트 동기).
+      if let pending = state.pendingSeekTime {
+        guard abs(time - pending) < 0.5 else { return .none }
+        state.pendingSeekTime = nil
+      }
       state.currentTime = time
       if let effect = advanceNodeIfNeeded(state: &state, time: time) {
         return effect

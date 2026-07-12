@@ -10,9 +10,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
 import Entity
 import Kingfisher
+import PickeDesignKit
 
 @ViewAction(for: ChatRoomFeature.self)
 public struct ChatRoomView: View {
@@ -215,8 +215,8 @@ extension ChatRoomView {
     let alignment: HorizontalAlignment = speaker.side == .left ? .leading : .trailing
     VStack(alignment: alignment, spacing: 6) {
       Text(speaker.name)
-        .pretendardFont(.semiBold13)
-        .foregroundStyle(.neutral500)
+        .pretendardFont(.bold13)
+        .foregroundStyle(.neutral800)
         .padding(.horizontal, 4)
 
       // 오른쪽 화자는 말풍선도 우측 정렬되도록 내부 VStack 정렬을 side 에 맞춘다.
@@ -240,14 +240,16 @@ extension ChatRoomView {
   private func bubble(
     text: String,
     side: ChatSpeakerSide,
-    isActive: Bool = false
+    isActive _: Bool = false
   ) -> some View {
-    // 재생 중인 말풍선은 흰 배경으로 강조 (테두리는 동일 유지).
-    let background: Color = isActive ? .beige50 : (side == .left ? .beige300 : .beige400)
+    // 안드로이드 시안: 왼쪽=흰색(beige50)/오른쪽=탄색(beige600)으로 좌우 대비를 주고,
+    // 재생 여부와 무관하게 텍스트는 항상 읽기 좋은 neutral800(비활성 흐림 제거).
+    // 재생 중 표시는 말풍선 옆 웨이브폼 아이콘으로 대체한다.
+    let background: Color = side == .left ? .beige50 : .beige600
     let border: Color = side == .left ? .beige600 : .beige700
     Text(text)
       .pretendardFont(.regular13)
-      .foregroundStyle(isActive ? .neutral800 : .neutral500)
+      .foregroundStyle(.neutral800)
       .lineSpacing(13 * 0.4)
       .multilineTextAlignment(.leading)
       .fixedSize(horizontal: false, vertical: true)
@@ -372,7 +374,9 @@ extension ChatRoomView {
         isPlaying: .constant(store.isPlaying),
         onBackward: { send(.seekBackwardTapped) },
         onTogglePlay: { send(.togglePlayTapped) },
-        onForward: { send(.seekForwardTapped) }
+        onForward: { send(.seekForwardTapped) },
+        // 안드로이드 시안: 재생 컨트롤 아이콘은 브라운(primary500).
+        tint: .primary500
       )
     }
     .padding(.horizontal, 24)
