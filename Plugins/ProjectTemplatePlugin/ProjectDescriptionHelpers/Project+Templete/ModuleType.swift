@@ -33,13 +33,3 @@ public enum ModuleType {
   /// Data/Domain 등 비-Presentation 모듈을 마이크로피처(Interface/구현/Testing/Tests) 4타깃으로 구성.
   case microModule(name: String)
 }
-
-// MARK: - Domain / Data feature 카탈로그 (마이크로 모듈 접근자용)
-
-public enum DomainFeatureModule: String, CaseIterable {
-  case Profile
-}
-
-public enum DataFeatureModule: String, CaseIterable {
-  case Profile
-}
