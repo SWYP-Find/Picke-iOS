@@ -11,6 +11,7 @@ import DomainInterface
 import NetworkToken
 import NotificationData
 import NotificationDomainInterface
+import ProfileData
 import Repository
 import SearchData
 import SearchDomainInterface

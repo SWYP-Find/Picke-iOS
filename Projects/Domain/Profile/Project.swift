@@ -5,16 +5,15 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.Profile),
-  bundleId: .appBundleID(name: ".Profile"),
+  moduleType: .microModule(name: "ProfileDomain"),
+  bundleId: .appBundleID(name: ".ProfileDomain"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Domain(.Profile),
-    .Domain(implements: .UseCase),
-    .Shared(implements: .Shared),
     .SPM.composableArchitecture,
-    .SPM.tcaFlow,
-    .SPM.kingfisher,
+  ],
+  interfaceDependencies: [
+    .SPM.weaveDI,
+    .SPM.composableArchitecture,
   ]
 )

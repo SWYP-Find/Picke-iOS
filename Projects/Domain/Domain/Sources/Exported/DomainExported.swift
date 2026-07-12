@@ -11,4 +11,5 @@
 @_exported import SearchDomainInterface
 @_exported import NotificationDomain
 @_exported import NotificationDomainInterface
+@_exported import ProfileDomain
 @_exported import UseCase

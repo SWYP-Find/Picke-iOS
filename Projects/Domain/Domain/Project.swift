@@ -17,6 +17,7 @@ let project = Project.configure(
     .Domain(.Search),
     .Domain(.Notification, .interface),
     .Domain(.Notification),
+    .Domain(.Profile),
   ],
   sources: ["Sources/**"]
 )
