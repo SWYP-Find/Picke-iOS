@@ -11,6 +11,7 @@ import UIKit
 import ComposableArchitecture
 import PickeDesignKit
 import DomainInterface
+import CommonDomainInterface
 import Entity
 import LogMacro
 import UseCase

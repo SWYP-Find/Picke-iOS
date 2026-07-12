@@ -5,14 +5,10 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Model"),
-  bundleId: .appBundleID(name: ".Model"),
+  moduleType: .microModule(name: "CommonDomain"),
+  bundleId: .appBundleID(name: ".CommonDomain"),
   product: .staticFramework,
   settings: .settings(),
-  dependencies: [
-    .Domain(.Common, .interface),
-    .Domain(implements: .Entity),
-  ],
-  sources: ["Sources/**"],
-  hasTests: false
+  dependencies: [],
+  interfaceDependencies: []
 )

@@ -3,6 +3,7 @@
 //  Model
 //
 
+import CommonDomainInterface
 import Entity
 import Foundation
 

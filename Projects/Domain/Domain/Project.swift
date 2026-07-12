@@ -10,6 +10,8 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Common, .interface),
+    .Domain(.Common),
     .Domain(implements: .Entity),
     .Domain(implements: .DomainInterface),
     .Domain(implements: .UseCase),

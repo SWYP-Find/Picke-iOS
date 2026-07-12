@@ -5,14 +5,14 @@
 
 import Foundation
 
-public enum BattleStep: String, Sendable {
+public enum AnalyticsBattleStep: String, Sendable {
   case preVote = "pre_vote"
   case audioEnd = "audio_end"
   case postVote = "post_vote"
 }
 
 public struct BattleStepData: Sendable {
-  public let stepName: BattleStep
+  public let stepName: AnalyticsBattleStep
   public let contentID: String
   /// 선택지(좌/우 등). 없으면 미전송.
   public let choice: String?
@@ -20,7 +20,7 @@ public struct BattleStepData: Sendable {
   public let isChanged: Bool?
 
   public init(
-    stepName: BattleStep,
+    stepName: AnalyticsBattleStep,
     contentID: String,
     choice: String? = nil,
     isChanged: Bool? = nil

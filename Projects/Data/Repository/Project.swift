@@ -10,6 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Common, .interface),
     .Network(implements: .Networking),
     .Network(implements: .NetworkHeader),
     .Data(implements: .Service),

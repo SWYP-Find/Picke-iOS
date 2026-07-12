@@ -1,18 +1,19 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.configure(
   moduleType: .module(name: "DomainInterface"),
   bundleId: .appBundleID(name: ".DomainInterface"),
   product: .staticFramework,
-  settings:  .settings(),
+  settings: .settings(),
   dependencies: [
+    .Domain(.Common, .interface),
     .Domain(implements: .Entity),
     .SPM.weaveDI,
-    .SPM.composableArchitecture
+    .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
   hasTests: false

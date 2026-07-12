@@ -4,6 +4,7 @@
 //
 
 import Dependencies
+import CommonDomainInterface
 import Entity
 import Foundation
 import WeaveDI

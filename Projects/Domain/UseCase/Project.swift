@@ -10,6 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Common, .interface),
     .Domain(implements: .DomainInterface),
     .Domain(.Profile),
     .SPM.composableArchitecture,
