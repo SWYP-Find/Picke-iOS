@@ -9,7 +9,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 
 @ViewAction(for: WithdrawReasonFeature.self)
 public struct WithdrawReasonView: View {
@@ -43,11 +43,20 @@ private extension WithdrawReasonView {
 
   @ViewBuilder
   func title() -> some View {
-    Text("\(store.nickname.isEmpty ? "회원" : store.nickname)님 정말 떠나시나요? 아쉬워요 🥲")
-      .pretendardFont(.bold18)
-      .foregroundStyle(.primary500)
-      .kerning(-0.45)
-      .padding(.horizontal, 20)
+    let name = store.nickname.isEmpty ? "회원" : store.nickname
+    let style = CustomSizeFont.bold18
+    // 이모지(🥲)는 시스템 폰트로 렌더한다. Pretendard 를 fixedSize 로 적용하면 폰트
+    // cascade 폴백이 끊겨 이모지가 Pretendard 의 .notdef(두부 `[?]`)로 깨지므로,
+    // 이모지만 별도 Text 로 분리해 시스템 이모지 폰트로 그리게 한다.
+    (
+      Text("\(name)님 정말 떠나시나요? 아쉬워요 ")
+        .font(.pretendardFontFamily(family: style.fontFamily, size: style.size))
+        + Text("🥲")
+        .font(.system(size: style.size))
+    )
+    .foregroundStyle(.primary500)
+    .kerning(-0.45)
+    .padding(.horizontal, 20)
   }
 
   // MARK: 안내문

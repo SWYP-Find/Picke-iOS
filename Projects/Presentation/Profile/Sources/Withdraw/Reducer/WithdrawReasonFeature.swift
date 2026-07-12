@@ -10,7 +10,7 @@
 import Foundation
 
 import ComposableArchitecture
-import DesignSystem
+import PickeDesignKit
 import LogMacro
 import UseCase
 
