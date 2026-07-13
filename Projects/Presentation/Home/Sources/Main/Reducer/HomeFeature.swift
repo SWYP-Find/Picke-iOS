@@ -10,6 +10,7 @@ import DomainInterface
 import Entity
 import Foundation
 import HomeDomainInterface
+import HomeInterface
 import LogMacro
 import NotificationDomainInterface
 import Shared
@@ -46,7 +47,7 @@ public struct HomeFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
-    case delegate(DelegateAction)
+    case delegate(HomeDelegate)
   }
 
   @CasePathable
@@ -78,14 +79,6 @@ public struct HomeFeature {
   public enum InnerAction: Equatable {
     case homeResponse(Result<HomeBundle, AuthError>)
     case unreadBadgeResponse(Bool)
-  }
-
-  public enum DelegateAction: Equatable {
-    case presentPreVote(battleId: Int)
-    /// "더보기" → 탐색 탭으로 이동.
-    case moveToExplore
-    /// 알림(종) 아이콘 → 알림받기 화면.
-    case openNotification
   }
 
   nonisolated enum CancelID: Hashable {
@@ -237,7 +230,7 @@ extension HomeFeature {
 
   private func handleDelegateAction(
     state _: inout State,
-    action: DelegateAction
+    action: HomeDelegate
   ) -> Effect<Action> {
     switch action {
     case .presentPreVote, .moveToExplore, .openNotification:

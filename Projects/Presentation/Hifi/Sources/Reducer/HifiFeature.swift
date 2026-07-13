@@ -11,6 +11,7 @@ import SearchDomainInterface
 
 import ComposableArchitecture
 import Entity
+import HifiInterface
 import HomeDomainInterface
 import LogMacro
 import NotificationDomainInterface
@@ -40,7 +41,7 @@ public struct HifiFeature {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
-    case delegate(DelegateAction)
+    case delegate(HifiDelegate)
   }
 
   @CasePathable
@@ -63,12 +64,6 @@ public struct HifiFeature {
   public enum InnerAction: Equatable {
     case searchResponse(Result<ExploreItemPage, BattleError>, reset: Bool)
     case unreadBadgeResponse(Bool)
-  }
-
-  public enum DelegateAction: Equatable {
-    case openBattle(battleId: Int)
-    /// 알림(종) 아이콘 → 알림받기 화면.
-    case openNotification
   }
 
   nonisolated enum CancelID: Hashable {
