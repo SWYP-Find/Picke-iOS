@@ -34,7 +34,6 @@ public struct HifiView: View {
     .background(Color.beige50.ignoresSafeArea())
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
     .onAppear { send(.onAppear) }
   }
 }
