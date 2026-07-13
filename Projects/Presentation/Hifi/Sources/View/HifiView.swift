@@ -52,6 +52,10 @@ private extension HifiView {
     .background(.beige50)
     .frame(maxWidth: .infinity)
     .zIndex(1)
+    // 스크롤 중 상단 바가 슬라이드·어긋나 보이던 13 mini/iOS 18.6 잔상 제거.
+    // (탭에만 animation=nil 이 걸려 헤더·정렬만 애니메이션 슬라이드해 순간적으로
+    //  탭이 헤더 위로 올라간 듯 보이던 현상 — 상단 바 전체의 암묵 애니메이션을 끈다.)
+    .transaction { $0.animation = nil }
   }
 
   @ViewBuilder
