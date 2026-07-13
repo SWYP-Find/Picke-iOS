@@ -122,16 +122,19 @@ Picke-iOS/
 │   │   ├── Web/                   # 약관 / 외부 링크 WebView
 │   │   └── Presentation/          # 공통 프레젠테이션 유틸
 │   │
-│   ├── Domain/                    # 🔥 Business Logic Layer
-│   │   ├── Entity/                # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Device / Deeplink / AppUpdate / Share / Error 엔티티
-│   │   ├── DomainInterface/       # Repository / Manager 인터페이스 (Device · AppUpdate 포함)
-│   │   └── UseCase/               # Auth / Battle / Comment / Home / OAuth / Profile / Notification / Device / AppUpdate / Analytics / Ad 유스케이스
+│   ├── Domain/                    # 🔥 Business Logic Layer — Presentation 처럼 feature별 마이크로 모듈
+│   │   ├── <Feature>/             # Auth · Battle · Comment · Home · Notification · Perspective · Profile · Search
+│   │   │   ├── Interface/         #   <F>DomainInterface: Entity + Repository/UseCase 프로토콜 + DI 키
+│   │   │   ├── Sources/           #   <F>Domain: UseCase 구현 (pass-through 는 인터페이스로 소비)
+│   │   │   └── Testing/           #   <F>DomainTesting: 목
+│   │   ├── Common/                # 공유 도메인 계약(BattlePerspective·CommentLikeResult·BattleTag 등) + 횡단 관심사
+│   │   └── Domain/                # 엄브렐라(@_exported) — App(DI 조립) 전용
 │   │
-│   ├── Data/                      # 📡 Data Layer
-│   │   ├── API/                   # Base / Auth / Battle / Comment / Home / Perspective / Profile / Notification / Device endpoint
-│   │   ├── Service/               # Moya TargetType + 요청 바디
-│   │   ├── Model/                 # BaseResponseDTO + DTO → Entity 매퍼
-│   │   └── Repository/            # RepositoryImpl + OAuth / AudioPlayer 구현
+│   ├── Data/                      # 📡 Data Layer — feature별 마이크로 모듈
+│   │   ├── <Feature>/             # Auth · Battle · Comment · Home · Notification · Perspective · Profile · Search
+│   │   │   └── Sources/           #   <F>Data(단일 타깃): API / Model / Service / Repository 폴더 내장
+│   │   └── Data/                  # 엄브렐라(@_exported) — App(DI 조립) 전용
+│   │       # 공유 베이스(BaseResponseDTO·MoyaProvider.authorized·세션매니저)는 monolith Model/Repository 에 유지
 │   │
 │   ├── Network/                   # 🌐 Network Layer
 │   │   ├── Networking/            # 네트워크 클라이언트 export
@@ -158,19 +161,20 @@ Picke-iOS/
 
 ```mermaid
 graph TD
-    A[Presentation: SwiftUI + TCA Feature] --> B[Domain: UseCase + Entity]
-    B --> C[DomainInterface: Repository Protocol]
-    D[Data: RepositoryImpl] --> C
-    D --> E[Data: DTO Model + Service + API]
-    E --> F[Network: AsyncMoya + Header + Token]
-    G[Shared: DesignSystem / Utill] --> A
-    G --> B
-    G --> D
+    A["Presentation/&lt;Feature&gt;"] --> B["&lt;Feature&gt;DomainInterface (Entity + 프로토콜 + DI 키)"]
+    A2["&lt;Feature&gt;Domain (UseCase 구현)"] --> B
+    C["&lt;Feature&gt;Data (API/Model/Service/Repository)"] --> B
+    C --> CM["Common (공유 계약)"]
+    B --> CM
+    C --> E["Network: NetworkHeader / NetworkToken / AsyncMoya"]
+    G[Shared: PickeDesignKit / Utill] --> A
+    App["App (DI 조립)"] --> UMB["Domain·Data 엄브렐라 @_exported"]
 
-    A -.-> H[Auth / Battle / Chat / Home / Hifi / MainTab / Splash / Web]
-    B -.-> I[Auth / Battle / Comment / Perspective / Search UseCase]
-    D -.-> J[Auth / Battle / Comment / Home / OAuth / Perspective / Search Repository]
+    A -.->|.interface 만 의존| B
+    A2 -.->|Auth 만 UseCase 유지| A
 ```
+
+> **핵심**: Presentation·Data 는 `<Feature>DomainInterface`(프로토콜·DI 키)에만 의존 → 구현 변경이 소비자를 리빌드시키지 않는다. pass-through UseCase(Auth 제외 7개)는 인터페이스로 직접 소비, Auth 는 OAuth 오케스트레이션 로직이 있어 UseCase 계층 유지.
 
 ### 🕸️ TuistSpider 확장 뷰
 
@@ -187,15 +191,15 @@ graph TD
 ### 🔄 의존성 방향 원칙
 
 ```
-Presentation → Domain (UseCase Protocol)
+Presentation/<F>  → <F>DomainInterface (프로토콜 + DI 키)        [.interface 만 의존]
        ↓
-Domain/UseCase → Domain (Repository Protocol)
+<F>Domain (UseCase 구현) → <F>DomainInterface + Common
        ↓
-Data/Repository → Domain (Entity + Repository Protocol)
+<F>Data (Repository/Service/Model/API) → <F>DomainInterface + Common + Network
        ↓
-Data/Model → Domain (Entity 변환)
+공유 계약(BattlePerspective·CommentLikeResult·BattleTag 등) → Common
        ↓
-Data/Service → Data/API + Network/NetworkHeader
+Network 인프라(NetworkHeader → NetworkToken, MoyaProvider.authorized) → 브리지 경유
 ```
 
 **핵심 설계 원칙**
