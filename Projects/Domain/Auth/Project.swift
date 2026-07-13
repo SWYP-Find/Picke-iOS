@@ -17,6 +17,7 @@ let project = Project.configure(
     .SPM.logMarco,
   ],
   interfaceDependencies: [
+    .Domain(implements: .Entity),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]

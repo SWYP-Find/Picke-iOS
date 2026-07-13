@@ -12,7 +12,6 @@ import ComposableArchitecture
 import Entity
 import TCAFlow
 
-import AuthDomain
 import AuthDomainInterface
 
 @FlowCoordinator(screen: "AuthScreen", navigation: true)

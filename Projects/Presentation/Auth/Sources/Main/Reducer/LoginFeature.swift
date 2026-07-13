@@ -13,9 +13,8 @@ import ComposableArchitecture
 import Entity
 import LogMacro
 
-import PickeDesignKit
-import AuthDomain
 import AuthDomainInterface
+import PickeDesignKit
 import UseCase
 
 @Reducer
@@ -151,7 +150,8 @@ extension LoginFeature {
           with: .apple,
           appleCredential: credential,
           nonce: nonce,
-          googleToken: nil
+          googleToken: nil,
+          kakaoToken: nil
         )
         await send(.inner(.loginResponse(outcome)))
       }

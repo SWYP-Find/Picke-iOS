@@ -15,7 +15,7 @@ import LogMacro
 import Sharing
 
 /// 통합 OAuth UseCase — 소셜 인증 → 백엔드 로그인까지 단일 진입점
-public struct UnifiedOAuthUseCase {
+public struct UnifiedOAuthUseCase: UnifiedOAuthUseCaseInterface {
   @Dependency(\.authRepository) private var authRepository: AuthInterface
   @Dependency(\.appleOAuthProvider) private var appleProvider: AppleOAuthProviderInterface
   @Dependency(\.googleOAuthProvider) private var googleProvider: GoogleOAuthProviderInterface
@@ -184,20 +184,5 @@ public extension UnifiedOAuthUseCase {
     } catch {
       return .failure(.unknownError(error.localizedDescription))
     }
-  }
-}
-
-// MARK: - Dependencies Registration
-
-extension UnifiedOAuthUseCase: DependencyKey {
-  public static let liveValue = UnifiedOAuthUseCase()
-  public static let testValue = UnifiedOAuthUseCase()
-  public static let previewValue = UnifiedOAuthUseCase()
-}
-
-public extension DependencyValues {
-  var unifiedOAuthUseCase: UnifiedOAuthUseCase {
-    get { self[UnifiedOAuthUseCase.self] }
-    set { self[UnifiedOAuthUseCase.self] = newValue }
   }
 }

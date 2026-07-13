@@ -14,7 +14,7 @@ import Entity
 import ComposableArchitecture
 import WeaveDI
 
-public struct AuthUseCaseImpl: AuthInterface {
+public struct AuthUseCaseImpl: AuthUseCaseInterface {
   @Dependency(\.authRepository) var authRepository
   @Dependency(\.keychainManager) private var keychainManager: KeychainManaging
   @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
@@ -74,18 +74,5 @@ public struct AuthUseCaseImpl: AuthInterface {
 
   public func updateSessionCredential(with tokens: AuthTokens) {
     authRepository.updateSessionCredential(with: tokens)
-  }
-}
-
-extension AuthUseCaseImpl: DependencyKey {
-  public static var liveValue = AuthUseCaseImpl()
-  public static var testValue = AuthUseCaseImpl()
-  public static var previewValue = AuthUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var authUseCase: AuthUseCaseImpl {
-    get { self[AuthUseCaseImpl.self] }
-    set { self[AuthUseCaseImpl.self] = newValue }
   }
 }

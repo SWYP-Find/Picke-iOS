@@ -11,7 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Profile, .interface),
-    .Domain(.Auth),
+    .Domain(.Auth, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Notification, .interface),
     .Domain(implements: .UseCase),

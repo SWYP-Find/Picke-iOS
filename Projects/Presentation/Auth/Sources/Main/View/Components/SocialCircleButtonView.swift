@@ -5,11 +5,10 @@
 //  Created by Wonji Suh  on 5/14/26.
 //
 
+import AuthDomainInterface
 import AuthenticationServices
 import ComposableArchitecture
 import Entity
-import AuthDomain
-import AuthDomainInterface
 import SwiftUI
 
 struct SocialCircleButtonView: View {

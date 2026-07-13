@@ -62,6 +62,8 @@ public final class AppDIManager: Sendable {
       .register { DeviceRepositoryImpl() as DeviceInterface }
       .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
       .register { AppUpdateUseCaseImpl() as AppUpdateUseCaseInterface }
+      .register { AuthUseCaseImpl() as AuthUseCaseInterface }
+      .register { UnifiedOAuthUseCase() as UnifiedOAuthUseCaseInterface }
       // 🔐 OAuth Provider 계층 (PFW 조합 패턴)
       .register {
         MainActor.assumeIsolated {

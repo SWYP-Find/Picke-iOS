@@ -9,10 +9,10 @@
 
 import Foundation
 
+import AuthDomainInterface
 import ComposableArchitecture
-import AuthDomain
-import PickeDesignKit
 import LogMacro
+import PickeDesignKit
 import UseCase
 
 @Reducer
