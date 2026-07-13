@@ -11,6 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Network(implements: .NetworkToken),
+    .SPM.alamofire,
   ],
   sources: ["Sources/**"],
   hasTests: false
