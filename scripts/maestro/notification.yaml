@@ -1,0 +1,35 @@
+# 알림 여정(QA-47): 홈 헤더 벨 → 알림 목록 → 카테고리 탭 → "모두 읽음"
+#
+# 알림 화면은 홈 상단 헤더의 벨 아이콘(HomeHeaderView)에서 진입.
+# 벨은 이미지 아이콘만 있고 접근성 라벨이 없어 우상단 좌표(point)로 탭한다.
+# "모두 읽음" 버튼은 accessibilityIdentifier("notification.readAll") 보유.
+appId: io.Picke.co
+---
+- launchApp
+- tapOn:
+    id: "tab.0"
+    optional: true
+- extendedWaitUntil:
+    visible: "지금 뜨는 배틀"
+    timeout: 15000
+# 홈 헤더 우상단 벨 아이콘 탭 → 알림 화면.
+- tapOn:
+    point: "92%, 7%"
+- extendedWaitUntil:
+    visible: "알림"
+    timeout: 10000
+- takeScreenshot: notification-01-list
+# 카테고리 탭(전체/활동/공지 등) — 두 번째 탭이 있으면 전환(동적이라 optional).
+- tapOn:
+    point: "50%, 15%"
+    optional: true
+- takeScreenshot: notification-02-category
+# 모두 읽음 (id 우선, 없으면 텍스트).
+- tapOn:
+    id: "notification.readAll"
+    optional: true
+- tapOn:
+    text: "모두 읽음"
+    optional: true
+- takeScreenshot: notification-03-readall
+- back

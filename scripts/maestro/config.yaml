@@ -1,0 +1,19 @@
+# Picke Maestro 워크스페이스 설정
+#
+# 실행 순서(폴더 단위 실행 시): 세션을 파괴하지 않는 순서로 정렬.
+# 로그인/탈퇴는 인증 상태를 바꾸므로 스모크(smoke)에는 포함하지 않는다.
+#
+#   maestro --device <UDID> test scripts/maestro/         # 폴더 전체
+#   maestro --device <UDID> test scripts/maestro/smoke.yaml # 스모크만
+#
+# 주의(환경): iOS 26.x 시뮬레이터에서는 maestro XCUITest 드라이버 채널이
+# 연결되지 않아(hang) 실행 불가. iOS 18.6(iPhone 13 mini)에서 실행 권장.
+flows:
+  - smoke.yaml
+  - home.yaml
+  - explore.yaml
+  - notification.yaml
+  - battle_vote.yaml
+  - profile.yaml
+# login.yaml / withdraw.yaml 은 인증 상태를 변경하므로 폴더 실행에서 제외.
+# 필요 시 개별 실행: maestro test scripts/maestro/login.yaml

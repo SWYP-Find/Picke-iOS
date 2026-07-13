@@ -1,0 +1,33 @@
+# 마이 여정: 마이 탭 → 나의 철학자 유형 / 내 포인트 / 메뉴 → 설정 진입
+#
+# 마이 탭(ProfileView): 프로필 카드 + "내 포인트" + "무료 충전" + "나의 철학자 유형"
+# + 메뉴(내 배틀 기록 / 내 콘텐츠 활동 / 공지방 · 이벤트).
+# 상단바 우측 설정(gearshape) 아이콘은 접근성 라벨이 없어 좌표로 탭.
+appId: io.Picke.co
+---
+- launchApp
+- tapOn:
+    id: "tab.3"          # 마이 탭
+- extendedWaitUntil:
+    visible: "나의 철학자 유형"
+    timeout: 15000
+- takeScreenshot: profile-01-main
+- assertVisible:
+    text: "내 포인트"
+    optional: true
+- assertVisible:
+    text: "무료 충전"
+    optional: true
+- assertVisible:
+    text: "내 배틀 기록"
+    optional: true
+# 상단 우측 설정(톱니) 아이콘 → 설정 화면.
+- tapOn:
+    point: "92%, 7%"
+- extendedWaitUntil:
+    visible: "설정"
+    timeout: 10000
+- takeScreenshot: profile-02-settings
+- assertVisible: "서비스 약관"
+- assertVisible: "회원 탈퇴"
+- back

@@ -1,0 +1,35 @@
+# 배틀 상세/투표 여정: 홈 "지금 뜨는 배틀" 카드 → 배틀 상세(사전투표) → 옵션 선택
+#
+# 배틀 상세는 사전투표(PreVoteView)로 진입. 화면 중앙에 "VS" 마커와 두 옵션
+# (option.stance / representative)이 배치된다. 배틀 콘텐츠는 서버 응답에
+# 의존(동적)하므로 카드 존재 시에만 진행하고, 옵션 탭은 좌표로 수행한다.
+appId: io.Picke.co
+---
+- launchApp
+- tapOn:
+    id: "tab.0"
+    optional: true
+- extendedWaitUntil:
+    visible: "지금 뜨는 배틀"
+    timeout: 15000
+# 지금 뜨는 배틀 첫 카드 탭(헤더 문구 아래 첫 카드 영역).
+- tapOn:
+    point: "30%, 40%"
+    optional: true
+# 배틀 상세(사전투표) 진입 확인 — VS 마커.
+- assertVisible:
+    text: "VS"
+    optional: true
+- takeScreenshot: battle-01-detail
+# 좌측 옵션 선택(사전투표) — 동적 스탠스라 좌표 탭.
+- tapOn:
+    point: "28%, 60%"
+    optional: true
+- takeScreenshot: battle-02-voted
+# 대안 진입 경로: 빠른 배틀 탭(BattleView)에서도 VS 투표 화면 확인.
+- tapOn:
+    id: "tab.2"
+- takeScreenshot: battle-03-quick
+- assertVisible:
+    text: "VS|아직 빠른 배틀이 선정되지 않았어요"
+    optional: true

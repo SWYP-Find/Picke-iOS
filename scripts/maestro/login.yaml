@@ -1,0 +1,28 @@
+# 로그인 여정: 스플래시 → SNS 로그인 화면 → 소셜 로그인(구글)
+#
+# 주의: 실제 OAuth(구글 계정 선택/동의)는 시뮬레이터 계정/네트워크 환경에
+# 의존하므로 완전 자동화가 어렵다. 여기서는 로그인 화면 진입과 소셜 버튼
+# 탭까지의 플로우만 정의하고, 이후 웹 OAuth 단계는 optional 로 둔다.
+#
+# 소셜 버튼(SocialCircleButtonView)은 이미지 아이콘만 있고 접근성 라벨이
+# 없어 텍스트로 탭할 수 없다. 버튼 배열 순서는 kakao, apple, google 이며
+# 화면 하단 중앙 HStack 에 균등 배치되므로 좌표(point)로 탭한다.
+appId: io.Picke.co
+---
+- launchApp:
+    clearState: true   # 로그아웃 상태에서 시작해 로그인 화면을 강제 노출
+# 스플래시 후 로그인 화면이 떠야 한다.
+- extendedWaitUntil:
+    visible: "SNS 계정으로 로그인"
+    timeout: 15000
+- assertVisible: "당신의 생각을"
+- takeScreenshot: login-01-sns
+# 소셜 버튼 3개(kakao/apple/google)는 하단 중앙에 균등 배치.
+# google 은 3개 중 우측 → 화면 가로 약 72% 지점.
+- tapOn:
+    point: "72%, 70%"
+# 이후 구글 OAuth 웹뷰(계정 선택)는 환경 의존 — 있으면 스크린샷만.
+- takeScreenshot: login-02-oauth
+- assertVisible:
+    text: "Google|계정 선택|로그인"
+    optional: true
