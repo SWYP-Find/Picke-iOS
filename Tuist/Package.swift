@@ -16,6 +16,7 @@
       "Sharing": .framework,
       "TCAFlow": .staticFramework,
       "Moya": .staticFramework,
+      "Alamofire": .staticFramework,
       "LogMacro": .staticFramework,
       "AsyncMoya": .staticFramework,
       "AppAuth": .framework,

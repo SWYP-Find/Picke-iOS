@@ -20,6 +20,7 @@ let project = Project.configure(
     .Domain(implements: .DomainInterface),
     .Domain(.Auth, .interface),
     .SPM.asyncMoya,
+    .SPM.alamofire,
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.logMarco,
