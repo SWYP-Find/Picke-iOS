@@ -10,9 +10,9 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Domain(.Profile),
+    .Domain(.Profile, .interface),
     .Domain(.Auth),
-    .Domain(.Battle),
+    .Domain(.Battle, .interface),
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,

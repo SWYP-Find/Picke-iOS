@@ -6,13 +6,12 @@
 //
 
 import ComposableArchitecture
+import NotificationDomainInterface
 import DomainInterface
 import Entity
 import Foundation
-import HomeDomain
 import HomeDomainInterface
 import LogMacro
-import NotificationDomain
 import UseCase
 
 @Reducer

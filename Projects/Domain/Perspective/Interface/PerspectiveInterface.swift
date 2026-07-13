@@ -56,3 +56,11 @@ public extension DependencyValues {
     set { self[PerspectiveRepositoryDependency.self] = newValue }
   }
 }
+
+// UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
+public extension DependencyValues {
+  var perspectiveUseCase: PerspectiveInterface {
+    get { self[PerspectiveRepositoryDependency.self] }
+    set { self[PerspectiveRepositoryDependency.self] = newValue }
+  }
+}

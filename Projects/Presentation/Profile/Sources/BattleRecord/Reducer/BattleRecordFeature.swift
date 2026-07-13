@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import ProfileDomainInterface
 
 import ComposableArchitecture
 import Entity

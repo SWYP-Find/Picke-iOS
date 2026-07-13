@@ -24,15 +24,3 @@ public struct CommentUseCaseImpl: CommentInterface {
   }
 }
 
-extension CommentUseCaseImpl: DependencyKey {
-  public static var liveValue = CommentUseCaseImpl()
-  public static var testValue = CommentUseCaseImpl()
-  public static var previewValue = CommentUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var commentUseCase: CommentUseCaseImpl {
-    get { self[CommentUseCaseImpl.self] }
-    set { self[CommentUseCaseImpl.self] = newValue }
-  }
-}

@@ -12,7 +12,6 @@ import Foundation
 import ComposableArchitecture
 import Entity
 import LogMacro
-import NotificationDomain
 import NotificationDomainInterface
 import UseCase
 

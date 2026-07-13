@@ -13,7 +13,7 @@ let project = Project.configure(
     .Shared(implements: .Shared),
     .Domain(.Home, .interface),
     .Domain(implements: .UseCase),
-    .Domain(.Search),
+    .Domain(.Search, .interface),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

@@ -89,15 +89,3 @@ public struct BattleUseCaseImpl: BattleInterface {
   }
 }
 
-extension BattleUseCaseImpl: DependencyKey {
-  public static var liveValue = BattleUseCaseImpl()
-  public static var testValue = BattleUseCaseImpl()
-  public static var previewValue = BattleUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var battleUseCase: BattleUseCaseImpl {
-    get { self[BattleUseCaseImpl.self] }
-    set { self[BattleUseCaseImpl.self] = newValue }
-  }
-}

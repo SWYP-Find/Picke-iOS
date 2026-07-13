@@ -7,12 +7,12 @@
 //
 
 import Foundation
+import SearchDomainInterface
 
 import ComposableArchitecture
 import Entity
 import HomeDomainInterface
 import LogMacro
-import SearchDomain
 import UseCase
 
 @Reducer

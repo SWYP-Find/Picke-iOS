@@ -31,15 +31,3 @@ public struct SearchUseCaseImpl: SearchInterface {
   }
 }
 
-extension SearchUseCaseImpl: DependencyKey {
-  public static var liveValue = SearchUseCaseImpl()
-  public static var testValue = SearchUseCaseImpl()
-  public static var previewValue = SearchUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var searchUseCase: SearchUseCaseImpl {
-    get { self[SearchUseCaseImpl.self] }
-    set { self[SearchUseCaseImpl.self] = newValue }
-  }
-}

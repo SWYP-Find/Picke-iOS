@@ -6,16 +6,13 @@
 
 import Foundation
 
-import CommentDomain
 import CommentDomainInterface
 import CommonDomainInterface
 import ComposableArchitecture
 import DomainInterface
 import Entity
-import BattleDomain
 import BattleDomainInterface
 import LogMacro
-import PerspectiveDomain
 import PerspectiveDomainInterface
 import PickeDesignKit
 import UseCase

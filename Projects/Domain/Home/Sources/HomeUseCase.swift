@@ -19,15 +19,3 @@ public struct HomeUseCaseImpl: HomeInterface {
   }
 }
 
-extension HomeUseCaseImpl: DependencyKey {
-  public static var liveValue = HomeUseCaseImpl()
-  public static var testValue = HomeUseCaseImpl()
-  public static var previewValue = HomeUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var homeUseCase: HomeUseCaseImpl {
-    get { self[HomeUseCaseImpl.self] }
-    set { self[HomeUseCaseImpl.self] = newValue }
-  }
-}

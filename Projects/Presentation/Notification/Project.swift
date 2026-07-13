@@ -9,7 +9,7 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Notification"),
   settings: .settings(),
   dependencies: [
-    .Domain(.Notification),
+    .Domain(.Notification, .interface),
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,

@@ -43,15 +43,3 @@ public struct NotificationUseCaseImpl: NotificationInterface {
   }
 }
 
-extension NotificationUseCaseImpl: DependencyKey {
-  public static var liveValue = NotificationUseCaseImpl()
-  public static var testValue = NotificationUseCaseImpl()
-  public static var previewValue = NotificationUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var notificationUseCase: NotificationUseCaseImpl {
-    get { self[NotificationUseCaseImpl.self] }
-    set { self[NotificationUseCaseImpl.self] = newValue }
-  }
-}

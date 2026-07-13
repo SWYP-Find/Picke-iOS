@@ -87,15 +87,3 @@ public struct PerspectiveUseCaseImpl: PerspectiveInterface {
   }
 }
 
-extension PerspectiveUseCaseImpl: DependencyKey {
-  public static var liveValue = PerspectiveUseCaseImpl()
-  public static var testValue = PerspectiveUseCaseImpl()
-  public static var previewValue = PerspectiveUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var perspectiveUseCase: PerspectiveUseCaseImpl {
-    get { self[PerspectiveUseCaseImpl.self] }
-    set { self[PerspectiveUseCaseImpl.self] = newValue }
-  }
-}

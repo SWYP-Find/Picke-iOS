@@ -10,10 +10,10 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Common, .interface),
-    .Domain(.Battle),
+    .Domain(.Battle, .interface),
     .Domain(.Home, .interface),
     .Domain(implements: .UseCase),
-    .Domain(.Comment),
+    .Domain(.Comment, .interface),
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,

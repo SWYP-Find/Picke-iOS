@@ -62,15 +62,3 @@ public struct ProfileUseCaseImpl: ProfileInterface {
   }
 }
 
-extension ProfileUseCaseImpl: DependencyKey {
-  public static var liveValue = ProfileUseCaseImpl()
-  public static var testValue = ProfileUseCaseImpl()
-  public static var previewValue = ProfileUseCaseImpl()
-}
-
-public extension DependencyValues {
-  var profileUseCase: ProfileUseCaseImpl {
-    get { self[ProfileUseCaseImpl.self] }
-    set { self[ProfileUseCaseImpl.self] = newValue }
-  }
-}
