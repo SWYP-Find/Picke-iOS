@@ -72,6 +72,11 @@ private extension HifiView {
     .clipped()
     .contentShape(Rectangle())
     .simultaneousGesture(categorySwipe)
+    // 카테고리 전환 시 콘텐츠를 하드 컷 대신 부드럽게 디졸브 + 상단으로 리셋.
+    // (상단 카테고리 바는 13 mini 안정성 위해 애니메이션 비활성 유지 — 콘텐츠 영역만 적용)
+    .id(store.selectedCategory)
+    .transition(.opacity)
+    .animation(.easeInOut(duration: 0.2), value: store.selectedCategory)
   }
 
   @ViewBuilder
