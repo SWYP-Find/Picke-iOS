@@ -155,6 +155,12 @@ extension NotificationFeature {
           state.items[index] = state.items[index].markedAsRead()
         }
         updateUnreadBadge(state: &state)
+        // QA-47 연장: 개별 읽음으로 로드된 미읽음이 모두 사라졌으면, 홈 재진입 시 markAsRead 서버 반영
+        // 지연(fire-and-forget)이 syncUnreadBadge 조회에서 빨간점을 되살리는 레이스를 막는다.
+        // (모두읽음과 동일한 pending 가드. 새 푸시가 오면 AppDelegate 가 가드를 해제한다.)
+        if !state.hasUnread {
+          state.$readAllPending.withLock { $0 = true }
+        }
         effects.append(.send(.async(.markRead(notificationId: item.notificationId))))
       }
 
