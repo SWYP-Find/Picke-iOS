@@ -10,13 +10,12 @@ import Foundation
 import API
 import NetworkHeader
 
-import AsyncMoya
 
 public enum HomeService {
   case home
 }
 
-extension HomeService: BaseTargetType {
+extension HomeService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .home }
@@ -28,9 +27,8 @@ extension HomeService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .home:
       return .get

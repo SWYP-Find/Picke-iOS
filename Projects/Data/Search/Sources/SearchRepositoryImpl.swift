@@ -12,15 +12,13 @@ import Repository
 import SearchDomainInterface
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class SearchRepositoryImpl: SearchInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<SearchService>
 
   public init(
-    provider: any NetworkProviding<SearchService> = MoyaProvider<SearchService>.authorized
+    provider: any NetworkProviding<SearchService> = AlamofireNetworkProvider<SearchService>.authorized
   ) {
     self.provider = provider
   }

@@ -13,7 +13,6 @@ let project = Project.configure(
     .Data(implements: .API),
     .Domain(implements: .Entity),
     .Network(implements: .NetworkHeader),
-    .SPM.asyncMoya,
   ],
   sources: ["Sources/**"],
   hasTests: false

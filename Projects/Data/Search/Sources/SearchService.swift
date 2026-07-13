@@ -8,13 +8,12 @@ import Foundation
 import API
 import NetworkHeader
 
-import AsyncMoya
 
 public enum SearchService {
   case battles(category: String?, sort: String?, offset: Int?, size: Int?)
 }
 
-extension SearchService: BaseTargetType {
+extension SearchService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .search }
@@ -26,9 +25,8 @@ extension SearchService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .battles:
       return .get

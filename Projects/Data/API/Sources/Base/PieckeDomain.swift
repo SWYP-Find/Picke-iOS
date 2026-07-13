@@ -7,7 +7,7 @@
 
 import Foundation
 
-import AsyncMoya
+import NetworkHeader
 
 public enum PieckeDomain {
   case auth
@@ -22,7 +22,7 @@ public enum PieckeDomain {
   case device
 }
 
-extension PieckeDomain: DomainType {
+extension PieckeDomain: PickeDomainType {
   public var baseURLString: String {
     BaseAPI.base.apiDescription
   }

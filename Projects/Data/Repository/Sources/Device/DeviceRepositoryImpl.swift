@@ -13,15 +13,13 @@ import Model
 import Service
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class DeviceRepositoryImpl: DeviceInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<DeviceService>
 
   public init(
-    provider: any NetworkProviding<DeviceService> = MoyaProvider<DeviceService>.authorized
+    provider: any NetworkProviding<DeviceService> = AlamofireNetworkProvider<DeviceService>.authorized
   ) {
     self.provider = provider
   }

@@ -8,7 +8,6 @@ import Foundation
 import API
 import NetworkHeader
 
-import AsyncMoya
 
 public struct PerspectiveCommentBody: Encodable {
   public let content: String
@@ -30,7 +29,7 @@ public enum PerspectiveService {
   case reportComment(perspectiveId: Int, commentId: Int)
 }
 
-extension PerspectiveService: BaseTargetType {
+extension PerspectiveService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .perspective }
@@ -64,9 +63,8 @@ extension PerspectiveService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .detail, .listLabeledComments, .fetchPerspectiveLikes:
       return .get

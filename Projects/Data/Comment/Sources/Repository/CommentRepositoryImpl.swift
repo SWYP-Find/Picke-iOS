@@ -11,15 +11,13 @@ import Model
 import Repository
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class CommentRepositoryImpl: CommentInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<CommentService>
 
   public init(
-    provider: any NetworkProviding<CommentService> = MoyaProvider<CommentService>.authorized
+    provider: any NetworkProviding<CommentService> = AlamofireNetworkProvider<CommentService>.authorized
   ) {
     self.provider = provider
   }

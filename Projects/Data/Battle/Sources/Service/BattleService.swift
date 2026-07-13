@@ -8,7 +8,6 @@ import Foundation
 import API
 import NetworkHeader
 
-import AsyncMoya
 
 public enum BattleService {
   case today
@@ -24,7 +23,7 @@ public enum BattleService {
   case createProposal(body: BattleProposalRequest)
 }
 
-extension BattleService: BaseTargetType {
+extension BattleService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .battle }
@@ -56,9 +55,8 @@ extension BattleService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .today, .detail, .scenario, .voteStats, .perspectives, .myPerspective, .recommendations:
       return .get

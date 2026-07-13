@@ -13,15 +13,13 @@ import Model
 import Repository
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class HomeRepositoryImpl: HomeInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<HomeService>
 
   public init(
-    provider: any NetworkProviding<HomeService> = MoyaProvider<HomeService>.authorized
+    provider: any NetworkProviding<HomeService> = AlamofireNetworkProvider<HomeService>.authorized
   ) {
     self.provider = provider
   }

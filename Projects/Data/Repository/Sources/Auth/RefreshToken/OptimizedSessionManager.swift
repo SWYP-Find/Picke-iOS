@@ -19,37 +19,15 @@ public final class OptimizedSessionManager {
   @Dependency(\.keychainManager) var keychainManager
 
   var credential: AccessTokenCredential?
+  /// 인증 세션(인터셉터·이벤트 모니터 부착). 대부분의 요청에 사용.
   let session: Session
+  /// 비인증 세션(로그인/토큰 재발급 등 토큰이 아직 없는 요청). 인터셉터 없음.
+  let plainSession: Session
 
   private init() {
-    let configuration = URLSessionConfiguration.default
-
-    configuration.httpMaximumConnectionsPerHost = 6
-    configuration.requestCachePolicy = .useProtocolCachePolicy
-
-    configuration.timeoutIntervalForRequest = 30.0
-    configuration.timeoutIntervalForResource = 120.0
-
-    configuration.urlCache = URLCache(
-      memoryCapacity: 50 * 1024 * 1024,
-      diskCapacity: 200 * 1024 * 1024,
-      diskPath: "picke_network_cache"
-    )
-
-    configuration.multipathServiceType = .handover
-    configuration.allowsCellularAccess = true
-    configuration.allowsExpensiveNetworkAccess = true
-    configuration.allowsConstrainedNetworkAccess = false
-
-    configuration.httpAdditionalHeaders = [
-      "Connection": "keep-alive",
-      "Keep-Alive": "timeout=120, max=1000",
-    ]
-
-    session = Session(
-      configuration: configuration,
-      interceptor: AuthInterceptor()
-    )
+    // 세션 조립은 SessionFactory 가 담당(config·인터셉터·이벤트 모니터). 동작 보존.
+    session = SessionFactory.authenticated()
+    plainSession = SessionFactory.plain()
 
     setupInitialCredential()
   }

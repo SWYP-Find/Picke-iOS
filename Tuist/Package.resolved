@@ -1,5 +1,5 @@
 {
-  "originHash" : "00681b1c9619e4fa3754648072555b572e0b133c1d9d6b2d1473591949276db6",
+  "originHash" : "52d6d6f6a72524f79ef38c0134a08bb0efb5ea9d8b7b4c0dfb9301a1a530054a",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -35,15 +35,6 @@
       "state" : {
         "revision" : "145104f5ea9d58ae21b60add007c33c1cc0c948e",
         "version" : "2.0.0"
-      }
-    },
-    {
-      "identity" : "asyncmoya",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Roy-wonji/AsyncMoya",
-      "state" : {
-        "revision" : "d92027d1258a8020ce57d73a7644c7dbf32f093e",
-        "version" : "1.1.8"
       }
     },
     {
@@ -191,15 +182,6 @@
       }
     },
     {
-      "identity" : "moya",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/Moya/Moya.git",
-      "state" : {
-        "revision" : "c263811c1f3dbf002be9bd83107f7cdc38992b26",
-        "version" : "15.0.3"
-      }
-    },
-    {
       "identity" : "nanopb",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/firebase/nanopb.git",
@@ -224,15 +206,6 @@
       "state" : {
         "revision" : "c43bae3dac73fdd3cb906bd5a1914686ca71ed3c",
         "version" : "6.7.0"
-      }
-    },
-    {
-      "identity" : "rxswift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ReactiveX/RxSwift.git",
-      "state" : {
-        "revision" : "132aea4f236ccadc51590b38af0357a331d51fa2",
-        "version" : "6.10.2"
       }
     },
     {

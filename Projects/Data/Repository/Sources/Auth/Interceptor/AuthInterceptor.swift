@@ -6,14 +6,13 @@
 //
 
 import Alamofire
+import AuthDomainInterface
 import ComposableArchitecture
 import Dependencies
-import AuthDomainInterface
 import DomainInterface
 import Entity
 import Foundation
 import LogMacro
-import Moya
 import UIKit
 
 // MARK: - Notification
@@ -80,15 +79,12 @@ actor TokenRefreshManager {
     let errorString = String(describing: error)
     if errorString.contains("statusCodeError(401)") { return true }
 
-    if let moyaError = error as? MoyaError {
-      switch moyaError {
-      case let .statusCode(response):
-        if response.statusCode == 401 { return true }
-      case let .underlying(_, response):
-        if response?.statusCode == 401 { return true }
-      default:
-        break
-      }
+    if let afError = error.asAFError,
+       case let .responseValidationFailed(reason) = afError,
+       case let .unacceptableStatusCode(code) = reason,
+       code == 401
+    {
+      return true
     }
 
     if let authError = error as? AuthError, authError.isTokenExpiredError {

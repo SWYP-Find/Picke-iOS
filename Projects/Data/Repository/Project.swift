@@ -19,7 +19,6 @@ let project = Project.configure(
     .Data(implements: .Model),
     .Domain(implements: .DomainInterface),
     .Domain(.Auth, .interface),
-    .SPM.asyncMoya,
     .SPM.alamofire,
     .SPM.composableArchitecture,
     .SPM.weaveDI,

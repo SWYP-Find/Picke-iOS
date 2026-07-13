@@ -8,11 +8,9 @@
 import Foundation
 
 import API
-import Service
 import AuthDomainInterface
 import NetworkHeader
-
-import AsyncMoya
+import Service
 
 public enum AuthService {
   case login(provider: SocialType, body: OAuthLoginRequest)
@@ -21,7 +19,7 @@ public enum AuthService {
   case logout
 }
 
-extension AuthService: BaseTargetType {
+extension AuthService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain {
@@ -46,11 +44,7 @@ extension AuthService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? {
-    nil
-  }
-
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .login, .refresh, .logout:
       return .post

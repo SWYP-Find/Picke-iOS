@@ -9,7 +9,6 @@ import API
 import NetworkHeader
 import Service
 
-import AsyncMoya
 
 public enum ProfileService {
   case mypage
@@ -21,7 +20,7 @@ public enum ProfileService {
   case updateNotificationSettings(body: NotificationSettingsRequest)
 }
 
-extension ProfileService: BaseTargetType {
+extension ProfileService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .profile }
@@ -45,9 +44,8 @@ extension ProfileService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .mypage, .recap, .creditsHistory, .battleRecords, .contentActivities, .notificationSettings:
       return .get

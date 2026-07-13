@@ -9,15 +9,13 @@ import ProfileDomainInterface
 import Repository
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<ProfileService>
 
   public init(
-    provider: any NetworkProviding<ProfileService> = MoyaProvider<ProfileService>.authorized
+    provider: any NetworkProviding<ProfileService> = AlamofireNetworkProvider<ProfileService>.authorized
   ) {
     self.provider = provider
   }

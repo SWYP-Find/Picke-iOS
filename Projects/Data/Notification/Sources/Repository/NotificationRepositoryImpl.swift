@@ -10,15 +10,13 @@ import NotificationDomainInterface
 import Repository
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class NotificationRepositoryImpl: NotificationInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<NotificationService>
 
   public init(
-    provider: any NetworkProviding<NotificationService> = MoyaProvider<NotificationService>.authorized
+    provider: any NetworkProviding<NotificationService> = AlamofireNetworkProvider<NotificationService>.authorized
   ) {
     self.provider = provider
   }

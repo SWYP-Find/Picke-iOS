@@ -8,14 +8,13 @@ import Foundation
 import API
 import NetworkHeader
 
-import AsyncMoya
 
 public enum CommentService {
   case like(commentId: Int)
   case unlike(commentId: Int)
 }
 
-extension CommentService: BaseTargetType {
+extension CommentService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .comment }
@@ -29,9 +28,8 @@ extension CommentService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .like:
       .post

@@ -12,8 +12,6 @@ import Foundation
 import API
 import NetworkHeader
 
-import AsyncMoya
-
 public enum DeviceService {
   /// POST /api/v1/devices
   case register(body: DeviceRegisterRequest)
@@ -21,16 +19,14 @@ public enum DeviceService {
   case unregister(fcmToken: String)
 }
 
-extension DeviceService: BaseTargetType {
+extension DeviceService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .device }
 
   public var urlPath: String { "" }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
-
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .register:
       return .post
@@ -49,18 +45,12 @@ extension DeviceService: BaseTargetType {
   }
 
   /// unregister 는 쿼리 파라미터, register 는 JSON 바디로 인코딩.
-  public var task: Moya.Task {
+  public var parameterEncoding: ParameterEncoding {
     switch self {
-    case let .register(body):
-      return .requestParameters(
-        parameters: body.toDictionary ?? [:],
-        encoding: JSONEncoding.default
-      )
-    case let .unregister(fcmToken):
-      return .requestParameters(
-        parameters: ["fcmToken": fcmToken],
-        encoding: URLEncoding.queryString
-      )
+    case .register:
+      return JSONEncoding.default
+    case .unregister:
+      return URLEncoding.queryString
     }
   }
 

@@ -18,7 +18,6 @@ let project = Project.configure(
     .Data(implements: .Model),
     .Data(implements: .Repository),
     .Network(implements: .NetworkHeader),
-    .SPM.asyncMoya,
     .SPM.logMarco,
   ],
   sources: ["Sources/**"],

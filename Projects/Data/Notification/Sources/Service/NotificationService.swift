@@ -9,7 +9,6 @@ import API
 import NetworkHeader
 import Service
 
-import AsyncMoya
 
 public enum NotificationService {
   case list(query: NotificationsQueryRequest)
@@ -19,7 +18,7 @@ public enum NotificationService {
   case readAll
 }
 
-extension NotificationService: BaseTargetType {
+extension NotificationService: PickeTargetType {
   public typealias Domain = PieckeDomain
 
   public var domain: PieckeDomain { .notification }
@@ -39,9 +38,8 @@ extension NotificationService: BaseTargetType {
     }
   }
 
-  public var error: [Int: AsyncMoya.NetworkError]? { nil }
 
-  public var method: Moya.Method {
+  public var method: HTTPMethod {
     switch self {
     case .list, .unread, .detail:
       return .get

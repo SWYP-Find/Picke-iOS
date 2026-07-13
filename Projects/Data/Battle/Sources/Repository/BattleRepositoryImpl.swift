@@ -15,15 +15,13 @@ import Repository
 import Service
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<BattleService>
 
   public init(
-    provider: any NetworkProviding<BattleService> = MoyaProvider<BattleService>.authorized
+    provider: any NetworkProviding<BattleService> = AlamofireNetworkProvider<BattleService>.authorized
   ) {
     self.provider = provider
   }

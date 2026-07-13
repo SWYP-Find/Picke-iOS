@@ -10,15 +10,13 @@ import Foundation
 import AuthDomainInterface
 import Entity
 import Model
-import Service
 import Repository
+import Service
 
+import Alamofire
 import Dependencies
 import LogMacro
-import Moya
 import WeaveDI
-
-@preconcurrency import AsyncMoya
 
 public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   @Dependency(\.keychainManager) private var keychainManager
@@ -27,8 +25,8 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   private let authProvider: any NetworkProviding<AuthService>
 
   public init(
-    provider: any NetworkProviding<AuthService> = MoyaProvider<AuthService>.default,
-    authProvider: any NetworkProviding<AuthService> = MoyaProvider<AuthService>.authorized
+    provider: any NetworkProviding<AuthService> = AlamofireNetworkProvider<AuthService>.default,
+    authProvider: any NetworkProviding<AuthService> = AlamofireNetworkProvider<AuthService>.authorized
   ) {
     self.provider = provider
     self.authProvider = authProvider
@@ -80,14 +78,12 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
     } catch {
       Log.error("🔍 [AuthRepositoryImpl] Refresh failed: \(error)")
 
-      if let moyaError = error as? MoyaError {
-        switch moyaError {
-        case let .statusCode(response) where response.statusCode == 401,
-             let .underlying(_, response?) where response.statusCode == 401:
-          throw AuthError.refreshTokenExpired
-        default:
-          break
-        }
+      if let afError = error.asAFError,
+         case let .responseValidationFailed(reason) = afError,
+         case let .unacceptableStatusCode(code) = reason,
+         code == 401
+      {
+        throw AuthError.refreshTokenExpired
       }
 
       let errorString = String(describing: error)

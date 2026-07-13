@@ -12,15 +12,13 @@ import PerspectiveDomainInterface
 import Repository
 
 import LogMacro
-import Moya
 
-@preconcurrency import AsyncMoya
 
 public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<PerspectiveService>
 
   public init(
-    provider: any NetworkProviding<PerspectiveService> = MoyaProvider<PerspectiveService>.authorized
+    provider: any NetworkProviding<PerspectiveService> = AlamofireNetworkProvider<PerspectiveService>.authorized
   ) {
     self.provider = provider
   }

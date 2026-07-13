@@ -10,7 +10,6 @@ let project = Project.configure(
   product: .staticFramework,
   settings:  .settings(),
   dependencies: [
-    .SPM.asyncMoya,
     .SPM.weaveDI
   ],
   sources: ["Sources/**"],
