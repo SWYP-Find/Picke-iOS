@@ -18,10 +18,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class DeviceRepositoryImpl: DeviceInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<DeviceService>
+  private let provider: any NetworkProviding<DeviceService>
 
   public init(
-    provider: MoyaProvider<DeviceService> = MoyaProvider<DeviceService>.authorized
+    provider: any NetworkProviding<DeviceService> = MoyaProvider<DeviceService>.authorized
   ) {
     self.provider = provider
   }

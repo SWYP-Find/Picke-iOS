@@ -23,12 +23,12 @@ import WeaveDI
 public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   @Dependency(\.keychainManager) private var keychainManager
 
-  private let provider: MoyaProvider<AuthService>
-  private let authProvider: MoyaProvider<AuthService>
+  private let provider: any NetworkProviding<AuthService>
+  private let authProvider: any NetworkProviding<AuthService>
 
   public init(
-    provider: MoyaProvider<AuthService> = MoyaProvider<AuthService>.default,
-    authProvider: MoyaProvider<AuthService> = MoyaProvider<AuthService>.authorized
+    provider: any NetworkProviding<AuthService> = MoyaProvider<AuthService>.default,
+    authProvider: any NetworkProviding<AuthService> = MoyaProvider<AuthService>.authorized
   ) {
     self.provider = provider
     self.authProvider = authProvider

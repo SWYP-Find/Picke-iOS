@@ -16,10 +16,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class CommentRepositoryImpl: CommentInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<CommentService>
+  private let provider: any NetworkProviding<CommentService>
 
   public init(
-    provider: MoyaProvider<CommentService> = MoyaProvider<CommentService>.authorized
+    provider: any NetworkProviding<CommentService> = MoyaProvider<CommentService>.authorized
   ) {
     self.provider = provider
   }

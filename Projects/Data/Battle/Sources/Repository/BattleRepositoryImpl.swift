@@ -20,10 +20,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<BattleService>
+  private let provider: any NetworkProviding<BattleService>
 
   public init(
-    provider: MoyaProvider<BattleService> = MoyaProvider<BattleService>.authorized
+    provider: any NetworkProviding<BattleService> = MoyaProvider<BattleService>.authorized
   ) {
     self.provider = provider
   }

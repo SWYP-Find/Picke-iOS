@@ -14,10 +14,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<ProfileService>
+  private let provider: any NetworkProviding<ProfileService>
 
   public init(
-    provider: MoyaProvider<ProfileService> = MoyaProvider<ProfileService>.authorized
+    provider: any NetworkProviding<ProfileService> = MoyaProvider<ProfileService>.authorized
   ) {
     self.provider = provider
   }

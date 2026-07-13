@@ -15,10 +15,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class NotificationRepositoryImpl: NotificationInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<NotificationService>
+  private let provider: any NetworkProviding<NotificationService>
 
   public init(
-    provider: MoyaProvider<NotificationService> = MoyaProvider<NotificationService>.authorized
+    provider: any NetworkProviding<NotificationService> = MoyaProvider<NotificationService>.authorized
   ) {
     self.provider = provider
   }

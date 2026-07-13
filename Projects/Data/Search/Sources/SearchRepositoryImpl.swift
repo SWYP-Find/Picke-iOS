@@ -17,10 +17,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class SearchRepositoryImpl: SearchInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<SearchService>
+  private let provider: any NetworkProviding<SearchService>
 
   public init(
-    provider: MoyaProvider<SearchService> = MoyaProvider<SearchService>.authorized
+    provider: any NetworkProviding<SearchService> = MoyaProvider<SearchService>.authorized
   ) {
     self.provider = provider
   }

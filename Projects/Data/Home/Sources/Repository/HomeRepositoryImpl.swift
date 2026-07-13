@@ -18,10 +18,10 @@ import Moya
 @preconcurrency import AsyncMoya
 
 public final class HomeRepositoryImpl: HomeInterface, @unchecked Sendable {
-  private let provider: MoyaProvider<HomeService>
+  private let provider: any NetworkProviding<HomeService>
 
   public init(
-    provider: MoyaProvider<HomeService> = MoyaProvider<HomeService>.authorized
+    provider: any NetworkProviding<HomeService> = MoyaProvider<HomeService>.authorized
   ) {
     self.provider = provider
   }
