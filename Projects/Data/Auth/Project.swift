@@ -23,5 +23,5 @@ let project = Project.configure(
     .SPM.googleSignIn,
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

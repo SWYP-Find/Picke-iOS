@@ -19,5 +19,5 @@ let project = Project.configure(
     .SPM.logMarco,
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )
