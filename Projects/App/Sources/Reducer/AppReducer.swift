@@ -8,7 +8,9 @@
 import ComposableArchitecture
 import Domain
 import LogMacro
+import NotificationDomainInterface
 import Presentation
+import Shared
 
 @Reducer
 public struct AppReducer: Sendable {
@@ -119,7 +121,6 @@ public struct AppReducer: Sendable {
   // 제거됨: PFW 권장사항에 따라 단순화
 
   public var body: some ReducerOf<Self> {
-    // 🔥 TCA 해결책 4: Reduce를 ifCaseLet보다 먼저 배치하여 액션 필터링 우선 처리
     Reduce { state, action in
       switch action {
       case let .view(viewAction):
@@ -135,19 +136,8 @@ public struct AppReducer: Sendable {
         return handleNavigationAction(state: &state, action: navigationAction)
 
       case let .scope(scopeAction):
-        // 🎯 PFW 패턴: 단순한 위임 - 복잡한 검증은 handleScopeAction에서
         return handleScopeAction(state: &state, action: scopeAction)
       }
-    }
-    // 🔥 TCA 해결책 5: 강화된 ifCaseLet 체인 - 상태 불일치 방어
-    .ifCaseLet(\.splash, action: \.scope.splash) {
-      SplashFeature()
-    }
-    .ifCaseLet(\.auth, action: \.scope.auth) {
-      AppAuthCoordinator()
-    }
-    .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
-      AppMainTabCoordinator()
     }
   }
 
@@ -266,13 +256,42 @@ public struct AppReducer: Sendable {
     state: inout State,
     action: ScopeAction
   ) -> Effect<Action> {
-    // 🎯 PFW 철학: 타입 안전한 상태 매칭
-    guard isValidAction(action, for: state) else {
+    guard isValidAction(action, for: state) else { return .none }
+
+    let childEffect = reduceChild(state: &state, action: action)
+    let navigationEffect = handleScopeNavigation(action: action)
+    return .merge(childEffect, navigationEffect)
+  }
+
+  private func reduceChild(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    switch (state, action) {
+    case var (.splash(childState), .splash(childAction)):
+      let effect = SplashFeature()
+        .reduce(into: &childState, action: childAction)
+        .map { Action.scope(.splash($0)) }
+      state = .splash(childState)
+      return effect
+
+    case var (.auth(childState), .auth(childAction)):
+      let effect = AppAuthCoordinator()
+        .reduce(into: &childState, action: childAction)
+        .map { Action.scope(.auth($0)) }
+      state = .auth(childState)
+      return effect
+
+    case var (.mainTab(childState), .mainTab(childAction)):
+      let effect = AppMainTabCoordinator()
+        .reduce(into: &childState, action: childAction)
+        .map { Action.scope(.mainTab($0)) }
+      state = .mainTab(childState)
+      return effect
+
+    default:
       return .none
     }
-
-    // 🎯 PFW 패턴: 단순한 네비게이션 처리
-    return handleScopeNavigation(action: action)
   }
 
   // 🎯 PFW 패턴: 네비게이션 로직 분리

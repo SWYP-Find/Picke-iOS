@@ -38,8 +38,7 @@ public struct NotificationUseCaseImpl: NotificationInterface {
     try await notificationRepository.markAsRead(notificationId: notificationId)
   }
 
-  public func markAllAsRead() async throws {
-    try await notificationRepository.markAllAsRead()
+  public func markAllAsRead() async throws -> Bool {
+    return try await notificationRepository.markAllAsRead()
   }
 }
-

@@ -13,6 +13,7 @@ import ComposableArchitecture
 import Entity
 import HomeDomainInterface
 import LogMacro
+import NotificationDomainInterface
 import UseCase
 
 @Reducer
@@ -28,6 +29,9 @@ public struct HifiFeature {
     public var isLoading: Bool = false
     public var nextOffset: Int?
     public var hasNext: Bool = false
+
+    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
+    public var hasUnreadNotification: Bool = false
 
     public init() {}
   }
@@ -52,10 +56,13 @@ public struct HifiFeature {
 
   public enum AsyncAction: Equatable {
     case searchRequested(reset: Bool)
+    /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
+    case syncUnreadBadge
   }
 
   public enum InnerAction: Equatable {
     case searchResponse(Result<ExploreItemPage, BattleError>, reset: Bool)
+    case unreadBadgeResponse(Bool)
   }
 
   public enum DelegateAction: Equatable {
@@ -66,9 +73,11 @@ public struct HifiFeature {
 
   nonisolated enum CancelID: Hashable {
     case search
+    case syncUnreadBadge
   }
 
   @Dependency(\.searchUseCase) private var searchUseCase
+  @Dependency(\.notificationUseCase) private var notificationUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
@@ -98,7 +107,11 @@ extension HifiFeature {
     switch action {
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .explore, referrer: nil))
-      return .send(.async(.searchRequested(reset: true)))
+      // 벨 배지는 진입/재진입마다 서버(/unread)로 갱신 — 저장값 없이 서버 진실값만 사용.
+      return .merge(
+        .send(.async(.searchRequested(reset: true))),
+        .send(.async(.syncUnreadBadge))
+      )
 
     case let .categoryTapped(category):
       state.selectedCategory = category
@@ -155,6 +168,13 @@ extension HifiFeature {
         return await send(.inner(.searchResponse(result, reset: reset)))
       }
       .cancellable(id: CancelID.search, cancelInFlight: true)
+
+    case .syncUnreadBadge:
+      return .run { [useCase = notificationUseCase] send in
+        guard let hasUnread = try? await useCase.hasUnreadNotifications() else { return }
+        await send(.inner(.unreadBadgeResponse(hasUnread)))
+      }
+      .cancellable(id: CancelID.syncUnreadBadge, cancelInFlight: true)
     }
   }
 
@@ -174,6 +194,11 @@ extension HifiFeature {
         Log.error("[HifiFeature] searchBattles failed: \(error.localizedDescription)")
         if reset { state.items = [] }
       }
+      return .none
+
+    case let .unreadBadgeResponse(hasUnread):
+      // 서버(/unread) 값을 그대로 반영 — 별도 저장/가드 없이 진입 시점 진실값만 사용.
+      state.hasUnreadNotification = hasUnread
       return .none
     }
   }

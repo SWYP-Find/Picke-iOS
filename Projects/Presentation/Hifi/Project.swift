@@ -14,6 +14,7 @@ let project = Project.configure(
     .Domain(.Home, .interface),
     .Domain(implements: .UseCase),
     .Domain(.Search, .interface),
+    .Domain(.Notification, .interface),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

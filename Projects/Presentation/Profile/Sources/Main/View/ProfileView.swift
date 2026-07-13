@@ -15,8 +15,6 @@ import Kingfisher
 @ViewAction(for: ProfileFeature.self)
 public struct ProfileView: View {
   @Bindable public var store: StoreOf<ProfileFeature>
-  /// 종 빨간점 — @Shared(appStorage)로 직접 관찰(타 화면 변경에도 즉시 반영).
-  @Shared(.appStorage("HasUnreadNotification")) private var hasUnread = false
 
   public init(store: StoreOf<ProfileFeature>) {
     self.store = store
@@ -62,18 +60,7 @@ private extension ProfileView {
       Spacer()
 
       Button { send(.notificationTapped) } label: {
-        Image(systemName: "bell")
-          .font(.system(size: 20, weight: .regular))
-          .foregroundStyle(.neutral900)
-          .frame(width: 24, height: 24)
-          .overlay(alignment: .topTrailing) {
-            if hasUnread {
-              Circle()
-                .fill(.errorDefault)
-                .frame(width: 6, height: 6)
-                .offset(x: 1, y: -1)
-            }
-          }
+        bellIcon()
       }
 
       Button { send(.settingsTapped) } label: {
@@ -85,6 +72,21 @@ private extension ProfileView {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  func bellIcon() -> some View {
+    if store.hasUnreadNotification {
+      Image(asset: .bell)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 24, height: 24)
+    } else {
+      Image(systemName: "bell")
+        .font(.system(size: 20, weight: .regular))
+        .foregroundStyle(.neutral900)
+        .frame(width: 24, height: 24)
+    }
   }
 
   // MARK: 프로필 카드

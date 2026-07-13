@@ -35,5 +35,5 @@ public struct DefaultNotificationRepositoryImpl: NotificationInterface {
 
   public func markAsRead(notificationId _: Int) async throws {}
 
-  public func markAllAsRead() async throws {}
+  public func markAllAsRead() async throws -> Bool { false }
 }

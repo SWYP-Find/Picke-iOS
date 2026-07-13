@@ -9,10 +9,8 @@ import Testing
 struct HomeTests {
   @Test
   @MainActor
-  func homeResponseDoesNotReviveNotificationBadgeFromNewNotice() async {
-    UserDefaults.standard.set(false, forKey: "HasUnreadNotification")
-    UserDefaults.standard.set(false, forKey: "NotificationReadAllPending")
-
+  func homeResponseDoesNotTouchNotificationBadge() async {
+    // 벨 배지는 서버(/unread)로만 갱신 — homeResponse(newNotice 포함)는 배지를 건드리지 않는다.
     let store = TestStore(initialState: HomeFeature.State()) {
       HomeFeature()
     }
@@ -21,6 +19,8 @@ struct HomeTests {
       $0.hasLoadedHome = true
       $0.newNotice = true
     }
+
+    #expect(store.state.hasUnreadNotification == false)
   }
 }
 

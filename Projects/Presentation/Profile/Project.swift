@@ -13,6 +13,7 @@ let project = Project.configure(
     .Domain(.Profile, .interface),
     .Domain(.Auth),
     .Domain(.Battle, .interface),
+    .Domain(.Notification, .interface),
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
     .SPM.composableArchitecture,

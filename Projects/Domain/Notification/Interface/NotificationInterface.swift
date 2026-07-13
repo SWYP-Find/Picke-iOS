@@ -16,7 +16,8 @@ public protocol NotificationInterface: Sendable {
   /// 벨 배지용 — 전체 기준 미읽음 알림 존재 여부.
   func hasUnreadNotifications() async throws -> Bool
   func markAsRead(notificationId: Int) async throws
-  func markAllAsRead() async throws
+  /// 모두 읽음 처리 후 서버가 반환한 최신 미읽음 여부(hasUnread).
+  func markAllAsRead() async throws -> Bool
 }
 
 public struct NotificationRepositoryDependency: DependencyKey {

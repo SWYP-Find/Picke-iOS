@@ -13,6 +13,7 @@ import ComposableArchitecture
 import Entity
 import LogMacro
 import NotificationDomainInterface
+import Shared
 import UseCase
 
 @Reducer
@@ -29,11 +30,6 @@ public struct NotificationFeature {
     public var items: [NotificationItem] = []
     public var page: Int = 0
     public var hasNext: Bool = false
-
-    /// 홈/프로필 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (전역 공유).
-    @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
-    /// QA-47: 모두읽음 직후 홈 재진입 시 서버 지연으로 빨간점이 되살아나는 것을 막는 가드.
-    @Shared(.appStorage("NotificationReadAllPending")) public var readAllPending: Bool = false
 
     public var hasUnread: Bool {
       items.contains { !$0.isRead }
@@ -68,7 +64,6 @@ public struct NotificationFeature {
 
   public enum InnerAction: Equatable {
     case notificationsResponse(Result<NotificationPage, NotificationError>, reset: Bool)
-    case unreadBadgeResponse(Result<Bool, NotificationError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -137,12 +132,8 @@ extension NotificationFeature {
         action: .readAll,
         unreadCount: state.items.count(where: { !$0.isRead })
       )))
-      // QA-47: 빨간점은 푸시 수신(AppDelegate) 시점에 전역 플래그로 켜질 수 있어,
-      // 현재 로드된 리스트의 미읽음 여부와 무관하게 항상 전역 빨간점을 끈다.
+      // 리스트를 낙관적으로 읽음 처리. 홈/탐색/프로필 벨 배지는 각 화면 재진입 시 /unread 로 갱신된다.
       state.items = state.items.map { $0.markedAsRead() }
-      // 모두 읽음 → 홈/프로필 빨간점 제거 + 서버 반영 지연 동안 홈 재진입이 되살리지 않도록 pending 설정.
-      state.$hasUnreadNotification.withLock { $0 = false }
-      state.$readAllPending.withLock { $0 = true }
       return .send(.async(.markAll))
 
     case let .notificationTapped(item):
@@ -153,13 +144,6 @@ extension NotificationFeature {
       if !item.isRead {
         if let index = state.items.firstIndex(where: { $0.id == item.id }) {
           state.items[index] = state.items[index].markedAsRead()
-        }
-        updateUnreadBadge(state: &state)
-        // QA-47 연장: 개별 읽음으로 로드된 미읽음이 모두 사라졌으면, 홈 재진입 시 markAsRead 서버 반영
-        // 지연(fire-and-forget)이 syncUnreadBadge 조회에서 빨간점을 되살리는 레이스를 막는다.
-        // (모두읽음과 동일한 pending 가드. 새 푸시가 오면 AppDelegate 가 가드를 해제한다.)
-        if !state.hasUnread {
-          state.$readAllPending.withLock { $0 = true }
         }
         effects.append(.send(.async(.markRead(notificationId: item.notificationId))))
       }
@@ -215,13 +199,9 @@ extension NotificationFeature {
       }
 
     case .markAll:
-      return .run { [useCase = notificationUseCase] send in
-        let result = await Result {
-          try await useCase.markAllAsRead()
-          return try await useCase.hasUnreadNotifications()
-        }
-        .mapError(NotificationError.from)
-        return await send(.inner(.unreadBadgeResponse(result)))
+      // 벨 배지는 각 화면 재진입 시 /unread 로 갱신되므로 여기선 서버 반영만(fire-and-forget).
+      return .run { [useCase = notificationUseCase] _ in
+        _ = try? await useCase.markAllAsRead()
       }
     }
   }
@@ -243,43 +223,10 @@ extension NotificationFeature {
         }
         state.hasNext = pageData.hasNext
         if pageData.hasNext { state.page += 1 }
-        updateUnreadBadge(state: &state)
       case let .failure(error):
         Log.error("[NotificationFeature] fetchNotifications failed: \(error.localizedDescription)")
       }
       return .none
-
-    case let .unreadBadgeResponse(result):
-      switch result {
-      case let .success(hasUnread):
-        updateUnreadBadge(state: &state, hasUnread: hasUnread)
-      case let .failure(error):
-        Log.error("[NotificationFeature] syncUnreadBadge failed: \(error.localizedDescription)")
-      }
-      return .none
-    }
-  }
-
-  /// 로드된 항목 기준 미읽음 존재 여부를 전역 빨간점 플래그에 반영.
-  /// 개별 읽음/모두 읽음 즉시 반영용. (카테고리 탭은 부분 정보라 다음 전체 조회/새 푸시 때 보정됨)
-  private func updateUnreadBadge(state: inout State) {
-    updateUnreadBadge(state: &state, hasUnread: state.hasUnread)
-  }
-
-  /// 서버의 전체 미읽음 여부를 전역 빨간점 플래그에 반영.
-  private func updateUnreadBadge(
-    state: inout State,
-    hasUnread: Bool
-  ) {
-    // QA-47: 방금 모두읽음(readAllPending) 했는데 서버가 아직 미읽음으로 지연되면 빨간점을 되살리지 않는다.
-    // 서버가 읽음을 반영(미읽음 없음)하면 점을 끄고 pending 을 해제한다. (HomeFeature 와 동일 가드)
-    if hasUnread {
-      if !state.readAllPending {
-        state.$hasUnreadNotification.withLock { $0 = true }
-      }
-    } else {
-      state.$hasUnreadNotification.withLock { $0 = false }
-      state.$readAllPending.withLock { $0 = false }
     }
   }
 

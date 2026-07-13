@@ -6,12 +6,13 @@
 //
 
 import ComposableArchitecture
-import NotificationDomainInterface
 import DomainInterface
 import Entity
 import Foundation
 import HomeDomainInterface
 import LogMacro
+import NotificationDomainInterface
+import Shared
 import UseCase
 
 @Reducer
@@ -31,10 +32,8 @@ public struct HomeFeature {
     public var votes: [VoteQuestion] = []
     public var newBattles: [NewBattle] = []
 
-    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (알림 화면과 전역 공유).
-    @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
-    /// QA-47: 모두읽음 직후, 서버 미읽음 상태 반영이 지연될 때 빨간점이 되살아나는 것을 막는 가드.
-    @Shared(.appStorage("NotificationReadAllPending")) public var readAllPending: Bool = false
+    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
+    public var hasUnreadNotification: Bool = false
 
     public var currentQuiz: QuizQuestion? { quizzes.first }
     public var currentVote: VoteQuestion? { votes.first }
@@ -230,15 +229,8 @@ extension HomeFeature {
       return .none
 
     case let .unreadBadgeResponse(hasUnread):
-      // fetchHome 의 newNotice 반영과 동일한 QA-47 가드 — 방금 모두읽음 상태면 되살리지 않는다.
-      if hasUnread {
-        if !state.readAllPending {
-          state.$hasUnreadNotification.withLock { $0 = true }
-        }
-      } else {
-        state.$hasUnreadNotification.withLock { $0 = false }
-        state.$readAllPending.withLock { $0 = false }
-      }
+      // 서버(/unread) 값을 그대로 반영 — 별도 저장/가드 없이 진입 시점 진실값만 사용.
+      state.hasUnreadNotification = hasUnread
       return .none
     }
   }

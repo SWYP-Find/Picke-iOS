@@ -44,7 +44,7 @@ private extension HifiView {
   @ViewBuilder
   func fixedTopBar() -> some View {
     VStack(spacing: 0) {
-      HifiHeaderView { send(.notificationTapped) }
+      HifiHeaderView(hasUnread: store.hasUnreadNotification) { send(.notificationTapped) }
       categoryTabs()
       sortRow()
     }

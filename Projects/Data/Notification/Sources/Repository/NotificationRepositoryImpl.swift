@@ -11,7 +11,6 @@ import Repository
 
 import LogMacro
 
-
 public final class NotificationRepositoryImpl: NotificationInterface, @unchecked Sendable {
   private let provider: any NetworkProviding<NotificationService>
 
@@ -70,7 +69,9 @@ public final class NotificationRepositoryImpl: NotificationInterface, @unchecked
     )
   }
 
-  public func markAllAsRead() async throws {
-    let _: BaseResponseDTO<String> = try await provider.request(.readAll)
+  /// PATCH /read-all — 서버가 처리 후 최신 미읽음 여부(`data.hasUnread`)를 반환한다. 그 값을 그대로 쓴다.
+  public func markAllAsRead() async throws -> Bool {
+    let dto: NotificationUnreadResponseDTO = try await provider.request(.readAll)
+    return dto.data?.hasUnread ?? false
   }
 }

@@ -23,7 +23,10 @@ public struct HomeView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      HomeHeaderView { send(.notificationTapped) } // sticky — 스크롤 영향 없음 (빨간점은 @Shared 직접 관찰)
+      HomeHeaderView(
+        hasUnread: store.hasUnreadNotification,
+        onNotificationTapped: { send(.notificationTapped) }
+      ) // sticky — 스크롤 영향 없음
 
       ScrollView(showsIndicators: false) {
         if shouldShowSkeleton {

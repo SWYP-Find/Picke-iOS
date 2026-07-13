@@ -13,6 +13,7 @@ import ProfileDomainInterface
 import ComposableArchitecture
 import Entity
 import LogMacro
+import NotificationDomainInterface
 import UseCase
 
 @Reducer
@@ -48,8 +49,8 @@ public struct ProfileFeature {
     /// 메뉴 목록.
     public var menuItems: [MenuItem] = MenuItem.allCases
 
-    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부 (알림 화면과 전역 공유).
-    @Shared(.appStorage("HasUnreadNotification")) public var hasUnreadNotification: Bool = false
+    /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
+    public var hasUnreadNotification: Bool = false
 
     public init() {}
 
@@ -88,10 +89,13 @@ public struct ProfileFeature {
 
   public enum AsyncAction: Equatable {
     case fetchProfile
+    /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
+    case syncUnreadBadge
   }
 
   public enum InnerAction: Equatable {
     case myPageResponse(Result<MyPage, ProfileError>)
+    case unreadBadgeResponse(Bool)
   }
 
   public enum DelegateAction: Equatable {
@@ -113,9 +117,11 @@ public struct ProfileFeature {
 
   nonisolated enum CancelID: Hashable {
     case fetchProfile
+    case syncUnreadBadge
   }
 
   @Dependency(\.profileUseCase) private var profileUseCase
+  @Dependency(\.notificationUseCase) private var notificationUseCase
   @Dependency(\.rewardedAdClient) private var rewardedAdClient
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
@@ -150,7 +156,11 @@ extension ProfileFeature {
     switch action {
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .mypage, referrer: nil))
-      return .send(.async(.fetchProfile))
+      // 벨 배지는 진입/재진입마다 서버(/unread)로 갱신 — 저장값 없이 서버 진실값만 사용.
+      return .merge(
+        .send(.async(.fetchProfile)),
+        .send(.async(.syncUnreadBadge))
+      )
 
     case .backTapped:
       return .send(.delegate(.backToHome))
@@ -203,6 +213,13 @@ extension ProfileFeature {
         return await send(.inner(.myPageResponse(result)))
       }
       .cancellable(id: CancelID.fetchProfile, cancelInFlight: true)
+
+    case .syncUnreadBadge:
+      return .run { [useCase = notificationUseCase] send in
+        guard let hasUnread = try? await useCase.hasUnreadNotifications() else { return }
+        await send(.inner(.unreadBadgeResponse(hasUnread)))
+      }
+      .cancellable(id: CancelID.syncUnreadBadge, cancelInFlight: true)
     }
   }
 
@@ -225,6 +242,11 @@ extension ProfileFeature {
       case let .failure(error):
         Log.error("[ProfileFeature] fetchMyPage failed: \(error.localizedDescription)")
       }
+      return .none
+
+    case let .unreadBadgeResponse(hasUnread):
+      // 서버(/unread) 값을 그대로 반영 — 별도 저장/가드 없이 진입 시점 진실값만 사용.
+      state.hasUnreadNotification = hasUnread
       return .none
     }
   }
