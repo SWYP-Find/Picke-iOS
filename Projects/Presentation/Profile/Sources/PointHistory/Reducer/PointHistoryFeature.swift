@@ -10,9 +10,9 @@ import Foundation
 import ProfileDomainInterface
 
 import ComposableArchitecture
-import PickeDesignKit
 import Entity
 import LogMacro
+import PickeDesignKit
 import UseCase
 
 @Reducer
@@ -138,7 +138,7 @@ extension PointHistoryFeature {
       } else {
         state.isLoadingMore = true
       }
-      let offset = reset ? 0 : state.nextOffset
+      let offset: Int? = reset ? nil : state.nextOffset
       return .run { [useCase = profileUseCase] send in
         let result = await Result {
           try await useCase.fetchCreditHistory(offset: offset, size: Self.pageSize)

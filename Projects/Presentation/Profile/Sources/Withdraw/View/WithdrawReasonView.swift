@@ -3,7 +3,7 @@
 //  Profile
 //
 //  회원 탈퇴 UI — picke.pen `탈퇴하기`.
-//  타이틀 + 안내문 + 탈퇴 사유(복수 선택) + 제출하기/픽케로 다시 돌아가기.
+//  타이틀 + 안내문 + 탈퇴 사유(단일 선택) + 제출하기/픽케로 다시 돌아가기.
 //
 
 import SwiftUI
@@ -84,7 +84,7 @@ private extension WithdrawReasonView {
 
   @ViewBuilder
   func reasonRow(_ reason: WithdrawReasonFeature.Reason) -> some View {
-    let isSelected = store.selectedReasons.contains(reason)
+    let isSelected = store.selectedReason == reason
 
     Button {
       send(.reasonTapped(reason))

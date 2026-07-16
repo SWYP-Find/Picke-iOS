@@ -23,7 +23,7 @@ public struct ProfileUseCaseImpl: ProfileInterface {
   }
 
   public func fetchCreditHistory(
-    offset: Int,
+    offset: Int?,
     size: Int
   ) async throws -> CreditHistoryPage {
     return try await profileRepository.fetchCreditHistory(offset: offset, size: size)
@@ -60,5 +60,14 @@ public struct ProfileUseCaseImpl: ProfileInterface {
   public func updateNotificationSettings(_ settings: NotificationSettings) async throws -> NotificationSettings {
     return try await profileRepository.updateNotificationSettings(settings)
   }
-}
 
+  public func updateProfile(
+    nickname: String,
+    characterType: String
+  ) async throws -> UpdatedProfile {
+    return try await profileRepository.updateProfile(
+      nickname: nickname,
+      characterType: characterType
+    )
+  }
+}

@@ -161,7 +161,7 @@ private extension NotificationView {
 
             Spacer(minLength: 0)
 
-            Text(item.createdAt.relativeKoreanString)
+            Text(item.createdAt.yearMonthDayDot)
               .pretendardFont(.labelSmall)
               .foregroundStyle(.gray300)
               .fixedSize()

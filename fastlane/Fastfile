@@ -1,3 +1,5 @@
+require "shellwords"
+
 # Fastlane 기본 설정
 default_platform(:ios)
 
@@ -48,6 +50,44 @@ def unlock_match_keychain
     password: keychain_password,
     add_to_search_list: true
   )
+end
+
+def transient_upload_error?(error)
+  messages = []
+  current_error = error
+
+  while current_error
+    messages << current_error.message.to_s.downcase
+    current_error = current_error.cause
+  end
+
+  messages.any? do |message|
+    message.include?("connection reset by peer") ||
+      message.include?("ssl_connect") ||
+      message.include?("unexpected eof while reading") ||
+      message.include?("execution expired") ||
+      message.include?("timed out")
+  end
+end
+
+def upload_to_testflight_with_retry(options)
+  max_attempts = Integer(ENV.fetch("TESTFLIGHT_UPLOAD_MAX_ATTEMPTS", "3"))
+  attempt = 1
+
+  begin
+    upload_to_testflight(**options)
+  rescue => e
+    raise unless transient_upload_error?(e) && attempt < max_attempts
+
+    wait_seconds = 15 * attempt
+    UI.important(
+      "TestFlight 업로드 연결이 끊겼습니다. #{wait_seconds}초 후 재시도합니다 " \
+      "(#{attempt + 1}/#{max_attempts})."
+    )
+    sleep(wait_seconds)
+    attempt += 1
+    retry
+  end
 end
 
 platform :ios do
@@ -181,7 +221,7 @@ platform :ios do
 
     begin
       # Picke/picke 그룹에 배포 (External 그룹이어야 실제 지정됨. Internal이면 자동 배포되고 아래 rescue로 넘어감)
-      upload_to_testflight(
+      upload_to_testflight_with_retry(
         ipa: ipa_path,
         changelog: ENV.fetch("RELEASE_NOTES", "변경사항"),
         groups: ["Picke", "picke"],
@@ -357,6 +397,41 @@ platform :ios do
       UI.success("🚀 이제 Apple의 심사를 기다리기만 하면 됩니다!")
     else
       UI.user_error!("⚠️ version 옵션을 지정해주세요: fastlane submit version:'1.0.0'")
+    end
+  end
+
+  # 📦 Sentry Size Analysis 업로드
+  desc "Archive and upload app size data to Sentry Size Analysis"
+  lane :sentry_size_analysis do |options|
+    sentry_org = ENV.fetch("SENTRY_ORG", "picke")
+    sentry_project = ENV.fetch("SENTRY_PROJECT", "picke-ios")
+    archive_path = options[:archive_path] || ENV["SENTRY_ARCHIVE_PATH"] || File.expand_path("output/#{APP_NAME}.xcarchive", __dir__)
+
+    if ENV["SENTRY_AUTH_TOKEN"].to_s.empty?
+      UI.user_error!("SENTRY_AUTH_TOKEN 이 필요합니다. Sentry Settings > Auth Tokens 에서 토큰을 발급해 주세요.")
+    end
+
+    unless system("which sentry-cli >/dev/null 2>&1")
+      UI.user_error!("sentry-cli 가 필요합니다: brew install getsentry/tools/sentry-cli")
+    end
+
+    Dir.chdir("..") do
+      sh("tuist generate --no-open")
+      build_app(
+        workspace: File.expand_path("Picke.xcworkspace"),
+        scheme: SCHEME,
+        configuration: "Release",
+        archive_path: archive_path,
+        skip_package_ipa: true,
+        clean: false,
+        silent: false,
+        build_timing_summary: true,
+        disable_package_automatic_updates: true,
+        skip_package_dependencies_resolution: true,
+        use_system_scm: true
+      )
+
+      sh("sentry-cli build upload #{Shellwords.escape(archive_path)} --org #{Shellwords.escape(sentry_org)} --project #{Shellwords.escape(sentry_project)}")
     end
   end
 

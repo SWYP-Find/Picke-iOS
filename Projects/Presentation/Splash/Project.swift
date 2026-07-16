@@ -10,6 +10,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,
+    .SPM.sdwebImageCore,
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
   ]

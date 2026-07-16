@@ -74,8 +74,8 @@ ln -s AGENTS.md CLAUDE.md
 ### 🔔 알림 (Notification)
 - **알림받기** 목록 — 카테고리 탭(전체·콘텐츠·공지사항·이벤트) + 무한 스크롤
 - 탭 시 읽음 처리 / **모두 읽음** — `GET /api/v1/notifications`, 읽음은 `PATCH .../read·/read-all`
-- **미읽음 빨간점** — `@Shared(.appStorage("HasUnreadNotification"))` 로 홈·프로필 종 아이콘에 표시
-  - 개별/모두 읽음 시 즉시 제거, **새 푸시 수신 시 다시 표시**, 앱 재실행에도 상태 유지
+- **미읽음 빨간점** — 저장소 없이 서버 `GET /api/v1/notifications/unread` 값으로만 구동
+  - 홈·마이·탐색이 각 화면 진입 시 `/unread` 호출 → 자체 Bool 뱃지 갱신, 읽음 처리 시 즉시 제거
 
 ### 📲 푸시 알림 / 딥링크 (APNs)
 - **APNs 다이렉트 발송** (Firebase SDK 미사용) — 권한 요청·토큰 수신 후 `POST /api/v1/devices` 등록(`platform: "IOS"`), 로그아웃/탈퇴 시 해제
@@ -170,10 +170,9 @@ graph TD
     App["App (DI 조립)"] --> UMB["Domain·Data 엄브렐라 @_exported"]
 
     A -.->|.interface 만 의존| B
-    A2 -.->|Auth 만 UseCase 유지| A
 ```
 
-> **핵심**: Presentation·Data 는 `<Feature>DomainInterface`(프로토콜·DI 키)에만 의존 → 구현 변경이 소비자를 리빌드시키지 않는다. pass-through UseCase(Auth 제외 7개)는 인터페이스로 직접 소비, Auth 는 OAuth 오케스트레이션 로직이 있어 UseCase 계층 유지.
+> **핵심**: Presentation·Data 는 `<Feature>DomainInterface`(프로토콜·DI 키)에만 의존 → 구현 변경이 소비자를 리빌드시키지 않는다. Auth 의 OAuth 오케스트레이션도 `AuthUseCaseInterface`/`UnifiedOAuthUseCaseInterface` 로 추출해 Presentation 이 구현이 아닌 인터페이스에 의존하도록 통일했다.
 
 ### 🕸️ TuistSpider 확장 뷰
 
@@ -201,8 +200,10 @@ Presentation/<F>  → <F>DomainInterface (프로토콜 + DI 키)        [.interf
 Network 인프라(NetworkHeader → NetworkToken, MoyaProvider.authorized) → 브리지 경유
 ```
 
+> Presentation 피처 간 화면 전환 계약은 각 `<Feature>Interface`(예: `HomeDelegate`·`HifiDelegate`·`ChatInterface`)에 두어, 소비자가 구현 타깃을 import 하지 않고도 라우팅한다.
+
 **핵심 설계 원칙**
-- ✅ **Presentation** 은 Domain 의 UseCase 만 의존합니다.
+- ✅ **Presentation** 은 Domain 의 UseCase 인터페이스에 의존합니다.
 - ✅ **Domain/UseCase** 는 Repository Protocol 을 통해 외부 IO 를 호출합니다.
 - ✅ **Data/Repository** 는 Domain 의 Repository Protocol 을 구현하고 Entity 를 반환합니다.
 - ✅ **Data/Model** 은 DTO 와 Entity 변환을 담당합니다.

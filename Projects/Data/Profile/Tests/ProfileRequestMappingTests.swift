@@ -43,6 +43,18 @@ struct ProfileRequestMappingTests {
     #expect(queryString.contains("size=20"))
   }
 
+  @Test func creditsHistory_첫_요청은_offset을_생략하고_size만_전달한다() throws {
+    let query = CreditHistoryQueryRequest(offset: nil, size: 20)
+    let request = try ProfileService.creditsHistory(query: query).asURLRequest()
+
+    #expect(request.url?.path == "/api/v1/me/credits/history")
+    #expect(request.httpMethod == "GET")
+
+    let queryString = try #require(request.url?.query)
+    #expect(!queryString.contains("offset="))
+    #expect(queryString.contains("size=20"))
+  }
+
   @Test func battleRecords_요청은_GET_이며_쿼리스트링으로_offset_size_voteSide_를_전달한다() throws {
     let query = BattleRecordsQueryRequest(offset: 10, size: 20, voteSide: "PRO")
     let request = try ProfileService.battleRecords(query: query).asURLRequest()
@@ -111,6 +123,23 @@ struct ProfileRequestMappingTests {
     #expect(json["newCommentEnabled"] as? Bool == false)
     #expect(json["contentLikeEnabled"] as? Bool == true)
     #expect(json["marketingEventEnabled"] as? Bool == false)
+  }
+
+  @Test func updateProfile_요청은_PATCH_이며_닉네임과_캐릭터_타입을_전달한다() throws {
+    let body = ProfileUpdateRequest(
+      nickname: "피클러",
+      characterType: "OWL"
+    )
+    let request = try ProfileService.updateProfile(body: body).asURLRequest()
+
+    #expect(request.url?.path == "/api/v1/me/profile")
+    #expect(request.httpMethod == "PATCH")
+    #expect(request.url?.query == nil)
+
+    let httpBody = try #require(request.httpBody)
+    let json = try #require(try JSONSerialization.jsonObject(with: httpBody) as? [String: Any])
+    #expect(json["nickname"] as? String == "피클러")
+    #expect(json["characterType"] as? String == "OWL")
   }
 
   @Test func 모든_요청은_baseHeader_를_포함한다() throws {

@@ -17,7 +17,7 @@ public protocol AuthInterface: Sendable {
     idToken: String?
   ) async throws -> LoginEntity
   func refresh() async throws -> AuthTokens
-  func withDraw(token: String) async throws -> WithdrawEntity
+  func withDraw(reason: String) async throws -> WithdrawEntity
   func logout() async throws -> AuthExitEntity
   func updateSessionCredential(with tokens: AuthTokens)
 }

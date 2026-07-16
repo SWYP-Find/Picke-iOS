@@ -18,6 +18,7 @@ public enum ProfileService {
   case contentActivities(query: ContentActivitiesQueryRequest)
   case notificationSettings
   case updateNotificationSettings(body: NotificationSettingsRequest)
+  case updateProfile(body: ProfileUpdateRequest)
 }
 
 extension ProfileService: PickeTargetType {
@@ -41,6 +42,8 @@ extension ProfileService: PickeTargetType {
       return ProfileAPI.notificationSettings.description
     case .updateNotificationSettings:
       return ProfileAPI.notificationSettings.description
+    case .updateProfile:
+      return ProfileAPI.profile.description
     }
   }
 
@@ -49,7 +52,7 @@ extension ProfileService: PickeTargetType {
     switch self {
     case .mypage, .recap, .creditsHistory, .battleRecords, .contentActivities, .notificationSettings:
       return .get
-    case .updateNotificationSettings:
+    case .updateNotificationSettings, .updateProfile:
       return .patch
     }
   }
@@ -72,6 +75,9 @@ extension ProfileService: PickeTargetType {
     case .notificationSettings:
       return nil
     case let .updateNotificationSettings(body):
+      guard let dict = body.toDictionary else { return nil }
+      return dict.isEmpty ? nil : dict
+    case let .updateProfile(body):
       guard let dict = body.toDictionary else { return nil }
       return dict.isEmpty ? nil : dict
     }

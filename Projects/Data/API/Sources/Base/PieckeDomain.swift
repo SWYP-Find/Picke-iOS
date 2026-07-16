@@ -32,7 +32,7 @@ extension PieckeDomain: PickeDomainType {
     case .auth:
       return "api/v1/auth/"
     case .profile:
-      return "api/v1/me/"
+      return "api/v1/me"
     case .home:
       return "api/v1/home"
     case .poll:

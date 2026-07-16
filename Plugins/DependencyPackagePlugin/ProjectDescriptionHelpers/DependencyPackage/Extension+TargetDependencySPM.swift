@@ -16,6 +16,7 @@ public extension TargetDependency.SPM {
   static let identifiedCollections = TargetDependency.external(name: "IdentifiedCollections", condition: .none)
   static let tcaFlow = TargetDependency.external(name: "TCAFlow", condition: .none)
   static let concurrencyExtras = TargetDependency.external(name: "ConcurrencyExtras", condition: .none)
+  static let sdwebImageCore = TargetDependency.external(name: "SDWebImage", condition: .none)
   static let sdwebImage = TargetDependency.external(name: "SDWebImageSwiftUI", condition: .none)
   static let kingfisher = TargetDependency.external(name: "Kingfisher", condition: .none)
   static let weaveDI = TargetDependency.external(name: "WeaveDI", condition: .none)

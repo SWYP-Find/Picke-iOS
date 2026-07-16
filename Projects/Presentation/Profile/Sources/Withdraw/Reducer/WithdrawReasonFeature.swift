@@ -3,7 +3,7 @@
 //  Profile
 //
 //  회원 탈퇴 — picke.pen `탈퇴하기`.
-//  탈퇴 사유(복수 선택) 수집 + 제출하기/돌아가기.
+//  탈퇴 사유(단일 선택) 수집 + 제출하기/돌아가기.
 //  제출 시 AuthUseCase.withDraw 호출 → Keychain 초기화 → 세션 종료 전파.
 //
 
@@ -28,12 +28,23 @@ public struct WithdrawReasonFeature {
     case noTime = "이용할 시간이 없어요"
 
     public var id: String { rawValue }
+
+    /// 서버 reason enum 코드 (Android SettingViewModel 매핑과 동일).
+    public var serverCode: String {
+      switch self {
+      case .notFrequent: return "NOT_USED_OFTEN"
+      case .noTopic: return "NO_INTERESTING_BATTLES"
+      case .notFit: return "BATTLE_STYLE_NOT_FIT"
+      case .inconvenient: return "SERVICE_INCONVENIENT"
+      case .noTime: return "NO_TIME"
+      }
+    }
   }
 
   @ObservableState
   public struct State: Equatable {
     public var nickname: String
-    public var selectedReasons: Set<Reason> = []
+    public var selectedReason: Reason?
     public var isProcessing: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
@@ -122,11 +133,8 @@ extension WithdrawReasonFeature {
   ) -> Effect<Action> {
     switch action {
     case let .reasonTapped(reason):
-      if state.selectedReasons.contains(reason) {
-        state.selectedReasons.remove(reason)
-      } else {
-        state.selectedReasons.insert(reason)
-      }
+      // 단일 선택 — 같은 항목 재탭 시 해제.
+      state.selectedReason = (state.selectedReason == reason) ? nil : reason
       return .none
 
     case .submitTapped:
@@ -169,14 +177,14 @@ extension WithdrawReasonFeature {
     case .performWithdraw:
       guard !state.isProcessing else { return .none }
       state.isProcessing = true
-      let token = keychainManager.refreshToken() ?? keychainManager.accessToken() ?? ""
+      let reason = (state.selectedReason ?? .notFrequent).serverCode
       return .run { [deviceUseCase] send in
         // Keychain 초기화 전(인증 유효) 에 디바이스 토큰 해제.
         if let deviceToken = DeviceTokenStorage.token, !deviceToken.isEmpty {
           try? await deviceUseCase.unregisterDevice(fcmToken: deviceToken)
         }
         do {
-          _ = try await authUseCase.withDraw(token: token)
+          _ = try await authUseCase.withDraw(reason: reason)
         } catch {
           Log.error("[WithdrawReasonFeature] withdraw failed: \(error.localizedDescription)")
         }

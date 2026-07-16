@@ -3,7 +3,7 @@ import GoogleMobileAds
 import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
-import Sentry
+@preconcurrency import Sentry
 import UIKit
 import UserNotifications
 import WeaveDI
@@ -75,7 +75,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
   // MARK: - Sentry
 
-  /// Sentry 크래시/에러 리포팅 + 성능 트레이싱 + 프로파일링 + 세션 리플레이 초기화.
+  /// Sentry 크래시/에러 리포팅 + 성능 트레이싱 + 프로파일링 초기화.
   /// 가장 먼저 호출해 초기 크래시까지 포착한다.
   /// DSN·환경은 xcconfig → Info.plist 로 주입된 값을 읽는다(BASE_URL/MIXPANEL_TOKEN 과 동일 패턴).
   private func configureSentry() {
@@ -104,20 +104,93 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       }
 
       // 구조화 로그.
-      options.experimental.enableLogs = true
+      options.enableLogs = true
+      options.enableMetrics = true
 
       // 성능 트레이싱 + 프로파일링(트레이싱에 종속).
-      options.tracesSampleRate = 1.0
-      options.profilesSampleRate = 1.0
+      options.tracesSampleRate = 0.2
+      options.configureProfiling = {
+        $0.lifecycle = .trace
+        $0.sessionSampleRate = 1.0
+      }
+      // TTFD(완전 표시까지의 시간) 트레이싱 + MetricKit(행/디스크/CPU 등 시스템 진단) 수집.
+      options.enableTimeToFullDisplayTracing = true
+      options.enableMetricKit = true
+      // async/await 크래시의 스택트레이스에 suspend 이전 프레임까지 이어붙인다.
+      options.swiftAsyncStacktraces = true
+
+      // 네트워크 자동 계측 — URLSession(Alamofire 포함)의 성공/실패 요청을 모두
+      // http.client 스팬 + 브레드크럼으로 수집한다. Sentry 가 URLSessionTask.resume 를
+      // 스위즐링하므로 네트워크 레이어에 별도 코드가 필요 없다.
+      options.enableSwizzling = true
+      options.enableAutoPerformanceTracing = true
+      options.enableNetworkTracking = true
+      options.enableNetworkBreadcrumbs = true
+
+      // 2xx·3xx는 정상 성능 데이터로 남기고, 4xx·5xx는 오류 이벤트도 추가 생성한다.
+      options.enableCaptureFailedRequests = true
+      options.failedRequestStatusCodes = [
+        HttpStatusCodeRange(
+          min: 400,
+          max: 599
+        ),
+      ]
 
       // 크래시 컨텍스트 첨부.
       options.attachScreenshot = true
-      options.attachViewHierarchy = true
+      options.attachViewHierarchy = false
 
-      // 세션 리플레이 — 텍스트/이미지는 SDK 기본 마스킹(개인정보 보호).
-      options.sessionReplay.sessionSampleRate = 0.1
-      options.sessionReplay.onErrorSampleRate = 1.0
+      // Session Replay는 별도 렌더링/인코딩 큐(io.sentry.session-replay.processing)를 사용한다.
+      // SwiftUI + Mixpanel Session Replay와 동시에 켜면 디버깅 중 해당 큐에서 멈추는 케이스가 있어 비활성화한다.
+      options.sessionReplay.maskAllText = true
+      options.sessionReplay.maskAllImages = true
+      options.sessionReplay.sessionSampleRate = 0.0
+      options.sessionReplay.onErrorSampleRate = 0.0
     }
+
+    sendSentryVerificationTelemetry(environment: environment)
+  }
+
+  /// Sentry 온보딩 검증용 로그/메트릭. DEBUG(Stage) 빌드에서만 전송해 운영 데이터 오염을 막는다.
+  private func sendSentryVerificationTelemetry(environment: String) {
+    #if DEBUG
+      let logAttributes: [String: Any] = [
+        "log_type": "test",
+        "environment": environment,
+        "source": "app_launch",
+      ]
+      let metricAttributes: [String: any SentryAttributeValue] = [
+        "log_type": "test",
+        "environment": environment,
+        "source": "app_launch",
+      ]
+
+      SentrySDK.logger.info(
+        "Sending a test info log",
+        attributes: logAttributes
+      )
+      SentrySDK.logger.warn(
+        "Sending a test warning log",
+        attributes: logAttributes
+      )
+
+      SentrySDK.metrics.count(
+        key: "app.launch.count",
+        value: 1,
+        attributes: metricAttributes
+      )
+      SentrySDK.metrics.gauge(
+        key: "app.launch.queue_depth",
+        value: 1.0,
+        attributes: metricAttributes
+      )
+      SentrySDK.metrics.distribution(
+        key: "app.launch.verification_time",
+        value: 1.0,
+        unit: .millisecond,
+        attributes: metricAttributes
+      )
+    #endif
   }
 
   // MARK: - Push Notifications (APNs)

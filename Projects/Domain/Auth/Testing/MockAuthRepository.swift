@@ -121,7 +121,7 @@ public final class MockAuthRepository: AuthInterface, @unchecked Sendable {
     }
   }
 
-  public func withDraw(token _: String) async throws -> WithdrawEntity {
+  public func withDraw(reason _: String) async throws -> WithdrawEntity {
     withdrawCallCount += 1
     try await Task.sleep(for: .milliseconds(10))
 

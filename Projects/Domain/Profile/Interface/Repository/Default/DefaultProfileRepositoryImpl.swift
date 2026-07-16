@@ -77,7 +77,7 @@ public struct DefaultProfileRepositoryImpl: ProfileInterface {
   }
 
   public func fetchCreditHistory(
-    offset _: Int,
+    offset _: Int?,
     size _: Int
   ) async throws -> CreditHistoryPage {
     CreditHistoryPage(items: [], nextOffset: 0, hasNext: false)
@@ -105,5 +105,17 @@ public struct DefaultProfileRepositoryImpl: ProfileInterface {
 
   public func updateNotificationSettings(_: NotificationSettings) async throws -> NotificationSettings {
     NotificationSettings()
+  }
+
+  public func updateProfile(
+    nickname: String,
+    characterType: String
+  ) async throws -> UpdatedProfile {
+    UpdatedProfile(
+      userTag: "",
+      nickname: nickname,
+      characterType: characterType,
+      updatedAt: ""
+    )
   }
 }

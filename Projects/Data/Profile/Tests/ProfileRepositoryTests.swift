@@ -83,6 +83,52 @@ struct ProfileRepositoryTests {
     }
   }
 
+  // MARK: - updateProfile
+
+  @Test func updateProfile_은_응답을_UpdatedProfile_로_매핑한다() async throws {
+    let json = """
+    {
+      "statusCode": 200,
+      "data": {
+        "userTag": "picke1234",
+        "nickname": "새 닉네임",
+        "characterType": "OWL",
+        "updatedAt": "2026-07-16T12:00:00Z"
+      },
+      "error": null
+    }
+    """
+    let repo = ProfileRepositoryImpl(
+      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
+    )
+
+    let result = try await repo.updateProfile(
+      nickname: "새 닉네임",
+      characterType: "OWL"
+    )
+
+    #expect(result.userTag == "picke1234")
+    #expect(result.nickname == "새 닉네임")
+    #expect(result.characterType == "OWL")
+    #expect(result.updatedAt == "2026-07-16T12:00:00Z")
+  }
+
+  @Test func updateProfile_은_data_가_없으면_backendError_를_던진다() async throws {
+    let json = """
+    {"statusCode": 200, "data": null, "error": {"code": "INVALID", "message": "프로필 수정 실패"}}
+    """
+    let repo = ProfileRepositoryImpl(
+      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
+    )
+
+    await #expect(throws: ProfileError.backendError("프로필 수정 실패")) {
+      try await repo.updateProfile(
+        nickname: "새 닉네임",
+        characterType: "OWL"
+      )
+    }
+  }
+
   // MARK: - fetchRecap
 
   @Test func fetchRecap_은_응답을_PhilosopherRecap_으로_매핑한다() async throws {

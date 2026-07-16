@@ -46,7 +46,7 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
   }
 
   public func fetchCreditHistory(
-    offset: Int,
+    offset: Int?,
     size: Int
   ) async throws -> CreditHistoryPage {
     let dto: CreditHistoryResponseDTO = try await provider.request(
@@ -139,6 +139,28 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
     guard let data = dto.data else {
       let message = dto.error?.message ?? "알림 설정 응답이 비어 있습니다"
       Log.error("[ProfileRepositoryImpl] empty updateNotificationSettings payload: \(message)")
+      throw ProfileError.backendError(message)
+    }
+
+    return data.toDomain()
+  }
+
+  public func updateProfile(
+    nickname: String,
+    characterType: String
+  ) async throws -> UpdatedProfile {
+    let dto: ProfileUpdateResponseDTO = try await provider.request(
+      .updateProfile(
+        body: ProfileUpdateRequest(
+          nickname: nickname,
+          characterType: characterType
+        )
+      )
+    )
+
+    guard let data = dto.data else {
+      let message = dto.error?.message ?? "프로필 수정 응답이 비어 있습니다"
+      Log.error("[ProfileRepositoryImpl] empty updateProfile payload: \(message)")
       throw ProfileError.backendError(message)
     }
 

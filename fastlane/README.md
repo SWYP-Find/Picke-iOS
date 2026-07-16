@@ -31,6 +31,14 @@ Upload to TestFlight (Debug)
 
 Submit to App Store
 
+### ios sentry_size_analysis
+
+```sh
+[bundle exec] fastlane ios sentry_size_analysis
+```
+
+Archive and upload app size data to Sentry Size Analysis
+
 ### ios submit_for_review
 
 ```sh

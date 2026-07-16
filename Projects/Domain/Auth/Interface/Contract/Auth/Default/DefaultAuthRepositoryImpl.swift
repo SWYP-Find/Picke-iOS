@@ -37,7 +37,7 @@ public final class DefaultAuthRepositoryImpl: AuthInterface, @unchecked Sendable
     )
   }
 
-  public func withDraw(token _: String) async throws -> WithdrawEntity {
+  public func withDraw(reason _: String) async throws -> WithdrawEntity {
     WithdrawEntity(isSuccess: true)
   }
 

@@ -101,7 +101,7 @@ struct AuthRequestMappingTests {
 
   @Test
   func withdraw_urlPath_matchesAuthAPIDescription() {
-    let service = AuthService.withdraw(token: "withdraw-token-1")
+    let service = AuthService.withdraw(reason: "NOT_USED_OFTEN")
 
     #expect(service.urlPath == AuthAPI.withDraw.description)
     #expect(service.urlPath == "")
@@ -109,7 +109,7 @@ struct AuthRequestMappingTests {
 
   @Test
   func withdraw_request_isDELETEWithJSONBodyAndBaseHeader() throws {
-    let service = AuthService.withdraw(token: "withdraw-token-1")
+    let service = AuthService.withdraw(reason: "NOT_USED_OFTEN")
     let request = try service.asURLRequest()
 
     #expect(service.method == .delete)
@@ -117,7 +117,7 @@ struct AuthRequestMappingTests {
 
     let httpBody = try #require(request.httpBody)
     let json = try #require(JSONSerialization.jsonObject(with: httpBody) as? [String: Any])
-    #expect(json["token"] as? String == "withdraw-token-1")
+    #expect(json["reason"] as? String == "NOT_USED_OFTEN")
 
     #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
     #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)

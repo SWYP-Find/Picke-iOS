@@ -15,7 +15,7 @@ import Service
 public enum AuthService {
   case login(provider: SocialType, body: OAuthLoginRequest)
   case refresh(refreshToken: String)
-  case withdraw(token: String)
+  case withdraw(reason: String)
   case logout
 }
 
@@ -59,8 +59,8 @@ extension AuthService: PickeTargetType {
       return body.toDictionary
     case .refresh:
       return nil
-    case let .withdraw(token):
-      return token.toDictionary(key: "token")
+    case let .withdraw(reason):
+      return reason.toDictionary(key: "reason")
     case .logout:
       return nil
     }

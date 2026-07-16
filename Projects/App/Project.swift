@@ -23,6 +23,7 @@ let project = Project.configure(
     .SPM.mixpanel,
     .SPM.mixpanelSessionReplay,
     .SPM.kingfisher,
+    .SPM.sdwebImageCore,
     .SPM.sentrySwiftUI,
 
   ],

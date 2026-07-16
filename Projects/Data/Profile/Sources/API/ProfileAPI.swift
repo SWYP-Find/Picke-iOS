@@ -12,21 +12,24 @@ public enum ProfileAPI {
   case battleRecords
   case contentActivities
   case notificationSettings
+  case profile
 
   public var description: String {
     switch self {
     case .mypage:
-      return "mypage"
+      return "/mypage"
     case .recap:
-      return "recap"
+      return "/recap"
     case .creditsHistory:
-      return "credits/history"
+      return "/credits/history"
     case .battleRecords:
-      return "battle-records"
+      return "/battle-records"
     case .contentActivities:
-      return "content-activities"
+      return "/content-activities"
     case .notificationSettings:
-      return "notification-settings"
+      return "/notification-settings"
+    case .profile:
+      return "/profile"
     }
   }
 }

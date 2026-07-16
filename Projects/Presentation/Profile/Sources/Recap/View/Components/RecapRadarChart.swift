@@ -8,15 +8,15 @@
 
 import SwiftUI
 
-import PickeDesignKit
 import Entity
+import PickeDesignKit
 
 public struct RecapRadarChart: View {
   private let axes: [RecapScoreAxis]
   private let rings: Int = 4
 
   /// picke.pen 육각형 단위 꼭짓점 (수직 반지름=1, 수평 0.846, 측면 y=±0.559).
-  /// 순서: 원칙↑ · 이성 · 개인 · 변화↓ · 내면 · 직관 (axes 순서와 동일).
+  /// 순서: 원칙↑ · 이성 · 개인 · 변화↓ · 내면 · 이상 (axes 순서와 동일).
   private let unit: [CGPoint] = [
     CGPoint(x: 0, y: -1),
     CGPoint(x: 0.846, y: -0.559),

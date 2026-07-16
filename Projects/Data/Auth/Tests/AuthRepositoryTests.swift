@@ -223,7 +223,7 @@ struct AuthRepositoryTests {
       authProvider: StubNetworkProvider(stubData: fixture, statusCode: 200)
     )
 
-    let entity = try await repo.withDraw(token: "withdraw-token-1")
+    let entity = try await repo.withDraw(reason: "NOT_USED_OFTEN")
 
     #expect(entity.isSuccess == true)
     #expect(entity.withdrawn == true)
@@ -237,7 +237,7 @@ struct AuthRepositoryTests {
       authProvider: StubNetworkProvider(stubData: Data(), statusCode: 200)
     )
 
-    let entity = try await repo.withDraw(token: "withdraw-token-1")
+    let entity = try await repo.withDraw(reason: "NOT_USED_OFTEN")
 
     #expect(entity.isSuccess == true)
     #expect(entity.withdrawn == true)
@@ -258,7 +258,7 @@ struct AuthRepositoryTests {
       authProvider: StubNetworkProvider(stubData: fixture, statusCode: 403)
     )
 
-    let entity = try await repo.withDraw(token: "withdraw-token-1")
+    let entity = try await repo.withDraw(reason: "NOT_USED_OFTEN")
 
     #expect(entity.isSuccess == false)
     #expect(entity.code == "AUTH_403")

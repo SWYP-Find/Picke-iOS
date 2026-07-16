@@ -3,8 +3,9 @@
 //  Model
 //
 
-import ProfileDomainInterface
 import Foundation
+import Model
+import ProfileDomainInterface
 
 public extension CreditHistoryDataDTO {
   func toDomain() -> CreditHistoryPage {
@@ -32,6 +33,8 @@ public extension CreditHistoryItemDTO {
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
     if let date = formatter.date(from: value) { return date }
     formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: value)
+    if let date = formatter.date(from: value) { return date }
+    // 타임존 없이 내려오는 서버 시각(예: "2026-07-12T21:26:26.921763") — KST 벽시계로 해석.
+    return ServerNaiveDateParser.date(from: value)
   }
 }

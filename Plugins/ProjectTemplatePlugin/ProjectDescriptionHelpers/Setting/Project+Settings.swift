@@ -23,12 +23,8 @@ extension Settings {
       // -ObjC 가 링크라인의 정적 아카이브에서 ObjC 클래스를 로드하므로 -all_load 는 불필요.
       // (-all_load 를 쓰면 동적 프레임워크 Sentry/Moya/CA 심볼이 앱 바이너리에 이중 등록되어
       //  "Class ... implemented in both" 경고 + 런타임 abort 발생)
-      // SDWebImage 의 category-only 파일(NSData+ImageContentType 의 sd_imageFormatForImageData:)은
-      // debug-dylib 분리 링크에서 -ObjC 만으로 누락될 수 있어, SDWebImage 정적 프레임워크만
-      // -force_load 로 강제 로드한다(타깃 한정이라 동적 프레임워크 중복-클래스 문제 없음).
-      .setOtherLdFlags(
-        "-ObjC -framework GoogleMobileAds -force_load $(BUILT_PRODUCTS_DIR)/SDWebImage.framework/SDWebImage"
-      )
+      // SDWebImage 는 동적 프레임워크로 링크/임베드되므로 force_load 하지 않는다.
+      .setOtherLdFlags("-ObjC -framework GoogleMobileAds")
       .setDebugInformationFormat("dwarf-with-dsym")
       .setProvisioningProfileSpecifier(provisioningProfile)
       .setSkipInstall(setSkipInstall)
