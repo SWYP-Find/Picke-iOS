@@ -1,5 +1,5 @@
 {
-  "originHash" : "2f9a08b587e39ff558d4c8c18dba58cd04c1003b8ce183ff43b718b81f095a00",
+  "originHash" : "90e503ea5a509853c4fdee624e7bad613897a8b9e08c1c0b8513b4a6073c7ef9",
   "pins" : [
     {
       "identity" : "abseil-cpp-binary",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "bbe8b69694d7873315fd3a4ad41efe043e1c07c5",
         "version" : "1.2024072200.0"
+      }
+    },
+    {
+      "identity" : "adfit-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/adfit/adfit-spm.git",
+      "state" : {
+        "revision" : "f29d3d1abb7be92e424f98806da495e3d6aa9707",
+        "version" : "3.21.24"
       }
     },
     {
