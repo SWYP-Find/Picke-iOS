@@ -17,6 +17,7 @@ import ProjectDescription
 // MARK: - Feature 모듈 식별자
 
 public enum DomainFeatureModule: String, CaseIterable {
+  case Attendance
   case Auth
   case Battle
   case Comment
@@ -30,6 +31,7 @@ public enum DomainFeatureModule: String, CaseIterable {
 }
 
 public enum DataFeatureModule: String, CaseIterable {
+  case Attendance
   case Auth
   case Battle
   case Comment

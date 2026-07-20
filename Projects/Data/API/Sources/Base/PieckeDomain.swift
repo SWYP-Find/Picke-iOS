@@ -10,6 +10,7 @@ import Foundation
 import NetworkHeader
 
 public enum PieckeDomain {
+  case attendance
   case auth
   case profile
   case home
@@ -29,6 +30,8 @@ extension PieckeDomain: PickeDomainType {
 
   public var url: String {
     switch self {
+    case .attendance:
+      return "api/v1/attendance"
     case .auth:
       return "api/v1/auth/"
     case .profile:

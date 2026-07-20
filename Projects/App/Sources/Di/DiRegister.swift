@@ -7,6 +7,8 @@
 
 import Foundation
 
+import AttendanceData
+import AttendanceDomainInterface
 import AuthData
 import AuthDomain
 import BattleData
@@ -59,6 +61,7 @@ public final class AppDIManager: Sendable {
       .register { AudioPlayerRepositoryImpl() as AudioPlayerInterface }
       .register { ProfileRepositoryImpl() as ProfileInterface }
       .register { NotificationRepositoryImpl() as NotificationInterface }
+      .register { AttendanceRepositoryImpl() as AttendanceInterface }
       .register { DeviceRepositoryImpl() as DeviceInterface }
       .register { AppUpdateRepositoryImpl() as AppUpdateInterface }
       .register { AppUpdateUseCaseImpl() as AppUpdateUseCaseInterface }
@@ -81,13 +84,6 @@ public final class AppDIManager: Sendable {
       .register { AppleOAuthProvider() as AppleOAuthProviderInterface }
       .register { GoogleOAuthProvider() as GoogleOAuthProviderInterface }
       .register { KakaoOAuthProvider() as KakaoOAuthProviderInterface }
-      // 📝 비즈니스 로직 계층 (PFW 단일 책임)
-//      .register { OnBoardingRepositoryImpl() as OnBoardingInterface }
-//      .register { SignUpRepositoryImpl() as SignUpInterface }
-//      .register { AttendanceRepositoryImpl() as AttendanceInterface }
-//      .register { MyPageRepositoryImpl() as MyPageRepositoryInterface }
-//      .register { ScheduleRepositoryImpl() as ScheduleInterface }
-//      .register { QRCodeRepositoryImpl() as QRCodeInterface }
       .configure()
   }
 }

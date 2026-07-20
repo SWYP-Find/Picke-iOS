@@ -5,24 +5,19 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Data"),
-  bundleId: .appBundleID(name: ".Data"),
+  moduleType: .module(name: "AttendanceData"),
+  bundleId: .appBundleID(name: ".AttendanceData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Attendance, .interface),
     .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Service),
     .Data(implements: .Repository),
-    .Data(.Attendance),
-    .Data(.Auth),
-    .Data(.Battle),
-    .Data(.Search),
-    .Data(.Comment),
-    .Data(.Home),
-    .Data(.Notification),
-    .Data(.Perspective),
-    .Data(.Profile),
+    .Network(implements: .NetworkHeader),
+    .SPM.logMarco,
   ],
-  sources: ["Sources/**"]
+  sources: ["Sources/**"],
+  hasTests: true
 )

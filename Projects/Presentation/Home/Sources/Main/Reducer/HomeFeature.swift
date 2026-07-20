@@ -5,6 +5,7 @@
 //  Created by Wonji Suh on 5/15/26.
 //
 
+import AttendanceDomainInterface
 import ComposableArchitecture
 import DomainInterface
 import Entity
@@ -19,6 +20,20 @@ import UseCase
 @Reducer
 public struct HomeFeature {
   public init() {}
+
+  /// 출석체크 결과 시트에 넘길 표시용 데이터.
+  /// 시트 자체는 상호작용이 없어 자식 리듀서를 두지 않고 값만 들고 있다가 `.sheet(item:)` 으로 띄운다.
+  public struct AttendanceSheetData: Equatable, Identifiable {
+    public let weekly: WeeklyAttendance
+    public let pointsEarned: Int
+
+    public var id: String { weekly.weekStartDate }
+
+    public init(weekly: WeeklyAttendance, pointsEarned: Int) {
+      self.weekly = weekly
+      self.pointsEarned = pointsEarned
+    }
+  }
 
   @ObservableState
   public struct State: Equatable {
@@ -35,6 +50,11 @@ public struct HomeFeature {
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
     public var hasUnreadNotification: Bool = false
+
+    /// 출석체크 시트 — 오늘 첫 출석에 성공했을 때만 값이 찬다.
+    public var attendanceSheet: AttendanceSheetData?
+    /// 출석 체크는 앱 세션당 1회만 시도한다(하루 1회 제한이라 재진입마다 때릴 이유가 없다).
+    public var hasTriedAttendance: Bool = false
 
     public var currentQuiz: QuizQuestion? { quizzes.first }
     public var currentVote: VoteQuestion? { votes.first }
@@ -74,20 +94,26 @@ public struct HomeFeature {
     case fetchHome
     /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
     case syncUnreadBadge
+    /// 오늘의 출석 체크 (POST /attendance/check) — 성공 시 주간 현황까지 이어 조회한다.
+    case checkAttendance
   }
 
   public enum InnerAction: Equatable {
     case homeResponse(Result<HomeBundle, AuthError>)
     case unreadBadgeResponse(Bool)
+    /// 출석 체크 성공 + 주간 현황 조회까지 끝난 결과.
+    case attendanceResponse(weekly: WeeklyAttendance, pointsEarned: Int)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetchHome
     case syncUnreadBadge
+    case attendance
   }
 
   @Dependency(\.homeUseCase) private var homeUseCase
   @Dependency(\.notificationUseCase) private var notificationUseCase
+  @Dependency(\.attendanceUseCase) private var attendanceUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   public var body: some Reducer<State, Action> {
@@ -119,8 +145,15 @@ extension HomeFeature {
       analyticsUseCase.track(.screenView(screen: .home, referrer: nil))
       // 벨 배지는 진입/재진입마다 서버(/unread)로 갱신 — fetchHome 이 스킵돼도 stale 방지.
       let syncBadge: Effect<Action> = .send(.async(.syncUnreadBadge))
-      guard !state.hasLoadedHome, !state.isLoading else { return syncBadge }
-      return .merge(syncBadge, .send(.async(.fetchHome)))
+      // 출석 체크는 세션당 1회 — 하루 1회 제한이라 재진입마다 호출할 이유가 없다.
+      let attendance: Effect<Action> = state.hasTriedAttendance
+        ? .none
+        : .send(.async(.checkAttendance))
+      state.hasTriedAttendance = true
+      guard !state.hasLoadedHome, !state.isLoading else {
+        return .merge(syncBadge, attendance)
+      }
+      return .merge(syncBadge, attendance, .send(.async(.fetchHome)))
 
     case .pullToRefresh:
       guard !state.isLoading else { return .none }
@@ -194,6 +227,18 @@ extension HomeFeature {
         await send(.inner(.unreadBadgeResponse(hasUnread)))
       }
       .cancellable(id: CancelID.syncUnreadBadge, cancelInFlight: true)
+
+    case .checkAttendance:
+      return .run { [useCase = attendanceUseCase] send in
+        // 이미 오늘 출석했으면 서버가 거절한다 — 그 경우 시트를 띄우지 않고 조용히 끝낸다.
+        guard let result = try? await useCase.checkAttendance() else { return }
+        guard let weekly = try? await useCase.fetchWeeklyAttendance() else { return }
+        await send(.inner(.attendanceResponse(
+          weekly: weekly,
+          pointsEarned: result.pointsEarned + result.streakBonusPoints
+        )))
+      }
+      .cancellable(id: CancelID.attendance, cancelInFlight: true)
     }
   }
 
@@ -224,6 +269,10 @@ extension HomeFeature {
     case let .unreadBadgeResponse(hasUnread):
       // 서버(/unread) 값을 그대로 반영 — 별도 저장/가드 없이 진입 시점 진실값만 사용.
       state.hasUnreadNotification = hasUnread
+      return .none
+
+    case let .attendanceResponse(weekly, pointsEarned):
+      state.attendanceSheet = AttendanceSheetData(weekly: weekly, pointsEarned: pointsEarned)
       return .none
     }
   }
