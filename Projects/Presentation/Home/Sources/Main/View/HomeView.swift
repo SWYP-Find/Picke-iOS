@@ -11,6 +11,7 @@ import Entity
 import HomeDomainInterface
 import PickeDesignKit
 
+import AdKit
 import ComposableArchitecture
 
 @ViewAction(for: HomeFeature.self)
@@ -44,6 +45,10 @@ public struct HomeView: View {
             if !store.hotBattles.isEmpty {
               hotBattlesSection()
             }
+            // 광고가 없으면 AdFitBannerView 가 스스로 접혀 높이 0 이 된다 —
+            // 섹션 간 spacing 32 가 두 번 겹치지 않도록 여백은 따로 주지 않는다.
+            AdFitBannerView(unit: .size320x50)
+              .frame(maxWidth: .infinity)
             if !store.bestBattles.isEmpty {
               bestBattlesSection()
             }
@@ -59,6 +64,12 @@ public struct HomeView: View {
       }
     }
     .background(Color.beige200.ignoresSafeArea())
+    // 오늘 첫 출석에 성공했을 때만 값이 차므로, 재진입 시엔 뜨지 않는다.
+    .sheet(item: $store.attendanceSheet) { sheet in
+      AttendanceSheetView(weekly: sheet.weekly, pointsEarned: sheet.pointsEarned)
+        .presentationDetents([.height(420)])
+        .presentationDragIndicator(.hidden)
+    }
     .onAppear { send(.onAppear) }
     .navigationBarHidden(true)
     .scrollIndicators(.hidden)

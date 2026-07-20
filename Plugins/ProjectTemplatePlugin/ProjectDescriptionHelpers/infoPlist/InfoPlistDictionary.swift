@@ -232,6 +232,23 @@ extension InfoPlistDictionary {
     merging(["REWARD_AD_UNIT": .string(value)]) { _, new in new }
   }
 
+  /// 카카오 AdFit 배너 광고 단위 코드 — xcconfig → Info.plist → Bundle 로 주입.
+  /// AdFit 은 광고 단위 하나가 사이즈 하나에 고정 발급되므로 규격별로 키를 나눈다.
+  func setAdFitBannerClientIds(
+    size320x50: String,
+    size320x100: String
+  ) -> InfoPlistDictionary {
+    merging([
+      "ADFIT_BANNER_320X50": .string(size320x50),
+      "ADFIT_BANNER_320X100": .string(size320x100),
+    ]) { _, new in new }
+  }
+
+  /// ATT 권한 요청 팝업에 표시되는 사유 문구. 값이 없으면 iOS 가 팝업을 띄우지 않는다.
+  func setUserTrackingUsageDescription(_ value: String) -> InfoPlistDictionary {
+    merging(["NSUserTrackingUsageDescription": .string(value)]) { _, new in new }
+  }
+
   func setSKAdNetworkItems(_ identifiers: [String]) -> InfoPlistDictionary {
     merging([
       "SKAdNetworkItems": .array(

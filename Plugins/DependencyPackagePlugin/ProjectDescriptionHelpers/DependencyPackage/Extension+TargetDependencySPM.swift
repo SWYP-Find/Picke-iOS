@@ -29,6 +29,7 @@ public extension TargetDependency.SPM {
   static let googleMobileAds = TargetDependency.external(name: "GoogleMobileAds", condition: .none)
   static let mixpanel = TargetDependency.external(name: "Mixpanel", condition: .none)
   static let mixpanelSessionReplay = TargetDependency.external(name: "MixpanelSessionReplay", condition: .none)
+  static let adFit = TargetDependency.external(name: "AdFitSDK", condition: .none)
   static let sentry = TargetDependency.external(name: "Sentry", condition: .none)
   static let sentrySwiftUI = TargetDependency.external(name: "SentrySwiftUI", condition: .none)
 }

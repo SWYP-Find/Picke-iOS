@@ -8,9 +8,10 @@
 
 import SwiftUI
 
+import AdKit
 import ComposableArchitecture
-import PickeDesignKit
 import Kingfisher
+import PickeDesignKit
 
 @ViewAction(for: ProfileFeature.self)
 public struct ProfileView: View {
@@ -42,11 +43,20 @@ public struct ProfileView: View {
             .padding(.horizontal, 16)
 
           Spacer(minLength: 0)
+
+          // 마이페이지 하단 배너 광고 — 디자인(높이 90)에 맞춰 큰 규격(320x100) 사용, 좌우 여백 16.
+          AdFitBannerView(
+            unit: .size320x100,
+            insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
+            alignment: .leading
+          )
         }
       }
     }
     .background(Color.beige200.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
+    // 리워드 광고 사전 고지 — 디자인 시스템 커스텀 팝업.
+    .customAlert($store.scope(state: \.rewardNoticeAlert, action: \.rewardNoticeAlert))
     .onAppear { send(.onAppear) }
   }
 }

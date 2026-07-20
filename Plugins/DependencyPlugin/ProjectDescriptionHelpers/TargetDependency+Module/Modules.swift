@@ -63,6 +63,8 @@ public extension ModulePath {
     case Shared
     case PickeDesignKit
     case Utill
+    /// 광고 SDK(AdFit) 전용 모듈. 디자인 시스템과 분리해, 광고를 노출하는 화면만 명시적으로 의존한다.
+    case AdKit
 
     public static let name: String = "Shared"
     case ThirdParty

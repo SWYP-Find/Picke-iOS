@@ -11,6 +11,8 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Shared(implements: .Shared),
+    // 탐색 리스트 인라인 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
+    .Shared(implements: .AdKit),
     .Domain(.Home, .interface),
     .Domain(implements: .UseCase),
     .Domain(.Search, .interface),

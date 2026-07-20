@@ -16,7 +16,7 @@
       "Sharing": .framework,
       "TCAFlow": .framework,
       "Alamofire": .framework,
-      "LogMacro": .staticFramework,
+      "LogMacro": .framework,
       "AppAuth": .framework,
       "AppAuthCore": .framework,
       "GTMAppAuth": .framework,
@@ -75,5 +75,8 @@ let package = Package(
     .package(url: "https://github.com/mixpanel/mixpanel-ios-session-replay-package", exact: "1.4.0"),
     .package(url: "https://github.com/googleads/swift-package-manager-google-mobile-ads", from: "12.0.0"),
     .package(url: "https://github.com/getsentry/sentry-cocoa", from: "9.21.0"),
+    // 카카오 AdFit — CocoaPods 지원 종료(3.18.6~)로 SPM 만 제공. 배포물은 binaryTarget(xcframework)
+    // 하나뿐이라 productTypes 전환 대상이 아니다(이미 DYLIB 로 빌드된 동적 프레임워크).
+    .package(url: "https://github.com/adfit/adfit-spm.git", exact: "3.21.24"),
   ]
 )

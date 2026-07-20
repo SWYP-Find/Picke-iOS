@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+import AdKit
 import ComposableArchitecture
 import Entity
 import HomeDomainInterface
@@ -111,7 +112,7 @@ private extension HifiView {
   func exploreList() -> some View {
     ScrollView {
       LazyVStack(spacing: 0) {
-        ForEach(store.items) { item in
+        ForEach(Array(store.items.enumerated()), id: \.element.id) { index, item in
           exploreRow(item)
             .onAppear {
               // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
@@ -119,11 +120,33 @@ private extension HifiView {
                 send(.reachedBottom)
               }
             }
+
+          // Figma 3925-3747: 콘텐츠 카드 3개마다 배너를 하나씩 인라인 삽입.
+          // 마지막 카드 뒤에는 넣지 않는다(리스트 끝에 광고가 매달리면 어색하다).
+          // 아이템이 3개 미만이면 조건이 성립하지 않아 자연히 노출되지 않는다.
+          // (광고 단위 미설정·수신 실패 시엔 AdFitBannerView 가 스스로 자리를 접는다)
+          if (index + 1) % 3 == 0, index != store.items.count - 1 {
+            adBannerRow()
+          }
         }
       }
     }
     .scrollIndicators(.hidden)
     .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+  }
+
+  /// 카드 사이에 끼우는 배너 광고 한 줄.
+  ///
+  /// 여백은 AdFitBannerView 내부에서 **광고가 실제로 노출될 때만** 적용된다(insets).
+  /// 광고가 없으면 여백까지 통째로 접혀 카드가 연속으로 이어진다.
+  /// 상하 12 는 위아래 카드의 vertical 패딩과 대칭을 이루고, 좌측 정렬로 카드 좌측 라인과 맞춘다.
+  @ViewBuilder
+  func adBannerRow() -> some View {
+    AdFitBannerView(
+      unit: .size320x50,
+      insets: EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20),
+      alignment: .leading
+    )
   }
 
   /// 좌우 스와이프로 카테고리 전환 (빈 상태/스켈레톤 포함 콘텐츠 영역 전체에 적용).

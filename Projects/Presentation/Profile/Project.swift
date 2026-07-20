@@ -16,6 +16,7 @@ let project = Project.configure(
     .Domain(.Notification, .interface),
     .Domain(implements: .UseCase),
     .Shared(implements: .Shared),
+    .Shared(implements: .AdKit), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

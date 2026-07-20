@@ -14,6 +14,7 @@ import ComposableArchitecture
 import Entity
 import LogMacro
 import NotificationDomainInterface
+import PickeDesignKit
 import UseCase
 
 @Reducer
@@ -28,6 +29,11 @@ public struct ProfileFeature {
 
     public var id: String { rawValue }
   }
+
+  /// 리워드 광고 1회 시청 보상 포인트.
+  /// AdMob 정책상 광고 노출 **전에** 보상 내용을 명확히 고지해야 하므로 문구에 그대로 노출한다.
+  /// 서버 지급 정책과 반드시 일치해야 하며, 마이페이지 응답에 보상량 필드가 생기면 그 값으로 교체할 것.
+  public static let rewardedAdPoint: Int = 20
 
   @ObservableState
   public struct State: Equatable {
@@ -52,6 +58,10 @@ public struct ProfileFeature {
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
     public var hasUnreadNotification: Bool = false
 
+    /// 리워드 광고 사전 고지 — 광고는 이 다이얼로그에서 동의해야만 노출된다.
+    /// 디자인 시스템 커스텀 팝업(CustomAlert)을 사용한다.
+    @Presents public var rewardNoticeAlert: CustomAlertState<CustomAlertAction>?
+
     public init() {}
 
     /// 철학자 유형 미확정(잠금) 여부.
@@ -72,6 +82,8 @@ public struct ProfileFeature {
     case async(AsyncAction)
     case inner(InnerAction)
     case delegate(DelegateAction)
+    /// 리워드 광고 사전 고지 다이얼로그의 버튼 액션.
+    case rewardNoticeAlert(PresentationAction<CustomAlertAction>)
   }
 
   @CasePathable
@@ -143,7 +155,24 @@ public struct ProfileFeature {
 
       case let .delegate(delegateAction):
         return handleDelegateAction(state: &state, action: delegateAction)
+
+      case .rewardNoticeAlert(.presented(.confirmTapped)):
+        // 사전 고지에 동의 → 리워드 광고 표시, 보상 획득 시 ad_revenue 트래킹 + 포인트 갱신.
+        state.rewardNoticeAlert = nil
+        return .run { [rewardedAdClient, analyticsUseCase] send in
+          let earned = await rewardedAdClient.showRewardedAd()
+          if earned {
+            analyticsUseCase.track(.adRevenue(placement: .charge))
+            await send(.async(.fetchProfile))
+          }
+        }
+
+      case .rewardNoticeAlert:
+        return .none
       }
+    }
+    .ifLet(\.$rewardNoticeAlert, action: \.rewardNoticeAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -181,14 +210,15 @@ extension ProfileFeature {
       return .send(.delegate(.chargePoint))
 
     case .freeChargeTapped:
-      // 무료 충전 → 리워드 광고 표시, 보상 획득 시 ad_revenue 트래킹 + 포인트 갱신.
-      return .run { [rewardedAdClient, analyticsUseCase] send in
-        let earned = await rewardedAdClient.showRewardedAd()
-        if earned {
-          analyticsUseCase.track(.adRevenue(placement: .charge))
-          await send(.async(.fetchProfile))
-        }
-      }
+      // 무료 충전 → 광고 노출 전에 보상 내용을 명확히 고지한다(AdMob 정책).
+      // 유저가 다이얼로그에서 동의해야만 광고가 뜬다.
+      state.rewardNoticeAlert = CustomAlertState(
+        title: "무료 포인트 충전",
+        message: "광고를 끝까지 시청하면\n포인트 \(Self.rewardedAdPoint)P가 지급됩니다.",
+        confirmTitle: "광고 보기",
+        cancelTitle: "취소"
+      )
+      return .none
 
     case .philosopherTapped:
       return .send(.delegate(.openPhilosopher))
