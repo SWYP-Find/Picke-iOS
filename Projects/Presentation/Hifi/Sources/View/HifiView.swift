@@ -143,7 +143,7 @@ private extension HifiView {
   @ViewBuilder
   func adBannerRow() -> some View {
     AdFitBannerView(
-      unit: .size320x50,
+      unit: .size320x100,
       insets: EdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20),
       alignment: .leading
     )
