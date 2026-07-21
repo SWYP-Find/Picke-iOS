@@ -417,7 +417,19 @@ platform :ios do
         submit_for_review: true,
         automatic_release: false,
         precheck_include_in_app_purchases: false,
-        reject_if_possible: true
+        reject_if_possible: true,
+        # 광고(AdMob/AdFit) 노출로 IDFA 를 사용하므로 심사 제출 시 광고 식별자 신고를 자동 응답한다.
+        # (미응답 시 "your app tracks users" 로 submit_for_review 가 거부됨)
+        # 값이 실제 운영과 맞는지 확인 필요: 광고 노출=serves_ads, ATT 준수=limits_tracking.
+        # 광고 기반 설치/행동 기여 트래킹을 하지 않으면 tracks_install/tracks_action 은 false.
+        # (암호화 신고는 Info.plist ITSAppUsesNonExemptEncryption 로 이미 처리됨)
+        submission_information: {
+          add_id_info_uses_idfa: true,
+          add_id_info_serves_ads: true,
+          add_id_info_tracks_action: false,
+          add_id_info_tracks_install: false,
+          add_id_info_limits_tracking: true
+        }
       )
 
       UI.success("🎉 앱 업로드 및 심사 요청 완료!")
