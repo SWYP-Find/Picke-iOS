@@ -17,9 +17,21 @@ struct AttendanceDayCell: View {
 
   private let circleSize: CGFloat = 36
 
+  /// 서버는 요일을 MON~SUN 으로 내려주지만 디자인은 한국어(월~일)다.
+  /// 도메인은 서버 값을 그대로 보존하므로 표기만 이 계층에서 변환한다.
+  /// 이미 한국어로 오는 경우엔 매칭이 없어 원본을 그대로 쓴다.
+  private static let koreanWeekday: [String: String] = [
+    "MON": "월", "TUE": "화", "WED": "수", "THU": "목",
+    "FRI": "금", "SAT": "토", "SUN": "일",
+  ]
+
+  private var weekdayLabel: String {
+    Self.koreanWeekday[day.day.uppercased()] ?? day.day
+  }
+
   var body: some View {
     VStack(spacing: 4) {
-      Text(day.day)
+      Text(weekdayLabel)
         .pretendardFont(.labelMedium)
         .foregroundStyle(.gray600)
 

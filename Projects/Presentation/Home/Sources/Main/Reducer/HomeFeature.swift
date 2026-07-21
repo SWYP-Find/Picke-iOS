@@ -21,20 +21,6 @@ import UseCase
 public struct HomeFeature {
   public init() {}
 
-  /// 출석체크 결과 시트에 넘길 표시용 데이터.
-  /// 시트 자체는 상호작용이 없어 자식 리듀서를 두지 않고 값만 들고 있다가 `.sheet(item:)` 으로 띄운다.
-  public struct AttendanceSheetData: Equatable, Identifiable {
-    public let weekly: WeeklyAttendance
-    public let pointsEarned: Int
-
-    public var id: String { weekly.weekStartDate }
-
-    public init(weekly: WeeklyAttendance, pointsEarned: Int) {
-      self.weekly = weekly
-      self.pointsEarned = pointsEarned
-    }
-  }
-
   @ObservableState
   public struct State: Equatable {
     public var isLoading: Bool = false
@@ -51,8 +37,8 @@ public struct HomeFeature {
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
     public var hasUnreadNotification: Bool = false
 
-    /// 출석체크 시트 — 오늘 첫 출석에 성공했을 때만 값이 찬다.
-    public var attendanceSheet: AttendanceSheetData?
+    /// 출석체크 커스텀 모달 — 오늘 첫 출석에 성공했을 때만 값이 찬다.
+    @Presents public var attendanceModal: AttendanceModalFeature.State?
     /// 출석 체크는 앱 세션당 1회만 시도한다(하루 1회 제한이라 재진입마다 때릴 이유가 없다).
     public var hasTriedAttendance: Bool = false
 
@@ -68,6 +54,7 @@ public struct HomeFeature {
     case async(AsyncAction)
     case inner(InnerAction)
     case delegate(HomeDelegate)
+    case attendanceModal(PresentationAction<AttendanceModalFeature.Action>)
   }
 
   @CasePathable
@@ -130,12 +117,23 @@ public struct HomeFeature {
         handleInnerAction(state: &state, action: innerAction)
       case let .delegate(delegateAction):
         handleDelegateAction(state: &state, action: delegateAction)
+      case let .attendanceModal(presentationAction):
+        handleAttendanceModal(state: &state, action: presentationAction)
       }
+    }
+    .ifLet(\.$attendanceModal, action: \.attendanceModal) {
+      AttendanceModalFeature()
     }
   }
 }
 
 extension HomeFeature {
+  /// staging 빌드 여부. 출석 시트를 테스트로 상시 노출할지 가르는 게이트.
+  /// 값은 xcconfig → Info.plist(SENTRY_ENVIRONMENT) 로 주입된다(Stage=staging, Prod=production).
+  static var isStagingEnvironment: Bool {
+    (Bundle.main.object(forInfoDictionaryKey: "SENTRY_ENVIRONMENT") as? String) == "staging"
+  }
+
   private func handleViewAction(
     state: inout State,
     action: View
@@ -230,12 +228,14 @@ extension HomeFeature {
 
     case .checkAttendance:
       return .run { [useCase = attendanceUseCase] send in
-        // 이미 오늘 출석했으면 서버가 거절한다 — 그 경우 시트를 띄우지 않고 조용히 끝낸다.
-        guard let result = try? await useCase.checkAttendance() else { return }
+        let result = try? await useCase.checkAttendance()
+        // 정책: Prod 는 오늘 첫 출석 성공(result != nil) 때만 노출.
+        // staging 은 테스트 목적으로 이미 출석(409)이어도 결과와 무관하게 상시 노출한다.
+        guard Self.isStagingEnvironment || result != nil else { return }
         guard let weekly = try? await useCase.fetchWeeklyAttendance() else { return }
         await send(.inner(.attendanceResponse(
           weekly: weekly,
-          pointsEarned: result.pointsEarned + result.streakBonusPoints
+          pointsEarned: (result?.pointsEarned ?? 0) + (result?.streakBonusPoints ?? 0)
         )))
       }
       .cancellable(id: CancelID.attendance, cancelInFlight: true)
@@ -272,7 +272,24 @@ extension HomeFeature {
       return .none
 
     case let .attendanceResponse(weekly, pointsEarned):
-      state.attendanceSheet = AttendanceSheetData(weekly: weekly, pointsEarned: pointsEarned)
+      var modalState = AttendanceModalFeature.State()
+      modalState.weekly = weekly
+      modalState.pointsEarned = pointsEarned
+      state.attendanceModal = modalState
+      return .none
+    }
+  }
+
+  private func handleAttendanceModal(
+    state: inout State,
+    action: PresentationAction<AttendanceModalFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.delegate(.dismissed)), .dismiss:
+      state.attendanceModal = nil
+      return .none
+
+    case .presented:
       return .none
     }
   }

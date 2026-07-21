@@ -64,14 +64,17 @@ public struct HomeView: View {
       }
     }
     .background(Color.beige200.ignoresSafeArea())
-    // 오늘 첫 출석에 성공했을 때만 값이 차므로, 재진입 시엔 뜨지 않는다.
-    .sheet(item: $store.attendanceSheet) { sheet in
-      AttendanceSheetView(weekly: sheet.weekly, pointsEarned: sheet.pointsEarned)
-        .presentationDetents([.height(420)])
-        .presentationDragIndicator(.hidden)
+    .pickeModal(
+      $store.scope(
+        state: \.attendanceModal,
+        action: \.attendanceModal
+      )
+    ) { modalStore in
+      AttendanceModalView(store: modalStore)
     }
     .onAppear { send(.onAppear) }
     .navigationBarHidden(true)
+    .toolbar(store.attendanceModal == nil ? .automatic : .hidden, for: .tabBar)
     .scrollIndicators(.hidden)
     .scrollBounceBehavior(.basedOnSize)
   }

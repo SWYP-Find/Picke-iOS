@@ -32,8 +32,12 @@ public struct AttendanceSheetView: View {
     .padding(.horizontal, 16)
     .padding(.bottom, 40)
     .background(
-      UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
-        .fill(.white)
+      UnevenRoundedRectangle(
+        topLeadingRadius: 32,
+        topTrailingRadius: 32
+      )
+      .fill(.white)
+      .ignoresSafeArea(edges: .bottom)
     )
   }
 
