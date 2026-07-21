@@ -70,6 +70,35 @@ def transient_upload_error?(error)
   end
 end
 
+# Sentry "Upload Mobile Builds" (Size Analysis + 사전배포) — 아카이브를 sentry-cli 로 업로드한다.
+# 실패해도 배포를 절대 막지 않는다. CI 에 SENTRY_AUTH_TOKEN 시크릿과 sentry-cli 가 있을 때만 동작.
+def upload_build_to_sentry
+  token = ENV["SENTRY_AUTH_TOKEN"].to_s
+  archive = lane_context[SharedValues::XCODEBUILD_ARCHIVE].to_s
+
+  if token.empty?
+    UI.message("ℹ️ Sentry 빌드 업로드 스킵: SENTRY_AUTH_TOKEN 미설정")
+    return
+  end
+  unless system("which sentry-cli >/dev/null 2>&1")
+    UI.message("ℹ️ Sentry 빌드 업로드 스킵: sentry-cli 미설치 (brew install getsentry/tools/sentry-cli)")
+    return
+  end
+  if archive.empty? || !File.directory?(archive)
+    UI.message("ℹ️ Sentry 빌드 업로드 스킵: xcarchive 경로 없음")
+    return
+  end
+
+  org = ENV.fetch("SENTRY_ORG", "picke")
+  project = ENV.fetch("SENTRY_PROJECT", "picke-ios")
+  begin
+    UI.message("📦 Sentry 빌드 업로드(Size Analysis): #{archive}")
+    sh("sentry-cli build upload #{Shellwords.escape(archive)} --org #{Shellwords.escape(org)} --project #{Shellwords.escape(project)}")
+  rescue => e
+    UI.important("⚠️ Sentry 빌드 업로드 실패(배포는 계속 진행): #{e.message}")
+  end
+end
+
 def upload_to_testflight_with_retry(options)
   max_attempts = Integer(ENV.fetch("TESTFLIGHT_UPLOAD_MAX_ATTEMPTS", "3"))
   attempt = 1
@@ -218,6 +247,9 @@ platform :ios do
         }
       )
     end
+
+    # 아카이브 산출 직후 Sentry 빌드/사이즈 업로드(비차단).
+    upload_build_to_sentry
 
     begin
       # Picke/picke 그룹에 배포 (External 그룹이어야 실제 지정됨. Internal이면 자동 배포되고 아래 rescue로 넘어감)
@@ -368,6 +400,9 @@ platform :ios do
       end
 
       # clean_symbols_from_ipa(ipa_path: ipa_path)
+
+      # 아카이브 산출 직후 Sentry 빌드/사이즈 업로드(비차단).
+      upload_build_to_sentry
 
       # 업로드 후 자동으로 심사 요청
       upload_to_app_store(
