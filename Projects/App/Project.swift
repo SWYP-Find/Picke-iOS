@@ -18,6 +18,7 @@ let project = Project.configure(
     .Data(implements: .Data),
     .Network(implements: .NetworkModule),
     .Shared(implements: .Shared),
+    .Shared(implements: .AdKit), // 앱 시작 전면 팝업 광고
     .SPM.googleMobileAds,
     .SPM.firebaseCrashlytics,
     .SPM.mixpanel,

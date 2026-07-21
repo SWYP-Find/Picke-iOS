@@ -27,12 +27,11 @@ public struct CurationView: View {
       header()
       ScrollView(showsIndicators: false) {
         VStack(spacing: 16) {
-          // 큐레이션 리스트 최상단 배너 광고 — 로딩/빈 상태와 무관하게 항상 노출한다.
-          // 광고가 없으면 AdFitBannerView 가 스스로 자리를 접어 높이 0 이 된다.
-          AdFitBannerView(
-            unit: .size320x50,
-            insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0),
-            alignment: .leading
+          // 큐레이션 리스트 최상단 네이티브 광고 — 로딩/빈 상태와 무관하게 항상 노출한다.
+          // 광고가 없으면 AdFitNativeAdView 가 스스로 자리를 접어 높이 0 이 된다.
+          AdFitNativeAdView(
+            unit: .wide,
+            insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0)
           )
 
           if store.isLoading, store.battles.isEmpty {

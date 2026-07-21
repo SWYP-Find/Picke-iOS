@@ -45,9 +45,9 @@ public struct HomeView: View {
             if !store.hotBattles.isEmpty {
               hotBattlesSection()
             }
-            // 광고가 없으면 AdFitBannerView 가 스스로 접혀 높이 0 이 된다 —
+            // 광고가 없으면 AdFitNativeAdView 가 스스로 접혀 높이 0 이 된다 —
             // 섹션 간 spacing 32 가 두 번 겹치지 않도록 여백은 따로 주지 않는다.
-            AdFitBannerView(unit: .size320x50)
+            AdFitNativeAdView(unit: .wide)
               .frame(maxWidth: .infinity)
             if !store.bestBattles.isEmpty {
               bestBattlesSection()

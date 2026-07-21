@@ -44,11 +44,10 @@ public struct ProfileView: View {
 
           Spacer(minLength: 0)
 
-          // 마이페이지 하단 배너 광고 — 디자인(높이 90)에 맞춰 큰 규격(320x100) 사용, 좌우 여백 16.
-          AdFitBannerView(
-            unit: .size320x100,
-            insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
-            alignment: .leading
+          // 마이페이지 하단 네이티브 광고 — 2:1(.wide) 규격, 좌우 여백 16.
+          AdFitNativeAdView(
+            unit: .wide,
+            insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
           )
         }
       }

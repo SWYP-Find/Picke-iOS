@@ -19,12 +19,14 @@ import AdFitSDK
 public enum AdFitBannerUnit: Sendable {
   case size320x50
   case size320x100
+  case size320x480
 
   /// SDK 에 넘기는 규격 문자열.
   var adUnitSize: String {
     switch self {
     case .size320x50: "320x50"
     case .size320x100: "320x100"
+    case .size320x480: "320x480"
     }
   }
 
@@ -43,6 +45,7 @@ public enum AdFitBannerUnit: Sendable {
     switch self {
     case .size320x50: "ADFIT_BANNER_320X50"
     case .size320x100: "ADFIT_BANNER_320X100"
+    case .size320x480: "ADFIT_BANNER_320X480"
     }
   }
 

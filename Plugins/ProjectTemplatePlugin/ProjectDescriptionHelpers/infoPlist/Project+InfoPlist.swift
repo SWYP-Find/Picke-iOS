@@ -53,8 +53,14 @@ public extension InfoPlist {
       .setRewardAdUnit("$(REWARD_AD_UNIT)")
       .setAdFitBannerClientIds(
         size320x50: "$(ADFIT_BANNER_320X50)",
-        size320x100: "$(ADFIT_BANNER_320X100)"
+        size320x100: "$(ADFIT_BANNER_320X100)",
+        size320x480: "$(ADFIT_BANNER_320X480)"
       )
+      .setAdFitNativeClientIds(
+        square: "$(ADFIT_NATIVE_1_1)",
+        wide: "$(ADFIT_NATIVE_2_1)"
+      )
+      .setAdFitAppTransitionId("$(ADFIT_APP_TRANSITION)")
       .setUserTrackingUsageDescription(
         "맞춤형 광고를 추천하기 위해 기기의 광고 식별자를 사용합니다."
       )

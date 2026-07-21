@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+import AdKit
 import ComposableArchitecture
 import PickeDesignKit
 
@@ -44,6 +45,9 @@ struct AppView: View {
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)
               ))
+              // splash 가 아닌 메인 진입 시점이라 rootViewController 가 준비돼 있다.
+              // 닫기 종류와 관계없이 다음 메인 진입 때 다시 요청한다.
+              .onAppear { AppStartPopupAd.presentIfNeeded() }
           }
         }
       }

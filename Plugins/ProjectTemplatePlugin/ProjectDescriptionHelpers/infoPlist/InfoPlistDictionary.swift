@@ -236,12 +236,30 @@ extension InfoPlistDictionary {
   /// AdFit 은 광고 단위 하나가 사이즈 하나에 고정 발급되므로 규격별로 키를 나눈다.
   func setAdFitBannerClientIds(
     size320x50: String,
-    size320x100: String
+    size320x100: String,
+    size320x480: String
   ) -> InfoPlistDictionary {
     merging([
       "ADFIT_BANNER_320X50": .string(size320x50),
       "ADFIT_BANNER_320X100": .string(size320x100),
+      "ADFIT_BANNER_320X480": .string(size320x480),
     ]) { _, new in new }
+  }
+
+  /// AdFit 네이티브 광고 단위 코드 — 이미지 비율(1:1, 2:1)별로 별도 발급된다.
+  func setAdFitNativeClientIds(
+    square: String,
+    wide: String
+  ) -> InfoPlistDictionary {
+    merging([
+      "ADFIT_NATIVE_1_1": .string(square),
+      "ADFIT_NATIVE_2_1": .string(wide),
+    ]) { _, new in new }
+  }
+
+  /// AdFit 앱 전환(전면 팝업) 광고 단위 코드 — 앱 시작 시 1회 노출.
+  func setAdFitAppTransitionId(_ value: String) -> InfoPlistDictionary {
+    merging(["ADFIT_APP_TRANSITION": .string(value)]) { _, new in new }
   }
 
   /// ATT 권한 요청 팝업에 표시되는 사유 문구. 값이 없으면 iOS 가 팝업을 띄우지 않는다.
