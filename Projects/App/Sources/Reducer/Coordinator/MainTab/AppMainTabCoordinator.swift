@@ -50,6 +50,21 @@ public struct AppMainTabCoordinator {
     public var quickBattleState: AppBattleCoordinator.State
     public var myPageState: AppProfileCoordinator.State
 
+    public var shouldHideTabBar: Bool {
+      switch Tab(rawValue: selectedTab) {
+      case .home:
+        return homeState.routes.count > 1
+      case .explore:
+        return exploreState.routes.count > 1
+      case .quickBattle:
+        return quickBattleState.routes.count > 1
+      case .myPage:
+        return myPageState.routes.count > 1
+      case .none:
+        return false
+      }
+    }
+
     public init(selectedTab: Int = Tab.home.rawValue) {
       self.selectedTab = selectedTab
       homeState = .init()
