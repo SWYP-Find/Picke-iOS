@@ -167,6 +167,11 @@ public struct ProfileFeature {
           }
         }
 
+      case .rewardNoticeAlert(.presented(.cancelTapped)):
+        // 커스텀 팝업은 자동 dismiss 가 없어 취소 시 직접 닫아준다.
+        state.rewardNoticeAlert = nil
+        return .none
+
       case .rewardNoticeAlert:
         return .none
       }
