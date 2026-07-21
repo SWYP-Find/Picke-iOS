@@ -91,29 +91,37 @@ public struct AdFitBannerView: View {
 
   public var body: some View {
     if let clientId = unit.clientId, loadState != .failed {
-      ZStack {
-        // 광고가 아직 안 온 동안은 스켈레톤으로 자리를 잡아 스크롤 중 빈칸이 튀지 않게 한다.
-        if loadState == .loading {
-          AdBannerSkeletonView(size: unit.size)
-        }
+      // 반응형: 사용 가능한 폭을 채우고, 규격 비율(예: 320:100)로 높이를 잡아
+      // 콘텐츠 카드와 동일한 전체 폭으로 노출한다.
+      // 실제 사용 폭을 SDK 에 넘겨 크리에이티브가 그 폭으로 렌더돼야 상위 clipped 에 안 잘린다.
+      Color.clear
+        .aspectRatio(unit.size.width / unit.size.height, contentMode: .fit)
+        .overlay {
+          GeometryReader { proxy in
+            ZStack {
+              // 로드 전에는 스켈레톤으로 자리를 잡아 스크롤 중 빈칸이 튀지 않게 한다.
+              if loadState == .loading {
+                AdBannerSkeletonView(size: proxy.size)
+              }
 
-        AdFitBannerPresentableView(
-          clientId: clientId,
-          adUnitSize: unit.adUnitSize
-        )
-        .onDidReceiveAd { _, error in
-          // 노출할 광고가 없는 경우(에러 코드 2)도 포함해 실패하면 자리를 비운다.
-          loadState = (error == nil) ? .loaded : .failed
+              AdFitBannerPresentableView(
+                clientId: clientId,
+                adUnitSize: unit.adUnitSize
+              )
+              .onDidReceiveAd { _, error in
+                // 노출할 광고가 없는 경우(에러 코드 2)도 포함해 실패하면 자리를 비운다.
+                loadState = (error == nil) ? .loaded : .failed
+              }
+              .onSizeThatFits(orientation: $orientation, width: proxy.size.width)
+              .frame(width: proxy.size.width, height: proxy.size.height)
+              // 로드 완료 전에는 광고 뷰를 숨겨두고 스켈레톤만 보이게 한다(로드는 계속 진행된다).
+              .opacity(loadState == .loaded ? 1 : 0)
+            }
+          }
         }
-        .onSizeThatFits(orientation: $orientation)
-        .frame(width: unit.size.width, height: unit.size.height)
-        // 로드 완료 전에는 광고 뷰를 숨겨두고 스켈레톤만 보이게 한다(로드는 계속 진행된다).
-        .opacity(loadState == .loaded ? 1 : 0)
-      }
-      .frame(height: unit.height)
-      // 320 고정폭 배너를 지정 정렬로 놓고, 광고가 있을 때만 콘텐츠와 같은 여백을 준다.
-      .frame(maxWidth: .infinity, alignment: alignment)
-      .padding(insets)
+        // 광고가 있을 때만 콘텐츠와 같은 여백을 준다.
+        .frame(maxWidth: .infinity, alignment: alignment)
+        .padding(insets)
     }
   }
 }
