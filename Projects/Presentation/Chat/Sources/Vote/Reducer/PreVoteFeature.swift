@@ -8,11 +8,11 @@
 import Foundation
 import UIKit
 
+import BattleDomainInterface
 import CommonDomainInterface
 import ComposableArchitecture
 import DomainInterface
 import Entity
-import BattleDomainInterface
 import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
@@ -342,7 +342,8 @@ extension PreVoteFeature {
       case let .success(perspective):
         state.myPerspective = perspective
         if perspective != nil {
-          state.customAlert = .alreadyWatched()
+          // 이미 참여한 배틀 — 팝업 없이 관점(댓글) 화면으로 바로 직행.
+          return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
         }
       case let .failure(error):
         Log.error("[PreVoteFeature] fetchMyPerspective failed: \(error.localizedDescription)")
@@ -479,7 +480,8 @@ extension PreVoteFeature {
 
         case .cancelTapped:
           state.customAlert = nil
-          return .send(.delegate(.dismiss))
+          // 이미 참여한 배틀에서 '취소' — 밖으로 나가지 않고 관점(댓글) 화면으로 이동.
+          return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
         }
 
       case .dismiss:

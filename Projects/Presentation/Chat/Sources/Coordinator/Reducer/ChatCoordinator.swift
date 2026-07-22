@@ -9,8 +9,8 @@
 import Foundation
 
 import ChatInterface
-import ComposableArchitecture
 import CommentDomainInterface
+import ComposableArchitecture
 import DomainInterface
 import LogMacro
 import PickeDesignKit
@@ -39,12 +39,22 @@ public struct ChatCoordinator {
       )]
     }
 
+    /// 이미 참여 완료한 배틀 — 관점(댓글) 화면으로 바로 시작.
+    public init(commentBattleId: Int) {
+      routes = [.root(
+        .comment(.init(battleId: commentBattleId)),
+        embedInNavigationView: true
+      )]
+    }
+
     public init(route: ChatRoute) {
       switch route {
       case let .preVote(battleId):
         self.init(battleId: battleId)
       case let .perspective(perspectiveId, commentId):
         self.init(perspectiveId: perspectiveId, commentId: commentId)
+      case let .comment(battleId):
+        self.init(commentBattleId: battleId)
       }
     }
   }
@@ -105,7 +115,13 @@ extension ChatCoordinator {
       return .none
 
     case let .routeAction(_, action: .preVote(.delegate(.alreadyFinalVoted(battleId)))):
-      state.routes.push(.comment(.init(battleId: battleId)))
+      // 사전투표 루트에서 감지된 재진입이면 사전투표 화면을 남기지 않고 관점 화면으로 교체.
+      // (스택 중간 — 최종투표 중복 500 — 이면 기존처럼 push)
+      if state.routes.count <= 1 {
+        state.routes = [.root(.comment(.init(battleId: battleId)), embedInNavigationView: true)]
+      } else {
+        state.routes.push(.comment(.init(battleId: battleId)))
+      }
       return .none
 
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
@@ -124,7 +140,8 @@ extension ChatCoordinator {
       return .none
 
     case .routeAction(_, action: .comment(.delegate(.dismiss))):
-      return .send(.view(.backAction))
+      // 단독(루트) 진입이면 코디네이터 자체를 닫고, 스택 내부면 뒤로.
+      return state.routes.count <= 1 ? .send(.delegate(.dismiss)) : .send(.view(.backAction))
 
     case let .routeAction(_, action: .comment(.delegate(.openReply(comment)))):
       // perspectiveId 가 없는 관점은 대댓글 식별이 불가능하므로 진입하지 않는다.

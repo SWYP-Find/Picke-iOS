@@ -146,6 +146,18 @@ private extension AppProfileCoordinator {
     case .routeAction(_, action: .battleRecord(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .battleRecord(.delegate(.openRecord(battleId)))):
+      // 내 배틀 기록 = 이미 참여한 배틀 — 관점(댓글) 화면으로 바로 진입.
+      guard let id = Int(battleId) else { return .none }
+      state.routes.push(.chat(.init(route: .comment(battleId: id))))
+      return .none
+
+    case .routeAction(_, action: .chat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
+      return .send(.view(.backToRootAction))
+
     case .routeAction(_, action: .contentActivity(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
@@ -199,6 +211,7 @@ extension AppProfileCoordinator {
     case recap(RecapFeature)
     case notification(NotificationCoordinator)
     case web(WebReducer)
+    case chat(ChatCoordinator)
   }
 }
 

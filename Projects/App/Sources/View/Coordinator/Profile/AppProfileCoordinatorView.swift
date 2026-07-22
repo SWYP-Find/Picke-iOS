@@ -46,6 +46,9 @@ public struct AppProfileCoordinatorView: View {
           .toolbar(.hidden, for: .tabBar)
       case let .web(webStore):
         WebView(store: webStore)
+      case let .chat(chatStore):
+        ChatCoordinatorView(store: chatStore)
+          .toolbar(.hidden, for: .tabBar)
       }
     }
   }

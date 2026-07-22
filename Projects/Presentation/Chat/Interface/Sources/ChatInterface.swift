@@ -14,6 +14,8 @@ public enum ChatRoute: Equatable, Sendable {
   case preVote(battleId: Int)
   /// 딥링크 알림에서 관점/답글 화면으로 바로 진입.
   case perspective(perspectiveId: Int, commentId: Int?)
+  /// 이미 참여 완료한 배틀 — 관점(댓글) 화면으로 바로 진입.
+  case comment(battleId: Int)
 }
 
 /// ChatRoomFeature 진입 입력값.
