@@ -10,9 +10,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import PickeDesignKit
 import Entity
 import Kingfisher
+import PickeDesignKit
 
 @ViewAction(for: BattleFeature.self)
 public struct BattleView: View {
@@ -267,8 +267,6 @@ private extension BattleView {
   func vsOptions(_ battle: DailyBattle) -> some View {
     let options = battle.options
     let selectedId = store.selectedOptionByBattle[battle.battleId]
-    // 이미 입장(투표)한 배틀이면 옵션 변경 비활성화.
-    let isVoted = store.votedBattleIds.contains(battle.battleId)
     ZStack {
       VStack(spacing: 12) {
         ForEach(options) { option in
@@ -277,7 +275,6 @@ private extension BattleView {
           }
         }
       }
-      .disabled(isVoted)
 
       if options.count > 1 {
         vsBadge()
