@@ -73,6 +73,7 @@ public struct AdFitBannerView: View {
 
   @State private var orientation: UIDeviceOrientation = .unknown
   @State private var loadState: LoadState = .loading
+  @State private var contentWidth: CGFloat = 0
 
   /// - Parameters:
   ///   - insets: 광고가 **실제로 노출될 때만** 적용되는 여백. 배너는 폭 320 고정이라
@@ -91,37 +92,37 @@ public struct AdFitBannerView: View {
 
   public var body: some View {
     if let clientId = unit.clientId, loadState != .failed {
-      // 반응형: 사용 가능한 폭을 채우고, 규격 비율(예: 320:100)로 높이를 잡아
-      // 콘텐츠 카드와 동일한 전체 폭으로 노출한다.
+      // 로드가 실제로 성공하기 전에는 높이 0 으로 자리를 접어 리스트에 빈 공간을 남기지 않고,
+      // 성공 시 사용 가능한 폭을 채우며 규격 비율(예: 320:100)로 높이를 편다.
       // 실제 사용 폭을 SDK 에 넘겨 크리에이티브가 그 폭으로 렌더돼야 상위 clipped 에 안 잘린다.
-      Color.clear
-        .aspectRatio(unit.size.width / unit.size.height, contentMode: .fit)
-        .overlay {
-          GeometryReader { proxy in
-            ZStack {
-              // 로드 전에는 스켈레톤으로 자리를 잡아 스크롤 중 빈칸이 튀지 않게 한다.
-              if loadState == .loading {
-                AdBannerSkeletonView(size: proxy.size)
-              }
-
-              AdFitBannerPresentableView(
-                clientId: clientId,
-                adUnitSize: unit.adUnitSize
-              )
-              .onDidReceiveAd { _, error in
-                // 노출할 광고가 없는 경우(에러 코드 2)도 포함해 실패하면 자리를 비운다.
-                loadState = (error == nil) ? .loaded : .failed
-              }
-              .onSizeThatFits(orientation: $orientation, width: proxy.size.width)
-              .frame(width: proxy.size.width, height: proxy.size.height)
-              // 로드 완료 전에는 광고 뷰를 숨겨두고 스켈레톤만 보이게 한다(로드는 계속 진행된다).
-              .opacity(loadState == .loaded ? 1 : 0)
-            }
-          }
-        }
-        // 광고가 있을 때만 콘텐츠와 같은 여백을 준다.
-        .frame(maxWidth: .infinity, alignment: alignment)
-        .padding(insets)
+      AdFitBannerPresentableView(
+        clientId: clientId,
+        adUnitSize: unit.adUnitSize
+      )
+      .onDidReceiveAd { _, error in
+        // 노출할 광고가 없는 경우(에러 코드 2)도 포함해 실패하면 자리를 비운다.
+        loadState = (error == nil) ? .loaded : .failed
+      }
+      .onSizeThatFits(orientation: $orientation, width: contentWidth)
+      .frame(
+        width: max(contentWidth, 1),
+        height: loadState == .loaded ? bannerHeight : 0
+      )
+      .clipped()
+      .opacity(loadState == .loaded ? 1 : 0)
+      .frame(maxWidth: .infinity, alignment: alignment)
+      // 광고가 있을 때만 콘텐츠와 같은 여백을 준다.
+      .padding(loadState == .loaded ? insets : EdgeInsets())
+      .onGeometryChange(for: CGFloat.self) { proxy in
+        proxy.size.width
+      } action: { width in
+        contentWidth = max(0, width - insets.leading - insets.trailing)
+      }
     }
+  }
+
+  private var bannerHeight: CGFloat {
+    guard contentWidth > 0 else { return unit.height }
+    return contentWidth * unit.size.height / unit.size.width
   }
 }
