@@ -10,15 +10,20 @@ import SwiftUI
 
 public struct SkeletonView: View {
   private let cornerRadius: CGFloat
+  private let baseColor: Color
+  private let shimmerColor: Color
 
-  public init(cornerRadius: CGFloat = 2) {
+  public init(
+    cornerRadius: CGFloat = 2,
+    baseColor: Color = .beige600,
+    shimmerColor: Color = .beige50
+  ) {
     self.cornerRadius = cornerRadius
+    self.baseColor = baseColor
+    self.shimmerColor = shimmerColor
   }
 
   @State private var phase: CGFloat = -1
-
-  private let baseColor = Color(red: 239 / 255, green: 234 / 255, blue: 224 / 255) // beige600 #EFEAE0
-  private let shimmerColor = Color(red: 254 / 255, green: 254 / 255, blue: 253 / 255) // beige50 #FEFEFD
 
   public var body: some View {
     RoundedRectangle(cornerRadius: cornerRadius)

@@ -7,9 +7,9 @@
 
 import SwiftUI
 
+import BattleDomainInterface
 import ComposableArchitecture
 import Entity
-import BattleDomainInterface
 import Kingfisher
 import PickeDesignKit
 
@@ -21,17 +21,23 @@ public struct PreVoteView: View {
     self.store = store
   }
 
+  // 안드로이드 시안: 사후(최종) 투표는 사전투표와 구분되도록 화면 배경을 통째로 검정으로 교체.
+  // (VoteScreen.kt — PRE: surface, POST: Color.Black. 옵션 카드/CTA/상단바 색은 동일)
+  private var isPostVote: Bool { store.voteMode == .post }
+  private var screenBackground: Color { isPostVote ? .black : .beige50 }
+  private var titleColor: Color { isPostVote ? .beige50 : .neutral500 }
+
   public var body: some View {
     Group {
       if shouldShowLoadError {
         loadErrorContent()
       } else if shouldShowSkeleton {
-        PreVoteSkeletonView()
+        PreVoteSkeletonView(isDark: isPostVote)
       } else {
         loadedContent()
       }
     }
-    .background(Color.beige50.ignoresSafeArea())
+    .background(screenBackground.ignoresSafeArea())
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
@@ -118,7 +124,7 @@ public struct PreVoteView: View {
         .ignoresSafeArea(edges: .top)
       }
     } else {
-      PreVoteSkeletonView()
+      PreVoteSkeletonView(isDark: isPostVote)
     }
   }
 }
@@ -156,9 +162,9 @@ extension PreVoteView {
   private func imageToContentGradient() -> some View {
     LinearGradient(
       stops: [
-        .init(color: .beige50.opacity(0), location: 0),
-        .init(color: .beige50.opacity(0.55), location: 0.55),
-        .init(color: .beige50, location: 1),
+        .init(color: screenBackground.opacity(0), location: 0),
+        .init(color: screenBackground.opacity(0.55), location: 0.55),
+        .init(color: screenBackground, location: 1),
       ],
       startPoint: .top,
       endPoint: .bottom
@@ -219,10 +225,10 @@ extension PreVoteView {
     .background(
       LinearGradient(
         stops: [
-          .init(color: .beige50.opacity(0), location: 0),
-          .init(color: .beige50.opacity(0.72), location: 0.42),
-          .init(color: .beige50, location: 0.7),
-          .init(color: .beige50, location: 1),
+          .init(color: screenBackground.opacity(0), location: 0),
+          .init(color: screenBackground.opacity(0.72), location: 0.42),
+          .init(color: screenBackground, location: 0.7),
+          .init(color: screenBackground, location: 1),
         ],
         startPoint: .top,
         endPoint: .bottom
@@ -260,7 +266,7 @@ extension PreVoteView {
   private func titleText(_ battle: PreVoteBattle) -> some View {
     Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
       .pretendardFont(.bold24)
-      .foregroundStyle(.neutral500)
+      .foregroundStyle(titleColor)
       .kerning(-0.6)
       .lineSpacing(24 * 0.4)
       .multilineTextAlignment(.leading)
