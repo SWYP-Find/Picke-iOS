@@ -417,12 +417,15 @@ platform :ios do
       # 아카이브 산출 직후 Sentry 빌드/사이즈 업로드 + 릴리즈 생성(비차단).
       upload_build_to_sentry(release_name: "io.Picke.co@#{options[:version]}+#{new_build_number}")
 
-      # 업로드 후 자동으로 심사 요청
+      # 업로드 후 자동으로 심사 요청.
+      # 바이너리는 upload_to_testflight 가 이미 올렸으므로 재업로드하지 않고
+      # (같은 빌드 번호 재업로드는 -19232 로 거부됨) 해당 빌드를 선택해 제출만 한다.
       upload_to_app_store(
         app_version: options[:version],
         username: ENV["APPLE_ID"],
         team_id: "KL4Y9PB9B8",
-        ipa: ipa_path,
+        skip_binary_upload: true,
+        build_number: new_build_number,
         skip_metadata: false,
         metadata_path: "./fastlane/metadata",
         skip_screenshots: true,
@@ -520,7 +523,15 @@ platform :ios do
           submit_for_review: true,
           automatic_release: false,
           precheck_include_in_app_purchases: false,
-          reject_if_possible: true
+          reject_if_possible: true,
+          # 광고(AdMob/AdFit) IDFA 사용 신고 — release 레인과 동일 응답.
+          submission_information: {
+            add_id_info_uses_idfa: true,
+            add_id_info_serves_ads: true,
+            add_id_info_tracks_install: false,
+            add_id_info_tracks_action: false,
+            add_id_info_limits_tracking: true
+          }
         )
         UI.success("🎉 심사 제출 완료!")
       rescue => ex
