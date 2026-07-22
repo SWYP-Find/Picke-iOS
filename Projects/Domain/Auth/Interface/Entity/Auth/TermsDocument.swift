@@ -22,8 +22,8 @@ public enum TermsDocument: String, CaseIterable, Identifiable, Hashable {
 
   public var urlString: String {
     switch self {
-    case .service: "https://www.notion.so/3566effee51c8184bdc2e8595bfead27?source=copy_link"
-    case .privacy: "https://www.notion.so/3566effee51c81898de5f91d52ab7391?source=copy_link"
+    case .service: "https://picke.store/terms"
+    case .privacy: "https://picke.store/privacy-policy"
     }
   }
 
