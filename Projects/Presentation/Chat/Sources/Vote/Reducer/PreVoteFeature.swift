@@ -33,6 +33,8 @@ public struct PreVoteFeature {
     public var battleDetail: BattleDetail?
     public var selectedOptionId: Int?
     public var isLoading: Bool = false
+    /// 기참여(관점 직행) 여부 확인 중 — 완료 전까지 사전투표 UI 대신 스켈레톤을 유지한다.
+    public var isCheckingParticipation: Bool = false
     /// 배틀 상세(사전투표) 로드(디코딩/네트워크) 실패 여부. true 면 무한 스켈레톤 대신 오류+재시도 UI 를 노출한다.
     public var detailLoadFailed: Bool = false
     public var isSubmitting: Bool = false
@@ -173,6 +175,8 @@ extension PreVoteFeature {
       // 최종(post) 진입은 사전 참여가 이미 전제이므로 이 알럿이 뜨면 안 되고,
       // 알럿 presentation 이 공유 시트(.sheet) presentation 을 막는 문제도 생긴다.
       if state.voteMode == .pre, state.myPerspective == nil {
+        // 기참여면 관점 화면으로 직행하므로, 확인이 끝날 때까지 사전투표 UI 노출을 막는다.
+        state.isCheckingParticipation = true
         effects.append(.send(.async(.fetchMyPerspective)))
       }
       return effects.isEmpty ? .none : .merge(effects)
@@ -338,6 +342,7 @@ extension PreVoteFeature {
       return .none
 
     case let .myPerspectiveResponse(result):
+      state.isCheckingParticipation = false
       switch result {
       case let .success(perspective):
         state.myPerspective = perspective

@@ -66,7 +66,7 @@ public struct PreVoteView: View {
   }
 
   private var shouldShowSkeleton: Bool {
-    (store.isLoading || store.battle == nil) && !shouldShowLoadError
+    (store.isLoading || store.battle == nil || store.isCheckingParticipation) && !shouldShowLoadError
   }
 
   @ViewBuilder
