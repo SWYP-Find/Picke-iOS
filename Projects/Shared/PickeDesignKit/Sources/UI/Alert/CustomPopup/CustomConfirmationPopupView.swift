@@ -95,50 +95,19 @@ struct CustomConfirmationPopup: View {
     }
   }
 
-  /// 로그아웃/탈퇴 — picke.pen `로그아웃 알림`.
-  /// 본문 + 하단 꽉 찬 2버튼(확정=왼쪽 밝은 secondary50 / 취소=오른쪽 primary500), 버튼 사이 gap 10.
+  /// 로그아웃/탈퇴 — 공통 팝업 스타일(무료 충전/다시 시청 팝업과 동일).
+  /// 본문 + 라운드 2버튼(확정=왼쪽 밝은 secondary50 / 취소=오른쪽 primary500).
   private var logoutWithdrawContent: some View {
-    VStack(spacing: 16) {
-      pickeBodyText(title)
+    pickeAlertCard {
+      VStack(spacing: 16) {
+        pickeBodyText(title)
 
-      HStack(spacing: 10) {
-        // 확정(로그아웃/탈퇴) — 왼쪽 밝은 버튼.
-        Button(action: onConfirm) {
-          Text(confirmTitle)
-            .pretendardFont(.labelMedium)
-            .foregroundStyle(.primary800)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 17)
-            .background(.secondary50, in: Rectangle())
-        }
-        .buttonStyle(.plain)
-
-        // 취소(유지) — 오른쪽 primary 버튼.
-        Button(action: onCancel) {
-          Text(cancelTitle)
-            .pretendardFont(.labelMedium)
-            .foregroundStyle(.secondary50)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 17)
-            .background(.primary500, in: Rectangle())
-        }
-        .buttonStyle(.plain)
+        pickeTwoButtonRow(
+          leftTitle: confirmTitle, leftAction: onConfirm,
+          rightTitle: cancelTitle, rightAction: onCancel
+        )
       }
     }
-    .padding(.top, 20)
-    .frame(maxWidth: 313)
-    .roundedBackground(.beige500)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.primary500, lineWidth: 1.5)
-    )
-    .opacity(0.9)
-    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
-    .onTapGesture {}
   }
 
   /// 주제 제안 — 타이틀 + 본문 + 뒤로가기(왼쪽 밝은) / 제안하기(오른쪽 primary).
