@@ -421,6 +421,7 @@ platform :ios do
       # 바이너리는 upload_to_testflight 가 이미 올렸으므로 재업로드하지 않고
       # (같은 빌드 번호 재업로드는 -19232 로 거부됨) 해당 빌드를 선택해 제출만 한다.
       upload_to_app_store(
+        app_identifier: BUNDLE_ID,
         app_version: options[:version],
         username: ENV["APPLE_ID"],
         team_id: "KL4Y9PB9B8",
@@ -512,6 +513,7 @@ platform :ios do
 
       begin
         upload_to_app_store(
+          app_identifier: BUNDLE_ID,
           app_version: options[:version],
           username: ENV["APPLE_ID"],
           team_id: "KL4Y9PB9B8",
