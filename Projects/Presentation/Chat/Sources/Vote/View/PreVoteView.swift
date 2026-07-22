@@ -99,21 +99,16 @@ public struct PreVoteView: View {
           backgroundImage(battle)
             .frame(width: proxy.size.width)
 
-          ScrollView {
-            VStack(spacing: 0) {
-              Color.clear
-                .frame(height: topInset)
+          // 본문은 스크롤하지 않는다 — 옵션 카드는 항상 CTA 바로 위에 고정.
+          let contentHeight = max(0, proxy.size.height - topInset - PreVoteLayout.ctaReservedHeight)
+          VStack(spacing: 0) {
+            Color.clear
+              .frame(height: topInset)
 
-              contentArea(
-                battle,
-                minHeight: max(0, proxy.size.height - topInset - PreVoteLayout.ctaReservedHeight)
-              )
-            }
-            .frame(width: proxy.size.width)
+            contentArea(battle, minHeight: contentHeight)
+              .frame(height: contentHeight, alignment: .top)
           }
-          .scrollIndicators(.hidden)
-          .scrollBounceBehavior(.basedOnSize)
-          // CTA 를 스크롤 영역 하단에 고정 예약 → 작은 화면에서도 옵션 카드가 버튼에 가리지 않는다.
+          .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
           .safeAreaInset(edge: .bottom, spacing: 0) {
             primaryButton()
               .padding(.horizontal, PreVoteLayout.ctaHorizontalPadding)
