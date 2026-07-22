@@ -306,8 +306,8 @@ private extension HifiView {
         Color.beige600
       }
     }
-    .frame(width: 76)
-    .frame(maxHeight: .infinity)
+    // 행 높이와 무관하게 크기 고정 — 안드로이드 ExploreScreen (80dp, 3:4 비율) 파리티.
+    .frame(width: 80, height: 80 * 4 / 3)
     .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
