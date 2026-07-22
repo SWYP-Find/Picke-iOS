@@ -137,8 +137,9 @@ private extension NotificationView {
     }
   }
 
+  /// 읽음 여부와 무관하게 알림 종류 아이콘을 유지한다. (읽음 표시는 색으로만 구분)
   func notificationIconName(_ item: NotificationItem) -> String {
-    item.isRead ? "checkmark.circle" : item.iconSystemName
+    item.iconSystemName
   }
 
   @ViewBuilder
