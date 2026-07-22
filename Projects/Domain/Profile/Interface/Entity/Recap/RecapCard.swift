@@ -32,6 +32,12 @@ public struct RecapCard: Equatable {
     self.imageURL = imageURL
   }
 
+  /// 표시용 유형명 — `철학자이름형` (예: `플라톤형`). 라벨 없으면 typeName 폴백.
+  public var displayTypeName: String {
+    guard !philosopherLabel.isEmpty else { return typeName }
+    return philosopherLabel.hasSuffix("형") ? philosopherLabel : philosopherLabel + "형"
+  }
+
   public static let empty = RecapCard(
     philosopherType: "",
     philosopherLabel: "",

@@ -8,9 +8,9 @@
 
 import SwiftUI
 
-import PickeDesignKit
 import Entity
 import Kingfisher
+import PickeDesignKit
 
 public struct RecapPhilosopherCard: View {
   private let card: RecapCard
@@ -30,7 +30,7 @@ public struct RecapPhilosopherCard: View {
           .pretendardFont(.semiBold13)
           .foregroundStyle(.primary500)
 
-        Text(card.typeName)
+        Text(card.displayTypeName)
           .pretendardFont(.semiBold24)
           .foregroundStyle(.gray500)
       }

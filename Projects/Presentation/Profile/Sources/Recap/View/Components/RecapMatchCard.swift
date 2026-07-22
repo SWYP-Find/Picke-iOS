@@ -8,9 +8,9 @@
 
 import SwiftUI
 
-import PickeDesignKit
 import Entity
 import Kingfisher
+import PickeDesignKit
 
 public struct RecapMatchCard: View {
   private let card: RecapCard
@@ -35,7 +35,7 @@ public struct RecapMatchCard: View {
       avatar
 
       VStack(spacing: 6) {
-        Text(card.typeName)
+        Text(card.displayTypeName)
           .pretendardFont(.semiBold13)
           .foregroundStyle(.gray500)
 

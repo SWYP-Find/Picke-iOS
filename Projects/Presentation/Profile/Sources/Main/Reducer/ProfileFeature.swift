@@ -69,10 +69,11 @@ public struct ProfileFeature {
       philosopherType?.isEmpty ?? true
     }
 
-    /// 표시용 철학자 유형 — 잠금 시 `??형`, 아니면 `유형명 · 라벨`.
+    /// 표시용 철학자 유형 — 잠금 시 `??형`, 아니면 `철학자이름형` (예: `플라톤형`).
     public var philosopherDisplay: String {
       guard let type = philosopherType, !type.isEmpty else { return "??형" }
-      return philosopherLabel.isEmpty ? type : "\(type) · \(philosopherLabel)"
+      guard !philosopherLabel.isEmpty else { return type }
+      return philosopherLabel.hasSuffix("형") ? philosopherLabel : philosopherLabel + "형"
     }
   }
 
