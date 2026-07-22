@@ -2,15 +2,17 @@
 //  NoticeView.swift
 //  Profile
 //
-//  공지사항 · 이벤트 UI — App Bar + 탭바(공지사항/이벤트) + 빈 콘텐츠.
-//  API 미구현 — 현재는 항상 빈 상태.
+//  공지사항 · 이벤트 UI — App Bar + 탭바(공지사항/이벤트) + 목록/상세.
+//  (안드로이드 NoticeEventScreen 카드/상세 레이아웃 파리티)
 //
 
 import SwiftUI
 
 import ComposableArchitecture
-import PickeDesignKit
 import Entity
+import NotificationDomainInterface
+import PickeDesignKit
+import Utill
 
 @ViewAction(for: NoticeFeature.self)
 public struct NoticeView: View {
@@ -25,16 +27,17 @@ public struct NoticeView: View {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "공지사항 · 이벤트")
         .foregroundStyle(.gray500)
 
-      tabBar()
-
-      PickeEmptyStateView(message: emptyMessage)
-        // 좌우 스와이프로 탭 전환
-        .contentShape(Rectangle())
-        .simultaneousGesture(tabSwipeGesture())
+      if let item = store.selectedItem {
+        detailContent(item)
+      } else {
+        tabBar()
+        listContent()
+      }
     }
     .background(Color.beige200.ignoresSafeArea())
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
+    .onAppear { send(.onAppear) }
   }
 
   /// 좌우 드래그 → 인접 탭 전환.
@@ -54,6 +57,142 @@ public struct NoticeView: View {
       }
   }
 }
+
+// MARK: - 목록
+
+private extension NoticeView {
+  @ViewBuilder
+  func listContent() -> some View {
+    Group {
+      if store.isLoading {
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else if store.currentItems.isEmpty {
+        PickeEmptyStateView(message: emptyMessage)
+      } else {
+        ScrollView {
+          LazyVStack(spacing: 12) {
+            ForEach(store.currentItems) { item in
+              noticeCard(item)
+            }
+          }
+          .padding(16)
+        }
+        .scrollIndicators(.hidden)
+      }
+    }
+    // 좌우 스와이프로 탭 전환
+    .contentShape(Rectangle())
+    .simultaneousGesture(tabSwipeGesture())
+  }
+
+  @ViewBuilder
+  func noticeCard(_ item: NotificationItem) -> some View {
+    Button {
+      send(.itemTapped(item))
+    } label: {
+      VStack(alignment: .leading, spacing: 0) {
+        categoryBadge()
+
+        Text(item.title)
+          .pretendardFont(.labelMedium)
+          .foregroundStyle(.gray500)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .padding(.top, 12)
+
+        Text(item.body)
+          .pretendardFont(.labelSmall)
+          .foregroundStyle(.gray300)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .padding(.top, 4)
+
+        Text(item.createdAt.yearMonthDayDot)
+          .pretendardFont(.regular11)
+          .foregroundStyle(.gray300)
+          .padding(.top, 8)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(16)
+      .roundedBackground(.beige50)
+      .overlay(
+        RoundedRectangle(cornerRadius: .radiusDefault)
+          .stroke(.beige600, lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
+  }
+
+  var emptyMessage: String {
+    switch store.selectedTab {
+    case .notice: "새로운 공지사항이 없습니다"
+    case .event: "새로운 이벤트가 없습니다"
+    }
+  }
+}
+
+// MARK: - 상세
+
+private extension NoticeView {
+  @ViewBuilder
+  func detailContent(_ item: NotificationItem) -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 0) {
+        categoryBadge()
+
+        Text(item.title)
+          .pretendardFont(.labelMedium)
+          .foregroundStyle(.gray500)
+          .padding(.top, 16)
+
+        Text(item.createdAt.yearMonthDayDot)
+          .pretendardFont(.regular11)
+          .foregroundStyle(.gray300)
+          .padding(.top, 8)
+
+        Text(item.body)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.neutral400)
+          .lineSpacing(13 * 0.4)
+          .padding(.top, 24)
+
+        Button { send(.backToListTapped) } label: {
+          Text("목록")
+            .pretendardFont(.semiBold13)
+            .foregroundStyle(.beige50)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 10)
+            .roundedBackground(.primary500)
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 48)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 24)
+      .padding(.vertical, 32)
+      .background(.beige50)
+    }
+    .scrollIndicators(.hidden)
+  }
+}
+
+// MARK: - 공통
+
+private extension NoticeView {
+  @ViewBuilder
+  func categoryBadge() -> some View {
+    Text(store.selectedTab.title)
+      .pretendardFont(.semiBold12)
+      .foregroundStyle(.primary500)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 2)
+      .roundedBackground(.beige600)
+  }
+}
+
+// MARK: - 탭바
 
 private extension NoticeView {
   @ViewBuilder
@@ -87,12 +226,5 @@ private extension NoticeView {
         }
     }
     .buttonStyle(.plain)
-  }
-
-  var emptyMessage: String {
-    switch store.selectedTab {
-    case .notice: "새로운 공지사항이 없습니다"
-    case .event: "새로운 이벤트가 없습니다"
-    }
   }
 }
