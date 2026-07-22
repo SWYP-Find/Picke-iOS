@@ -6,12 +6,12 @@
 
 import Foundation
 
+import BattleDomainInterface
 import CommentDomainInterface
 import CommonDomainInterface
 import ComposableArchitecture
 import DomainInterface
 import Entity
-import BattleDomainInterface
 import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
@@ -175,12 +175,6 @@ public struct CommentFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
-      case .binding(\.commentText):
-        if state.commentText.count > 200 {
-          state.commentText = String(state.commentText.prefix(200))
-        }
-        return .none
-
       case .binding:
         return .none
 

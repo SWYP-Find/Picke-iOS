@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-import ComposableArchitecture
 import CommentDomainInterface
-import PickeDesignKit
+import ComposableArchitecture
 import Entity
+import PickeDesignKit
 import Utill
 
 @ViewAction(for: CommentFeature.self)
@@ -214,6 +214,8 @@ private extension CommentView {
     .padding(.vertical, 2)
     .roundedBackground(.primary50)
     .frame(maxWidth: .infinity, alignment: .center)
+    // 상단 네비게이션 바와 딱 붙지 않도록 여백.
+    .padding(.top, 12)
   }
 
   @ViewBuilder
@@ -371,16 +373,8 @@ private extension CommentView {
 
   @ViewBuilder
   func emptyState() -> some View {
-    VStack(spacing: 8) {
-      Image(systemName: "bubble.left.and.bubble.right")
-        .font(.system(size: 32, weight: .light))
-        .foregroundStyle(.neutral300)
-      Text("아직 등록된 의견이 없어요")
-        .pretendardFont(.labelMedium)
-        .foregroundStyle(.neutral400)
-    }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 60)
+    PickeEmptyStateView(message: "아직 작성된 관점이 없습니다")
+      .padding(.vertical, 60)
   }
 
   @ViewBuilder
@@ -406,6 +400,8 @@ private extension CommentView {
         .pretendardFont(.regular13)
         .foregroundStyle(.neutral400)
         .lineSpacing(13 * 0.4)
+        // 3줄 초과 시 … 줄임 — 전체 내용은 답글 화면에서 확인.
+        .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -432,10 +428,6 @@ private extension CommentView {
           .foregroundStyle(.neutral500)
           .lineLimit(1)
 
-        if comment.isMine {
-          myBadge()
-        }
-
         Text(comment.timeAgo)
           .pretendardFont(.labelSmall)
           .foregroundStyle(.neutral300)
@@ -443,16 +435,6 @@ private extension CommentView {
 
       optionBadge(comment)
     }
-  }
-
-  @ViewBuilder
-  func myBadge() -> some View {
-    Text("나")
-      .pretendardFont(.labelXSmall)
-      .foregroundStyle(.beige50)
-      .padding(.horizontal, 5)
-      .padding(.vertical, 2)
-      .roundedBackground(.primary500)
   }
 
   @ViewBuilder
@@ -510,10 +492,15 @@ private extension CommentView {
   @ViewBuilder
   func likeButton(_ comment: CommentItem) -> some View {
     Button { send(.commentRow(id: comment.id, action: .like)) } label: {
-      actionLabel(
-        systemName: comment.isLiked ? "heart.fill" : "heart",
-        text: comment.likeCount.decimalFormatted
-      )
+      HStack(spacing: 2) {
+        Image(asset: .heartPlus)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 12, height: 12)
+        Text(comment.likeCount.decimalFormatted)
+          .pretendardFont(.labelSmall)
+      }
+      .foregroundStyle(comment.isLiked ? .primary500 : .gray300)
     }
     .buttonStyle(.plain)
   }
@@ -579,11 +566,6 @@ private extension CommentView {
         .frame(maxWidth: .infinity, alignment: .topLeading)
 
       Spacer(minLength: 0)
-
-      Text("\(store.commentText.count)/200")
-        .pretendardFont(.labelXSmall)
-        .foregroundStyle(.neutral400)
-        .frame(maxWidth: .infinity, alignment: .trailing)
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 8)

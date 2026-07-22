@@ -5,10 +5,10 @@
 
 import SwiftUI
 
-import ComposableArchitecture
 import CommentDomainInterface
-import PickeDesignKit
+import ComposableArchitecture
 import Entity
+import PickeDesignKit
 import Utill
 
 @ViewAction(for: CommentReplyFeature.self)
@@ -278,10 +278,15 @@ private extension CommentReplyView {
         }
 
         Button(action: likeAction) {
-          actionLabel(
-            systemName: isLiked ? "heart.fill" : "heart",
-            text: likeCount.decimalFormatted
-          )
+          HStack(spacing: 2) {
+            Image(asset: .heartPlus)
+              .resizable()
+              .scaledToFit()
+              .frame(width: 16, height: 16)
+            Text(likeCount.decimalFormatted)
+              .pretendardFont(.labelSmall)
+          }
+          .foregroundStyle(isLiked ? .primary500 : .gray300)
         }
         .buttonStyle(.plain)
       }
@@ -301,7 +306,7 @@ private extension CommentReplyView {
     author: String,
     imageURL: String?,
     timeAgo: String,
-    isMine: Bool,
+    isMine _: Bool,
     moreAction: (() -> Void)?
   ) -> some View {
     // Figma top 행: 아바타(36) + 이름/시간 스택 + 세로 더보기, 요소 간 gap 6
@@ -313,16 +318,10 @@ private extension CommentReplyView {
       )
 
       VStack(alignment: .leading, spacing: 0) {
-        HStack(spacing: 4) {
-          Text(author)
-            .pretendardFont(.labelMedium)
-            .foregroundStyle(.gray500)
-            .lineLimit(1)
-
-          if isMine {
-            myBadge()
-          }
-        }
+        Text(author)
+          .pretendardFont(.labelMedium)
+          .foregroundStyle(.gray500)
+          .lineLimit(1)
 
         // 시간 — caption/sm/semibold Pretendard SemiBold 10, gray300
         Text(timeAgo)
@@ -343,16 +342,6 @@ private extension CommentReplyView {
       }
       .buttonStyle(.plain)
     }
-  }
-
-  @ViewBuilder
-  func myBadge() -> some View {
-    Text("나")
-      .pretendardFont(.labelXSmall)
-      .foregroundStyle(.beige50)
-      .padding(.horizontal, 5)
-      .padding(.vertical, 2)
-      .roundedBackground(.primary500)
   }
 
   func optionBadge(label: String, option: CommentOption) -> some View {
@@ -387,23 +376,20 @@ private extension CommentReplyView {
 private extension CommentReplyView {
   @ViewBuilder
   func inputBar() -> some View {
-    HStack(alignment: .bottom, spacing: 8) {
+    // 댓글 화면 입력칸과 동일한 구성 (placeholder/색/레이아웃 통일).
+    HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 6) {
-        // Figma textarea: 텍스트/플레이스홀더 gray300, Pretendard Regular 13
-        TextField("내 의견은 어쩌구 저쩌구", text: $store.replyText, axis: .vertical)
+        TextField("댓글을 입력해주세요", text: $store.replyText, axis: .vertical)
           .pretendardFont(.regular13)
-          .foregroundStyle(.gray300)
-          .lineLimit(1 ... 3)
+          .foregroundStyle(.neutral400)
           .focused($isReplyFocused)
+          .frame(maxWidth: .infinity, alignment: .topLeading)
 
-        Text("\(store.replyText.count)/200")
-          .pretendardFont(.labelXSmall)
-          .foregroundStyle(.gray300)
-          .frame(maxWidth: .infinity, alignment: .trailing)
+        Spacer(minLength: 0)
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 8)
-      .frame(maxWidth: .infinity)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(.beige50)
 
       Button { send(.sendTapped) } label: {
@@ -426,7 +412,5 @@ private extension CommentReplyView {
         .fill(.beige800)
         .frame(height: 1)
     }
-    // Figma: 입력바 상단 그림자 0 -4 6 rgba(0,0,0,0.08)
-    .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: -4)
   }
 }

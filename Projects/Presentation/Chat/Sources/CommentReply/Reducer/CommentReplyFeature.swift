@@ -166,12 +166,6 @@ public struct CommentReplyFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
-      case .binding(\.replyText):
-        if state.replyText.count > 200 {
-          state.replyText = String(state.replyText.prefix(200))
-        }
-        return .none
-
       case .binding:
         return .none
 

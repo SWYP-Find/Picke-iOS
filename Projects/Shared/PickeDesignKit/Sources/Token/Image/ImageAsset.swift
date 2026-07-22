@@ -55,4 +55,8 @@ public enum ImageAsset: String {
 
   case history
   case lock
+
+  // MARK: - 댓글(관점)
+
+  case heartPlus
 }
