@@ -8,6 +8,7 @@
 import Foundation
 
 import ComposableArchitecture
+import DomainInterface
 import PickeDesignKit
 import Presentation
 import Shared
@@ -16,6 +17,8 @@ import TCAFlow
 @FlowCoordinator(screen: "AppHomeScreen", navigation: true)
 public struct AppHomeCoordinator {
   public init() {}
+
+  @Dependency(\.audioPlayer) private var audioPlayer
 
   @ObservableState
   public struct State: Equatable {
@@ -91,6 +94,18 @@ private extension AppHomeCoordinator {
 
     case .routeAction(_, action: .notification(.delegate(.dismiss))):
       return .send(.view(.backAction))
+
+    case let .updateRoutes(newRoutes):
+      // 스와이프 뒤로가기로 채팅(오디오 재생) 루트가 스택에서 통째로 사라지면
+      // 하위 리듀서 teardown 으로 자체 정지 가드가 실행되지 못하므로 여기서 정지한다.
+      let hasAudioScreen = newRoutes.contains { route in
+        if case .chat = route.screen { return true }
+        return false
+      }
+      if !hasAudioScreen {
+        return .run { [player = audioPlayer] _ in await player.pause() }
+      }
+      return .none
 
     default:
       return .none
