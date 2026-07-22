@@ -7,11 +7,11 @@
 
 import Foundation
 
+import BattleDomainInterface
 import ChatInterface
 import ComposableArchitecture
 import DomainInterface
 import Entity
-import BattleDomainInterface
 import HomeDomainInterface
 import LogMacro
 import PickeDesignKit
@@ -48,6 +48,14 @@ public struct ChatRoomFeature {
     public var isWaitingForNodeSelection: Bool = false
     /// 선택지 영역에서 사용자가 탭한 옵션 label
     public var selectedOptionLabel: String?
+    /// 중간(분기) 선택 확정 내역 — 선택 후에도 대화 흐름 중간에 유지 노출한다. (안드로이드 ScenarioScreen 파리티)
+    public var confirmedSelection: ConfirmedSelection?
+
+    public struct ConfirmedSelection: Equatable {
+      public let options: [ScenarioInteractiveOption]
+      public let selectedNodeId: Int
+    }
+
     /// 수동 seek(분기 선택·구간 이동) 직후 목표 시간. iOS 는 seek 반영 전 stale tick 을
     /// 흘리므로, 목표 시간 근처에 도달하기 전까지 옵저버 tick 을 무시해 오디오-텍스트 불일치를 막는다.
     public var pendingSeekTime: TimeInterval?
@@ -150,6 +158,12 @@ public struct ChatRoomFeature {
 
     public var shouldShowOptions: Bool {
       isWaitingForNodeSelection && !visibleOptions.isEmpty
+    }
+
+    /// 확정 선택 내역 블록을 끼워 넣을 기준 시각(ms) — 선택된 노드의 시작. 내역 없으면 nil.
+    public var confirmedSelectionStartMs: Int? {
+      guard let confirmedSelection else { return nil }
+      return Int(nodeStartTime(for: confirmedSelection.selectedNodeId) * 1000)
     }
 
     public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
@@ -352,6 +366,7 @@ extension ChatRoomFeature {
       state.visibleNodeIds = state.scenario.map { [$0.startNodeId] } ?? []
       state.isWaitingForNodeSelection = false
       state.selectedOptionLabel = nil
+      state.confirmedSelection = nil
       // 처음부터 다시 들을 때도 최종투표 팝업이 다시 뜨도록 1회성 플래그를 리셋한다.
       state.hasPresentedFinalVoteAlert = false
       return .run { [player = audioPlayer] _ in
@@ -411,6 +426,11 @@ extension ChatRoomFeature {
       if !state.visibleNodeIds.contains(option.nextNodeId) {
         state.visibleNodeIds.append(option.nextNodeId)
       }
+      // 선택 내역을 대화 흐름 중간에 계속 노출하기 위해 확정 시점의 선택지를 보존.
+      state.confirmedSelection = .init(
+        options: state.visibleOptions,
+        selectedNodeId: option.nextNodeId
+      )
       state.selectedOptionLabel = nil
       state.isWaitingForNodeSelection = false
       let targetTime = state.nodeStartTime(for: option.nextNodeId)

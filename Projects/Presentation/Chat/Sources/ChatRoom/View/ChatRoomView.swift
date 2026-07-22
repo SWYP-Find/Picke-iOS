@@ -19,11 +19,16 @@ import PickeDesignKit
 public struct ChatRoomView: View {
   @Bindable public var store: StoreOf<ChatRoomFeature>
 
+  // [고정 36 슬롯][8][말풍선 고정폭][8][고정 36 슬롯] — 재생 상태와 무관하게 말풍선 크기 고정.
   private enum Metric {
-    static let bubbleMaxWidth: CGFloat = 222
-    static let avatarSize: CGFloat = 32.7
+    static let sideSlotWidth: CGFloat = 36
+    static let avatarSize: CGFloat = 32
     static let avatarImageWidth: CGFloat = 24
     static let avatarImageHeight: CGFloat = 28
+    static let bubblePadding: CGFloat = 12
+    static let rowSpacing: CGFloat = 6
+    static let speakerChangeSpacing: CGFloat = 16
+    static let bodyLineSpacing: CGFloat = 4.8
   }
 
   public init(store: StoreOf<ChatRoomFeature>) {
@@ -123,76 +128,153 @@ extension ChatRoomView {
   private func messageList() -> some View {
     ScrollViewReader { proxy in
       ScrollView(showsIndicators: false) {
-        VStack(alignment: .leading, spacing: 20) {
-          ForEach(groupedMessages, id: \.id) { group in
-            messageGroup(group)
+        let rows = messageRows
+        let insertAfter = selectionInsertAfterIndex(rows)
+        VStack(alignment: .leading, spacing: Metric.rowSpacing) {
+          if insertAfter == -1 {
+            selectionHistorySection()
+          }
+          ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+            messageRow(row)
+              .padding(.top, index > 0 && row.showsHeader ? Metric.speakerChangeSpacing : 0)
               .transition(.opacity)
+            // 중간(분기) 선택 확정 내역 — 선택 지점 뒤에 유지 노출. (안드로이드 파리티)
+            if index == insertAfter {
+              selectionHistorySection()
+            }
           }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 40)
         // 대사가 한 줄씩 추가될 때 슬라이드/페이드인.
         .animation(.easeInOut(duration: 0.25), value: store.messages)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .onChange(of: store.activeMessageId) { _, activeMessageId in
-        guard let target = scrollTargetId(for: activeMessageId) else { return }
+        guard let activeMessageId else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
-          proxy.scrollTo(target, anchor: .bottom)
+          proxy.scrollTo(activeMessageId, anchor: .bottom)
         }
       }
     }
   }
 
-  /// 활성 메시지가 속한 SpeakerGroup 의 마지막 메시지 id 로 스크롤한다.
-  private func scrollTargetId(for activeId: UUID?) -> UUID? {
-    guard let activeId else { return nil }
-    for group in groupedMessages where group.messages.contains(where: { $0.id == activeId }) {
-      return group.messages.last?.id ?? activeId
-    }
-    return activeId
-  }
-
-  private var groupedMessages: [SpeakerGroup] {
-    var result: [SpeakerGroup] = []
-    for message in store.messages {
-      if let last = result.last, last.speaker == message.speaker {
-        var updated = last
-        updated.messages.append(message)
-        result[result.count - 1] = updated
-      } else {
-        result.append(SpeakerGroup(speaker: message.speaker, messages: [message]))
-      }
-    }
-    return result
+  /// 확정 선택 내역 블록을 끼워 넣을 행 인덱스(해당 행 뒤에 삽입). -1 이면 맨 앞, nil 이면 미노출.
+  private func selectionInsertAfterIndex(_ rows: [MessageRow]) -> Int? {
+    guard let startMs = store.confirmedSelectionStartMs else { return nil }
+    let firstAfter = rows.firstIndex { ($0.message.startTimeMs ?? 0) >= startMs } ?? rows.count
+    return firstAfter - 1
   }
 
   @ViewBuilder
-  private func messageGroup(_ group: SpeakerGroup) -> some View {
-    switch group.speaker.side {
-    case .left:
-      HStack(alignment: .top, spacing: 8) {
-        avatar(group.speaker)
-        bubbleColumn(speaker: group.speaker, messages: group.messages)
-        Spacer(minLength: 40)
-      }
+  private func selectionHistorySection() -> some View {
+    if let selection = store.confirmedSelection {
+      VStack(spacing: 24) {
+        HStack(spacing: 16) {
+          Rectangle()
+            .fill(.gray200)
+            .frame(height: 1)
+          Text("아래가 당신의 선택입니다.")
+            .pretendardFont(.labelMedium)
+            .italic()
+            .foregroundStyle(.gray500)
+            .fixedSize()
+          Rectangle()
+            .fill(.gray200)
+            .frame(height: 1)
+        }
 
-    case .right:
-      HStack(alignment: .top, spacing: 8) {
-        Spacer(minLength: 40)
-        bubbleColumn(speaker: group.speaker, messages: group.messages)
-        avatar(group.speaker)
-      }
-
-    case .center:
-      VStack(spacing: 6) {
-        ForEach(group.messages) { message in
-          narratorBubble(text: message.text)
-            .id(message.id)
+        VStack(spacing: 12) {
+          ForEach(selection.options, id: \.label) { option in
+            historyOptionCard(option, isChosen: option.nextNodeId == selection.selectedNodeId)
+          }
         }
       }
-      .frame(maxWidth: .infinity)
+      .padding(.vertical, 16)
     }
+  }
+
+  @ViewBuilder
+  private func historyOptionCard(_ option: ScenarioInteractiveOption, isChosen: Bool) -> some View {
+    Text(option.label)
+      .pretendardFont(.labelSmall)
+      .foregroundStyle(isChosen ? .gray900 : .gray500)
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity, alignment: .center)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 20)
+      .roundedBackground(.beige400)
+      .overlay(
+        RoundedRectangle(cornerRadius: .radiusDefault)
+          .stroke(isChosen ? .secondary500 : .beige700, lineWidth: 1)
+      )
+  }
+
+  private var messageRows: [MessageRow] {
+    var rows: [MessageRow] = []
+    for message in store.messages {
+      let showsHeader = rows.last.map { $0.message.speaker != message.speaker } ?? true
+      rows.append(MessageRow(message: message, showsHeader: showsHeader))
+    }
+    return rows
+  }
+
+  @ViewBuilder
+  private func messageRow(_ row: MessageRow) -> some View {
+    let message = row.message
+    let speaker = message.speaker
+    let isActive = message.id == store.activeMessageId
+
+    switch speaker.side {
+    case .center:
+      narratorBubble(text: message.text, isActive: isActive)
+        .opacity(isActive ? 1 : 0.8)
+        .id(message.id)
+
+    case .left, .right:
+      HStack(alignment: .top, spacing: 8) {
+        sideSlot(
+          showsAvatar: speaker.side == .left && row.showsHeader,
+          showsEqualizer: speaker.side == .right && isActive && store.isPlaying,
+          speaker: speaker
+        )
+
+        VStack(alignment: speaker.side == .left ? .leading : .trailing, spacing: 6) {
+          if row.showsHeader {
+            Text(speaker.name)
+              .pretendardFont(.headingSmall)
+              .foregroundStyle(.gray400)
+          }
+          bubble(text: message.text, side: speaker.side, isActive: isActive)
+        }
+        .frame(maxWidth: .infinity)
+
+        sideSlot(
+          showsAvatar: speaker.side == .right && row.showsHeader,
+          showsEqualizer: speaker.side == .left && isActive && store.isPlaying,
+          speaker: speaker
+        )
+      }
+      .opacity(isActive ? 1 : 0.8)
+      .id(message.id)
+    }
+  }
+
+  @ViewBuilder
+  private func sideSlot(
+    showsAvatar: Bool,
+    showsEqualizer: Bool,
+    speaker: ChatSpeaker
+  ) -> some View {
+    ZStack {
+      if showsAvatar {
+        avatar(speaker)
+      } else if showsEqualizer {
+        waveformIcon()
+      }
+    }
+    .frame(width: Metric.sideSlotWidth)
   }
 
   @ViewBuilder
@@ -209,53 +291,27 @@ extension ChatRoomView {
   }
 
   @ViewBuilder
-  private func bubbleColumn(
-    speaker: ChatSpeaker,
-    messages: [ChatMessage]
-  ) -> some View {
-    let alignment: HorizontalAlignment = speaker.side == .left ? .leading : .trailing
-    VStack(alignment: alignment, spacing: 6) {
-      Text(speaker.name)
-        .pretendardFont(.bold13)
-        .foregroundStyle(.neutral800)
-        .padding(.horizontal, 4)
-
-      // 오른쪽 화자는 말풍선도 우측 정렬되도록 내부 VStack 정렬을 side 에 맞춘다.
-      VStack(alignment: alignment, spacing: 6) {
-        ForEach(messages) { message in
-          let isActive = store.isPlaying && message.id == store.activeMessageId
-          HStack(alignment: .center, spacing: 6) {
-            if speaker.side == .right, isActive { waveformIcon() }
-            bubble(text: message.text, side: speaker.side, isActive: isActive)
-              .id(message.id)
-            if speaker.side == .left, isActive { waveformIcon() }
-          }
-          .transition(.opacity)
-        }
-      }
-    }
-    .frame(maxWidth: Metric.bubbleMaxWidth, alignment: speaker.side == .left ? .leading : .trailing)
+  private func waveformIcon() -> some View {
+    AudioEqualizerView(isPlaying: store.isPlaying)
+      .frame(width: 24, height: 24)
   }
 
   @ViewBuilder
   private func bubble(
     text: String,
     side: ChatSpeakerSide,
-    isActive _: Bool = false
+    isActive: Bool
   ) -> some View {
-    // 안드로이드 시안: 왼쪽=흰색(beige50)/오른쪽=탄색(beige600)으로 좌우 대비를 주고,
-    // 재생 여부와 무관하게 텍스트는 항상 읽기 좋은 neutral800(비활성 흐림 제거).
-    // 재생 중 표시는 말풍선 옆 웨이브폼 아이콘으로 대체한다.
-    let background: Color = side == .left ? .beige50 : .beige600
-    let border: Color = side == .left ? .beige600 : .beige700
+    let background: Color = side == .left ? .white : .beige500
+    let border: Color = side == .left ? .beige500 : .beige700
     Text(text)
-      .pretendardFont(.regular13)
-      .foregroundStyle(.neutral800)
-      .lineSpacing(13 * 0.4)
+      .pretendardFont(.labelSmall)
+      .foregroundStyle(isActive ? .gray700 : .gray300)
+      .lineSpacing(Metric.bodyLineSpacing)
       .multilineTextAlignment(.leading)
       .fixedSize(horizontal: false, vertical: true)
-      .padding(.horizontal, 8)
-      .padding(.vertical, 6)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(Metric.bubblePadding)
       .roundedBackground(background)
       .overlay(
         RoundedRectangle(cornerRadius: .radiusDefault)
@@ -263,32 +319,23 @@ extension ChatRoomView {
       )
   }
 
-  /// 재생 중 말풍선 옆 이퀄라이저 애니메이션 (재생 상태에 반응).
   @ViewBuilder
-  private func waveformIcon() -> some View {
-    AudioEqualizerView(isPlaying: store.isPlaying)
-      .frame(width: 24, height: 24)
-  }
-
-  /// 나레이션/클로징: 박스·테두리 없이 가운데 정렬 + 살짝 기울인 이탤릭.
-  @ViewBuilder
-  private func narratorBubble(text: String) -> some View {
-    Text(text)
-      .pretendardFont(.bodySmall)
+  private func narratorBubble(text: String, isActive: Bool) -> some View {
+    Text(text.replacingOccurrences(of: ", ", with: ",\n"))
+      .pretendardFont(.labelSmall)
       .italic()
-      .foregroundStyle(.neutral400)
-      .lineSpacing(12 * 0.4)
+      .foregroundStyle(isActive ? .gray700 : .gray300)
+      .lineSpacing(Metric.bodyLineSpacing)
       .multilineTextAlignment(.center)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 4)
-      .frame(maxWidth: 280)
+      .padding(.vertical, 6)
+      .frame(maxWidth: .infinity)
   }
 
-  private struct SpeakerGroup: Equatable, Identifiable {
-    let speaker: ChatSpeaker
-    var messages: [ChatMessage]
+  private struct MessageRow: Equatable, Identifiable {
+    let message: ChatMessage
+    let showsHeader: Bool
 
-    var id: UUID { messages.first?.id ?? UUID() }
+    var id: UUID { message.id }
   }
 }
 
@@ -305,28 +352,29 @@ extension ChatRoomView {
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .frame(maxWidth: .infinity)
-    .background(.beige100)
+    .background(.beige200)
   }
 
   @ViewBuilder
   private func optionsHeader() -> some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 16) {
       Rectangle()
-        .fill(.neutral200)
-        .frame(height: 0.5)
-      Text("당신의 입장을 선택해주세요")
-        .pretendardFont(.bold13)
-        .foregroundStyle(.neutral800)
+        .fill(.gray200)
+        .frame(height: 1)
+      Text("이제 당신의 입장을 선택해주세요")
+        .pretendardFont(.labelMedium)
+        .italic()
+        .foregroundStyle(.gray500)
         .fixedSize()
       Rectangle()
-        .fill(.neutral200)
-        .frame(height: 0.5)
+        .fill(.gray200)
+        .frame(height: 1)
     }
   }
 
   @ViewBuilder
   private func optionsList() -> some View {
-    VStack(spacing: 9) {
+    VStack(spacing: 12) {
       ForEach(store.visibleOptions, id: \.label) { option in
         optionCard(option)
       }
@@ -342,15 +390,15 @@ extension ChatRoomView {
     } label: {
       Text(option.label)
         .pretendardFont(.labelSmall)
-        .foregroundStyle(isSelected ? .neutral800 : .neutral300)
+        .foregroundStyle(isSelected ? .gray900 : .gray500)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
         .roundedBackground(.beige400)
         .overlay(
           RoundedRectangle(cornerRadius: .radiusDefault)
-            .stroke(isSelected ? .borderSecondarySelected : .borderBeigeDefault, lineWidth: 1)
+            .stroke(isSelected ? .secondary500 : .beige700, lineWidth: 1)
         )
     }
     .buttonStyle(.plain)
