@@ -26,8 +26,9 @@ public struct ChatRoomView: View {
     static let avatarImageWidth: CGFloat = 24
     static let avatarImageHeight: CGFloat = 28
     static let bubblePadding: CGFloat = 12
-    static let rowSpacing: CGFloat = 6
-    static let speakerChangeSpacing: CGFloat = 16
+    // 답답해 보이지 않도록 버블 간 간격을 넉넉하게.
+    static let rowSpacing: CGFloat = 10
+    static let speakerChangeSpacing: CGFloat = 24
     static let bodyLineSpacing: CGFloat = 4.8
   }
 
