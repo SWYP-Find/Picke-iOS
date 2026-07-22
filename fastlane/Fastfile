@@ -72,7 +72,7 @@ end
 
 # Sentry "Upload Mobile Builds" (Size Analysis + 사전배포) — 아카이브를 sentry-cli 로 업로드한다.
 # 실패해도 배포를 절대 막지 않는다. CI 에 SENTRY_AUTH_TOKEN 시크릿과 sentry-cli 가 있을 때만 동작.
-def upload_build_to_sentry
+def upload_build_to_sentry(release_name: nil)
   token = ENV["SENTRY_AUTH_TOKEN"].to_s
   archive = lane_context[SharedValues::XCODEBUILD_ARCHIVE].to_s
 
@@ -96,6 +96,19 @@ def upload_build_to_sentry
     sh("sentry-cli build upload #{Shellwords.escape(archive)} --org #{Shellwords.escape(org)} --project #{Shellwords.escape(project)}")
   rescue => e
     UI.important("⚠️ Sentry 빌드 업로드 실패(배포는 계속 진행): #{e.message}")
+  end
+
+  # Sentry Releases 에 버전이 잡히도록 릴리즈를 생성·확정한다.
+  # SDK 기본 릴리즈 형식(bundleId@version+build)과 일치해야 이벤트가 연결된다.
+  if release_name && !release_name.empty?
+    begin
+      UI.message("🏷️ Sentry 릴리즈 생성: #{release_name}")
+      sh("sentry-cli releases -o #{Shellwords.escape(org)} -p #{Shellwords.escape(project)} new #{Shellwords.escape(release_name)}")
+      sh("sentry-cli releases -o #{Shellwords.escape(org)} -p #{Shellwords.escape(project)} set-commits #{Shellwords.escape(release_name)} --auto --ignore-missing")
+      sh("sentry-cli releases -o #{Shellwords.escape(org)} -p #{Shellwords.escape(project)} finalize #{Shellwords.escape(release_name)}")
+    rescue => e
+      UI.important("⚠️ Sentry 릴리즈 생성 실패(배포는 계속 진행): #{e.message}")
+    end
   end
 end
 
@@ -401,8 +414,8 @@ platform :ios do
 
       # clean_symbols_from_ipa(ipa_path: ipa_path)
 
-      # 아카이브 산출 직후 Sentry 빌드/사이즈 업로드(비차단).
-      upload_build_to_sentry
+      # 아카이브 산출 직후 Sentry 빌드/사이즈 업로드 + 릴리즈 생성(비차단).
+      upload_build_to_sentry(release_name: "io.Picke.co@#{options[:version]}+#{new_build_number}")
 
       # 업로드 후 자동으로 심사 요청
       upload_to_app_store(
