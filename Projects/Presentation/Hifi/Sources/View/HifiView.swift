@@ -113,7 +113,8 @@ private extension HifiView {
     ScrollView {
       LazyVStack(spacing: 0) {
         ForEach(Array(store.items.enumerated()), id: \.element.id) { index, item in
-          exploreRow(item)
+          // 마지막 카드 아래엔 구분선을 그리지 않는다.
+          exploreRow(item, showsDivider: index != store.items.count - 1)
             .onAppear {
               // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
               if item.id == store.items.last?.id {
@@ -130,6 +131,8 @@ private extension HifiView {
           }
         }
       }
+      // 마지막 카드가 하단에 딱 붙지 않도록 10pt 여백.
+      .padding(.bottom, 10)
     }
     .scrollIndicators(.hidden)
     .scrollBounceBehavior(.basedOnSize, axes: .vertical)
@@ -246,7 +249,7 @@ private extension HifiView {
 
 private extension HifiView {
   @ViewBuilder
-  func exploreRow(_ item: ExploreItem) -> some View {
+  func exploreRow(_ item: ExploreItem, showsDivider: Bool = true) -> some View {
     Button { send(.itemTapped(id: item.id)) } label: {
       HStack(alignment: .center, spacing: 8) {
         thumbnail(item.imageURL)
@@ -288,7 +291,9 @@ private extension HifiView {
       .padding(.vertical, 12)
       .background(.beige50)
       .overlay(alignment: .bottom) {
-        Rectangle().fill(.beige600).frame(height: 1)
+        if showsDivider {
+          Rectangle().fill(.beige600).frame(height: 1)
+        }
       }
     }
     .buttonStyle(.plain)
