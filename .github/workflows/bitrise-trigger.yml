@@ -39,9 +39,12 @@ jobs:
             --data-binary @/tmp/payload.json \
             -o /tmp/resp.json
           # 검증 경고가 있으면 드러낸다(설정이 조용히 깨진 채 배포되는 것 방지).
-          python3 - <<'PY'
+          # 업로드는 위 curl 로 이미 끝났으므로, 이 출력이 실패해도 잡을 죽이지 않는다.
+          python3 - <<'PY' || echo "⚠️ 응답 파싱 실패(업로드 자체는 성공)"
           import json
-          w = json.load(open("/tmp/resp.json")).get("warnings", {}).get("config", [])
+          # warnings 키가 있으면서 값이 null 인 응답이 실제로 온다 → get 의 기본값이 안 먹는다.
+          d = json.load(open("/tmp/resp.json")) or {}
+          w = (d.get("warnings") or {}).get("config") or []
           if w:
               print("⚠️ Bitrise 설정 경고:")
               for x in w:
