@@ -45,22 +45,10 @@ public struct BottomActionSheet: View {
 
       VStack(spacing: 8) {
         ForEach(items) { item in
-          Button {
+          PickeActionPill(title: item.title, systemImage: item.systemImage) {
             onDismiss()
             item.action()
-          } label: {
-            HStack(spacing: 4) {
-              Image(systemName: item.systemImage)
-                .font(.system(size: 14, weight: .medium))
-              Text(item.title)
-                .pretendardFont(.medium13)
-            }
-            .foregroundStyle(.beige50)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 9)
-            .background(.primary500, in: Capsule())
           }
-          .buttonStyle(.plain)
         }
       }
       .padding(.bottom, 28)
