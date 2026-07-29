@@ -140,7 +140,7 @@ public struct CommentFeature {
     case voteStatsResponse(Result<BattleVoteStats, BattleError>)
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
-    case createCommentResponse(Result<BattlePerspective, BattleError>)
+    case createCommentResponse(Result<BattlePerspective?, BattleError>)
     case mutationFinished
     case perspectiveLikesResponse(Result<CommentLikeResult, CommentError>)
   }
@@ -587,14 +587,15 @@ extension CommentFeature {
       state.isSubmitting = false
       switch result {
       case let .success(perspective):
-        // 서버는 댓글을 "유저가 투표한 진영"에 저장한다(요청 optionId 무시). 응답의 실제 진영
-        // (perspective.option)으로 필터를 전환해 방금 쓴 댓글이 그 진영 탭에서 보이도록 한다.
-        let votedOptionId = perspective.option.optionId
-        state.myOptionId = votedOptionId
-        if votedOptionId == state.voteSummary.optionA.optionId {
-          state.selectedFilter = .optionA
-        } else if votedOptionId == state.voteSummary.optionB.optionId {
-          state.selectedFilter = .optionB
+        // 서버는 댓글을 "유저가 투표한 진영"에 저장한다(요청 optionId 무시). 재조회로 실제 진영을
+        // 알아낸 경우에만 필터를 전환하고, 못 알아냈으면 현재 탭 그대로 목록만 갱신한다.
+        if let votedOptionId = perspective?.option.optionId {
+          state.myOptionId = votedOptionId
+          if votedOptionId == state.voteSummary.optionA.optionId {
+            state.selectedFilter = .optionA
+          } else if votedOptionId == state.voteSummary.optionB.optionId {
+            state.selectedFilter = .optionB
+          }
         }
         return .send(.async(.fetchPerspectives(reset: true)))
       case let .failure(error):

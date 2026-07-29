@@ -29,11 +29,12 @@ public protocol BattleInterface: Sendable {
     optionId: Int?,
     sort: BattlePerspectiveSort?
   ) async throws -> BattlePerspectivePage
+  /// 관점을 등록한다. 등록 직후 재조회가 실패하면 `nil` 을 반환한다 — 등록 자체는 성공한 상태다.
   func createPerspective(
     battleId: Int,
     content: String,
     optionId: Int?
-  ) async throws -> BattlePerspective
+  ) async throws -> BattlePerspective?
   func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective?
   func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage
   func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal

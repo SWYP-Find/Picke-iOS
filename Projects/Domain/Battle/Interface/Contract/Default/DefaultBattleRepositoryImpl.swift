@@ -83,7 +83,7 @@ public struct DefaultBattleRepositoryImpl: BattleInterface {
     battleId _: Int,
     content: String,
     optionId _: Int?
-  ) async throws -> BattlePerspective {
+  ) async throws -> BattlePerspective? {
     BattlePerspective(
       perspectiveId: 0,
       user: BattlePerspectiveUser(userTag: "", nickname: "나", characterType: "", characterImageUrl: nil),

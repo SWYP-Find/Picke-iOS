@@ -68,7 +68,7 @@ public struct BattleUseCaseImpl: BattleInterface {
     battleId: Int,
     content: String,
     optionId: Int?
-  ) async throws -> BattlePerspective {
+  ) async throws -> BattlePerspective? {
     return try await battleRepository.createPerspective(
       battleId: battleId,
       content: content,
@@ -88,4 +88,3 @@ public struct BattleUseCaseImpl: BattleInterface {
     return try await battleRepository.proposeBattle(draft)
   }
 }
-

@@ -255,9 +255,30 @@ struct BattleRepositoryTests {
 
     let perspective = try await repo.createPerspective(battleId: 1, content: "내 의견입니다", optionId: 1)
 
-    #expect(perspective.perspectiveId == 5)
-    #expect(perspective.content == "내 의견입니다")
-    #expect(perspective.isMyPerspective == true)
+    #expect(perspective?.perspectiveId == 5)
+    #expect(perspective?.content == "내 의견입니다")
+    #expect(perspective?.isMyPerspective == true)
+  }
+
+  // 실제 서버 응답에는 user/option 이 없어 재조회(BattlePerspectiveDTO) 디코딩이 실패한다.
+  // 등록 자체는 성공했으므로 throw 하지 않고 nil 을 돌려줘야 호출부가 목록을 갱신할 수 있다.
+  @Test func createPerspective_는_재조회_실패해도_던지지_않고_nil_을_반환한다() async throws {
+    let json = """
+    {
+      "statusCode": 200,
+      "data": {
+        "perspectiveId": 249,
+        "status": "PUBLISHED",
+        "createdAt": "2026-07-29T23:35:39.593249513"
+      },
+      "error": null
+    }
+    """
+    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+
+    let perspective = try await repo.createPerspective(battleId: 39, content: "ㄴㄴㄴ", optionId: 75)
+
+    #expect(perspective == nil)
   }
 
   @Test func createPerspective_는_data_가_nil_이면_backendError_를_던진다() async throws {
