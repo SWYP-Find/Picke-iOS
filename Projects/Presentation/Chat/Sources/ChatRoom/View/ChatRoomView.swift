@@ -4,8 +4,6 @@
 //
 //  Created by Wonji Suh on 5/19/26.
 //
-//  .pen `채팅방` (k3lIx) + 와이어프레임 매핑 — 헤더 + 메시지 리스트 + 오디오 재생바.
-//
 
 import SwiftUI
 
@@ -22,6 +20,8 @@ public struct ChatRoomView: View {
   // [고정 36 슬롯][8][말풍선 고정폭][8][고정 36 슬롯] — 재생 상태와 무관하게 말풍선 크기 고정.
   private enum Metric {
     static let sideSlotWidth: CGFloat = 36
+    static let slotSpacing: CGFloat = 8
+    static let equalizerSize: CGFloat = 24
     static let avatarSize: CGFloat = 32
     static let avatarImageWidth: CGFloat = 24
     static let avatarImageHeight: CGFloat = 28
@@ -54,7 +54,7 @@ public struct ChatRoomView: View {
         }
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
+    .screenBackground()
     .overlay(alignment: .top) {
       if store.hasAudioError {
         FloatingErrorView(message: "오디오를 불러오는 중 문제가 발생했어요")
@@ -65,8 +65,7 @@ public struct ChatRoomView: View {
     }
     .animation(.easeInOut(duration: 0.25), value: store.hasAudioError)
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
     .onDisappear { send(.onDisappear) }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
@@ -115,11 +114,7 @@ extension ChatRoomView {
     }
     .foregroundStyle(.neutral800)
     .background(.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 }
 
@@ -174,17 +169,13 @@ extension ChatRoomView {
     if let selection = store.confirmedSelection {
       VStack(spacing: 24) {
         HStack(spacing: 16) {
-          Rectangle()
-            .fill(.gray200)
-            .frame(height: 1)
+          PickeDivider(.gray200)
           Text("아래가 당신의 선택입니다.")
             .pretendardFont(.labelMedium)
             .italic()
             .foregroundStyle(.gray500)
             .fixedSize()
-          Rectangle()
-            .fill(.gray200)
-            .frame(height: 1)
+          PickeDivider(.gray200)
         }
 
         VStack(spacing: 12) {
@@ -206,11 +197,7 @@ extension ChatRoomView {
       .frame(maxWidth: .infinity, alignment: .center)
       .padding(.horizontal, 16)
       .padding(.vertical, 20)
-      .roundedBackground(.beige400)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(isChosen ? .secondary500 : .beige700, lineWidth: 1)
-      )
+      .pickeCard(.beige400, border: isChosen ? .secondary500 : .beige700)
   }
 
   private var messageRows: [MessageRow] {
@@ -236,11 +223,7 @@ extension ChatRoomView {
 
     case .left, .right:
       HStack(alignment: .top, spacing: 8) {
-        sideSlot(
-          showsAvatar: speaker.side == .left && row.showsHeader,
-          showsEqualizer: speaker.side == .right && isActive && store.isPlaying,
-          speaker: speaker
-        )
+        sideSlot(showsAvatar: speaker.side == .left && row.showsHeader, speaker: speaker)
 
         VStack(alignment: speaker.side == .left ? .leading : .trailing, spacing: 6) {
           if row.showsHeader {
@@ -248,32 +231,46 @@ extension ChatRoomView {
               .pretendardFont(.headingSmall)
               .foregroundStyle(.gray400)
           }
-          bubble(text: message.text, side: speaker.side, isActive: isActive)
+          withEqualizer(
+            bubble(text: message.text, side: speaker.side, isActive: isActive),
+            side: speaker.side,
+            isVisible: isActive && store.isPlaying
+          )
         }
         .frame(maxWidth: .infinity)
 
-        sideSlot(
-          showsAvatar: speaker.side == .right && row.showsHeader,
-          showsEqualizer: speaker.side == .left && isActive && store.isPlaying,
-          speaker: speaker
-        )
+        sideSlot(showsAvatar: speaker.side == .right && row.showsHeader, speaker: speaker)
       }
       .opacity(isActive ? 1 : 0.8)
       .id(message.id)
     }
   }
 
+  /// 재생 중 이퀄라이저를 말풍선 반대편 슬롯 중앙에 얹는다.
+  ///
+  /// 말풍선의 overlay 라 레이아웃 폭을 차지하지 않아 "재생 상태와 무관하게 말풍선 크기 고정"
+  /// 불변식이 유지되고, 헤더(이름) 유무와 무관하게 항상 말풍선 세로 중앙에 온다.
   @ViewBuilder
-  private func sideSlot(
-    showsAvatar: Bool,
-    showsEqualizer: Bool,
-    speaker: ChatSpeaker
+  private func withEqualizer(
+    _ content: some View,
+    side: ChatSpeakerSide,
+    isVisible: Bool
   ) -> some View {
+    // 아이콘 중심을 말풍선 바깥 슬롯 중앙에 맞춘다: 간격 + 슬롯 절반 + 아이콘 절반.
+    let shift = Metric.slotSpacing + Metric.sideSlotWidth / 2 + Metric.equalizerSize / 2
+    content.overlay(alignment: side == .left ? .trailing : .leading) {
+      if isVisible {
+        waveformIcon()
+          .offset(x: side == .left ? shift : -shift)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func sideSlot(showsAvatar: Bool, speaker: ChatSpeaker) -> some View {
     ZStack {
       if showsAvatar {
         avatar(speaker)
-      } else if showsEqualizer {
-        waveformIcon()
       }
     }
     .frame(width: Metric.sideSlotWidth)
@@ -314,11 +311,7 @@ extension ChatRoomView {
       .fixedSize(horizontal: false, vertical: true)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Metric.bubblePadding)
-      .roundedBackground(background)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(border, lineWidth: 1)
-      )
+      .pickeCard(background, border: border)
   }
 
   @ViewBuilder
@@ -360,17 +353,13 @@ extension ChatRoomView {
   @ViewBuilder
   private func optionsHeader() -> some View {
     HStack(spacing: 16) {
-      Rectangle()
-        .fill(.gray200)
-        .frame(height: 1)
+      PickeDivider(.gray200)
       Text("이제 당신의 입장을 선택해주세요")
         .pretendardFont(.labelMedium)
         .italic()
         .foregroundStyle(.gray500)
         .fixedSize()
-      Rectangle()
-        .fill(.gray200)
-        .frame(height: 1)
+      PickeDivider(.gray200)
     }
   }
 
@@ -397,11 +386,7 @@ extension ChatRoomView {
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
-        .roundedBackground(.beige400)
-        .overlay(
-          RoundedRectangle(cornerRadius: .radiusDefault)
-            .stroke(isSelected ? .secondary500 : .beige700, lineWidth: 1)
-        )
+        .pickeCard(.beige400, border: isSelected ? .secondary500 : .beige700)
     }
     .buttonStyle(.plain)
   }
@@ -434,11 +419,7 @@ extension ChatRoomView {
     .padding(.top, 16)
     .padding(.bottom, 8)
     .background(.beige50)
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .topDivider(.beige600)
   }
 
   @ViewBuilder
