@@ -2,8 +2,6 @@
 //  ContentActivitiesQueryRequest.swift
 //  Service
 //
-//  GET /api/v1/me/content-activities 쿼리 파라미터.
-//
 
 import Foundation
 

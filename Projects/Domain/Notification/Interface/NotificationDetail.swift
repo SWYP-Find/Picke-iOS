@@ -2,8 +2,6 @@
 //  NotificationDetail.swift
 //  Entity
 //
-//  알림 단건 상세 — `GET /api/v1/notifications/{id}` (목록 항목 + readAt).
-//
 
 import Foundation
 

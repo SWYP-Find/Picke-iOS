@@ -2,8 +2,6 @@
 //  NotificationSkeletonView.swift
 //  Notification
 //
-//  알림받기 로딩 스켈레톤 — 공통 SkeletonBlock(light).
-//
 
 import SwiftUI
 

@@ -2,8 +2,6 @@
 //  NotificationSettings.swift
 //  Entity
 //
-//  `GET/PATCH /api/v1/me/notification-settings` 도메인 모델 (6개 토글).
-//
 
 import Foundation
 

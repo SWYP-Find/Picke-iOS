@@ -2,8 +2,6 @@
 //  CommentLikeResult.swift
 //  Entity
 //
-//  `POST/DELETE /api/v1/comments/{commentId}/likes` 응답.
-//
 
 import Foundation
 

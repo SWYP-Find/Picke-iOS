@@ -2,8 +2,6 @@
 //  WeeklyAttendance.swift
 //  Entity
 //
-//  이번 주(월~일) 출석 현황.
-//
 
 import Foundation
 

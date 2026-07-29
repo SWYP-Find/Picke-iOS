@@ -2,8 +2,6 @@
 //  AttendanceSheetView.swift
 //  Home
 //
-//  출석체크 성공 결과 바텀시트의 순수 View. 상태 주입만 받고 액션은 갖지 않는다.
-//
 
 import SwiftUI
 

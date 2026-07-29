@@ -2,8 +2,6 @@
 //  SkeletonBlock.swift
 //  DesignSystem
 //
-//  공통 스켈레톤 블록 — base + shimmer 그라데이션. (라이트/다크 배경 모두 지원)
-//
 
 import SwiftUI
 

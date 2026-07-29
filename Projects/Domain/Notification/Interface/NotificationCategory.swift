@@ -2,8 +2,6 @@
 //  NotificationCategory.swift
 //  Entity
 //
-//  알림 카테고리 (탭 + 항목 분류). API category 파라미터와 1:1.
-//
 
 import Foundation
 

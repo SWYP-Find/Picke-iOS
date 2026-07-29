@@ -2,8 +2,6 @@
 //  CurationSkeletonView.swift
 //  Chat
 //
-//  큐레이팅(추천 배틀) 리스트 로딩 placeholder.
-//
 
 import SwiftUI
 

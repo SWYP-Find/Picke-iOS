@@ -2,9 +2,6 @@
 //  ShareContent.swift
 //  Entity
 //
-//  공유 시트에 실어 보낼 컨텐츠 묶음. 카드 스냅샷(우선) + 썸네일(fallback) + 본문 텍스트 + URL.
-//  (PreVote / 오늘의 배틀 등 공용)
-//
 
 import Foundation
 

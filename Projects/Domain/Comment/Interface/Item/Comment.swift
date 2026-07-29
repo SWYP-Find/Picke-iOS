@@ -2,8 +2,6 @@
 //  Comment.swift
 //  Entity
 //
-//  picke.pen `댓글화면` (j3GDzL) 매핑 도메인 모델.
-//
 
 import Foundation
 

@@ -2,9 +2,6 @@
 //  PickeRetryErrorView.swift
 //  DesignSystem
 //
-//  공통 로드 실패 뷰 — 안내 문구 + 다시 시도 버튼.
-//  (PreVote/ChatRoom 등 fetch(디코딩/네트워크) 실패 시 스켈레톤 대신 노출)
-//
 
 import SwiftUI
 

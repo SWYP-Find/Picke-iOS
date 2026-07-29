@@ -2,8 +2,6 @@
 //  AppUpdateError.swift
 //  Entity
 //
-//  앱 업데이트 체크(App Store lookup) 에러.
-//
 
 import Foundation
 

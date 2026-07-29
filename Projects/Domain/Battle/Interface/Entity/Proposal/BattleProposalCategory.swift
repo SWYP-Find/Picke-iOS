@@ -2,8 +2,6 @@
 //  BattleProposalCategory.swift
 //  Entity
 //
-//  배틀 주제 제안 카테고리 (POST /api/v1/battles/proposals 의 category).
-//
 
 import Foundation
 

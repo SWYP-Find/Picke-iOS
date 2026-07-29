@@ -2,8 +2,6 @@
 //  ExploreSkeletonView.swift
 //  Hifi
 //
-//  탐색(Hi-Fi) 리스트 로딩 placeholder. 초기 로드 / 카테고리·정렬 전환 시 노출.
-//
 
 import SwiftUI
 

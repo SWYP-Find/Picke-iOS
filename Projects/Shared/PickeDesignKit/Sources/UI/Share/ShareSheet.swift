@@ -2,8 +2,6 @@
 //  ShareSheet.swift
 //  DesignSystem
 //
-//  애플 기본 공유 시트 (UIActivityViewController) 를 SwiftUI `.sheet` 로 띄우기 위한 wrapper.
-//
 
 import SwiftUI
 import UIKit

@@ -2,7 +2,6 @@
 //  CommentReplyFeature.swift
 //  Chat
 //
-//  대댓글 화면.
 
 //
 

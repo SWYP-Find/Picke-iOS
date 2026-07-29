@@ -2,9 +2,6 @@
 //  PickeModal.swift
 //  DesignSystem
 //
-//  TCA @Presents 스토어 기반 커스텀 바텀시트 오버레이.
-//  예: .pickeModal($store.scope(state: \.termsAgreement, action: \.termsAgreement)) { TermsAgreementSheetView(store: $0) }
-//
 
 import SwiftUI
 

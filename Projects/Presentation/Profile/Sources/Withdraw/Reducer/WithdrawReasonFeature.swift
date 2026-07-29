@@ -2,10 +2,6 @@
 //  WithdrawReasonFeature.swift
 //  Profile
 //
-//  회원 탈퇴 — picke.pen `탈퇴하기`.
-//  탈퇴 사유(단일 선택) 수집 + 제출하기/돌아가기.
-//  제출 시 AuthUseCase.withDraw 호출 → Keychain 초기화 → 세션 종료 전파.
-//
 
 import Foundation
 

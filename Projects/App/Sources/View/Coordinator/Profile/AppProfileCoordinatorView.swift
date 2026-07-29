@@ -2,8 +2,6 @@
 //  AppProfileCoordinatorView.swift
 //  Picke
 //
-//  App 레이어의 마이페이지 조립 화면.
-//
 
 import SwiftUI
 

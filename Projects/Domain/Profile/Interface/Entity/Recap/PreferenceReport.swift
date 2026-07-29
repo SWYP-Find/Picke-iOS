@@ -2,8 +2,6 @@
 //  PreferenceReport.swift
 //  Entity
 //
-//  내 취향 리포트 (통계 + 선호 주제 랭킹).
-//
 
 import Foundation
 

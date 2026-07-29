@@ -2,10 +2,6 @@
 //  ProfileFeature.swift
 //  Profile
 //
-//  마이페이지 루트 기능 — picke.pen `마이페이지_잠금`.
-//  프로필 카드(닉네임/잠금) + 포인트 충전 + 나의 철학자 유형 + 메뉴 리스트.
-//  프로필/포인트 조회 API 연동 전까지는 기본(목) 값 노출.
-//
 
 import Foundation
 import ProfileDomainInterface

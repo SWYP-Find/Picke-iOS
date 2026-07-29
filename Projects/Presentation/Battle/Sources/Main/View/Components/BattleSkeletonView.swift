@@ -2,8 +2,6 @@
 //  BattleSkeletonView.swift
 //  Battle
 //
-//  오늘의 배틀 로딩 스켈레톤 — 다크 배경에 맞춘 어두운 shimmer.
-//
 
 import SwiftUI
 

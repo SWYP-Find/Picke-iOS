@@ -2,8 +2,6 @@
 //  View+Background.swift
 //  DesignSystem
 //
-//  반복되는 라운드 배경 관용구를 체이닝 모디파이어로 추출.
-//
 
 import SwiftUI
 

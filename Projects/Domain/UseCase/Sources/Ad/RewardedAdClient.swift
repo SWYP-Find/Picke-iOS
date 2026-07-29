@@ -2,10 +2,6 @@
 //  RewardedAdClient.swift
 //  UseCase
 //
-//  무료 충전 — GoogleMobileAds 리워드 동영상 광고(네이티브).
-//  광고 클릭 시 랜딩(웹뷰)은 SDK 인앱 브라우저로 자동 처리되며,
-//  rootViewController 만 올바르게 넘겨주면 된다.
-//
 
 import Foundation
 

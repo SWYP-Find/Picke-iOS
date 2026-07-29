@@ -2,9 +2,6 @@
 //  SkeletonView.swift
 //  DesignSystem
 //
-//  KFImage 등 비동기 이미지 로딩 placeholder 용 공용 skeleton.
-//  shimmer 그라데이션을 좌→우로 반복해 로딩 중임을 시각화한다.
-//
 
 import SwiftUI
 

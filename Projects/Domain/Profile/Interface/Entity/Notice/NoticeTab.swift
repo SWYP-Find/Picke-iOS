@@ -2,8 +2,6 @@
 //  NoticeTab.swift
 //  Entity
 //
-//  공지사항 · 이벤트 탭.
-//
 
 import Foundation
 

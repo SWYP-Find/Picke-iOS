@@ -2,9 +2,6 @@
 //  PickeDeeplink.swift
 //  Picke
 //
-//  알림 → 화면 이동 목적지. (TimeSpot-iOS DeeplinkRouter 패턴)
-//  푸시 data 페이로드 / 유니버설 링크 URL / 인앱 알림(detailCode) 세 경로를 하나로 흡수.
-//
 
 import Foundation
 

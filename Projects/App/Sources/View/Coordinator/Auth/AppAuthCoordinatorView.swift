@@ -2,8 +2,6 @@
 //  AppAuthCoordinatorView.swift
 //  Picke
 //
-//  App 레이어의 인증 조립 화면.
-//
 
 import SwiftUI
 

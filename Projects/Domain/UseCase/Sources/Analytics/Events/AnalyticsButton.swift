@@ -2,8 +2,6 @@
 //  AnalyticsButton.swift
 //  UseCase
 //
-//  ui_action 이벤트의 버튼 식별자(enum). `{screen}_{button}` 규약. 신규 버튼은 여기에 등록.
-//
 
 import Foundation
 

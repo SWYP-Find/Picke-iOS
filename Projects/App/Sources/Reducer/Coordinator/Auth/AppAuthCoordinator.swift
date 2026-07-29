@@ -2,9 +2,6 @@
 //  AppAuthCoordinator.swift
 //  Picke
 //
-//  App 레이어의 인증 조립 코디네이터.
-//  Auth feature 와 Web feature 를 앱 조립 레이어에서 연결한다.
-//
 
 import Foundation
 

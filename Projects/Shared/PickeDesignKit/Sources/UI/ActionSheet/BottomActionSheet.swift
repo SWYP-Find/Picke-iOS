@@ -2,9 +2,6 @@
 //  BottomActionSheet.swift
 //  DesignSystem
 //
-//  아이콘 + 라벨 행을 가진 하단 액션 시트.
-//  댓글 "…" 메뉴(수정/삭제/신고)처럼 이미지가 필요한 메뉴에 사용한다.
-//
 
 import SwiftUI
 

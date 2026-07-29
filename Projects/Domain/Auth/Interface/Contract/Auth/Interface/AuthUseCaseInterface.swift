@@ -2,9 +2,6 @@
 //  AuthUseCaseInterface.swift
 //  DomainInterface
 //
-//  Auth UseCase 인터페이스 + 의존성 등록.
-//  구현(AuthUseCaseImpl)은 UseCase 모듈에 유지하고 DI 로 주입한다.
-//
 
 import Foundation
 import WeaveDI

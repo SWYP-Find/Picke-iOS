@@ -2,9 +2,6 @@
 //  AudioPlayerControlView.swift
 //  DesignSystem
 //
-//  .pen `Group 26` (재생바 컨트롤 3 버튼) 공통 컴포넌트.
-//  채팅방 / 배틀 상세 등 오디오 플레이백이 필요한 화면에서 재사용.
-//
 
 import SwiftUI
 

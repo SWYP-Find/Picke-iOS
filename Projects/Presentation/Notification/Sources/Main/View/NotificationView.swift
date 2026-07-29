@@ -2,8 +2,6 @@
 //  NotificationView.swift
 //  Notification
 //
-//
-//
 
 import SwiftUI
 

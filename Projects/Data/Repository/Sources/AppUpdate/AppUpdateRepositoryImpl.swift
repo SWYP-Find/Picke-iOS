@@ -2,8 +2,6 @@
 //  AppUpdateRepositoryImpl.swift
 //  Repository
 //
-//  App Store(iTunes lookup) 로 최신 버전 조회 후 현재 버전과 비교.
-//
 
 import Foundation
 

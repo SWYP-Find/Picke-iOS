@@ -2,12 +2,6 @@
 //  AlamofireNetworkProvider.swift
 //  Repository
 //
-//  NetworkProviding 의 Alamofire 구현체. AsyncMoya→Alamofire 전환의 실제 백엔드.
-//  호출부(Repository)는 기존 `provider.request(target)` (AsyncMoya 스타일) 그대로 사용한다.
-//
-//  동작 보존: 인증 세션(인터셉터·토큰 갱신·이벤트 모니터)은 `SessionFactory`/`OptimizedSessionManager`
-//  가 조립한 것을 재사용한다. 엔드포인트는 `PickeTargetType.asURLRequest()`(NetworkHeader) 로 매핑한다.
-//
 
 import Foundation
 

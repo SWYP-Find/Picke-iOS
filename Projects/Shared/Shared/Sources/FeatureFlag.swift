@@ -2,9 +2,6 @@
 //  FeatureFlag.swift
 //  Shared
 //
-//  기능 토글 플래그 모음.
-//  투표 기능 안정화 전까지 진입을 일시적으로 막기 위한 스위치.
-//
 
 import Foundation
 

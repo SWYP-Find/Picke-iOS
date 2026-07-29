@@ -2,8 +2,6 @@
 //  AnalyticsScreen.swift
 //  UseCase
 //
-//  screen_view 이벤트의 화면 식별자(enum). 신규 화면은 여기에 등록.
-//
 
 import Foundation
 

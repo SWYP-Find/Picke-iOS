@@ -2,10 +2,6 @@
 //  AdFitBannerView.swift
 //  PickeDesignKit
 //
-//  카카오 AdFit 배너 광고 뷰.
-//  광고 단위 코드는 xcconfig → Info.plist → Bundle 로 주입된다.
-//  (REWARD_AD_UNIT 을 읽는 RewardedAdClient 와 동일한 패턴)
-//
 
 import SwiftUI
 

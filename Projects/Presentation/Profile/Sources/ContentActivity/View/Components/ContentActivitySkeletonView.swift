@@ -2,8 +2,6 @@
 //  ContentActivitySkeletonView.swift
 //  Profile
 //
-//  내 콘텐츠 활동 로딩 스켈레톤 — 공통 SkeletonBlock(light).
-//
 
 import SwiftUI
 

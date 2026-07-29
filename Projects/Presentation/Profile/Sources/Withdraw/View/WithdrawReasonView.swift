@@ -2,9 +2,6 @@
 //  WithdrawReasonView.swift
 //  Profile
 //
-//  회원 탈퇴 UI — picke.pen `탈퇴하기`.
-//  타이틀 + 안내문 + 탈퇴 사유(단일 선택) + 제출하기/픽케로 다시 돌아가기.
-//
 
 import SwiftUI
 

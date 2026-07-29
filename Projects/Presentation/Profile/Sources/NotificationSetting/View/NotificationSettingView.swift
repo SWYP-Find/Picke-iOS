@@ -2,9 +2,6 @@
 //  NotificationSettingView.swift
 //  Profile
 //
-//  알림 설정 UI — picke.pen `알림 설정`.
-//  App Bar + 섹션(기능별/소셜/마케팅) + 토글 행.
-//
 
 import SwiftUI
 

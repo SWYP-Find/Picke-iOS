@@ -2,8 +2,6 @@
 //  CommentReplySkeletonView.swift
 //  Chat
 //
-//  대댓글 화면 로딩 placeholder (부모 댓글 + 답글 목록).
-//
 
 import SwiftUI
 

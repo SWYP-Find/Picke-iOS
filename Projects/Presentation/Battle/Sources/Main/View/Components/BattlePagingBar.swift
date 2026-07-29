@@ -2,10 +2,6 @@
 //  BattlePagingBar.swift
 //  Battle
 //
-//  빠른 배틀 상단 paging 인디케이터 — picke Figma `오늘의 배틀` Progress Bar (node 3637:3392).
-//  배틀 수만큼 풀폭 세그먼트(4px)를 그리고, 현재 페이지까지 채워서(beige50) 표시.
-//  세그먼트 터치 시 해당 배틀로 페이지 이동.
-//
 
 import SwiftUI
 

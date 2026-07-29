@@ -2,10 +2,6 @@
 //  ServerNaiveDateParser.swift
 //  Model
 //
-//  타임존 없이 내려오는 서버 시각(예: "2026-07-12T21:26:26.921763")을 파싱한다.
-//  ISO8601DateFormatter 는 타임존 지정자(Z/오프셋)가 필수라 이런 값은 파싱하지 못하므로,
-//  KST 벽시계 시각으로 해석한다(표시도 기기 로컬 KST 이므로 서버가 준 날짜와 일치).
-//
 
 import Foundation
 

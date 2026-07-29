@@ -2,8 +2,6 @@
 //  RecapScoreBar.swift
 //  Profile
 //
-//  성향 6축 점수 미니 바 — 채워지는 애니메이션.
-//
 
 import SwiftUI
 

@@ -2,8 +2,6 @@
 //  ContentActivity.swift
 //  Entity
 //
-//  `GET /api/v1/me/content-activities` 항목 (내가 단/좋아요한 댓글).
-//
 
 import Foundation
 

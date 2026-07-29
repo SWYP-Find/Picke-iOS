@@ -2,8 +2,6 @@
 //  AppUpdateInfo.swift
 //  Entity
 //
-//  앱 업데이트 정보 — App Store(iTunes lookup) 최신 버전 대비 현재 버전 비교 결과.
-//
 
 import Foundation
 

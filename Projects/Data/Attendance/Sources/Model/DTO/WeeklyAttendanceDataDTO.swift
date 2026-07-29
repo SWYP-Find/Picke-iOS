@@ -2,8 +2,6 @@
 //  WeeklyAttendanceDataDTO.swift
 //  Model
 //
-//  GET /api/v1/attendance/weekly 응답 페이로드.
-//
 
 import Foundation
 

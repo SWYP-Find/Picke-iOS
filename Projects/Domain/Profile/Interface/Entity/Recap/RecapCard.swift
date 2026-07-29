@@ -2,8 +2,6 @@
 //  RecapCard.swift
 //  Entity
 //
-//  철학자 카드 (내 카드 / 궁합 best·worst).
-//
 
 import Foundation
 

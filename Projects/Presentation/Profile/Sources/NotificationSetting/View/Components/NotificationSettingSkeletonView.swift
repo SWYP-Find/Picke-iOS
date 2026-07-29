@@ -2,8 +2,6 @@
 //  NotificationSettingSkeletonView.swift
 //  Profile
 //
-//  알림 설정 로딩 스켈레톤 — 공통 SkeletonBlock(light).
-//
 
 import SwiftUI
 

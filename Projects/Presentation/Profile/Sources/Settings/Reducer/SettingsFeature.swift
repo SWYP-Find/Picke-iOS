@@ -2,11 +2,6 @@
 //  SettingsFeature.swift
 //  Profile
 //
-//  설정 — picke.pen `설정`.
-//  메뉴(알림설정/개인정보 처리방침/서비스 약관/로그아웃/회원 탈퇴) + 로그아웃·탈퇴 확인 팝업.
-//  팝업은 PickeDesignKit 의 CustomAlert(.logout/.withdraw) 사용.
-//  로그아웃/탈퇴 시 AuthUseCase 호출 → Keychain 초기화 → 로그인 화면 복귀.
-//
 
 import Foundation
 

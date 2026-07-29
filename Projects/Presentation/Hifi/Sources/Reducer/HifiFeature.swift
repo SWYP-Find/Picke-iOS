@@ -2,9 +2,6 @@
 //  HifiFeature.swift
 //  Hifi
 //
-//  탐색(Hi-Fi) 탭 루트 기능. .pen `탐색 hifi 이미지` 기준.
-//  GET /api/v1/search/battles (카테고리·정렬 검색)
-//
 
 import Foundation
 import SearchDomainInterface

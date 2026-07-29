@@ -2,10 +2,6 @@
 //  AudioPlayerRepositoryImpl.swift
 //  Repository
 //
-//  AVPlayer 기반 단일 오디오 플레이어 구현체.
-//  AudioPlayerInterface 를 만족하며, 채팅방 / 배틀 상세 등 한 화면당 하나의 음원이
-//  재생되는 환경을 가정한다.
-//
 
 import AVFoundation
 import DomainInterface

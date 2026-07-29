@@ -2,9 +2,6 @@
 //  FloatingErrorView.swift
 //  DesignSystem
 //
-//  .pen `채팅방_오류` 의 오류 메세지 floating 배너.
-//  빨간 배경 + 경고 아이콘 + 메시지. 상단에 떠 있는 형태.
-//
 
 import SwiftUI
 

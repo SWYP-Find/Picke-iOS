@@ -2,8 +2,6 @@
 //  DefaultAttendanceRepositoryImpl.swift
 //  DomainInterface
 //
-//  DI 미등록 시 폴백 — 네트워크를 타지 않고 빈 값을 돌려준다.
-//
 
 import Foundation
 

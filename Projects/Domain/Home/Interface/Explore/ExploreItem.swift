@@ -2,8 +2,6 @@
 //  ExploreItem.swift
 //  Entity
 //
-//  탐색(Hi-Fi) 화면 리스트 아이템 도메인 모델. .pen `탐색 hifi 이미지` 기준.
-//
 
 import Foundation
 

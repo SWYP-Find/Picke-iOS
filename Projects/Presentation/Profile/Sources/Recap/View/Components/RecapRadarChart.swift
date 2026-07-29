@@ -2,9 +2,6 @@
 //  RecapRadarChart.swift
 //  Profile
 //
-//  성향 분석 6축 레이더 차트 — picke.pen `graph` 노드 정합.
-//  세로로 약간 긴 육각형(폭/높이 = 0.846) + 4겹 그리드 + 스포크 + 데이터 폴리곤(중심→값 펼침 애니메이션) + 꼭짓점 점.
-//
 
 import SwiftUI
 

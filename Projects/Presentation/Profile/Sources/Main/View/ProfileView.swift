@@ -2,9 +2,6 @@
 //  ProfileView.swift
 //  Profile
 //
-//  마이페이지 루트 UI — picke.pen `마이페이지_잠금`.
-//  프로필 카드 + 포인트 충전 버튼 + 나의 철학자 유형 + 메뉴 리스트.
-//
 
 import SwiftUI
 

@@ -2,8 +2,6 @@
 //  NotificationItem.swift
 //  Entity
 //
-//  알림 단건 — `GET /api/v1/notifications` items.
-//
 
 import Foundation
 

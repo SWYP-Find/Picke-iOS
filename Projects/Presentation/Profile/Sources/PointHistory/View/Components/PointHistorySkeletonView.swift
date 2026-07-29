@@ -2,8 +2,6 @@
 //  PointHistorySkeletonView.swift
 //  Profile
 //
-//  포인트 내역 로딩 스켈레톤 — 라이트(beige) 배경 shimmer.
-//
 
 import SwiftUI
 

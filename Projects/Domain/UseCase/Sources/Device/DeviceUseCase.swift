@@ -2,8 +2,6 @@
 //  DeviceUseCase.swift
 //  UseCase
 //
-//  FCM 디바이스 토큰 등록/해제 UseCase.
-//
 
 import Foundation
 

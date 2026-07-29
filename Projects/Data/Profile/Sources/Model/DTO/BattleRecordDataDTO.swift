@@ -2,8 +2,6 @@
 //  BattleRecordDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/me/battle-records` 응답 DTO.
-//
 
 import Foundation
 import Model

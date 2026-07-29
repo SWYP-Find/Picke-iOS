@@ -2,9 +2,6 @@
 //  AuthLocalStorage.swift
 //  DomainInterface
 //
-//  Apple OAuth 가 응답으로 내려준 authorizationCode 와 identityToken 을
-//  로컬에 보관해두는 UserDefaults wrapper. Keychain 과 달리 단순 캐시 용도.
-//
 
 import Foundation
 

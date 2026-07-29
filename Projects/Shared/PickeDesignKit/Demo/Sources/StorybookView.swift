@@ -2,8 +2,6 @@
 //  StorybookView.swift
 //  PickeDesignKitDemo
 //
-//  PickeDesignKit 토큰/컴포넌트 카탈로그. 섹션별로 컴포넌트 프리뷰를 추가해 확장한다.
-//
 
 import SwiftUI
 

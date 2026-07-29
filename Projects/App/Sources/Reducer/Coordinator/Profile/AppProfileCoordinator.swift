@@ -2,9 +2,6 @@
 //  AppProfileCoordinator.swift
 //  Picke
 //
-//  App 레이어의 마이페이지 조립 코디네이터.
-//  Profile feature 와 Notification/Web feature 를 앱 조립 레이어에서 연결한다.
-//
 
 import Foundation
 

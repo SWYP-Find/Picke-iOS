@@ -2,8 +2,6 @@
 //  NotificationAPI.swift
 //  API
 //
-//  알림(notifications) 엔드포인트 경로. (domain = "api/v1/notifications")
-//
 
 import Foundation
 

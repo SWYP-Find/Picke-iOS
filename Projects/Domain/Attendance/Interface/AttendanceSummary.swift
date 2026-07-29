@@ -2,8 +2,6 @@
 //  AttendanceSummary.swift
 //  Entity
 //
-//  출석 누적 통계 — GET /attendance/summary 응답.
-//
 
 import Foundation
 

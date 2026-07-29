@@ -2,8 +2,6 @@
 //  AppDelegate+Push.swift
 //  Picke
 //
-//  APNs 푸시 알림 권한/토큰 등록 + 수신 처리.
-//
 
 import LogMacro
 import UIKit

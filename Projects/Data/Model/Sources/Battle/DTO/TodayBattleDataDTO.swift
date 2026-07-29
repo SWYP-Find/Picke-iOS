@@ -2,8 +2,6 @@
 //  TodayBattleDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/battles/today` 응답 DTO. 아이템은 BattleInfoDTO 재사용.
-//
 
 import Foundation
 

@@ -2,8 +2,6 @@
 //  AttendanceUseCase.swift
 //  AttendanceDomain
 //
-//  출석체크 pass-through UseCase — 리포지토리를 그대로 위임한다.
-//
 
 import Foundation
 

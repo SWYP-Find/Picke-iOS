@@ -2,8 +2,6 @@
 //  TodayBattlePage.swift
 //  Entity
 //
-//  `GET /api/v1/battles/today` 응답 도메인 모델. 아이템은 BattleInfo 재사용.
-//
 
 import Foundation
 

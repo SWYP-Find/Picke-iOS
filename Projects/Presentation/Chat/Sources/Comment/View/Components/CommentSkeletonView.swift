@@ -2,9 +2,6 @@
 //  CommentSkeletonView.swift
 //  Chat
 //
-//  댓글(관점) 리스트 로딩 placeholder.
-//  초기 로드 / 정렬·필터 전환 / 등록 후 갱신 시 노출된다.
-//
 
 import SwiftUI
 

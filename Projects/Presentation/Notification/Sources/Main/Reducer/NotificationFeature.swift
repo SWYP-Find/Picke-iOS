@@ -2,10 +2,6 @@
 //  NotificationFeature.swift
 //  Notification
 //
-//  알림받기 — picke.pen `알림받기`.
-//  카테고리 탭(전체/콘텐츠/공지사항/이벤트), GET /api/v1/notifications (page 페이지네이션),
-//  탭 시 읽음 처리 / 모두 읽음.
-//
 
 import Foundation
 

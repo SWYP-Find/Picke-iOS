@@ -2,8 +2,6 @@
 //  AttendanceCheckResult.swift
 //  Entity
 //
-//  오늘의 출석 체크 결과 — POST /attendance/check 응답.
-//
 
 import Foundation
 

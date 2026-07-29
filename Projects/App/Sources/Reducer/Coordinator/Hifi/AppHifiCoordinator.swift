@@ -2,8 +2,6 @@
 //  AppHifiCoordinator.swift
 //  Picke
 //
-//  App 레이어의 Hi-Fi 탭 조립 코디네이터.
-//
 
 import Foundation
 

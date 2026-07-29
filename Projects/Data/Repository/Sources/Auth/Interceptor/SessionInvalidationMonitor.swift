@@ -2,10 +2,6 @@
 //  SessionInvalidationMonitor.swift
 //  Repository
 //
-//  서버가 USER_404(존재하지 않는 사용자)/AUTH_401 을 반환하면 세션을 무효화하고 강제 로그아웃한다.
-//  기존 Moya `SessionInvalidationPlugin` 을 Alamofire `EventMonitor` 로 이식(동작 보존).
-//  기존 .refreshTokenExpired 경로를 재사용해 로그인 화면으로 전환된다.
-//
 
 import Alamofire
 import Dependencies

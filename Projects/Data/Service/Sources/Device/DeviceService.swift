@@ -2,10 +2,6 @@
 //  DeviceService.swift
 //  Service
 //
-//  FCM 디바이스 토큰 등록/해제 — POST/DELETE /api/v1/devices.
-//  - register: JSON 바디 (fcmToken, platform)
-//  - unregister: 쿼리 파라미터 (fcmToken)
-//
 
 import Foundation
 

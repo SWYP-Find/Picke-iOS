@@ -2,8 +2,6 @@
 //  NotificationSettingsRequest.swift
 //  Service
 //
-//  `PATCH /api/v1/me/notification-settings` 요청 body.
-//
 
 import Foundation
 

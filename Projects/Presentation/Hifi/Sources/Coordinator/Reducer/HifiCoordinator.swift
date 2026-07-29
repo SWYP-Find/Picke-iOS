@@ -2,8 +2,6 @@
 //  HifiCoordinator.swift
 //  Hifi
 //
-//  Hi-Fi 탭 코디네이터. 루트는 HifiFeature, 후속 화면이 필요하면 HifiScreen 에 case 추가.
-//
 
 import Foundation
 

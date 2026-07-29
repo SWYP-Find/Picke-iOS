@@ -2,8 +2,6 @@
 //  AttendanceError.swift
 //  Entity
 //
-//  출석체크 도메인 표준 에러.
-//
 
 import Foundation
 

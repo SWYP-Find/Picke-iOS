@@ -2,8 +2,6 @@
 //  BattleRecordPage.swift
 //  Entity
 //
-//  `GET /api/v1/me/battle-records` 응답 (offset 페이지네이션).
-//
 
 import Foundation
 

@@ -2,9 +2,6 @@
 //  NoticeFeature.swift
 //  Profile
 //
-//  공지사항 · 이벤트 — 탭 전환(공지사항/이벤트) + 알림 API(category=NOTICE/EVENT) 목록/상세.
-//  (안드로이드 NoticeEventViewModel 과 동일하게 알림 목록 API 를 카테고리로 재사용한다)
-//
 
 import Foundation
 

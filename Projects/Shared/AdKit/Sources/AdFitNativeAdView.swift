@@ -2,10 +2,6 @@
 //  AdFitNativeAdView.swift
 //  AdKit
 //
-//  카카오 AdFit 네이티브 광고 뷰.
-//  `AdFitNativeAdLoader` 로 광고를 요청하고 네이티브 광고 뷰에 바인딩하며,
-//  광고 단위 코드는 배너와 동일하게 xcconfig → Info.plist → Bundle 로 주입된다.
-//
 
 import OSLog
 import SwiftUI

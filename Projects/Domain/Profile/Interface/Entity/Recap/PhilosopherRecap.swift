@@ -2,8 +2,6 @@
 //  PhilosopherRecap.swift
 //  Entity
 //
-//  `GET /api/v1/me/recap` 응답 — 나의 철학자 유형 리캡.
-//
 
 import Foundation
 

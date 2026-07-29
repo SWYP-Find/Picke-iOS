@@ -2,8 +2,6 @@
 //  AppDelegate+Sentry.swift
 //  Picke
 //
-//  Sentry 크래시/에러 리포팅 + 성능 트레이싱 + 프로파일링 초기화.
-//
 
 import Foundation
 import LogMacro

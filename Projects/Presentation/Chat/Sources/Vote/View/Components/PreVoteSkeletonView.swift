@@ -2,9 +2,6 @@
 //  PreVoteSkeletonView.swift
 //  Chat
 //
-//  PreVoteView 의 로딩 상태 placeholder.
-//  .pen `사전 투표창 - Skeleton Loader` 를 의미 단위(hero / 카피 / 옵션 / CTA) 로 재구성한다.
-//
 
 import SwiftUI
 

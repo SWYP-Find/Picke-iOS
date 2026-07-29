@@ -2,8 +2,6 @@
 //  CurationView.swift
 //  Chat
 //
-//  .pen `큐레이팅 화면` — 흥미 기반 배틀 추천 목록.
-//
 
 import SwiftUI
 

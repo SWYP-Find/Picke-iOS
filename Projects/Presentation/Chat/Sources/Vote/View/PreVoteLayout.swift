@@ -2,8 +2,6 @@
 //  PreVoteLayout.swift
 //  Chat
 //
-//  PreVote 화면 레이아웃 토큰.
-//
 
 import CoreGraphics
 

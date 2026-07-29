@@ -2,9 +2,6 @@
 //  NotificationCoordinator.swift
 //  Notification
 //
-//  알림 모듈 진입점. 루트는 알림받기 목록(NotificationFeature).
-//  상세 화면 연결 시 NotificationScreen 에 case 추가.
-//
 
 import Foundation
 

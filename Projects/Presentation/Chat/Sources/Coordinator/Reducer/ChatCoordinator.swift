@@ -2,9 +2,6 @@
 //  ChatCoordinator.swift
 //  Chat
 //
-//  채팅방 모듈 진입점. battleId 를 받아 PreVote → ChatRoom 흐름을 자체적으로 라우팅한다.
-//  향후 사후 투표 결과 / 공유 등 후속 화면이 필요해지면 ChatScreen enum 에 case 만 추가.
-//
 
 import Foundation
 

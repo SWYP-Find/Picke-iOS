@@ -2,8 +2,6 @@
 //  AppUpdateInterface.swift
 //  DomainInterface
 //
-//  앱 업데이트 체크 Repository 인터페이스.
-//
 
 import Foundation
 

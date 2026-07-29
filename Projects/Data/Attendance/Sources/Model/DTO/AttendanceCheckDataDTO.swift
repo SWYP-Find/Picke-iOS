@@ -2,8 +2,6 @@
 //  AttendanceCheckDataDTO.swift
 //  Model
 //
-//  POST /api/v1/attendance/check 응답 페이로드.
-//
 
 import Foundation
 

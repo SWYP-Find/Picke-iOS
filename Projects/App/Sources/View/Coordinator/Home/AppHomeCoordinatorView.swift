@@ -2,8 +2,6 @@
 //  AppHomeCoordinatorView.swift
 //  Picke
 //
-//  App 레이어의 홈 탭 조립 화면.
-//
 
 import SwiftUI
 

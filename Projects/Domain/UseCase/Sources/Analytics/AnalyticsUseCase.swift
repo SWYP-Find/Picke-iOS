@@ -2,10 +2,6 @@
 //  AnalyticsUseCase.swift
 //  UseCase
 //
-//  Mixpanel 트래킹 UseCase. 이벤트 정의는 AnalyticsEvent.swift / Events/ 참고.
-//  이벤트를 쪼개지 않고 하나의 카테고리 + 속성값으로 구분(무료 플랜 한도 절약).
-//  설계: docs/analytics-mixpanel-design.md
-//
 
 import Foundation
 

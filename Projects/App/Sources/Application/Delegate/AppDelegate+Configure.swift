@@ -2,9 +2,6 @@
 //  AppDelegate+Configure.swift
 //  Picke
 //
-//  앱 기동 시 1회 수행하는 초기화 묶음.
-//  didFinishLaunching 은 `configure()` 하나만 호출하고, 실제 순서/내용은 여기서 관리한다.
-//
 
 import Firebase
 import GoogleMobileAds

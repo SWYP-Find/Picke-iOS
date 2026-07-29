@@ -2,8 +2,6 @@
 //  AppDelegate+Tracking.swift
 //  Picke
 //
-//  ATT(App Tracking Transparency) 권한 요청.
-//
 
 import AppTrackingTransparency
 import LogMacro

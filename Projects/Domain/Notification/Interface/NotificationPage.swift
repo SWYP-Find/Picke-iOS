@@ -2,8 +2,6 @@
 //  NotificationPage.swift
 //  Entity
 //
-//  `GET /api/v1/notifications` 응답 (page 기반 페이지네이션).
-//
 
 import Foundation
 

@@ -2,9 +2,6 @@
 //  PointHistoryFeature.swift
 //  Profile
 //
-//  포인트(크레딧) 내역 — picke.pen `포인트 내역`.
-//  GET /api/v1/me/credits/history (offset 기반 페이지네이션).
-//
 
 import Foundation
 import ProfileDomainInterface

@@ -2,9 +2,6 @@
 //  TermsAgreementView.swift
 //  Auth
 //
-//  .pen `애플 구글_약관 동의` — Apple/Google 신규 가입자 약관 동의 커스텀 바텀시트.
-//  Picke `.customAlert` / Attendance `.attendanceModal` 과 동일한 오버레이 방식.
-//
 
 import SwiftUI
 

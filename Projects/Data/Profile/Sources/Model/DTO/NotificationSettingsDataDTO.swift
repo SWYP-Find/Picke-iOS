@@ -2,8 +2,6 @@
 //  NotificationSettingsDataDTO.swift
 //  Model
 //
-//  `GET/PATCH /api/v1/me/notification-settings` 응답 DTO.
-//
 
 import Foundation
 import Model

@@ -2,9 +2,6 @@
 //  RecapLockedView.swift
 //  Profile
 //
-//  나의 철학자 유형 잠금 화면 — picke.pen `잠긴화면_콘텐츠 소비 5개 미만`.
-//  분석 기록 부족 안내 카드 + 블러 처리된 성향 분석 + 잠금 해제 안내.
-//
 
 import SwiftUI
 

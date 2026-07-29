@@ -2,9 +2,6 @@
 //  BattleRecordView.swift
 //  Profile
 //
-//  내 배틀 기록 UI — picke.pen `내 배틀기록`.
-//  App Bar + 기록 카드(뱃지/제목/요약/날짜) 리스트 + 무한 스크롤.
-//
 
 import SwiftUI
 

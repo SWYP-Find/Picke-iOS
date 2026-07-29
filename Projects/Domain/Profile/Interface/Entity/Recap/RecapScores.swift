@@ -2,8 +2,6 @@
 //  RecapScores.swift
 //  Entity
 //
-//  성향 분석 6축 점수 (0~100).
-//
 
 import Foundation
 

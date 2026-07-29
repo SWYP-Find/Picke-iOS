@@ -2,10 +2,6 @@
 //  SessionFactory.swift
 //  Repository
 //
-//  Alamofire `Session` 조립 전담(Joongna JNNetwork SessionFactory 구조 참고).
-//  config(커넥션 풀·캐시·타임아웃) / 인증 인터셉터 / 이벤트 모니터(로깅·세션 무효화) 를 한 곳에서 묶는다.
-//  동작 보존: 기존 OptimizedSessionManager 의 최적화 설정을 그대로 옮겨왔다.
-//
 
 import Alamofire
 import Foundation

@@ -2,12 +2,6 @@
 //  PickeTargetType.swift
 //  NetworkHeader
 //
-//  라이브러리 비의존 요청 스펙. AsyncMoya `BaseTargetType`(Moya `TargetType` 확장)을 대체해
-//  Moya 없이 Alamofire 로 직접 요청을 만든다. Service 는 이 프로토콜만 conform 하면 되고,
-//  실행 backend(Alamofire)는 NetworkProviding 구현이 담당한다.
-//
-//  호출부(Repository)는 여전히 `provider.request(target)` (AsyncMoya 스타일) 그대로 사용한다.
-//
 
 import Foundation
 

@@ -2,9 +2,6 @@
 //  TermsAgreementFeature.swift
 //  Auth
 //
-//  Apple/Google 신규 가입자 약관 동의 바텀시트 리듀서.
-//  LoginFeature 에서 @Presents 로 보유하고 .termsAgreementSheet 커스텀 오버레이로 표시.
-//
 
 import Foundation
 

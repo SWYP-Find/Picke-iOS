@@ -2,8 +2,6 @@
 //  CTAButtonStyle.swift
 //  DesignSystem
 //
-//  Picke CTA 버튼 디자인 토큰 (variant × size).
-//
 
 import SwiftUI
 

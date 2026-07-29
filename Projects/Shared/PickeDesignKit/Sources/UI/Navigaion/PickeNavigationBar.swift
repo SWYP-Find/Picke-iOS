@@ -2,8 +2,6 @@
 //  PickeNavigationBar.swift
 //  DesignSystem
 //
-//  Picke 공통 네비게이션 바 — 좌측 back / 가운데 옵션 / 우측 ViewBuilder.
-//
 
 import SwiftUI
 

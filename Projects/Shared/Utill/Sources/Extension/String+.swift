@@ -2,8 +2,6 @@
 //  String+Sentence.swift
 //  Utill
 //
-//  문자열을 문장 단위로 분할하는 공통 유틸 (채팅 대사 한 문장씩 노출 등).
-//
 
 import Foundation
 

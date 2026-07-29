@@ -2,9 +2,6 @@
 //  ContentActivityView.swift
 //  Profile
 //
-//  내 콘텐츠 활동 UI — picke.pen `내 콘텐츠활동_댓글/좋아요`.
-//  App Bar + 탭바(내 댓글/좋아요) + 카드 리스트 + 무한 스크롤.
-//
 
 import SwiftUI
 

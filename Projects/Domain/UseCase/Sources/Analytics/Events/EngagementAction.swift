@@ -2,8 +2,6 @@
 //  EngagementAction.swift
 //  UseCase
 //
-//  engagement_action(Tier3) 의 미세 상호작용 종류.
-//
 
 import Foundation
 

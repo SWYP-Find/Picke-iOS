@@ -2,9 +2,6 @@
 //  BattleRecordFeature.swift
 //  Profile
 //
-//  내 배틀 기록 — picke.pen `내 배틀기록`.
-//  GET /api/v1/me/battle-records (offset 기반 페이지네이션).
-//
 
 import Foundation
 import ProfileDomainInterface

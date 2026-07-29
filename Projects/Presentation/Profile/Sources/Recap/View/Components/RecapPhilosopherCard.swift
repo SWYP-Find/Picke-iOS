@@ -2,9 +2,6 @@
 //  RecapPhilosopherCard.swift
 //  Profile
 //
-//  내 철학자 유형 카드 — 상단 액센트 라인 + 유형명 + 아바타 + 설명 + 키워드 뱃지.
-//  (잠금 화면에서도 재사용)
-//
 
 import SwiftUI
 

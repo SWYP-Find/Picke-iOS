@@ -2,9 +2,6 @@
 //  BattleProposalFeature.swift
 //  Profile
 //
-//  배틀 주제 제안(배틀 만들기) — picke.pen `배틀 주제 제안`.
-//  카테고리/주제/양측입장/부가설명 입력 → POST /api/v1/battles/proposals.
-//
 
 import Foundation
 

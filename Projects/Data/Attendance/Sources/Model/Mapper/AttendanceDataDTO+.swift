@@ -2,8 +2,6 @@
 //  AttendanceDataDTO+.swift
 //  Model
 //
-//  출석체크 DTO → 도메인 엔티티 매핑.
-//
 
 import Foundation
 

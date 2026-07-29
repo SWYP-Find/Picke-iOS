@@ -4,8 +4,6 @@
 //
 //  Created by Wonji Suh on 5/15/26.
 //
-//  Pencil .pen `wZ4Yt` (Card/Vote) — Property 1=Default · Property 1=Result 두 상태.
-//
 
 import SwiftUI
 

@@ -2,8 +2,6 @@
 //  Int+DecimalFormat.swift
 //  Utill
 //
-//  숫자 표시용 공통 포맷 (좋아요/조회수 등). Chat / Home / Auth / Hifi 등에서 공용 사용.
-//
 
 import Foundation
 

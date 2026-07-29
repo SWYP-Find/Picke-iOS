@@ -2,8 +2,6 @@
 //  CreditHistoryDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/me/credits/history` 응답 DTO.
-//
 
 import Foundation
 import Model

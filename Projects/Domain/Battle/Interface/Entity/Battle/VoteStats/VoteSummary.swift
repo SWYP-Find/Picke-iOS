@@ -2,8 +2,6 @@
 //  VoteSummary.swift
 //  Entity
 //
-//  댓글 화면 상단 투표 통계 모델.
-//
 
 import Foundation
 

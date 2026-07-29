@@ -2,8 +2,6 @@
 //  BattleRecordsQueryRequest.swift
 //  Service
 //
-//  GET /api/v1/me/battle-records 쿼리 파라미터.
-//
 
 import Foundation
 

@@ -2,11 +2,6 @@
 //  PushTokenStore.swift
 //  Picke
 //
-//  APNs 디바이스 토큰 보관 + 서버 등록/해제 헬퍼. (FCM 미사용)
-//  - current: 마지막으로 발급받은 APNs 토큰 (UserDefaults 캐시).
-//  - register/unregister: POST/DELETE /api/v1/devices (DeviceUseCase 경유).
-//  로그아웃 해제는 Keychain 초기화 전에 호출해야 인증 헤더가 살아있다.
-//
 
 import Foundation
 

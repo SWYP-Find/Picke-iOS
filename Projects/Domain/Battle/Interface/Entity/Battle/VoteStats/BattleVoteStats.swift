@@ -2,9 +2,6 @@
 //  BattleVoteStats.swift
 //  Entity
 //
-//  `GET /api/v1/battles/{battleId}/vote-stats` 응답 도메인 모델.
-//  댓글 화면 상단의 옵션별 비율 막대 / 참여자 수 표시에 사용.
-//
 
 import Foundation
 

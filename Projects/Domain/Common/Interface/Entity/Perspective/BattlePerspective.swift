@@ -2,9 +2,6 @@
 //  BattlePerspective.swift
 //  Entity
 //
-//  `GET /api/v1/battles/{battleId}/perspectives` 응답 도메인 모델.
-//  댓글(=관점) 리스트 + 커서 페이지네이션.
-//
 
 import Foundation
 

@@ -2,8 +2,6 @@
 //  AppUpdateDTO+.swift
 //  Model
 //
-//  AppStoreInfoDTO → AppUpdateInfo 매핑 (버전 비교 포함).
-//
 
 import Foundation
 

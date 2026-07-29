@@ -2,8 +2,6 @@
 //  ContentActivityDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/me/content-activities` 응답 DTO.
-//
 
 import Foundation
 import Model

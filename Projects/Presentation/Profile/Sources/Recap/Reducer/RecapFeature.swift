@@ -2,9 +2,6 @@
 //  RecapFeature.swift
 //  Profile
 //
-//  나의 철학자 유형(리캡) — picke.pen `나의 철학자 유형`.
-//  GET /api/v1/me/recap 로드 + 공유.
-//
 
 import Foundation
 import ProfileDomainInterface

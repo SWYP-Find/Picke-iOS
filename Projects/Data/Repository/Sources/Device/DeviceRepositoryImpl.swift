@@ -2,8 +2,6 @@
 //  DeviceRepositoryImpl.swift
 //  Repository
 //
-//  FCM 디바이스 토큰 등록/해제 — POST/DELETE /api/v1/devices.
-//
 
 import Foundation
 

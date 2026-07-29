@@ -2,8 +2,6 @@
 //  DailyBattle.swift
 //  Battle
 //
-//  오늘의 배틀 화면 모델 — picke.pen `오늘의 배틀`. `BattleInfo` 에서 매핑.
-//
 
 import Foundation
 

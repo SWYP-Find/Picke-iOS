@@ -2,8 +2,6 @@
 //  AttendanceDayDTO.swift
 //  Model
 //
-//  주간 출석 현황의 하루치 항목.
-//
 
 import Foundation
 

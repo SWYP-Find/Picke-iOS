@@ -2,8 +2,6 @@
 //  PickeEmptyStateView.swift
 //  DesignSystem
 //
-//  공통 빈 상태 뷰 — noDataLogo + 안내 문구. (배틀 모듈 emptyState 패턴 공통화)
-//
 
 import SwiftUI
 

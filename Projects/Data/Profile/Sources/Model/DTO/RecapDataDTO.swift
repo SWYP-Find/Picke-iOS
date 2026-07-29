@@ -2,8 +2,6 @@
 //  RecapDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/me/recap` 응답 DTO.
-//
 
 import Foundation
 import Model

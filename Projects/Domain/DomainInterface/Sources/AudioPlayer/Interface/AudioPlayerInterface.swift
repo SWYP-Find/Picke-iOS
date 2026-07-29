@@ -2,8 +2,6 @@
 //  AudioPlayerInterface.swift
 //  DomainInterface
 //
-//  채팅방 / 배틀 상세 등 한 번에 하나의 음원만 재생되는 환경을 위한 단일 플레이어 인터페이스.
-//
 
 import Dependencies
 import Foundation

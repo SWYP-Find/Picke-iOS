@@ -2,10 +2,6 @@
 //  PickeEventMonitor.swift
 //  Repository
 //
-//  요청/응답/에러를 상세 로깅하는 Alamofire EventMonitor.
-//  AsyncMoya 의 `MoyaLoggingPlugin`/`#logNetwork` 로깅을 대체한다(Joongna JNEventMonitor 구조 참고).
-//  로깅은 프로젝트 LogMacro `Log` 에 위임 — 정상은 debug, 에러는 error 레벨.
-//
 
 import Alamofire
 import Foundation

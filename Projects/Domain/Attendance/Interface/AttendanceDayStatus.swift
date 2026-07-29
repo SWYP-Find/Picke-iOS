@@ -2,8 +2,6 @@
 //  AttendanceDayStatus.swift
 //  Entity
 //
-//  주간 출석 현황의 요일별 상태.
-//
 
 import Foundation
 

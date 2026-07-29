@@ -2,8 +2,6 @@
 //  AttendanceDayCell.swift
 //  Home
 //
-//  주간 출석 카드의 요일 1칸. 상태에 따라 원의 표현이 4가지로 갈린다.
-//
 
 import SwiftUI
 

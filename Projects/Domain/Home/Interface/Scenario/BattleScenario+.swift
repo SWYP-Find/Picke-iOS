@@ -2,8 +2,6 @@
 //  BattleScenario+.swift
 //  Entity
 //
-//  시나리오 타임라인 계산.
-//
 
 import Foundation
 

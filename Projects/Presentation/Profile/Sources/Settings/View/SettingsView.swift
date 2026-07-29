@@ -2,9 +2,6 @@
 //  SettingsView.swift
 //  Profile
 //
-//  설정 UI — picke.pen `설정`.
-//  App Bar(백/타이틀) + 메뉴 리스트 + 로그아웃/탈퇴 확인 팝업.
-//
 
 import SwiftUI
 

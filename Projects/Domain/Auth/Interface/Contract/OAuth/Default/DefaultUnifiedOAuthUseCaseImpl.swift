@@ -2,8 +2,6 @@
 //  DefaultUnifiedOAuthUseCaseImpl.swift
 //  DomainInterface
 //
-//  통합 OAuth UseCase 의 기본 구현체 (테스트 / 프리뷰용 no-op)
-//
 
 @preconcurrency import AuthenticationServices
 import Entity

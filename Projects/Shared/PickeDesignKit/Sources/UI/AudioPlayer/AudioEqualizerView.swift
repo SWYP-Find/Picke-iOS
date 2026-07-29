@@ -2,9 +2,6 @@
 //  AudioEqualizerView.swift
 //  DesignSystem
 //
-//  재생 중임을 나타내는 이퀄라이저 바 애니메이션.
-//  채팅방 등 오디오 재생 화면에서 isPlaying 상태에 반응해 막대가 위아래로 출렁인다.
-//
 
 import SwiftUI
 

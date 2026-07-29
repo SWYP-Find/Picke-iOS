@@ -2,8 +2,6 @@
 //  BattleProposalDraft.swift
 //  Entity
 //
-//  배틀 주제 제안 입력 묶음 (POST /api/v1/battles/proposals 요청 값).
-//
 
 import Foundation
 

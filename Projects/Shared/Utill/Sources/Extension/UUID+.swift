@@ -2,8 +2,6 @@
 //  UUID+Deterministic.swift
 //  Utill
 //
-//  정수로부터 항상 동일한 UUID 를 생성하는 공통 유틸 (ForEach 안정 id 등).
-//
 
 import Foundation
 

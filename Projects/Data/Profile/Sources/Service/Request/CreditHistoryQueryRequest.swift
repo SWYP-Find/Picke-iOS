@@ -2,8 +2,6 @@
 //  CreditHistoryQueryRequest.swift
 //  Service
 //
-//  GET /api/v1/me/credits/history 쿼리 파라미터.
-//
 
 import Foundation
 

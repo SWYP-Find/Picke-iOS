@@ -2,9 +2,6 @@
 //  RecommendedBattle.swift
 //  Entity
 //
-//  `GET /api/v1/battles/{battleId}/recommendations/interesting` 응답 도메인 모델.
-//  특정 배틀 기준 흥미로운 배틀 추천 목록 + 커서 페이지네이션.
-//
 
 import Foundation
 import CommonDomainInterface

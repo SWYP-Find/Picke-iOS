@@ -2,9 +2,6 @@
 //  RecapMatchCard.swift
 //  Profile
 //
-//  궁합 유형 카드 (BEST / WORST) — 아바타 + 유형명 + 설명.
-//  (잠금 화면에서도 재사용)
-//
 
 import SwiftUI
 

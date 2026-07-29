@@ -2,8 +2,6 @@
 //  PerspectivesQueryRequest.swift
 //  Service
 //
-//  GET /api/v1/battles/{battleId}/perspectives 쿼리 파라미터.
-//
 
 import Foundation
 

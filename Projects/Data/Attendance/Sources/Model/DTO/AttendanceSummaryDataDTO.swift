@@ -2,8 +2,6 @@
 //  AttendanceSummaryDataDTO.swift
 //  Model
 //
-//  GET /api/v1/attendance/summary 응답 페이로드.
-//
 
 import Foundation
 

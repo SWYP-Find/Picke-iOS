@@ -2,9 +2,6 @@
 //  NetworkProviding.swift
 //  Repository
 //
-//  네트워크 요청 실행 추상화. Repository 는 구체 provider 대신 이 프로토콜에 의존한다.
-//  겉(호출부)은 AsyncMoya 스타일(`provider.request(target)`)을 유지하고, 내부 백엔드만 Alamofire 로 바꾼다.
-//
 
 import Foundation
 

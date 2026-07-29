@@ -2,8 +2,6 @@
 //  RecapSkeletonView.swift
 //  Profile
 //
-//  나의 철학자 유형(리캡) 로딩 스켈레톤 — 공통 SkeletonBlock(light).
-//
 
 import SwiftUI
 

@@ -2,8 +2,6 @@
 //  CTAButtonStyleModifier.swift
 //  DesignSystem
 //
-//  `Button` 위에 얹는 ButtonStyle + `View.ctaButtonStyle(...)` 단축 모디파이어.
-//
 
 import SwiftUI
 

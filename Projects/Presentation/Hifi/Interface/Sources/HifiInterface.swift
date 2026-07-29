@@ -2,9 +2,6 @@
 //  HifiInterface.swift
 //  HifiInterface
 //
-//  Hifi(탐색) 피쳐의 public 계약(delegate).
-//  구현(HifiCoordinator/HifiFeature/View)은 Hifi 타깃에 유지한다.
-//
 
 import Foundation
 

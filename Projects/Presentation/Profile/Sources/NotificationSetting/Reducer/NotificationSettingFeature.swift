@@ -2,9 +2,6 @@
 //  NotificationSettingFeature.swift
 //  Profile
 //
-//  알림 설정 — picke.pen `알림 설정`.
-//  GET /me/notification-settings 로드 + 토글 변경 시 PATCH (낙관적 갱신).
-//
 
 import Foundation
 import ProfileDomainInterface

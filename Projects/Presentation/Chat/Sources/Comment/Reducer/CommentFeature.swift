@@ -2,7 +2,6 @@
 //  CommentFeature.swift
 //  Chat
 //
-//
 
 import Foundation
 

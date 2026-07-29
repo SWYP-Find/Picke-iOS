@@ -2,8 +2,6 @@
 //  DefaultAppUpdateRepositoryImpl.swift
 //  DomainInterface
 //
-//  AppUpdate Repository 미해결 시 fallback (업데이트 없음).
-//
 
 import Foundation
 

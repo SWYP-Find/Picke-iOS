@@ -2,8 +2,6 @@
 //  ProfileSkeletonView.swift
 //  Profile
 //
-//  마이페이지 로딩 스켈레톤 — 라이트(beige) 배경에 맞춘 옅은 shimmer.
-//
 
 import SwiftUI
 

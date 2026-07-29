@@ -2,8 +2,6 @@
 //  BattleDetail.swift
 //  Entity
 //
-//  `GET /api/v1/battles/{battleId}` 응답 도메인 모델.
-//
 
 import Foundation
 import CommonDomainInterface

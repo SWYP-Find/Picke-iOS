@@ -4,8 +4,6 @@
 //
 //  Created by Wonji Suh on 5/15/26.
 //
-//  Pencil .pen `Card/Quiz` — 선택 전/후 (O 정답 · X 오답) 상태 미러.
-//
 
 import SwiftUI
 

@@ -2,8 +2,6 @@
 //  DeviceInterface.swift
 //  DomainInterface
 //
-//  FCM 디바이스 토큰 등록/해제 Repository 인터페이스.
-//
 
 import Entity
 import Foundation

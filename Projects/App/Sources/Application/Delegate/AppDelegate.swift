@@ -2,9 +2,6 @@
 //  AppDelegate.swift
 //  Picke
 //
-//  앱 진입점. 실제 초기화는 AppDelegate+Configure 의 `configure()` 가 담당하고,
-//  세부 설정은 관심사별 확장 파일(Sentry / Tracking / Push)로 나눠져 있다.
-//
 
 import UIKit
 

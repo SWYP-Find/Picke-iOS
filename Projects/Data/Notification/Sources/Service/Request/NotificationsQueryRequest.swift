@@ -2,8 +2,6 @@
 //  NotificationsQueryRequest.swift
 //  Service
 //
-//  GET /api/v1/notifications 쿼리 파라미터.
-//
 
 import Foundation
 

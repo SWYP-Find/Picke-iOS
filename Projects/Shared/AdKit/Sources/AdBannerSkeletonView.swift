@@ -2,9 +2,6 @@
 //  AdBannerSkeletonView.swift
 //  AdKit
 //
-//  배너 광고 로딩 동안 표시하는 shimmer 자리표시자.
-//  광고 수신 콜백이 오기 전까지의 빈 공간이 튀어 보이지 않도록 배너와 같은 크기로 자리를 잡는다.
-//
 
 import SwiftUI
 

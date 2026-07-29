@@ -2,8 +2,6 @@
 //  BattleScenario.swift
 //  Entity
 //
-//  `GET /api/v1/battles/{battleId}/scenario` 응답 도메인 모델.
-//
 
 import Foundation
 

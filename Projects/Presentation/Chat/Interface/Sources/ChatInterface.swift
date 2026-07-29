@@ -2,9 +2,6 @@
 //  ChatInterface.swift
 //  ChatInterface
 //
-//  Chat 피쳐의 public 계약(route/input model + delegate).
-//  구현(ChatCoordinator/ChatRoomFeature/View)은 Chat 타깃에 유지한다.
-//
 
 import Foundation
 

@@ -2,8 +2,6 @@
 //  NotificationDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/notifications` 및 단건 상세 응답 DTO.
-//
 
 import Foundation
 

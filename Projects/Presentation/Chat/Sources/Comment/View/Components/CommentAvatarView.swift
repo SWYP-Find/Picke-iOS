@@ -2,8 +2,6 @@
 //  CommentAvatarView.swift
 //  Chat
 //
-//  댓글 프로필 이미지 공통 뷰.
-//
 
 import SwiftUI
 

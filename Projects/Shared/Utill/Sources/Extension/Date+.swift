@@ -2,8 +2,6 @@
 //  Date+.swift
 //  Utill
 //
-//  날짜 포맷 유틸.
-//
 
 import Foundation
 

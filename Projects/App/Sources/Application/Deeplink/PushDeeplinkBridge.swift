@@ -2,9 +2,6 @@
 //  PushDeeplinkBridge.swift
 //  Picke
 //
-//  AppDelegate(푸시 탭) → TCA(AppReducer) 사이 딥링크 전달 브리지. (TimeSpot-iOS 패턴)
-//  파싱한 딥링크를 NotificationCenter 로 브로드캐스트하고, 콜드 스타트 대비 UserDefaults 에도 보관.
-//
 
 import Foundation
 

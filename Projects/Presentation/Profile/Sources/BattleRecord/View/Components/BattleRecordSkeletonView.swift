@@ -2,8 +2,6 @@
 //  BattleRecordSkeletonView.swift
 //  Profile
 //
-//  내 배틀 기록 로딩 스켈레톤 — 공통 SkeletonBlock(light) 사용.
-//
 
 import SwiftUI
 

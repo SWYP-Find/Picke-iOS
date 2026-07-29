@@ -2,8 +2,6 @@
 //  BattleCoordinator.swift
 //  Battle
 //
-//  빠른 배틀 탭 코디네이터. 루트는 BattleFeature, 배틀 진입 시 ChatCoordinator 로 push.
-//
 
 import Foundation
 

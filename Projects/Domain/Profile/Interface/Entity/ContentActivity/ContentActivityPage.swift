@@ -2,8 +2,6 @@
 //  ContentActivityPage.swift
 //  Entity
 //
-//  `GET /api/v1/me/content-activities` 응답 (offset 페이지네이션).
-//
 
 import Foundation
 

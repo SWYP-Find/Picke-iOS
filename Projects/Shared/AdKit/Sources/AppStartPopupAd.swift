@@ -2,13 +2,6 @@
 //  AppStartPopupAd.swift
 //  AdKit
 //
-//  카카오 AdFit 앱 전환(전면 팝업) 광고.
-//
-//  SwiftUI `PopUpTransitionModifier` 는 isPresented 바인딩으로 표시를 강제하는데,
-//  광고가 로드되지 않으면 빈 오버레이가 화면을 덮고 닫기 콜백도 없어 터치가 잠긴다.
-//  그래서 명령형 `SuperboardPopUp` 을 쓴다. present() 는 광고 로드에 성공했을 때만
-//  SDK 가 모달을 띄우고, 닫기/그만보기/실패는 delegate 로 알려주며 SDK 가 스스로 dismiss 한다.
-//
 
 import UIKit
 import OSLog

@@ -2,8 +2,6 @@
 //  MyPage.swift
 //  Entity
 //
-//  `GET /api/v1/me/mypage` 응답 도메인 모델 (프로필 / 철학자 / 티어).
-//
 
 import Foundation
 

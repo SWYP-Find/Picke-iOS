@@ -2,8 +2,6 @@
 //  DefaultAuthUseCaseImpl.swift
 //  DomainInterface
 //
-//  Auth UseCase 의 기본 구현체 (테스트 / 프리뷰용 no-op)
-//
 
 import Foundation
 

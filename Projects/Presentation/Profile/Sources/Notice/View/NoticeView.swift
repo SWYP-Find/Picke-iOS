@@ -2,9 +2,6 @@
 //  NoticeView.swift
 //  Profile
 //
-//  공지사항 · 이벤트 UI — App Bar + 탭바(공지사항/이벤트) + 목록/상세.
-//  (안드로이드 NoticeEventScreen 카드/상세 레이아웃 파리티)
-//
 
 import SwiftUI
 

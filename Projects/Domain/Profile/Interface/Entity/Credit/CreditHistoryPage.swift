@@ -2,8 +2,6 @@
 //  CreditHistoryPage.swift
 //  Entity
 //
-//  `GET /api/v1/me/credits/history` 응답 (offset 페이지네이션).
-//
 
 import Foundation
 

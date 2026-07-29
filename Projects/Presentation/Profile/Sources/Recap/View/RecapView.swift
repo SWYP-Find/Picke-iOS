@@ -2,9 +2,6 @@
 //  RecapView.swift
 //  Profile
 //
-//  나의 철학자 유형(리캡) UI — picke.pen `나의 철학자 유형`.
-//  내 카드 + 성향 분석(레이더/바) + 내 취향 리포트 + 궁합 유형 + 공유하기.
-//
 
 import SwiftUI
 

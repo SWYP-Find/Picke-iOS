@@ -2,9 +2,6 @@
 //  HomeInterface.swift
 //  HomeInterface
 //
-//  Home 피쳐의 public 계약(delegate).
-//  구현(HomeCoordinator/HomeFeature/View)은 Home 타깃에 유지한다.
-//
 
 import Foundation
 

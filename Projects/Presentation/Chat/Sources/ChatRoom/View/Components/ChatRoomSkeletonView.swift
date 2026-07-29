@@ -2,9 +2,6 @@
 //  ChatRoomSkeletonView.swift
 //  Home
 //
-//  picke.pen `채팅방 - Skeleton Loader` (2CRRg) 매핑.
-//  메시지 리스트 + 재생바 placeholder 를 shimmer 애니메이션과 함께 렌더링한다.
-//
 
 import SwiftUI
 

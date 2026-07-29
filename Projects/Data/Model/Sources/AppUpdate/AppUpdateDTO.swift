@@ -2,8 +2,6 @@
 //  AppUpdateDTO.swift
 //  Model
 //
-//  App Store(iTunes) lookup 응답 DTO.
-//
 
 import Foundation
 

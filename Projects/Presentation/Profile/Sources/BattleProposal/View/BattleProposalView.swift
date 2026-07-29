@@ -2,9 +2,6 @@
 //  BattleProposalView.swift
 //  Profile
 //
-//  배틀 주제 제안(배틀 만들기) UI — picke.pen `배틀 주제 제안`.
-//  카테고리 칩 + 주제 + 양측 입장(A/B) + 부가 설명 + 제안하기(-30P).
-//
 
 import SwiftUI
 

@@ -2,9 +2,6 @@
 //  AuthInterface.swift
 //  AuthInterface
 //
-//  Auth 피쳐의 public 계약(route/input model + delegate).
-//  구현(LoginFeature/OnBoardingFeature/AuthCoordinator/View)은 Auth 타깃에 유지한다.
-//
 
 import Foundation
 

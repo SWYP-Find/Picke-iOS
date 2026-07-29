@@ -2,8 +2,6 @@
 //  AppBattleCoordinatorView.swift
 //  Picke
 //
-//  App 레이어의 빠른 배틀 탭 조립 화면.
-//
 
 import SwiftUI
 

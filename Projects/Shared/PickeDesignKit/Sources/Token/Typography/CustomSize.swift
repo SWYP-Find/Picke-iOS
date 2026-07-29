@@ -2,8 +2,6 @@
 //  CustomSize.swift
 //  DesignSystem
 //
-//  Picke Figma typography tokens (name / size / weight).
-//
 
 import Foundation
 

@@ -2,9 +2,6 @@
 //  CurationFeature.swift
 //  Chat
 //
-//  .pen `큐레이팅 화면` — 특정 배틀 기준 흥미로운 배틀 추천 목록.
-//  GET /api/v1/battles/{battleId}/recommendations/interesting
-//
 
 import Foundation
 

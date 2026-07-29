@@ -2,9 +2,6 @@
 //  WebInterface.swift
 //  WebInterface
 //
-//  Web 피쳐의 public 계약(route/input model + delegate). 구현(WebReducer/WebView)은 Web 타깃에 유지한다.
-//  다른 피쳐(Auth/Profile)는 이 Interface 에만 의존하는 것을 목표로 한다. (문서 3~4단계)
-//
 
 import Foundation
 

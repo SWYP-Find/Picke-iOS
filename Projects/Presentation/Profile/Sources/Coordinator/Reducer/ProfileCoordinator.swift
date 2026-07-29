@@ -2,8 +2,6 @@
 //  ProfileCoordinator.swift
 //  Profile
 //
-//  마이 탭 코디네이터. 루트는 ProfileFeature, 편집/세부 화면은 추후 push.
-//
 
 import Foundation
 

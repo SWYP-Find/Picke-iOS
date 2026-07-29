@@ -2,8 +2,6 @@
 //  DeviceRegisterRequest.swift
 //  Service
 //
-//  POST /api/v1/devices 요청 바디 (camelCase 도메인).
-//
 
 import Foundation
 

@@ -2,8 +2,6 @@
 //  PlaybackAction.swift
 //  UseCase
 //
-//  playback_action(Tier3) 의 조작 종류.
-//
 
 import Foundation
 

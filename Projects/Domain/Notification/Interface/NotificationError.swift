@@ -2,8 +2,6 @@
 //  NotificationError.swift
 //  Entity
 //
-//  알림 도메인 표준 에러.
-//
 
 import Foundation
 

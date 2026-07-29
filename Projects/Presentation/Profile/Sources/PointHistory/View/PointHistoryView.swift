@@ -2,9 +2,6 @@
 //  PointHistoryView.swift
 //  Profile
 //
-//  포인트(크레딧) 내역 UI — picke.pen `포인트 내역`.
-//  App Bar(백/타이틀) + 내역 리스트(좌: 유형·날짜 / 우: 금액·적립·사용).
-//
 
 import SwiftUI
 

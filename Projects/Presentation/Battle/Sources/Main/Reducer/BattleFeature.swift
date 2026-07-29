@@ -2,10 +2,6 @@
 //  BattleFeature.swift
 //  Battle
 //
-//  빠른 배틀 탭 루트 기능 — picke.pen `오늘의 배틀`.
-//  배경 이미지 + 제목/소요시간 + VS 선택지 + "배틀 입장하기".
-//  GET /api/v1/battles (예정) — 현재는 목 데이터.
-//
 
 import Foundation
 

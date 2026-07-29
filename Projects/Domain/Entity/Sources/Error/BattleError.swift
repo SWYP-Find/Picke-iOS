@@ -2,8 +2,6 @@
 //  BattleError.swift
 //  Entity
 //
-//  배틀 도메인 (배틀 상세 / 시나리오 / 사전·최종 투표 / 투표 통계) 의 표준 에러.
-//
 
 import Foundation
 

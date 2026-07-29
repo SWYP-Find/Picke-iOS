@@ -2,9 +2,6 @@
 //  ContentActivityFeature.swift
 //  Profile
 //
-//  내 콘텐츠 활동 — picke.pen `내 콘텐츠활동_댓글/좋아요`.
-//  내 댓글 / 좋아요 탭, GET /api/v1/me/content-activities (offset 페이지네이션).
-//
 
 import Foundation
 import ProfileDomainInterface

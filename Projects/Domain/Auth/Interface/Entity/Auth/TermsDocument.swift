@@ -2,8 +2,6 @@
 //  TermsDocument.swift
 //  Entity
 //
-//  약관 동의 항목. .pen `애플 구글_약관 동의` 기준 (필수 2종).
-//
 
 import Foundation
 

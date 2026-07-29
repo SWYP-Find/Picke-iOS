@@ -2,8 +2,6 @@
 //  MyPageDataDTO.swift
 //  Model
 //
-//  `GET /api/v1/me/mypage` 응답 DTO.
-//
 
 import Foundation
 import Model

@@ -2,8 +2,6 @@
 //  ChatMessage.swift
 //  Entity
 //
-//  채팅방(`/Users/suhwonji/Desktop/와이어프레임/채팅방.pdf` + .pen `k3lIx`) 메시지 모델.
-//
 
 import Foundation
 
