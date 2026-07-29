@@ -13,6 +13,13 @@ app:
     - CONFIG_REPO: SWYP-Find/iOS-Config
     - TUIST_VERSION: 4.154.0
     - REPO: SWYP-Find/Picke-iOS
+    # Sentry — SENTRY_AUTH_TOKEN 은 Bitrise Secrets 에 등록한다(코드에 두지 않음).
+    # 토큰이 없으면 Fastfile 의 upload_build_to_sentry 가 스스로 스킵하므로 배포는 계속된다.
+    - SENTRY_ORG: picke
+    - SENTRY_PROJECT: picke-ios
+    - SENTRY_CLI_VERSION: 2.57.0
+    # Bitrise Release Management — BITRISE_RELEASE_MGMT_TOKEN 은 Secrets 에 등록한다.
+    - RELEASE_MGMT_APP_UUID: 3863eca9-01cc-48c7-b008-d7d842adda30
 
 pipelines:
   # PR → 유닛 테스트 + 커버리지/실패 PR 코멘트
@@ -86,9 +93,9 @@ workflows:
       - restore-cache@3:
           inputs:
             - key: |-
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
-                deps-{{ .OS }}-{{ .Arch }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}
       - script@1:
           title: Tuist 설치 + 프로젝트 생성
           inputs:
@@ -99,18 +106,45 @@ workflows:
                 export PATH="$HOME/.local/bin:$PATH"
                 eval "$(mise activate bash)"
                 mise install "tuist@${TUIST_VERSION}"
-                mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install
+
+                # SwiftPM 은 바이너리 아티팩트 다운로드에 타임아웃이 없어, 하나만 멈춰도
+                # 빌드 타임아웃까지 그대로 매달린다. 스텝 레벨에서 제한을 걸고 재시도한다.
+                # (부분 다운로드는 ~/Library/Caches/org.swift.swiftpm 에 남아 이어받는다)
+                run_with_timeout() {
+                  local secs="$1"; shift
+                  "$@" & local pid=$! waited=0
+                  while kill -0 "$pid" 2>/dev/null; do
+                    sleep 15; waited=$((waited + 15))
+                    if [ "$waited" -ge "$secs" ]; then
+                      echo "⏱️ ${secs}s 초과 — 종료 후 재시도"
+                      kill -9 "$pid" 2>/dev/null || true
+                      wait "$pid" 2>/dev/null || true
+                      return 124
+                    fi
+                  done
+                  wait "$pid"
+                }
+
+                for attempt in 1 2 3; do
+                  if run_with_timeout 1200 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install; then
+                    break
+                  fi
+                  if [ "$attempt" -eq 3 ]; then
+                    echo "❌ tuist install 3회 실패"
+                    exit 1
+                  fi
+                  echo "🔁 tuist install 재시도 ($((attempt + 1))/3)"
+                done
                 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift generate
       - save-cache@1:
           inputs:
-            - key: deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+            - key: deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
             - paths: |-
                 $HOME/.local/bin
                 $HOME/.local/share/mise
                 $HOME/.cache/mise
                 $HOME/.cache/tuist
                 $HOME/Library/Caches/org.swift.swiftpm
-                $HOME/Library/Developer/Xcode/DerivedData/**/SourcePackages
       - script@1:
           title: Tuist test
           inputs:
@@ -198,9 +232,9 @@ workflows:
       - restore-cache@3:
           inputs:
             - key: |-
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
-                deps-{{ .OS }}-{{ .Arch }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}
       - script@1:
           title: Tuist 설치 + 프로젝트 생성
           inputs:
@@ -211,19 +245,55 @@ workflows:
                 export PATH="$HOME/.local/bin:$PATH"
                 eval "$(mise activate bash)"
                 mise install "tuist@${TUIST_VERSION}"
-                mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install
+
+                # SwiftPM 은 바이너리 아티팩트 다운로드에 타임아웃이 없어, 하나만 멈춰도
+                # 빌드 타임아웃까지 그대로 매달린다. 스텝 레벨에서 제한을 걸고 재시도한다.
+                # (부분 다운로드는 ~/Library/Caches/org.swift.swiftpm 에 남아 이어받는다)
+                run_with_timeout() {
+                  local secs="$1"; shift
+                  "$@" & local pid=$! waited=0
+                  while kill -0 "$pid" 2>/dev/null; do
+                    sleep 15; waited=$((waited + 15))
+                    if [ "$waited" -ge "$secs" ]; then
+                      echo "⏱️ ${secs}s 초과 — 종료 후 재시도"
+                      kill -9 "$pid" 2>/dev/null || true
+                      wait "$pid" 2>/dev/null || true
+                      return 124
+                    fi
+                  done
+                  wait "$pid"
+                }
+
+                for attempt in 1 2 3; do
+                  if run_with_timeout 1200 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install; then
+                    break
+                  fi
+                  if [ "$attempt" -eq 3 ]; then
+                    echo "❌ tuist install 3회 실패"
+                    exit 1
+                  fi
+                  echo "🔁 tuist install 재시도 ($((attempt + 1))/3)"
+                done
                 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift generate
                 ls -d *.xcworkspace
+      - script@1:
+          title: Sentry CLI 설치 (deps 캐시에 포함)
+          inputs:
+            - content: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                # $HOME/.local/bin 은 아래 save-cache 에 포함되므로 배포 워크플로가 캐시로 재사용한다.
+                curl -sL https://sentry.io/get-cli/ | INSTALL_DIR="$HOME/.local/bin" bash
+                "$HOME/.local/bin/sentry-cli" --version
       - save-cache@1:
           inputs:
-            - key: deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+            - key: deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
             - paths: |-
                 $HOME/.local/bin
                 $HOME/.local/share/mise
                 $HOME/.cache/mise
                 $HOME/.cache/tuist
                 $HOME/Library/Caches/org.swift.swiftpm
-                $HOME/Library/Developer/Xcode/DerivedData/**/SourcePackages
 
   # ── 배포 (Stage → TestFlight): fastlane QA ──────────────────────────
   fastlane-qa:
@@ -247,9 +317,9 @@ workflows:
       - restore-cache@3:
           inputs:
             - key: |-
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
-                deps-{{ .OS }}-{{ .Arch }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}
       - script@1:
           title: Tuist 설치 + 프로젝트 생성
           inputs:
@@ -260,7 +330,35 @@ workflows:
                 export PATH="$HOME/.local/bin:$PATH"
                 eval "$(mise activate bash)"
                 mise install "tuist@${TUIST_VERSION}"
-                mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install
+
+                # SwiftPM 은 바이너리 아티팩트 다운로드에 타임아웃이 없어, 하나만 멈춰도
+                # 빌드 타임아웃까지 그대로 매달린다. 스텝 레벨에서 제한을 걸고 재시도한다.
+                # (부분 다운로드는 ~/Library/Caches/org.swift.swiftpm 에 남아 이어받는다)
+                run_with_timeout() {
+                  local secs="$1"; shift
+                  "$@" & local pid=$! waited=0
+                  while kill -0 "$pid" 2>/dev/null; do
+                    sleep 15; waited=$((waited + 15))
+                    if [ "$waited" -ge "$secs" ]; then
+                      echo "⏱️ ${secs}s 초과 — 종료 후 재시도"
+                      kill -9 "$pid" 2>/dev/null || true
+                      wait "$pid" 2>/dev/null || true
+                      return 124
+                    fi
+                  done
+                  wait "$pid"
+                }
+
+                for attempt in 1 2 3; do
+                  if run_with_timeout 1200 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install; then
+                    break
+                  fi
+                  if [ "$attempt" -eq 3 ]; then
+                    echo "❌ tuist install 3회 실패"
+                    exit 1
+                  fi
+                  echo "🔁 tuist install 재시도 ($((attempt + 1))/3)"
+                done
                 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift generate
                 ls -d *.xcworkspace
       - restore-cache@3:
@@ -286,6 +384,18 @@ workflows:
             - key: gems-{{ .OS }}-{{ .Arch }}-{{ checksum "Gemfile.lock" }}
             - paths: vendor/bundle
       - script@1:
+          title: Sentry CLI 설치
+          inputs:
+            - content: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+                  echo "ℹ️ SENTRY_AUTH_TOKEN 미설정 — Sentry 업로드 스킵"
+                  exit 0
+                fi
+                curl -sL https://sentry.io/get-cli/ | INSTALL_DIR="$HOME/.local/bin" bash
+                "$HOME/.local/bin/sentry-cli" --version
+      - script@1:
           title: Fastlane QA — Stage → TestFlight
           inputs:
             - content: |
@@ -298,6 +408,53 @@ workflows:
                 # 빌드된 IPA를 Bitrise 배포 디렉토리로 복사 → Installable artifacts 노출
                 mkdir -p "$BITRISE_DEPLOY_DIR"
                 cp -f fastlane/output/*.ipa "$BITRISE_DEPLOY_DIR/" 2>/dev/null || true
+      - script@1:
+          title: Bitrise Release Management 업로드 (Installable Artifact)
+          inputs:
+            - content: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                # 토큰이 없으면 배포를 막지 않고 넘어간다.
+                if [ -z "${BITRISE_RELEASE_MGMT_TOKEN:-}" ]; then
+                  echo "ℹ️ BITRISE_RELEASE_MGMT_TOKEN 미설정 — Release Management 업로드 스킵"
+                  exit 0
+                fi
+
+                IPA=$(ls -1 "$BITRISE_DEPLOY_DIR"/*.ipa 2>/dev/null | head -1 || true)
+                if [ -z "$IPA" ]; then
+                  echo "⚠️ IPA 없음 — Release Management 업로드 스킵"
+                  exit 0
+                fi
+
+                FILE_NAME=$(basename "$IPA")
+                FILE_SIZE=$(stat -f%z "$IPA")
+                ARTIFACT_UUID=$(uuidgen | tr "[:upper:]" "[:lower:]")
+                BASE="https://api.bitrise.io/release-management/v1/connected-apps/${RELEASE_MGMT_APP_UUID}/installable-artifacts/${ARTIFACT_UUID}"
+                echo "📦 ${FILE_NAME} (${FILE_SIZE} bytes) → artifact ${ARTIFACT_UUID}"
+
+                # 1) 업로드 URL 발급
+                UPLOAD_URL=$(curl -fsS -H "Authorization: ${BITRISE_RELEASE_MGMT_TOKEN}" \
+                  "${BASE}/upload-url?file_name=${FILE_NAME}&file_size_bytes=${FILE_SIZE}" \
+                  | python3 -c "import sys,json; print(json.load(sys.stdin)['upload_url'])")
+
+                # 2) 파일 업로드
+                curl -fsS -X PUT \
+                  -H "Content-Type: application/octet-stream" \
+                  -H "X-Goog-Content-Length-Range: 0,${FILE_SIZE}" \
+                  --upload-file "$IPA" "$UPLOAD_URL"
+
+                # 3) 처리 상태 폴링 (최대 5분)
+                for i in $(seq 1 30); do
+                  STATUS=$(curl -fsS -H "Authorization: ${BITRISE_RELEASE_MGMT_TOKEN}" "${BASE}/status" \
+                    | python3 -c "import sys,json; print(json.load(sys.stdin).get('artifact_status',''))" || echo "")
+                  echo "  [$i/30] status=${STATUS:-unknown}"
+                  case "$STATUS" in
+                    processed) echo "✅ Release Management 업로드 완료"; exit 0 ;;
+                    failed)    echo "❌ 처리 실패"; exit 1 ;;
+                  esac
+                  sleep 10
+                done
+                echo "⚠️ 처리 상태 확인 시간 초과 — 업로드 자체는 완료됨"
       - deploy-to-bitrise-io@2: {}
 
   # ── 빌드 (Prod): 릴리스 버전 + 자산 주입 + Tuist generate + 캐시 ───────
@@ -321,9 +478,9 @@ workflows:
       - restore-cache@3:
           inputs:
             - key: |-
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
-                deps-{{ .OS }}-{{ .Arch }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}
       - script@1:
           title: Tuist 설치 + 프로젝트 생성
           inputs:
@@ -334,19 +491,55 @@ workflows:
                 export PATH="$HOME/.local/bin:$PATH"
                 eval "$(mise activate bash)"
                 mise install "tuist@${TUIST_VERSION}"
-                mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install
+
+                # SwiftPM 은 바이너리 아티팩트 다운로드에 타임아웃이 없어, 하나만 멈춰도
+                # 빌드 타임아웃까지 그대로 매달린다. 스텝 레벨에서 제한을 걸고 재시도한다.
+                # (부분 다운로드는 ~/Library/Caches/org.swift.swiftpm 에 남아 이어받는다)
+                run_with_timeout() {
+                  local secs="$1"; shift
+                  "$@" & local pid=$! waited=0
+                  while kill -0 "$pid" 2>/dev/null; do
+                    sleep 15; waited=$((waited + 15))
+                    if [ "$waited" -ge "$secs" ]; then
+                      echo "⏱️ ${secs}s 초과 — 종료 후 재시도"
+                      kill -9 "$pid" 2>/dev/null || true
+                      wait "$pid" 2>/dev/null || true
+                      return 124
+                    fi
+                  done
+                  wait "$pid"
+                }
+
+                for attempt in 1 2 3; do
+                  if run_with_timeout 1200 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install; then
+                    break
+                  fi
+                  if [ "$attempt" -eq 3 ]; then
+                    echo "❌ tuist install 3회 실패"
+                    exit 1
+                  fi
+                  echo "🔁 tuist install 재시도 ($((attempt + 1))/3)"
+                done
                 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift generate
                 ls -d *.xcworkspace
+      - script@1:
+          title: Sentry CLI 설치 (deps 캐시에 포함)
+          inputs:
+            - content: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                # $HOME/.local/bin 은 아래 save-cache 에 포함되므로 배포 워크플로가 캐시로 재사용한다.
+                curl -sL https://sentry.io/get-cli/ | INSTALL_DIR="$HOME/.local/bin" bash
+                "$HOME/.local/bin/sentry-cli" --version
       - save-cache@1:
           inputs:
-            - key: deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+            - key: deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
             - paths: |-
                 $HOME/.local/bin
                 $HOME/.local/share/mise
                 $HOME/.cache/mise
                 $HOME/.cache/tuist
                 $HOME/Library/Caches/org.swift.swiftpm
-                $HOME/Library/Developer/Xcode/DerivedData/**/SourcePackages
 
   # ── 배포 (Prod → App Store): fastlane release ───────────────────────
   fastlane-release:
@@ -383,9 +576,9 @@ workflows:
       - restore-cache@3:
           inputs:
             - key: |-
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
-                deps-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
-                deps-{{ .OS }}-{{ .Arch }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}-{{ checksum "Tuist/Package.resolved" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}-{{ checksum "mise.toml" }}
+                deps-v2-{{ .OS }}-{{ .Arch }}
       - script@1:
           title: Tuist 설치 + 프로젝트 생성
           inputs:
@@ -396,7 +589,35 @@ workflows:
                 export PATH="$HOME/.local/bin:$PATH"
                 eval "$(mise activate bash)"
                 mise install "tuist@${TUIST_VERSION}"
-                mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install
+
+                # SwiftPM 은 바이너리 아티팩트 다운로드에 타임아웃이 없어, 하나만 멈춰도
+                # 빌드 타임아웃까지 그대로 매달린다. 스텝 레벨에서 제한을 걸고 재시도한다.
+                # (부분 다운로드는 ~/Library/Caches/org.swift.swiftpm 에 남아 이어받는다)
+                run_with_timeout() {
+                  local secs="$1"; shift
+                  "$@" & local pid=$! waited=0
+                  while kill -0 "$pid" 2>/dev/null; do
+                    sleep 15; waited=$((waited + 15))
+                    if [ "$waited" -ge "$secs" ]; then
+                      echo "⏱️ ${secs}s 초과 — 종료 후 재시도"
+                      kill -9 "$pid" 2>/dev/null || true
+                      wait "$pid" 2>/dev/null || true
+                      return 124
+                    fi
+                  done
+                  wait "$pid"
+                }
+
+                for attempt in 1 2 3; do
+                  if run_with_timeout 1200 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift install; then
+                    break
+                  fi
+                  if [ "$attempt" -eq 3 ]; then
+                    echo "❌ tuist install 3회 실패"
+                    exit 1
+                  fi
+                  echo "🔁 tuist install 재시도 ($((attempt + 1))/3)"
+                done
                 mise exec "tuist@${TUIST_VERSION}" -- swift TuistTool.swift generate
                 ls -d *.xcworkspace
       - restore-cache@3:
@@ -422,6 +643,18 @@ workflows:
             - key: gems-{{ .OS }}-{{ .Arch }}-{{ checksum "Gemfile.lock" }}
             - paths: vendor/bundle
       - script@1:
+          title: Sentry CLI 설치
+          inputs:
+            - content: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                if [ -z "${SENTRY_AUTH_TOKEN:-}" ]; then
+                  echo "ℹ️ SENTRY_AUTH_TOKEN 미설정 — Sentry 업로드 스킵"
+                  exit 0
+                fi
+                curl -sL https://sentry.io/get-cli/ | INSTALL_DIR="$HOME/.local/bin" bash
+                "$HOME/.local/bin/sentry-cli" --version
+      - script@1:
           title: Fastlane release — Prod → App Store
           inputs:
             - content: |
@@ -434,6 +667,53 @@ workflows:
                 # 빌드된 IPA를 Bitrise 배포 디렉토리로 복사 → Installable artifacts 노출
                 mkdir -p "$BITRISE_DEPLOY_DIR"
                 cp -f fastlane/output/*.ipa "$BITRISE_DEPLOY_DIR/" 2>/dev/null || true
+      - script@1:
+          title: Bitrise Release Management 업로드 (Installable Artifact)
+          inputs:
+            - content: |
+                #!/usr/bin/env bash
+                set -euo pipefail
+                # 토큰이 없으면 배포를 막지 않고 넘어간다.
+                if [ -z "${BITRISE_RELEASE_MGMT_TOKEN:-}" ]; then
+                  echo "ℹ️ BITRISE_RELEASE_MGMT_TOKEN 미설정 — Release Management 업로드 스킵"
+                  exit 0
+                fi
+
+                IPA=$(ls -1 "$BITRISE_DEPLOY_DIR"/*.ipa 2>/dev/null | head -1 || true)
+                if [ -z "$IPA" ]; then
+                  echo "⚠️ IPA 없음 — Release Management 업로드 스킵"
+                  exit 0
+                fi
+
+                FILE_NAME=$(basename "$IPA")
+                FILE_SIZE=$(stat -f%z "$IPA")
+                ARTIFACT_UUID=$(uuidgen | tr "[:upper:]" "[:lower:]")
+                BASE="https://api.bitrise.io/release-management/v1/connected-apps/${RELEASE_MGMT_APP_UUID}/installable-artifacts/${ARTIFACT_UUID}"
+                echo "📦 ${FILE_NAME} (${FILE_SIZE} bytes) → artifact ${ARTIFACT_UUID}"
+
+                # 1) 업로드 URL 발급
+                UPLOAD_URL=$(curl -fsS -H "Authorization: ${BITRISE_RELEASE_MGMT_TOKEN}" \
+                  "${BASE}/upload-url?file_name=${FILE_NAME}&file_size_bytes=${FILE_SIZE}" \
+                  | python3 -c "import sys,json; print(json.load(sys.stdin)['upload_url'])")
+
+                # 2) 파일 업로드
+                curl -fsS -X PUT \
+                  -H "Content-Type: application/octet-stream" \
+                  -H "X-Goog-Content-Length-Range: 0,${FILE_SIZE}" \
+                  --upload-file "$IPA" "$UPLOAD_URL"
+
+                # 3) 처리 상태 폴링 (최대 5분)
+                for i in $(seq 1 30); do
+                  STATUS=$(curl -fsS -H "Authorization: ${BITRISE_RELEASE_MGMT_TOKEN}" "${BASE}/status" \
+                    | python3 -c "import sys,json; print(json.load(sys.stdin).get('artifact_status',''))" || echo "")
+                  echo "  [$i/30] status=${STATUS:-unknown}"
+                  case "$STATUS" in
+                    processed) echo "✅ Release Management 업로드 완료"; exit 0 ;;
+                    failed)    echo "❌ 처리 실패"; exit 1 ;;
+                  esac
+                  sleep 10
+                done
+                echo "⚠️ 처리 상태 확인 시간 초과 — 업로드 자체는 완료됨"
       - deploy-to-bitrise-io@2: {}
 
   # ── Discord 알림 (배포 워크플로와 분리, 파이프라인이 오케스트레이션) ──────────
