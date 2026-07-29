@@ -16,8 +16,46 @@ on:
       - '*'
 
 jobs:
+  # Bitrise 앱은 저장소가 아니라 bitrise.io 에 저장된 bitrise.yml 을 실행한다.
+  # 그래서 저장소의 bitrise.yml 을 고쳐 push 해도 CI 에 반영되지 않는다(2026-07-30 확인).
+  # UI 에서 "repository 의 bitrise.yml 사용" 으로 바꾸기 전까지, push 마다 저장본을
+  # 저장소 내용으로 덮어써 둘을 강제로 일치시킨다.
+  # PR 에서는 돌리지 않는다 — 머지되지 않은 CI 설정이 전체에 적용되면 안 된다.
+  sync-config:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync bitrise.yml to Bitrise
+        env:
+          BITRISE_TOKEN: ${{ secrets.BITRISE_API_TOKEN }}
+          APP_SLUG: cc46a893-15b6-40b5-a5ea-2cbb4948c4ec
+        run: |
+          set -euo pipefail
+          python3 -c "import json;print(json.dumps({'app_config_datastore_yaml':open('bitrise.yml').read()}))" > /tmp/payload.json
+          curl -fsSL -X POST "https://api.bitrise.io/v0.1/apps/${APP_SLUG}/bitrise.yml" \
+            -H "Authorization: ${BITRISE_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/payload.json \
+            -o /tmp/resp.json
+          # 검증 경고가 있으면 드러낸다(설정이 조용히 깨진 채 배포되는 것 방지).
+          python3 - <<'PY'
+          import json
+          w = json.load(open("/tmp/resp.json")).get("warnings", {}).get("config", [])
+          if w:
+              print("⚠️ Bitrise 설정 경고:")
+              for x in w:
+                  print(" -", x)
+          else:
+              print("✅ bitrise.yml 동기화 완료 — 경고 없음")
+          PY
+
   trigger:
     runs-on: ubuntu-latest
+    # 동기화가 끝난 뒤 트리거해야 새 설정으로 빌드된다. PR 에서는 sync-config 가
+    # skip 되므로 always() 로 그대로 진행시킨다.
+    needs: [sync-config]
+    if: always() && (needs.sync-config.result == 'success' || needs.sync-config.result == 'skipped')
     steps:
       - name: Trigger Bitrise pipeline
         env:
