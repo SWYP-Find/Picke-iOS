@@ -2,8 +2,6 @@
 //  HifiView.swift
 //  Hifi
 //
-//  .pen `탐색 hifi 이미지` 기준 탐색 화면 UI.
-//
 
 import SwiftUI
 
@@ -32,7 +30,7 @@ public struct HifiView: View {
       fixedTopBar()
       contentArea()
     }
-    .background(Color.beige50.ignoresSafeArea())
+    .screenBackground(.beige50)
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
@@ -122,11 +120,8 @@ private extension HifiView {
               }
             }
 
-          // Figma 3925-3747: 콘텐츠 카드 3개마다 배너를 하나씩 인라인 삽입.
-          // 마지막 카드 뒤에는 넣지 않는다(리스트 끝에 광고가 매달리면 어색하다).
-          // 아이템이 3개 미만이면 조건이 성립하지 않아 자연히 노출되지 않는다.
-          // (광고 단위 미설정·수신 실패 시엔 AdFitBannerView 가 스스로 자리를 접는다)
-          if (index + 1) % 3 == 0, index != store.items.count - 1 {
+          // AdFit 광고 단위 코드는 한 화면에 한 번만 노출 가능해 3번째 카드 뒤에만 넣는다.
+          if index == 2, index != store.items.count - 1 {
             adBannerRow()
           }
         }
@@ -179,11 +174,7 @@ private extension HifiView {
       }
     }
     .padding(.horizontal, 16)
-    .frame(height: 40)
     .background(.white)
-    .overlay(alignment: .bottom) {
-      Rectangle().fill(.beige600).frame(height: 1.5)
-    }
     .transaction { transaction in
       transaction.animation = nil
     }
@@ -191,24 +182,12 @@ private extension HifiView {
 
   @ViewBuilder
   func categoryTab(_ category: ExploreCategory) -> some View {
-    let isSelected = store.selectedCategory == category
     Button { send(.categoryTapped(category)) } label: {
       // 각 탭은 가용 너비를 등분(maxWidth: .infinity) → 전체 너비 균등 분포 + 가로 움직임 제거.
-      // 폰트 웨이트는 고정(Medium)해 글자 폭 변화로 인한 흔들림 제거.
-      // 밑줄은 항상 자리(4px) 확보하고 색만 토글해 세로 레이아웃 재계산 방지.
       Text(category.title)
-        .pretendardFont(.labelMedium)
-        .foregroundStyle(isSelected ? .primary500 : .gray300)
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: .infinity)
-        .overlay(alignment: .bottom) {
-          Rectangle()
-            .fill(isSelected ? .primary500 : .clear)
-            .frame(height: 4)
-        }
+        .pickeSegmentTab(isSelected: store.selectedCategory == category)
     }
     .buttonStyle(.plain)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .transaction { transaction in
       transaction.animation = nil
     }
@@ -222,18 +201,9 @@ private extension HifiView {
   func sortRow() -> some View {
     HStack(spacing: 12) {
       ForEach(ExploreSort.allCases, id: \.self) { sort in
-        let isSelected = store.selectedSort == sort
         Button { send(.sortTapped(sort)) } label: {
           Text(sort.title)
-            .pretendardFont(isSelected ? .semiBold12 : .labelSmall)
-            .foregroundStyle(isSelected ? .beige50 : .primary500)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .roundedBackground(isSelected ? .primary500 : .bgDefault, radius: 4)
-            .overlay(
-              RoundedRectangle(cornerRadius: 4)
-                .stroke(.primary500, lineWidth: 1)
-            )
+            .pickeSortChip(isSelected: store.selectedSort == sort)
         }
         .buttonStyle(.plain)
       }
@@ -258,11 +228,7 @@ private extension HifiView {
           VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 6) {
               Text("#\(item.category)")
-                .pretendardFont(.semiBold12)
-                .foregroundStyle(.primary500)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .roundedBackground(.beige600)
+                .pickeBadge(.filled, size: .tag)
 
               Text(item.title)
                 .pretendardFont(.headingSmall)
@@ -292,7 +258,7 @@ private extension HifiView {
       .background(.beige50)
       .overlay(alignment: .bottom) {
         if showsDivider {
-          Rectangle().fill(.beige600).frame(height: 1)
+          PickeDivider(.beige600)
         }
       }
     }

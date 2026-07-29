@@ -40,7 +40,6 @@ public struct WebView: View {
       }
       .navigationBarBackButtonHidden(true)
     }
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
   }
 }

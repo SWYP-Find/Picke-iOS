@@ -45,9 +45,8 @@ public struct NotificationView: View {
       }
       .simultaneousGesture(tabSwipeGesture())
     }
-    .background(Color.bgDefault.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground(.bgDefault)
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
   }
 
@@ -95,11 +94,7 @@ private extension NotificationView {
         .foregroundStyle(isSelected ? .beige50 : .primary500)
         .padding(.vertical, 6)
         .padding(.horizontal, 12)
-        .roundedBackground(isSelected ? .primary500 : .primary50)
-        .overlay(
-          RoundedRectangle(cornerRadius: .radiusDefault)
-            .stroke(isSelected ? .clear : .primary500, lineWidth: 1)
-        )
+        .pickeCard(isSelected ? .primary500 : .primary50, border: isSelected ? .clear : .primary500)
     }
     .buttonStyle(.plain)
   }
@@ -175,11 +170,7 @@ private extension NotificationView {
       }
       .padding(16)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige600)
       .overlay(alignment: .topTrailing) {
         if !item.isRead {
           RoundedRectangle(cornerRadius: 3)

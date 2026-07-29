@@ -57,14 +57,13 @@ public struct CommentReplyView: View {
       }
       inputBar()
     }
-    .background(Color.beige200.ignoresSafeArea()) // Figma 화면 배경 beige200
+    .screenBackground()
     .contentShape(Rectangle())
     .onTapGesture {
       isReplyFocused = false
     }
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
     .animation(.easeInOut(duration: 0.18), value: store.menuTargetReplyId)
@@ -75,10 +74,13 @@ public struct CommentReplyView: View {
   private func replyMenu(for reply: CommentReplyItem) -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       if reply.isMine {
-        menuPill(title: "수정", systemImage: "pencil") { send(.replyMenu(id: reply.id, action: .edit)) }
-        menuPill(title: "삭제", systemImage: "trash") { send(.replyMenu(id: reply.id, action: .delete)) }
+        PickeActionPill(title: "수정", systemImage: "pencil") { send(.replyMenu(id: reply.id, action: .edit)) }
+        PickeActionPill(title: "삭제", systemImage: "trash") { send(.replyMenu(id: reply.id, action: .delete)) }
       } else {
-        menuPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.replyMenu(id: reply.id, action: .report)) }
+        PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.replyMenu(
+          id: reply.id,
+          action: .report
+        )) }
       }
     }
   }
@@ -88,33 +90,12 @@ public struct CommentReplyView: View {
   private func parentMenuView() -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       if store.parentComment.isMine {
-        menuPill(title: "수정", systemImage: "pencil") { send(.parentMenu(.edit)) }
-        menuPill(title: "삭제", systemImage: "trash") { send(.parentMenu(.delete)) }
+        PickeActionPill(title: "수정", systemImage: "pencil") { send(.parentMenu(.edit)) }
+        PickeActionPill(title: "삭제", systemImage: "trash") { send(.parentMenu(.delete)) }
       } else {
-        menuPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.parentMenu(.report)) }
+        PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.parentMenu(.report)) }
       }
     }
-  }
-
-  @ViewBuilder
-  private func menuPill(
-    title: String,
-    systemImage: String,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button(action: action) {
-      HStack(spacing: 4) {
-        Image(systemName: systemImage)
-          .font(.system(size: 13, weight: .medium))
-        Text(title)
-          .pretendardFont(.medium13)
-      }
-      .foregroundStyle(.beige50)
-      .padding(.horizontal, 14)
-      .padding(.vertical, 7)
-      .background(.primary500, in: Capsule())
-    }
-    .buttonStyle(.plain)
   }
 }
 
@@ -123,27 +104,10 @@ public struct CommentReplyView: View {
 private extension CommentReplyView {
   @ViewBuilder
   func navigationBar() -> some View {
-    HStack {
-      Button { send(.backButtonTapped) } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 18, weight: .regular))
-          .frame(width: 24, height: 24)
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-
-      // 타이틀 "댓글" — heading/sm Pretendard SemiBold 16, gray500
-      Text("댓글")
-        .pretendardFont(.headingMedium)
-        .foregroundStyle(.gray500)
-
-      Spacer()
-
-      Color.clear.frame(width: 24, height: 24)
-    }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
+    PickeNavigationBar(
+      onBack: { send(.backButtonTapped) },
+      centerTitle: "댓글"
+    )
     .foregroundStyle(.gray500)
     // Figma: 앱바는 beige200 위에 투명 배치, 하단 구분선 없음
     .background(.beige200)
@@ -171,11 +135,7 @@ private extension CommentReplyView {
       moreAction: { send(.parentMenu(.more)) },
       likeAction: { send(.parentLikeTapped) }
     )
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .topDivider(.beige600)
     .overlay(alignment: .topTrailing) {
       if store.parentMenuOpen {
         parentMenuView()
@@ -196,11 +156,7 @@ private extension CommentReplyView {
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(12)
       .background(.beige200)
-      .overlay(alignment: .bottom) {
-        Rectangle()
-          .fill(.beige600)
-          .frame(height: 1)
-      }
+      .bottomDivider(.beige600)
   }
 
   @ViewBuilder
@@ -295,11 +251,7 @@ private extension CommentReplyView {
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 
   func commentHeader(
@@ -311,7 +263,7 @@ private extension CommentReplyView {
   ) -> some View {
     // Figma top 행: 아바타(36) + 이름/시간 스택 + 세로 더보기, 요소 간 gap 6
     HStack(spacing: 6) {
-      CommentAvatarView(
+      PickeAvatarView(
         imageURL: imageURL,
         fallback: author,
         size: 36
@@ -407,10 +359,6 @@ private extension CommentReplyView {
     .padding(.bottom, 24)
     .frame(height: 128)
     .background(.beige400)
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(.beige800)
-        .frame(height: 1)
-    }
+    .topDivider(.beige800)
   }
 }

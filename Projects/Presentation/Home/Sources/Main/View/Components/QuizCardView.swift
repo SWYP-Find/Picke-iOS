@@ -30,10 +30,7 @@ struct QuizCardView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .roundedBackground(.beige400)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
-    )
+    .pickeCard(.beige400, border: .beige700)
   }
 
   @ViewBuilder
@@ -93,10 +90,7 @@ struct QuizCardView: View {
       }
       .frame(maxWidth: .infinity)
       .padding(12)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige500, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige500)
       .opacity(hasAnswered && !isSelected ? 0.5 : 1)
     }
     .buttonStyle(.plain)

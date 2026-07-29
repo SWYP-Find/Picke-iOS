@@ -28,9 +28,8 @@ public struct PointHistoryView: View {
         content()
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
     .onAppear { send(.onAppear) }
   }
@@ -41,7 +40,10 @@ private extension PointHistoryView {
 
   @ViewBuilder
   func appBar() -> some View {
-    PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "포인트 내역") {
+    PickeNavigationBar(
+      onBack: { send(.backTapped) },
+      centerTitle: "포인트 내역"
+    ) {
       // 배틀(주제) 제안 팝업 열기
       Button { send(.suggestTopicTapped) } label: {
         Image(asset: .history)
@@ -111,10 +113,10 @@ private extension PointHistoryView {
     }
     .padding(16)
     .frame(maxWidth: .infinity)
-    .roundedBackground(.beige50, radius: 8)
-    .overlay(
-      RoundedRectangle(cornerRadius: 8)
-        .stroke(.beige600, lineWidth: 1)
+    .pickeCard(
+      .beige50,
+      border: .beige600,
+      radius: 8
     )
   }
 

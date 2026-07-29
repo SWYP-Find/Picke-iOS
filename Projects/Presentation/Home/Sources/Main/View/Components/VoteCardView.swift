@@ -45,10 +45,7 @@ struct VoteCardView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige50, border: .beige600)
   }
 
   @ViewBuilder
@@ -103,19 +100,12 @@ struct VoteCardView: View {
         .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, 8)
         .frame(minWidth: 52, minHeight: 24)
-        .roundedBackground(.beige200)
-        .overlay(
-          RoundedRectangle(cornerRadius: .radiusDefault)
-            .stroke(.primary500, lineWidth: 1)
-        )
+        .pickeCard(.beige200, border: .primary500)
     } else {
       RoundedRectangle(cornerRadius: .radiusDefault)
         .fill(.beige200)
         .frame(width: 52, height: 24)
-        .overlay(
-          RoundedRectangle(cornerRadius: .radiusDefault)
-            .stroke(.beige600, lineWidth: 1)
-        )
+        .roundedBorder(.beige600)
     }
   }
 

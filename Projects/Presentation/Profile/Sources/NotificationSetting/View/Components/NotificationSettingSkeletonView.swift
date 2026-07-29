@@ -29,9 +29,7 @@ struct NotificationSettingSkeletonView: View {
                   .frame(width: 32, height: 18)
               }
               .padding(.vertical, 16)
-              .overlay(alignment: .bottom) {
-                Rectangle().fill(.beige600).frame(height: 1)
-              }
+              .bottomDivider(.beige600)
             }
           }
         }

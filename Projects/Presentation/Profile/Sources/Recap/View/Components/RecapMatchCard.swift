@@ -45,17 +45,12 @@ public struct RecapMatchCard: View {
     }
     .padding(16)
     .frame(maxWidth: .infinity)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige50, border: .beige600)
   }
 
   @ViewBuilder
   private var avatar: some View {
     ZStack {
-      Circle().fill(.beige600)
       if !card.imageURL.isEmpty, let url = URL(string: card.imageURL) {
         KFImage(url)
           .resizable()
@@ -67,7 +62,6 @@ public struct RecapMatchCard: View {
           .foregroundStyle(.gray300)
       }
     }
-    .frame(width: 40, height: 40)
-    .clipShape(Circle())
+    .pickeAvatar(size: 40)
   }
 }

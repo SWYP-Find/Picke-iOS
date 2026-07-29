@@ -27,10 +27,9 @@ public struct WithdrawReasonView: View {
       Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.beige200.ignoresSafeArea())
+    .screenBackground()
     .safeAreaInset(edge: .bottom, spacing: 0) { bottomButtons() }
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 }
@@ -123,30 +122,12 @@ private extension WithdrawReasonView {
   @ViewBuilder
   func bottomButtons() -> some View {
     HStack(spacing: 0) {
-      Button {
-        send(.submitTapped)
-      } label: {
-        Text("제출하기")
-          .pretendardFont(.headingMedium)
-          .foregroundStyle(.primary500)
-          .frame(maxWidth: .infinity)
-          .frame(height: 60)
-          .background(.secondary50)
-      }
-      .buttonStyle(.plain)
-      .disabled(store.isProcessing)
+      Button("제출하기") { send(.submitTapped) }
+        .ctaButtonStyle(.secondary, size: .large, height: 60, cornerRadius: 0)
+        .disabled(store.isProcessing)
 
-      Button {
-        send(.backTapped)
-      } label: {
-        Text("픽케로 다시 돌아가기")
-          .pretendardFont(.headingMedium)
-          .foregroundStyle(.beige50)
-          .frame(maxWidth: .infinity)
-          .frame(height: 60)
-          .background(.primary500)
-      }
-      .buttonStyle(.plain)
+      Button("픽케로 다시 돌아가기") { send(.backTapped) }
+        .ctaButtonStyle(.primary, size: .large, height: 60, cornerRadius: 0)
     }
   }
 }

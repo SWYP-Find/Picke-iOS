@@ -78,10 +78,7 @@ private struct HomeHotBattlesSkeletonView: View {
             }
             .padding(12)
             .frame(width: 220, alignment: .leading)
-            .roundedBackground(.beige50)
-            .overlay(
-              RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-            )
+            .pickeCard(.beige50, border: .beige600)
           }
         }
         .padding(.horizontal, 16)
@@ -156,10 +153,7 @@ private struct HomeTodayPickeSkeletonView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .roundedBackground(.beige400)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
-    )
+    .pickeCard(.beige400, border: .beige700)
   }
 
   @ViewBuilder
@@ -188,10 +182,7 @@ private struct HomeTodayPickeSkeletonView: View {
     }
     .padding(.vertical, 20)
     .padding(.horizontal, 16)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige700, lineWidth: 1)
-    )
+    .pickeCard(.beige50, border: .beige700)
   }
 }
 
@@ -216,10 +207,7 @@ private struct HomeNewBattlesSkeletonView: View {
             }
           }
           .padding(12)
-          .roundedBackground(.beige50)
-          .overlay(
-            RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-          )
+          .pickeCard(.beige50, border: .beige600)
         }
       }
       .padding(.horizontal, 16)
@@ -239,10 +227,7 @@ private struct SkeletonBattleOption: View {
     }
     .padding(8)
     .frame(maxWidth: .infinity)
-    .roundedBackground(.beige300)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige300, border: .beige600)
   }
 }
 
@@ -323,9 +308,9 @@ private struct SkeletonShimmerModifier: ViewModifier {
       .blendMode(.screen)
       .allowsHitTesting(false)
       .animation(
-        .linear(duration: 1.6)
-          .delay(0.15)
-          .repeatForever(autoreverses: false),
+      .linear(duration: 1.6)
+      .delay(0.15)
+      .repeatForever(autoreverses: false),
         value: isShimmering
       )
     }

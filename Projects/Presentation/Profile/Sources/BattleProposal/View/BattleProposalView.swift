@@ -21,8 +21,11 @@ public struct BattleProposalView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "배틀 만들기")
-        .foregroundStyle(.gray500)
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "배틀 만들기"
+      )
+      .foregroundStyle(.gray500)
 
       ScrollView {
         VStack(spacing: 16) {
@@ -44,9 +47,8 @@ public struct BattleProposalView: View {
           }
       )
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 }
@@ -91,10 +93,7 @@ private extension BattleProposalView {
         }
       }
       .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .roundedBorder(.beige600)
     }
   }
 
@@ -151,11 +150,7 @@ private extension BattleProposalView {
     .padding(.leading, 8)
     .frame(height: 44)
     .frame(maxWidth: .infinity)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige50, border: .beige600)
   }
 
   // MARK: 부가 설명
@@ -189,11 +184,7 @@ private extension BattleProposalView {
       .padding(.vertical, 8)
       .padding(.horizontal, 12)
       .frame(maxWidth: .infinity)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige600)
     }
   }
 

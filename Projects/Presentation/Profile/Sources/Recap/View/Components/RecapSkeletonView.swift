@@ -88,11 +88,7 @@ struct RecapSkeletonView: View {
   private func cardBox(@ViewBuilder _ content: () -> some View) -> some View {
     content()
       .frame(maxWidth: .infinity)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige600)
   }
 
   @ViewBuilder

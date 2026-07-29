@@ -31,11 +31,7 @@ struct HomeHeaderView: View {
     .padding(.vertical, 8)
     .frame(height: 56)
     .background(.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 }
 

@@ -35,9 +35,7 @@ struct ProfileSkeletonView: View {
             Spacer()
           }
           .padding(.vertical, 20)
-          .overlay(alignment: .bottom) {
-            Rectangle().fill(.beige600).frame(height: 1)
-          }
+          .bottomDivider(.beige600)
         }
       }
       .padding(.horizontal, 16)

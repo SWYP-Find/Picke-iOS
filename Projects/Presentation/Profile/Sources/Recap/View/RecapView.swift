@@ -6,9 +6,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import PickeDesignKit
 import Entity
 import Kingfisher
+import PickeDesignKit
 
 @ViewAction(for: RecapFeature.self)
 public struct RecapView: View {
@@ -20,7 +20,10 @@ public struct RecapView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "나의 철학자 유형") {
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "나의 철학자 유형"
+      ) {
         Button { shareWithSnapshot() } label: {
           Image(systemName: "square.and.arrow.up")
             .font(.system(size: 18, weight: .regular))
@@ -40,9 +43,8 @@ public struct RecapView: View {
         RecapSkeletonView()
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .sheet(item: $store.shareItem) { item in
       ShareSheet(items: item.items)
         .presentationDetents([.fraction(0.5)])
@@ -84,11 +86,7 @@ private extension RecapView {
   func card(@ViewBuilder _ content: () -> some View) -> some View {
     content()
       .frame(maxWidth: .infinity)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige600)
   }
 
   // MARK: 성향 분석
@@ -178,9 +176,7 @@ private extension RecapView {
     }
     .padding(.vertical, 12)
     .padding(.horizontal, 16)
-    .overlay(alignment: .top) {
-      Rectangle().fill(.beige600).frame(height: 1)
-    }
+    .topDivider(.beige600)
   }
 
   // MARK: 궁합 유형
@@ -200,22 +196,13 @@ private extension RecapView {
 
   @ViewBuilder
   func shareButton() -> some View {
-    Button {
-      shareWithSnapshot()
-    } label: {
-      HStack(spacing: 6) {
-        Text("공유하기")
-          .pretendardFont(.headingMedium)
-          .foregroundStyle(.beige50)
-        Image(systemName: "square.and.arrow.up")
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(.beige50)
-      }
-      .frame(maxWidth: .infinity)
-      .frame(height: 52)
-      .roundedBackground(.primary500)
-    }
-    .buttonStyle(.plain)
+    Button("공유하기") { shareWithSnapshot() }
+      .ctaButtonStyle(
+        .primary,
+        size: .large,
+        height: 52,
+        icon: Image(systemName: "square.and.arrow.up")
+      )
   }
 }
 

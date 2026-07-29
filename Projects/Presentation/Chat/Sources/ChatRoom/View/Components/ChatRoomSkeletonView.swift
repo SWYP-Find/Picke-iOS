@@ -14,7 +14,7 @@ struct ChatRoomSkeletonView: View {
       messageListSkeleton()
       playerBarSkeleton()
     }
-    .background(Color.beige50.ignoresSafeArea())
+    .screenBackground(.beige50)
   }
 }
 
@@ -32,11 +32,7 @@ private extension ChatRoomSkeletonView {
     }
     .padding(.horizontal, 20)
     .frame(height: 60)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 }
 
@@ -116,10 +112,6 @@ private extension ChatRoomSkeletonView {
     .padding(.top, 16)
     .padding(.bottom, 8)
     .background(.beige50)
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .topDivider(.beige600)
   }
 }

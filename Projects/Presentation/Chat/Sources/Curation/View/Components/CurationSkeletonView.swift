@@ -41,10 +41,7 @@ struct CurationSkeletonView: View {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .roundedBackground(.beige50)
-    .overlay {
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    }
+    .pickeCard(.beige50, border: .beige600)
   }
 
   @ViewBuilder
@@ -58,9 +55,6 @@ struct CurationSkeletonView: View {
     }
     .frame(maxWidth: .infinity)
     .padding(8)
-    .roundedBackground(.beige300)
-    .overlay {
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    }
+    .pickeCard(.beige300, border: .beige600)
   }
 }

@@ -19,8 +19,11 @@ public struct NotificationSettingView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "알림 설정")
-        .foregroundStyle(.gray500)
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "알림 설정"
+      )
+      .foregroundStyle(.gray500)
 
       if store.isLoading {
         NotificationSettingSkeletonView()
@@ -38,9 +41,8 @@ public struct NotificationSettingView: View {
         .scrollBounceBehavior(.basedOnSize)
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
   }
 }
@@ -84,9 +86,7 @@ private extension NotificationSettingView {
       .buttonStyle(.plain)
     }
     .padding(.vertical, 16)
-    .overlay(alignment: .bottom) {
-      Rectangle().fill(.beige600).frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 }
 

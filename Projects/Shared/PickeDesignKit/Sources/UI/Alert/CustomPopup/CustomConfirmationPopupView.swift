@@ -143,10 +143,10 @@ struct CustomConfirmationPopup: View {
     content()
       .padding(.top, 20)
       .frame(maxWidth: 313)
-      .roundedBackground(.beige500)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.primary500, lineWidth: 1.5)
+      .pickeCard(
+        .beige500,
+        border: .primary500,
+        lineWidth: 1.5
       )
       .opacity(opacity)
       .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
@@ -263,10 +263,10 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.top, 20)
     .frame(maxWidth: 313)
-    .roundedBackground(.beige500)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.primary500, lineWidth: 1.5)
+    .pickeCard(
+      .beige500,
+      border: .primary500,
+      lineWidth: 1.5
     )
     .opacity(0.9)
     .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
@@ -317,10 +317,11 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.top, 24)
     .frame(maxWidth: 343)
-    .roundedBackground(.beige500, radius: 6)
-    .overlay(
-      RoundedRectangle(cornerRadius: 6)
-        .stroke(.primary500, lineWidth: 1.5)
+    .pickeCard(
+      .beige500,
+      border: .primary500,
+      lineWidth: 1.5,
+      radius: 6
     )
     .onTapGesture {}
   }
@@ -372,11 +373,7 @@ struct CustomConfirmationPopup: View {
     .padding(.vertical, 28)
     .padding(.horizontal, 20)
     .frame(maxWidth: 320)
-    .roundedBackground(ComponentToken.Popup.background)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(ComponentToken.Popup.border, lineWidth: 1)
-    )
+    .pickeCard(ComponentToken.Popup.background, border: ComponentToken.Popup.border)
     .onTapGesture {}
   }
 
@@ -416,10 +413,10 @@ struct CustomConfirmationPopup: View {
     }
     .padding(.top, 20)
     .frame(maxWidth: 313)
-    .roundedBackground(.beige500)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.primary500, lineWidth: 1.5)
+    .pickeCard(
+      .beige500,
+      border: .primary500,
+      lineWidth: 1.5
     )
     .opacity(0.9)
     .onTapGesture {}
@@ -438,9 +435,10 @@ struct CustomConfirmationPopup: View {
     .frame(maxWidth: 343)
     .roundedBackground(.beige500, radius: 6)
     .clipShape(RoundedRectangle(cornerRadius: 6))
-    .overlay(
-      RoundedRectangle(cornerRadius: 6)
-        .stroke(.primary500, lineWidth: 1.5)
+    .roundedBorder(
+      .primary500,
+      lineWidth: 1.5,
+      radius: 6
     )
     .onTapGesture {}
   }

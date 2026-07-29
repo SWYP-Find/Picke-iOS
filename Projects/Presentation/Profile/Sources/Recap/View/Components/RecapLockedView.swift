@@ -67,14 +67,8 @@ private extension RecapLockedView {
     .frame(maxWidth: .infinity)
     .padding(.vertical, 16)
     .padding(.horizontal, 24)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.beige600, lineWidth: 1)
-    )
-    .overlay(alignment: .top) {
-      Rectangle().fill(.primary500).frame(height: 3)
-    }
+    .pickeCard(.beige50, border: .beige600)
+    .topDivider(.primary500, height: 3)
     .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
@@ -101,11 +95,7 @@ private extension RecapLockedView {
       .padding(.vertical, 16)
       .padding(.horizontal, 20)
       .frame(maxWidth: .infinity)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige600)
       .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
     }
   }

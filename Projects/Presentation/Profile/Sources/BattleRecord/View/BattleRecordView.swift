@@ -20,8 +20,11 @@ public struct BattleRecordView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "내 배틀 기록")
-        .foregroundStyle(.gray500)
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "내 배틀 기록"
+      )
+      .foregroundStyle(.gray500)
 
       if store.isLoading {
         BattleRecordSkeletonView()
@@ -29,9 +32,8 @@ public struct BattleRecordView: View {
         content()
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
   }
 }
@@ -75,11 +77,7 @@ private extension BattleRecordView {
         HStack(spacing: 8) {
           if !record.categoryTag.isEmpty {
             Text(record.categoryTag)
-              .pretendardFont(.semiBold12)
-              .foregroundStyle(.primary500)
-              .padding(.vertical, 2)
-              .padding(.horizontal, 6)
-              .roundedBackground(.beige600)
+              .pickeBadge(.filled, size: .tag)
           }
 
           Text(record.title)
@@ -102,10 +100,10 @@ private extension BattleRecordView {
       }
       .padding(12)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .roundedBackground(.beige50, radius: 8)
-      .overlay(
-        RoundedRectangle(cornerRadius: 8)
-          .stroke(.beige600, lineWidth: 1)
+      .pickeCard(
+        .beige50,
+        border: .beige600,
+        radius: 8
       )
     }
     .buttonStyle(.plain)

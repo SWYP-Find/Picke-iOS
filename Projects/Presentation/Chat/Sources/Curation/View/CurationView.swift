@@ -47,10 +47,9 @@ public struct CurationView: View {
         .padding(.bottom, 16)
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
+    .screenBackground()
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
   }
 }
@@ -60,39 +59,20 @@ public struct CurationView: View {
 private extension CurationView {
   @ViewBuilder
   func header() -> some View {
-    HStack(spacing: 0) {
-      Button { send(.backButtonTapped) } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 18, weight: .regular))
-          .frame(width: 24, height: 24)
-          .foregroundStyle(.neutral900)
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-
-      Text("더 흥미로운 배틀도 있어요!")
-        .pretendardFont(.headingMedium)
-        .foregroundStyle(.neutral500)
-
-      Spacer()
-
+    PickeNavigationBar(
+      onBack: { send(.backButtonTapped) },
+      centerTitle: "더 흥미로운 배틀도 있어요!"
+    ) {
       Button { send(.closeButtonTapped) } label: {
         Image(systemName: "xmark")
           .font(.system(size: 16, weight: .regular))
           .frame(width: 24, height: 24)
-          .foregroundStyle(.neutral900)
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
+    .foregroundStyle(.neutral900)
     .background(.beige200)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 }
 
@@ -126,11 +106,7 @@ private extension CurationView {
       }
       .padding(12)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .roundedBackground(.beige50)
-      .overlay {
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      }
+      .pickeCard(.beige50, border: .beige600)
     }
     .buttonStyle(.plain)
   }
@@ -141,11 +117,7 @@ private extension CurationView {
       HStack(spacing: 10) {
         if let tag = battle.tags.first {
           Text("#\(tag.name)")
-            .pretendardFont(.semiBold12)
-            .foregroundStyle(.primary500)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .roundedBackground(.beige600)
+            .pickeBadge(.filled, size: .tag)
         }
 
         Spacer()
@@ -202,7 +174,7 @@ private extension CurationView {
   func optionButton(_ option: RecommendedBattleOption?) -> some View {
     // QA-40/42: 두 옵션 버튼을 좌측 정렬 + 동일 너비로 통일해 위치가 들쭉날쭉하지 않게 한다.
     HStack(spacing: 4) {
-      CommentAvatarView(
+      PickeAvatarView(
         imageURL: option?.imageUrl,
         fallback: option?.representative ?? "",
         size: 40
@@ -222,11 +194,7 @@ private extension CurationView {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(8)
-    .roundedBackground(.beige300)
-    .overlay {
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.beige600, lineWidth: 1)
-    }
+    .pickeCard(.beige300, border: .beige600)
   }
 
   @ViewBuilder

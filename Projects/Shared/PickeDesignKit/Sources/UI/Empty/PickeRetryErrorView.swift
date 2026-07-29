@@ -33,10 +33,7 @@ public struct PickeRetryErrorView: View {
           .foregroundStyle(.neutral800)
           .padding(.horizontal, 20)
           .padding(.vertical, 10)
-          .overlay(
-            RoundedRectangle(cornerRadius: 8)
-              .stroke(.beige600, lineWidth: 1)
-          )
+          .roundedBorder(.beige600, radius: 8)
       }
       .buttonStyle(.plain)
     }

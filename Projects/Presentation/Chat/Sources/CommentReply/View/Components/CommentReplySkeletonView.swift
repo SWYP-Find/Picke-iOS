@@ -15,9 +15,7 @@ struct CommentReplySkeletonView: View {
       parentCard()
         .padding(12)
         .background(.beige50)
-        .overlay(alignment: .bottom) {
-          Rectangle().fill(.beige600).frame(height: 1)
-        }
+        .bottomDivider(.beige600)
 
       VStack(alignment: .leading, spacing: 8) {
         SkeletonView(cornerRadius: 4)
@@ -63,9 +61,6 @@ struct CommentReplySkeletonView: View {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .roundedBackground(.beige50)
-    .overlay {
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    }
+    .pickeCard(.beige50, border: .beige600)
   }
 }

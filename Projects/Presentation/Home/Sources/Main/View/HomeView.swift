@@ -63,7 +63,7 @@ public struct HomeView: View {
         }
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
+    .screenBackground()
     .pickeModal(
       $store.scope(
         state: \.attendanceModal,
@@ -124,9 +124,7 @@ extension HomeView {
             .contentShape(Rectangle())
             .onTapGesture { send(.bestBattleTapped(battle)) }
           if index < store.bestBattles.count - 1 {
-            Rectangle()
-              .fill(.beige600)
-              .frame(height: 1)
+            PickeDivider(.beige600)
           }
         }
       }

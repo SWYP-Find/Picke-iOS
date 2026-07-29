@@ -65,8 +65,7 @@ public struct BattleView: View {
       .zIndex(10)
     }
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
     // 데이터 로드 후 첫 페이지를 현재 배틀로 초기화 (스크롤 전엔 scrollPosition 이 nil).
     .onChange(of: store.battles.map(\.id)) { _, ids in
@@ -149,32 +148,18 @@ private extension BattleView {
 private extension BattleView {
   @ViewBuilder
   func appBar() -> some View {
-    HStack {
-      Button { send(.backTapped) } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 18, weight: .medium))
-          .foregroundStyle(.beige50)
-          .frame(width: 24, height: 24)
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-
+    PickeNavigationBar(onBack: { send(.backTapped) }) {
       // 데이터 없을 땐 공유 숨김.
       if let battleId = currentBattleId ?? store.battles.first?.battleId {
         Button { send(.shareTapped(battleId: battleId)) } label: {
           Image(systemName: "square.and.arrow.up")
-            .font(.system(size: 18, weight: .medium))
-            .foregroundStyle(.beige50)
+            .font(.system(size: 18, weight: .semibold))
             .frame(width: 24, height: 24)
         }
         .buttonStyle(.plain)
       }
     }
-    .padding(.horizontal, 16)
-    // VStack overlay 로 감싸이면서 HStack 이 전체 너비로 확장되지 못해 뒤로가기 버튼이
-    // 중앙으로 collapse → 좌측 상단 탭이 안 먹던 문제 수정. 전체 너비 강제.
-    .frame(maxWidth: .infinity)
+    .foregroundStyle(.beige50)
     .contentShape(Rectangle())
   }
 }
@@ -229,11 +214,7 @@ private extension BattleView {
     HStack(spacing: 9) {
       ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
         Text("#\(tag)")
-          .pretendardFont(.semiBold12)
-          .foregroundStyle(.primary500)
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .roundedBackground(.beige600)
+          .pickeBadge(.filled, size: .tag)
       }
     }
   }
@@ -249,10 +230,7 @@ private extension BattleView {
     .foregroundStyle(.gray300)
     .padding(.horizontal, 12)
     .padding(.vertical, 6)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.gray500, lineWidth: 1)
-    )
+    .roundedBorder(.gray500)
   }
 }
 
@@ -314,11 +292,7 @@ private extension BattleView {
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 24)
-      .roundedBackground(isSelected ? .neutral900 : .gray700)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(isSelected ? .secondary500 : .clear, lineWidth: 1)
-      )
+      .pickeCard(isSelected ? .neutral900 : .gray700, border: isSelected ? .secondary500 : .clear)
     }
     .buttonStyle(.plain)
   }

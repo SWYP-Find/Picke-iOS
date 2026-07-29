@@ -5,9 +5,9 @@
 
 import SwiftUI
 
+import AuthDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
-import AuthDomainInterface
 
 struct TermsAgreementView: View {
   @Bindable var store: StoreOf<TermsAgreementFeature>
@@ -100,10 +100,11 @@ struct TermsAgreementView: View {
       .buttonStyle(.plain)
     }
     .padding(16)
-    .roundedBackground(.beige300, radius: 6)
-    .overlay {
-      RoundedRectangle(cornerRadius: 6).stroke(.beige600, lineWidth: 1)
-    }
+    .pickeCard(
+      .beige300,
+      border: .beige600,
+      radius: 6
+    )
   }
 
   @ViewBuilder
@@ -123,16 +124,8 @@ struct TermsAgreementView: View {
 
   @ViewBuilder
   private func agreeButton() -> some View {
-    Button { store.send(.view(.agreeTapped)) } label: {
-      Text("동의")
-        .pretendardFont(.headingMedium)
-        .foregroundStyle(.beige50)
-        .frame(maxWidth: .infinity)
-        .frame(height: 52)
-        .roundedBackground(.primary500)
-    }
-    .buttonStyle(.plain)
-    .disabled(!store.canAgree)
-    .opacity(store.canAgree ? 1 : 0.5)
+    Button("동의") { store.send(.view(.agreeTapped)) }
+      .ctaButtonStyle(.primary, size: .large, height: 52)
+      .disabled(!store.canAgree)
   }
 }

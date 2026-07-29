@@ -6,9 +6,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import PickeDesignKit
 import Entity
 import Kingfisher
+import PickeDesignKit
 import Utill
 
 @ViewAction(for: ContentActivityFeature.self)
@@ -21,8 +21,11 @@ public struct ContentActivityView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "내 콘텐츠 활동")
-        .foregroundStyle(.gray500)
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "내 콘텐츠 활동"
+      )
+      .foregroundStyle(.gray500)
 
       tabBar()
 
@@ -36,9 +39,8 @@ public struct ContentActivityView: View {
       // 좌우 스와이프로 탭 전환 (CommentView 와 동일한 제스처 UX)
       .simultaneousGesture(tabSwipeGesture())
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
   }
 
@@ -70,9 +72,7 @@ private extension ContentActivityView {
         tabButton(tab)
       }
     }
-    .overlay(alignment: .bottom) {
-      Rectangle().fill(.neutral200).frame(height: 1)
-    }
+    .bottomDivider(.neutral200)
   }
 
   @ViewBuilder
@@ -87,11 +87,7 @@ private extension ContentActivityView {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
-        .overlay(alignment: .bottom) {
-          Rectangle()
-            .fill(isSelected ? .primary500 : .clear)
-            .frame(height: 3)
-        }
+        .bottomDivider(isSelected ? .primary500 : .clear, height: 3)
     }
     .buttonStyle(.plain)
   }
@@ -148,11 +144,7 @@ private extension ContentActivityView {
 
             if !item.stanceText.isEmpty {
               Text(item.stanceText)
-                .pretendardFont(.labelSmall)
-                .foregroundStyle(.primary500)
-                .padding(.vertical, 2)
-                .padding(.horizontal, 6)
-                .roundedBackground(.beige600)
+                .pickeBadge(.filled, size: .compact)
             }
           }
 
@@ -183,10 +175,10 @@ private extension ContentActivityView {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .roundedBackground(.beige50, radius: 8)
-    .overlay(
-      RoundedRectangle(cornerRadius: 8)
-        .stroke(.beige600, lineWidth: 1)
+    .pickeCard(
+      .beige50,
+      border: .beige600,
+      radius: 8
     )
   }
 
@@ -194,8 +186,6 @@ private extension ContentActivityView {
   func avatar(_ author: ContentActivityAuthor) -> some View {
     // 디자인(Z5YAW): 항상 beige600 원 배경 위에 캐릭터/기본 아이콘.
     ZStack {
-      Circle().fill(.beige600)
-
       if !author.characterImageURL.isEmpty, let url = URL(string: author.characterImageURL) {
         KFImage(url)
           .resizable()
@@ -207,7 +197,6 @@ private extension ContentActivityView {
           .foregroundStyle(.gray300)
       }
     }
-    .frame(width: 36, height: 36)
-    .clipShape(Circle())
+    .pickeAvatar(size: 36)
   }
 }

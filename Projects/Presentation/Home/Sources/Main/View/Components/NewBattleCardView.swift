@@ -22,10 +22,7 @@ struct NewBattleCardView: View {
       content
     }
     .padding(12)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige50, border: .beige600)
   }
 }
 
@@ -53,11 +50,7 @@ extension NewBattleCardView {
     HStack(spacing: 10) {
       if let tag = battle.tags.first {
         Text("#\(tag.name)")
-          .pretendardFont(.semiBold12)
-          .foregroundStyle(.primary500)
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .roundedBackground(.beige600)
+          .pickeBadge(.filled, size: .tag)
       }
       Spacer()
       MetaLabelView(systemImage: "clock", text: "\(battle.durationMinutes)분")
@@ -125,10 +118,7 @@ extension NewBattleCardView {
     }
     .padding(8)
     .frame(maxWidth: .infinity)
-    .roundedBackground(.beige300)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige300, border: .beige600)
   }
 
   @ViewBuilder

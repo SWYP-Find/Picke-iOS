@@ -2,8 +2,6 @@
 //  CommentView.swift
 //  Chat
 //
-//  .pen `댓글화면` 기준 mock 댓글 UI.
-//
 
 import SwiftUI
 
@@ -25,15 +23,18 @@ public struct CommentView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      navigationBar()
-      ScrollView(showsIndicators: false) {
-        VStack(spacing: 0) {
-          summarySection()
-          filterSection()
-          commentList()
-        }
-        .padding(.bottom, 16)
+      // Figma 8661-8291: 네비바·투표요약·필터탭은 고정, 아래 List 영역만 스크롤한다.
+      VStack(spacing: 4) {
+        navigationBar()
+        summarySection()
+        filterTabs()
       }
+      .background(.beige200)
+
+      ScrollView(showsIndicators: false) {
+        commentList()
+      }
+      .background(.surfaceBeigeDefault)
       .scrollDismissesKeyboard(.interactively)
       .simultaneousGesture(
         DragGesture(minimumDistance: 24)
@@ -50,14 +51,13 @@ public struct CommentView: View {
       )
       inputBar()
     }
-    .background(Color.beige200.ignoresSafeArea())
+    .screenBackground()
     .contentShape(Rectangle())
     .onTapGesture {
       isCommentFocused = false
     }
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .onAppear {
       send(.onAppear)
       withAnimation(.easeOut(duration: 0.75).delay(0.15)) {
@@ -124,39 +124,18 @@ public struct CommentView: View {
 private extension CommentView {
   @ViewBuilder
   func navigationBar() -> some View {
-    HStack {
-      Button { send(.backButtonTapped) } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 18, weight: .regular))
-          .frame(width: 24, height: 24)
-      }
-      .buttonStyle(.plain)
-
-      Spacer()
-
-      Text(store.title)
-        .pretendardFont(.headingMedium)
-        .foregroundStyle(.neutral500)
-        .lineLimit(1)
-
-      Spacer()
-
+    PickeNavigationBar(
+      onBack: { send(.backButtonTapped) },
+      centerTitle: store.title
+    ) {
       Button { send(.forwardTapped) } label: {
         Image(systemName: "chevron.right")
-          .font(.system(size: 18, weight: .regular))
+          .font(.system(size: 18, weight: .semibold))
           .frame(width: 24, height: 24)
       }
       .buttonStyle(.plain)
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
-    .foregroundStyle(.neutral500)
-    .background(.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.beige600)
-        .frame(height: 1)
-    }
+    .foregroundStyle(.cardBaseTextTitle)
   }
 }
 
@@ -165,39 +144,58 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func summarySection() -> some View {
-    // Figma 7423-7968: 칩 행 py2, gap4, stats 행 py4.
-    VStack(spacing: 4) {
-      // 사후투표 후 칩을 항상 노출 — 문구는 isMindChanged 에 따라 분기.
-      changeBadge()
-        .padding(.vertical, 2)
+    // Figma 9331-7984: 양옆 옵션 컬럼 w70(아바타40/제목/퍼센트), 가운데 뱃지+비율바, px16 py4.
+    HStack(alignment: .bottom, spacing: 0) {
+      optionColumn(
+        imageUrl: store.voteSummary.optionA.imageUrl,
+        representative: store.voteSummary.optionA.representative,
+        title: store.voteSummary.optionA.title,
+        percentage: store.voteSummary.optionA.percentage
+      )
 
-      HStack(alignment: .center, spacing: 12) {
-        HStack(spacing: 4) {
-          avatarCircle(
-            imageUrl: store.voteSummary.optionA.imageUrl,
-            name: store.voteSummary.optionA.representative
-          )
-          Text(percentText(store.voteSummary.optionA.percentage))
-            .pretendardFont(.labelSmall)
-            .foregroundStyle(.neutral500)
-            .fixedSize()
-        }
+      // Spacer 를 쓰면 컬럼이 남은 화면 높이를 전부 차지해 뱃지와 비율바가 벌어진다.
+      // 고정 간격으로 묶어 양옆 옵션 컬럼 높이에 맞춘다.
+      VStack(spacing: 24) {
+        changeBadge()
         voteProgress()
-        HStack(spacing: 4) {
-          Text(percentText(store.voteSummary.optionB.percentage))
-            .pretendardFont(.labelSmall)
-            .foregroundStyle(.neutral500)
-            .fixedSize()
-          avatarCircle(
-            imageUrl: store.voteSummary.optionB.imageUrl,
-            name: store.voteSummary.optionB.representative
-          )
-        }
+          .padding(.horizontal, 8)
       }
-      .padding(.vertical, 4)
+      .padding(.top, 10)
+      .frame(maxWidth: .infinity)
+
+      optionColumn(
+        imageUrl: store.voteSummary.optionB.imageUrl,
+        representative: store.voteSummary.optionB.representative,
+        title: store.voteSummary.optionB.title,
+        percentage: store.voteSummary.optionB.percentage
+      )
     }
     .padding(.horizontal, 16)
-    .background(.beige50)
+    .padding(.vertical, 4)
+  }
+
+  @ViewBuilder
+  func optionColumn(
+    imageUrl: String?,
+    representative: String,
+    title: String,
+    percentage: Double
+  ) -> some View {
+    VStack(spacing: 4) {
+      avatarCircle(imageUrl: imageUrl, name: representative)
+
+      VStack(spacing: 0) {
+        Text(title)
+          .pretendardFont(.medium11)
+          .foregroundStyle(.gray500)
+          .lineLimit(1)
+        Text(percentText(percentage))
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.gray500)
+      }
+      .frame(maxWidth: .infinity)
+    }
+    .frame(width: 70)
   }
 
   @ViewBuilder
@@ -213,9 +211,6 @@ private extension CommentView {
     .padding(.horizontal, 4)
     .padding(.vertical, 2)
     .roundedBackground(.primary50)
-    .frame(maxWidth: .infinity, alignment: .center)
-    // 상단 네비게이션 바와 딱 붙지 않도록 여백.
-    .padding(.top, 12)
   }
 
   @ViewBuilder
@@ -238,7 +233,7 @@ private extension CommentView {
 
   @ViewBuilder
   func avatarCircle(imageUrl: String?, name: String) -> some View {
-    CommentAvatarView(
+    PickeAvatarView(
       imageURL: imageUrl,
       fallback: name,
       size: 40
@@ -250,15 +245,6 @@ private extension CommentView {
 
 private extension CommentView {
   @ViewBuilder
-  func filterSection() -> some View {
-    // Figma 7423-7968: 필터탭은 탭별 py8 자체 패딩, 그 아래 List 컨테이너 top16 → sort 행(py4).
-    VStack(spacing: 16) {
-      filterTabs()
-      sortRow()
-    }
-  }
-
-  @ViewBuilder
   func filterTabs() -> some View {
     HStack(spacing: 0) {
       ForEach(CommentFilter.allCases, id: \.self) { filter in
@@ -266,12 +252,6 @@ private extension CommentView {
       }
     }
     .frame(maxWidth: .infinity)
-    // 전체 탭을 가로지르는 연속 베이스 라인 (셀별로 끊겨 보이던 문제 해결).
-    .overlay(alignment: .bottom) {
-      Rectangle()
-        .fill(.neutral200)
-        .frame(height: 1)
-    }
   }
 
   @ViewBuilder
@@ -281,13 +261,11 @@ private extension CommentView {
       sortButton(.latest)
       Spacer()
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 4) // Figma: sort 행 py4
+    .padding(.vertical, 4) // Figma 8661-8320: sort 행 py4
   }
 
   @ViewBuilder
   func filterButton(_ filter: CommentFilter) -> some View {
-    let isSelected = store.selectedFilter == filter
     let title: String = switch filter {
     case .all: "전체"
     case .optionA: store.voteSummary.optionA.title
@@ -297,42 +275,18 @@ private extension CommentView {
       send(.filterTapped(filter))
     } label: {
       Text(title)
-        .pretendardFont(.labelMedium)
-        .foregroundStyle(isSelected ? .primary500 : .neutral300)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .overlay(alignment: .bottom) {
-          Rectangle()
-            .fill(isSelected ? .primary500 : .clear)
-            .frame(height: 2.5)
-        }
+        .pickeSegmentTab(isSelected: store.selectedFilter == filter)
     }
     .buttonStyle(.plain)
   }
 
   @ViewBuilder
   func sortButton(_ sort: CommentSort) -> some View {
-    let isSelected = store.selectedSort == sort
     Button {
       send(.sortTapped(sort))
     } label: {
       Text(sort.title)
-        .pretendardFont(.medium13)
-        .foregroundStyle(isSelected ? .beige50 : .primary500)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-          isSelected ? .primary500 : .primary50,
-          in: RoundedRectangle(cornerRadius: .radiusDefault)
-        )
-        .overlay {
-          RoundedRectangle(cornerRadius: .radiusDefault)
-            .stroke(.primary500, lineWidth: isSelected ? 0 : 1)
-        }
+        .pickeSortChip(isSelected: store.selectedSort == sort)
     }
     .buttonStyle(.plain)
   }
@@ -343,32 +297,31 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func commentList() -> some View {
-    Group {
+    // Figma 8661-8318: List 컨테이너 p16 / 댓글모음 gap6 pb24.
+    VStack(spacing: 6) {
+      sortRow()
+
       if store.isLoadingComments, store.comments.isEmpty {
         CommentSkeletonView()
       } else if store.comments.isEmpty {
         emptyState()
       } else {
-        VStack(spacing: 12) {
-          ForEach(store.comments) { comment in
-            commentCard(comment)
-              .overlay(alignment: .topTrailing) {
-                if store.menuTargetCommentID == comment.id {
-                  inlineMenu(for: comment)
-                    .padding(.trailing, 12)
-                    .offset(y: 46)
-                    .zIndex(1)
-                }
+        ForEach(store.comments) { comment in
+          commentCard(comment)
+            .overlay(alignment: .bottomTrailing) {
+              if store.menuTargetCommentID == comment.id {
+                inlineMenu(for: comment)
+                  .offset(y: 34)
+                  .zIndex(1)
               }
-              .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
-          }
+            }
+            .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
         }
         .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
       }
     }
-    .padding(.top, 16) // Figma: List 컨테이너 top16
-    .padding(.horizontal, 16)
-    .padding(.bottom, 24) // Figma: 댓글모음 pb24
+    .padding(16)
+    .padding(.bottom, 24)
   }
 
   @ViewBuilder
@@ -379,18 +332,18 @@ private extension CommentView {
 
   @ViewBuilder
   func commentCard(_ comment: CommentItem) -> some View {
+    // Figma 8661-8331: 흰 배경 + 하단 구분선만, py12 / 내부 gap8.
     VStack(alignment: .leading, spacing: 8) {
       commentHeader(comment)
-      commentBody(comment)
+
+      VStack(alignment: .leading, spacing: 4) {
+        commentBody(comment)
+        detailLink(comment)
+      }
+
       commentActions(comment)
     }
-    .padding(12)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .roundedBackground(.beige50)
-    .overlay {
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.beige600, lineWidth: 1)
-    }
+    .pickeListRowCard()
   }
 
   @ViewBuilder
@@ -398,12 +351,24 @@ private extension CommentView {
     Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       Text(comment.content)
         .pretendardFont(.regular13)
-        .foregroundStyle(.neutral400)
+        .foregroundStyle(.cardBaseTextBody)
         .lineSpacing(13 * 0.4)
         // 3줄 초과 시 … 줄임 — 전체 내용은 답글 화면에서 확인.
         .lineLimit(3)
         .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .buttonStyle(.plain)
+  }
+
+  @ViewBuilder
+  func detailLink(_ comment: CommentItem) -> some View {
+    Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
+      Text("자세히 보기")
+        .pretendardFont(.labelSmall)
+        .foregroundStyle(.gray200)
+        .padding(.horizontal, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
     .buttonStyle(.plain)
@@ -411,72 +376,53 @@ private extension CommentView {
 
   @ViewBuilder
   func commentHeader(_ comment: CommentItem) -> some View {
-    HStack(alignment: .top, spacing: 6) {
+    HStack(spacing: 8) {
       avatar(urlString: comment.authorImageURL, fallback: comment.author)
-      commentAuthorBlock(comment)
-      Spacer()
-      reportButton(commentId: comment.id)
-    }
-  }
 
-  @ViewBuilder
-  func commentAuthorBlock(_ comment: CommentItem) -> some View {
-    VStack(alignment: .leading, spacing: 4) {
-      HStack(spacing: 6) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(comment.isMine ? "나" : comment.author)
-          .pretendardFont(.labelMedium)
-          .foregroundStyle(.neutral500)
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.cardBaseTextTitle)
           .lineLimit(1)
 
         Text(comment.timeAgo)
-          .pretendardFont(.labelSmall)
-          .foregroundStyle(.neutral300)
+          .pretendardFont(.labelXSmall)
+          .foregroundStyle(.cardBaseTextDecription)
+          .lineLimit(1)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
 
       optionBadge(comment)
     }
   }
 
   @ViewBuilder
-  func reportButton(commentId: UUID) -> some View {
-    Button { send(.commentMenu(id: commentId, action: .more)) } label: {
-      Image(systemName: "ellipsis")
-        .font(.system(size: 18, weight: .regular))
-        .frame(width: 24, height: 24)
-    }
-    .buttonStyle(.plain)
-    .foregroundStyle(.neutral300)
-  }
-
-  @ViewBuilder
   func optionBadge(_ comment: CommentItem) -> some View {
     let summary = comment.option == .a ? store.voteSummary.optionA : store.voteSummary.optionB
-    let label = comment.optionLabel ?? summary.title
-    Text(label)
-      .pretendardFont(.labelSmall)
-      .foregroundStyle(.primary500)
-      .padding(.horizontal, 4)
-      .padding(.vertical, 2)
-      .roundedBackground(.beige600)
+    Text(comment.optionLabel ?? summary.title)
+      .pickeBadge()
   }
 
   @ViewBuilder
   func commentActions(_ comment: CommentItem) -> some View {
-    HStack(spacing: 12) {
-      moreButton(commentId: comment.id)
+    // Figma 8661-8352: 좋아요·답글수는 좌측 gap11, "…" 메뉴는 우측.
+    HStack(spacing: 0) {
+      HStack(spacing: 11) {
+        likeButton(comment)
+        replyCountButton(comment)
+      }
       Spacer()
-      replyCountButton(comment)
-      likeButton(comment)
+      moreButton(commentId: comment.id)
     }
-    .foregroundStyle(.neutral300)
   }
 
   @ViewBuilder
   func moreButton(commentId: UUID) -> some View {
-    Button { send(.commentRow(id: commentId, action: .openReply)) } label: {
-      Text("더보기")
-        .pretendardFont(.labelSmall)
-        .foregroundStyle(.neutral300)
+    Button { send(.commentMenu(id: commentId, action: .more)) } label: {
+      Image(systemName: "ellipsis")
+        .font(.system(size: 18, weight: .regular))
+        .foregroundStyle(.cardBaseTextDecription)
+        .frame(width: 24, height: 24)
     }
     .buttonStyle(.plain)
   }
@@ -484,7 +430,16 @@ private extension CommentView {
   @ViewBuilder
   func replyCountButton(_ comment: CommentItem) -> some View {
     Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
-      actionLabel(systemName: "message", text: "\(comment.replyCount)")
+      HStack(spacing: 2) {
+        Image(systemName: "message")
+          .font(.system(size: 14, weight: .medium))
+          .frame(width: 16, height: 16)
+        Text("\(comment.replyCount)")
+          .pretendardFont(.labelSmall)
+      }
+      .foregroundStyle(.cardBaseTextDecription)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 4)
     }
     .buttonStyle(.plain)
   }
@@ -496,27 +451,13 @@ private extension CommentView {
         Image(asset: .heartPlus)
           .resizable()
           .scaledToFit()
-          .frame(width: 12, height: 12)
+          .frame(width: 16, height: 16)
         Text(comment.likeCount.decimalFormatted)
           .pretendardFont(.labelSmall)
       }
-      .foregroundStyle(comment.isLiked ? .primary500 : .gray300)
+      .foregroundStyle(comment.isLiked ? .primary500 : .cardBaseTextDecription)
     }
     .buttonStyle(.plain)
-  }
-
-  @ViewBuilder
-  func actionLabel(
-    systemName: String,
-    text: String
-  ) -> some View {
-    HStack(spacing: 4) {
-      Image(systemName: systemName)
-        .font(.system(size: 14, weight: .medium))
-        .frame(width: 16, height: 16)
-      Text(text)
-        .pretendardFont(.labelSmall)
-    }
   }
 
   @ViewBuilder
@@ -524,7 +465,7 @@ private extension CommentView {
     urlString: String?,
     fallback: String
   ) -> some View {
-    CommentAvatarView(
+    PickeAvatarView(
       imageURL: urlString,
       fallback: fallback,
       size: 36
@@ -537,53 +478,13 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func inputBar() -> some View {
-    // Figma 7423-8013: 컨테이너 h128 / pt12 pb24 px16 / gap8, 내부 요소는 세로 중앙(items-center).
-    HStack(spacing: 8) {
-      inputTextBox()
-      sendButton()
-    }
-    .padding(.top, 12)
-    .padding(.horizontal, 16)
-    .padding(.bottom, 24)
-    .frame(height: 128)
-    .background(.beige400)
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(.beige800)
-        .frame(height: 1)
-    }
-  }
-
-  @ViewBuilder
-  func inputTextBox() -> some View {
-    // Figma 7423-8014: 입력박스는 flex-1 h-full 로 컨테이너 높이를 꽉 채운다 (px12 py8).
-    // 입력 텍스트는 상단, 글자수 카운터는 하단 우측에 배치.
-    VStack(alignment: .leading, spacing: 6) {
-      TextField("댓글을 입력해주세요", text: $store.commentText, axis: .vertical)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.neutral400)
-        .focused($isCommentFocused)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-
-      Spacer(minLength: 0)
-    }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .background(.beige50)
-  }
-
-  @ViewBuilder
-  func sendButton() -> some View {
-    Button { send(.sendTapped) } label: {
-      Image(systemName: "paperplane.fill")
-        .font(.system(size: 16, weight: .semibold))
-        .foregroundStyle(.beige50)
-        .frame(width: 36, height: 36)
-        .background(store.isSendEnabled ? .primary500 : .primary200, in: Circle())
-    }
-    .buttonStyle(.plain)
-    .disabled(!store.isSendEnabled)
+    PickeCommentInputBar(
+      text: $store.commentText,
+      focus: $isCommentFocused,
+      placeholder: "댓글을 입력해주세요",
+      isSendEnabled: store.isSendEnabled,
+      onSend: { send(.sendTapped) }
+    )
   }
 }
 

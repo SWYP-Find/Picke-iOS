@@ -22,9 +22,8 @@ public struct SettingsView: View {
       menuList()
       Spacer(minLength: 0)
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 }
@@ -34,8 +33,11 @@ private extension SettingsView {
 
   @ViewBuilder
   func appBar() -> some View {
-    PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "설정")
-      .foregroundStyle(.gray500)
+    PickeNavigationBar(
+      onBack: { send(.backTapped) },
+      centerTitle: "설정"
+    )
+    .foregroundStyle(.gray500)
   }
 
   // MARK: 메뉴 리스트
@@ -69,9 +71,7 @@ private extension SettingsView {
       }
       .padding(.vertical, 20)
       .contentShape(Rectangle())
-      .overlay(alignment: .bottom) {
-        Rectangle().fill(.beige600).frame(height: 1)
-      }
+      .bottomDivider(.beige600)
     }
     .buttonStyle(.plain)
   }

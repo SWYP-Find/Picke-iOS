@@ -44,8 +44,6 @@ struct ExploreSkeletonView: View {
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .background(.beige50)
-    .overlay(alignment: .bottom) {
-      Rectangle().fill(.beige600).frame(height: 1)
-    }
+    .bottomDivider(.beige600)
   }
 }

@@ -27,11 +27,7 @@ struct NotificationSkeletonView: View {
           }
           .padding(16)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .roundedBackground(.beige50)
-          .overlay(
-            RoundedRectangle(cornerRadius: .radiusDefault)
-              .stroke(.beige600, lineWidth: 1)
-          )
+          .pickeCard(.beige50, border: .beige600)
         }
       }
       .padding(.top, 8)

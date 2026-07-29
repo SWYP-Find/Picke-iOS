@@ -49,7 +49,7 @@ public struct ProfileView: View {
         }
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
+    .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     // 리워드 광고 사전 고지 — 디자인 시스템 커스텀 팝업.
     .customAlert($store.scope(state: \.rewardNoticeAlert, action: \.rewardNoticeAlert))
@@ -125,8 +125,6 @@ private extension ProfileView {
   func avatar() -> some View {
     // 디자인(oFtBQ): 항상 beige600 원 배경 위에 캐릭터 이미지/기본 아이콘을 올린다.
     ZStack {
-      Circle().fill(.beige600)
-
       if let urlString = store.profileImageURL, let url = URL(string: urlString) {
         KFImage(url)
           .resizable()
@@ -138,8 +136,7 @@ private extension ProfileView {
           .foregroundStyle(.gray300)
       }
     }
-    .frame(width: 52, height: 52)
-    .clipShape(Circle())
+    .pickeAvatar(size: 52)
   }
 
   // MARK: 포인트 충전 버튼
@@ -238,10 +235,10 @@ private extension ProfileView {
       }
       .padding(16)
       .frame(maxWidth: .infinity)
-      .roundedBackground(.beige400, radius: 8)
-      .overlay(
-        RoundedRectangle(cornerRadius: 8)
-          .stroke(.beige600, lineWidth: 1)
+      .pickeCard(
+        .beige400,
+        border: .beige600,
+        radius: 8
       )
     }
     .buttonStyle(.plain)
@@ -276,11 +273,7 @@ private extension ProfileView {
       }
       .padding(.vertical, 20)
       .contentShape(Rectangle())
-      .overlay(alignment: .bottom) {
-        Rectangle()
-          .fill(.beige600)
-          .frame(height: 1)
-      }
+      .bottomDivider(.beige600)
     }
     .buttonStyle(.plain)
   }

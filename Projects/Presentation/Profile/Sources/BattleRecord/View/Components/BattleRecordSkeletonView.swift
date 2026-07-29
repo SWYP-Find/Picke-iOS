@@ -22,10 +22,10 @@ struct BattleRecordSkeletonView: View {
           }
           .padding(12)
           .frame(maxWidth: .infinity, alignment: .leading)
-          .roundedBackground(.beige50, radius: 8)
-          .overlay(
-            RoundedRectangle(cornerRadius: 8)
-              .stroke(.beige600, lineWidth: 1)
+          .pickeCard(
+            .beige50,
+            border: .beige600,
+            radius: 8
           )
         }
       }

@@ -40,10 +40,7 @@ struct HotBattleCardView: View {
     }
     .padding(12)
     .frame(width: 220, alignment: .leading)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.beige600, lineWidth: 1)
-    )
+    .pickeCard(.beige50, border: .beige600)
   }
 
   @ViewBuilder
@@ -62,8 +59,6 @@ struct HotBattleCardView: View {
     }
     .frame(width: 196, height: 140)
     .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault).stroke(.borderBeigeSelected, lineWidth: 4)
-    )
+    .roundedBorder(.borderBeigeSelected, lineWidth: 4)
   }
 }

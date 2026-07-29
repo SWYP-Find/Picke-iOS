@@ -86,10 +86,7 @@ public struct AttendanceSheetView: View {
     .background(
       RoundedRectangle(cornerRadius: 6)
         .fill(.beige100)
-        .overlay(
-          RoundedRectangle(cornerRadius: 6)
-            .stroke(.gray50, lineWidth: 1)
-        )
+        .roundedBorder(.gray50, radius: 6)
     )
   }
 
@@ -152,10 +149,7 @@ public struct AttendanceSheetView: View {
       .background(
         RoundedRectangle(cornerRadius: 6)
           .fill(.beige200)
-          .overlay(
-            RoundedRectangle(cornerRadius: 6)
-              .stroke(.primary50, lineWidth: 1)
-          )
+          .roundedBorder(.primary50, radius: 6)
       )
 
       Text("실패해도 다음 주 월요일에 다시 도전해요")

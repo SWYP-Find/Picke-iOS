@@ -39,8 +39,7 @@ public struct PreVoteView: View {
     }
     .background(screenBackground.ignoresSafeArea())
     .navigationBarHidden(true)
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .hidesSystemBars()
     .overlay(alignment: .top) {
       if !shouldShowSkeleton, !shouldShowLoadError {
         navigationBar()
@@ -72,19 +71,8 @@ public struct PreVoteView: View {
   @ViewBuilder
   private func loadErrorContent() -> some View {
     VStack(spacing: 0) {
-      HStack {
-        Button { send(.backButtonTapped) } label: {
-          Image(systemName: "chevron.left")
-            .font(.system(size: 24, weight: .regular))
-            .frame(width: 20, height: 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        Spacer()
-      }
-      .padding(.horizontal, 16)
-      .padding(.top, 12)
-      .foregroundStyle(.neutral800)
+      PickeNavigationBar(onBack: { send(.backButtonTapped) })
+        .foregroundStyle(.neutral800)
 
       PickeRetryErrorView(message: "배틀을 불러오지 못했어요") { send(.retryTapped) }
     }
@@ -253,11 +241,7 @@ extension PreVoteView {
     HStack(spacing: 9) {
       ForEach(battle.tags, id: \.self) { tag in
         Text(tag)
-          .pretendardFont(.semiBold12)
-          .foregroundStyle(.primary500)
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .roundedBackground(.beige600)
+          .pickeBadge(.filled, size: .tag)
       }
     }
   }
@@ -331,11 +315,7 @@ extension PreVoteView {
       .padding(8)
       .frame(maxWidth: .infinity)
       .frame(height: PreVoteLayout.optionCardHeight)
-      .roundedBackground(.beige300)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(isSelected ? .beige700 : .beige500, lineWidth: 1)
-      )
+      .pickeCard(.beige300, border: isSelected ? .beige700 : .beige500)
       .opacity(isSelected ? 1.0 : 0.88)
     }
     .buttonStyle(.plain)

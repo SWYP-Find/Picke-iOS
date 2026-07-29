@@ -21,8 +21,11 @@ public struct NoticeView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "공지사항 · 이벤트")
-        .foregroundStyle(.gray500)
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "공지사항 · 이벤트"
+      )
+      .foregroundStyle(.gray500)
 
       if let item = store.selectedItem {
         detailContent(item)
@@ -31,9 +34,8 @@ public struct NoticeView: View {
         listContent()
       }
     }
-    .background(Color.beige200.ignoresSafeArea())
-    .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
+    .screenBackground()
+    .hidesSystemBars()
     .onAppear { send(.onAppear) }
   }
 
@@ -112,11 +114,7 @@ private extension NoticeView {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(16)
-      .roundedBackground(.beige50)
-      .overlay(
-        RoundedRectangle(cornerRadius: .radiusDefault)
-          .stroke(.beige600, lineWidth: 1)
-      )
+      .pickeCard(.beige50, border: .beige600)
     }
     .buttonStyle(.plain)
   }
@@ -181,11 +179,7 @@ private extension NoticeView {
   @ViewBuilder
   func categoryBadge() -> some View {
     Text(store.selectedTab.title)
-      .pretendardFont(.semiBold12)
-      .foregroundStyle(.primary500)
-      .padding(.horizontal, 6)
-      .padding(.vertical, 2)
-      .roundedBackground(.beige600)
+      .pickeBadge(.filled, size: .tag)
   }
 }
 
@@ -199,9 +193,7 @@ private extension NoticeView {
         tabButton(tab)
       }
     }
-    .overlay(alignment: .bottom) {
-      Rectangle().fill(.neutral200).frame(height: 1)
-    }
+    .bottomDivider(.neutral200)
   }
 
   @ViewBuilder
@@ -216,11 +208,7 @@ private extension NoticeView {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
-        .overlay(alignment: .bottom) {
-          Rectangle()
-            .fill(isSelected ? .primary500 : .clear)
-            .frame(height: 3)
-        }
+        .bottomDivider(isSelected ? .primary500 : .clear, height: 3)
     }
     .buttonStyle(.plain)
   }

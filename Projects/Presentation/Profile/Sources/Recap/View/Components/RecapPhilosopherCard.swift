@@ -49,11 +49,7 @@ public struct RecapPhilosopherCard: View {
                 .foregroundStyle(.primary500)
                 .padding(.vertical, 2)
                 .padding(.horizontal, 6)
-                .roundedBackground(.beige50)
-                .overlay(
-                  RoundedRectangle(cornerRadius: .radiusDefault)
-                    .stroke(.primary100, lineWidth: 1)
-                )
+                .pickeCard(.beige50, border: .primary100)
             }
           }
         }
@@ -62,23 +58,14 @@ public struct RecapPhilosopherCard: View {
     .padding(.vertical, 16)
     .padding(.horizontal, 20)
     .frame(maxWidth: .infinity)
-    .roundedBackground(.beige50)
-    .overlay(
-      RoundedRectangle(cornerRadius: .radiusDefault)
-        .stroke(.beige600, lineWidth: 1)
-    )
-    .overlay(alignment: .top) {
-      Rectangle()
-        .fill(.primary500)
-        .frame(height: 3)
-    }
+    .pickeCard(.beige50, border: .beige600)
+    .topDivider(.primary500, height: 3)
     .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
   @ViewBuilder
   private var avatar: some View {
     ZStack {
-      Circle().fill(.beige600)
       if let avatarOverride {
         // 공유 스냅샷: 사전 로드된 이미지를 동기 렌더.
         Image(uiImage: avatarOverride)
@@ -96,7 +83,6 @@ public struct RecapPhilosopherCard: View {
           .foregroundStyle(.gray300)
       }
     }
-    .frame(width: 68, height: 68)
-    .clipShape(Circle())
+    .pickeAvatar(size: 68)
   }
 }
