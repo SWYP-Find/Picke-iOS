@@ -97,8 +97,18 @@ jobs:
               '{hook_info:{type:"bitrise"}, build_params:{branch:$branch, pipeline_id:$pipeline, commit_message:$msg, commit_hash:$hash}}')
           fi
           echo "▶ Bitrise 트리거: $PIPELINE"
-          curl -fsSL -X POST "https://api.bitrise.io/v0.1/apps/${APP_SLUG}/builds" \
+          # -f 는 4xx 본문을 버려서 Bitrise 가 알려준 거절 이유가 사라진다. 그러면
+          # 뒤이은 파싱만 JSONDecodeError 로 죽고 원인은 로그에 안 남는다(run 30545402690).
+          # 상태코드와 본문을 함께 남기고, 실패 시 본문·페이로드를 그대로 노출한다.
+          http=$(curl -sS -o /tmp/build_resp.json -w '%{http_code}' \
+            -X POST "https://api.bitrise.io/v0.1/apps/${APP_SLUG}/builds" \
             -H "Authorization: ${BITRISE_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d "$PAYLOAD" \
-            | python3 -c "import sys,json;d=json.load(sys.stdin);print('build #',d.get('build_number'),d.get('build_url',''))"
+            -d "$PAYLOAD")
+          if [ "$http" != "200" ] && [ "$http" != "201" ]; then
+            echo "❌ Bitrise 트리거 실패 (HTTP $http)"
+            echo "--- 응답 ---"; cat /tmp/build_resp.json; echo
+            echo "--- 보낸 페이로드 ---"; echo "$PAYLOAD"
+            exit 1
+          fi
+          python3 -c "import json;d=json.load(open('/tmp/build_resp.json'));print('build #',d.get('build_number'),d.get('build_url',''))"
