@@ -7,9 +7,8 @@ import SwiftUI
 
 import CommentDomainInterface
 import ComposableArchitecture
-import Entity
 import PickeDesignKit
-import Utill
+import PickeFoundation
 
 @ViewAction(for: CommentReplyFeature.self)
 public struct CommentReplyView: View {

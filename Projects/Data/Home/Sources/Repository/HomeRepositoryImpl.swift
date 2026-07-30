@@ -7,12 +7,12 @@
 
 import Foundation
 
-import Entity
 import HomeDomainInterface
 import Model
 import Repository
 
 import LogMacro
+import AuthDomainInterface
 
 
 public final class HomeRepositoryImpl: HomeInterface, @unchecked Sendable {

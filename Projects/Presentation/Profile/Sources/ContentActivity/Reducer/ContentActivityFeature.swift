@@ -7,9 +7,7 @@ import Foundation
 import ProfileDomainInterface
 
 import ComposableArchitecture
-import Entity
 import LogMacro
-import UseCase
 
 @Reducer
 public struct ContentActivityFeature {

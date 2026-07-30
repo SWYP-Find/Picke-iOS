@@ -6,11 +6,11 @@
 import Foundation
 
 import ComposableArchitecture
-import DomainInterface
 import PickeDesignKit
 import Presentation
-import Shared
+import PickeCore
 import TCAFlow
+import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "AppBattleScreen", navigation: true)
 public struct AppBattleCoordinator {

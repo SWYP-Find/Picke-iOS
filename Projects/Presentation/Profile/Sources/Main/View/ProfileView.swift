@@ -5,10 +5,10 @@
 
 import SwiftUI
 
-import AdKit
 import ComposableArchitecture
 import Kingfisher
 import PickeDesignKit
+import AdService
 
 @ViewAction(for: ProfileFeature.self)
 public struct ProfileView: View {
@@ -44,7 +44,8 @@ public struct ProfileView: View {
           // 마이페이지 하단 네이티브 광고 — 2:1(.wide) 규격, 좌우 여백 16.
           AdFitNativeAdView(
             unit: .wide,
-            insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+            insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
+            onAdClick: { send(.adNativeClicked) }
           )
         }
       }

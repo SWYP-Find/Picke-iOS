@@ -6,7 +6,7 @@
 import SwiftUI
 
 import PickeDesignKit
-import Entity
+import ProfileDomainInterface
 
 public struct RecapScoreBar: View {
   private let axis: RecapScoreAxis

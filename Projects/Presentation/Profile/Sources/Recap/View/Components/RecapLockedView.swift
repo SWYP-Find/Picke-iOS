@@ -6,7 +6,7 @@
 import SwiftUI
 
 import PickeDesignKit
-import Entity
+import ProfileDomainInterface
 
 struct RecapLockedView: View {
   /// 잠금 장식용 레이더(블러) — picke.pen 잠금 그래프 라벨/형태(거의 꽉 찬 육각형).

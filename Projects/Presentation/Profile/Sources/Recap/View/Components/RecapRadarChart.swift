@@ -5,8 +5,8 @@
 
 import SwiftUI
 
-import Entity
 import PickeDesignKit
+import ProfileDomainInterface
 
 public struct RecapRadarChart: View {
   private let axes: [RecapScoreAxis]

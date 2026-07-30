@@ -7,12 +7,11 @@
 
 import SwiftUI
 
-import Entity
 import HomeDomainInterface
 import PickeDesignKit
 
-import AdKit
 import ComposableArchitecture
+import AdService
 
 @ViewAction(for: HomeFeature.self)
 public struct HomeView: View {
@@ -47,7 +46,7 @@ public struct HomeView: View {
             }
             // 광고가 없으면 AdFitNativeAdView 가 스스로 접혀 높이 0 이 된다 —
             // 섹션 간 spacing 32 가 두 번 겹치지 않도록 여백은 따로 주지 않는다.
-            AdFitNativeAdView(unit: .wide)
+            AdFitNativeAdView(unit: .wide, onAdClick: { send(.adNativeClicked) })
               .frame(maxWidth: .infinity)
             if !store.bestBattles.isEmpty {
               bestBattlesSection()

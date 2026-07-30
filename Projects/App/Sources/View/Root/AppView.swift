@@ -7,11 +7,11 @@
 
 import SwiftUI
 
-import AdKit
 import ComposableArchitecture
 import PickeDesignKit
 
 import Presentation
+import AdService
 
 struct AppView: View {
   @Bindable var store: StoreOf<AppReducer>
@@ -47,7 +47,12 @@ struct AppView: View {
               ))
               // splash 가 아닌 메인 진입 시점이라 rootViewController 가 준비돼 있다.
               // 닫기 종류와 관계없이 다음 메인 진입 때 다시 요청한다.
-              .onAppear { AppStartPopupAd.presentIfNeeded() }
+              .onAppear {
+                AppStartPopupAd.presentIfNeeded(
+                  // 이 스코프의 store 는 mainTab 코디네이터라 루트 스토어를 명시한다.
+                  onAdClick: { self.store.send(.view(.appStartAdClicked)) }
+                )
+              }
           }
         }
       }

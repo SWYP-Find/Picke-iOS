@@ -6,9 +6,9 @@
 import Foundation
 
 import ComposableArchitecture
-import DomainInterface
 import Presentation
 import TCAFlow
+import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "AppHifiScreen", navigation: true)
 public struct AppHifiCoordinator {

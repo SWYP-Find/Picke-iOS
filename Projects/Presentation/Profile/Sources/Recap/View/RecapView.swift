@@ -6,9 +6,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Entity
 import Kingfisher
 import PickeDesignKit
+import ProfileDomainInterface
 
 @ViewAction(for: RecapFeature.self)
 public struct RecapView: View {

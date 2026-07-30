@@ -16,7 +16,7 @@ import BattleDomainInterface
 import CommentData
 import CommentDomain
 import CommentDomainInterface
-import DomainInterface
+import AudioPlayerService
 import HomeData
 import HomeDomainInterface
 import NetworkToken
@@ -28,10 +28,13 @@ import ProfileData
 import Repository
 import SearchData
 import SearchDomainInterface
-import UseCase
 
 import ComposableArchitecture
 import WeaveDI
+import AppUpdateDomain
+import DeviceService
+import PickeStorage
+import ProfileDomainInterface
 
 /// 기본 WeaveDI 관리자 (단순하고 안정적)
 @MainActor

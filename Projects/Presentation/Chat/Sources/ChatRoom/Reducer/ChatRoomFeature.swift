@@ -10,13 +10,12 @@ import Foundation
 import BattleDomainInterface
 import ChatInterface
 import ComposableArchitecture
-import DomainInterface
-import Entity
 import HomeDomainInterface
 import LogMacro
 import PickeDesignKit
-import UseCase
-import Utill
+import PickeFoundation
+import AnalyticsServiceInterface
+import AudioPlayerServiceInterface
 
 @Reducer
 public struct ChatRoomFeature {

@@ -4,8 +4,8 @@
 //
 
 @preconcurrency import AuthenticationServices
-import Entity
 import Foundation
+import AuthDomainInterface
 
 /// 통합 OAuth UseCase 의 기본 구현체 (테스트 / 프리뷰용 no-op)
 public final class DefaultUnifiedOAuthUseCaseImpl: UnifiedOAuthUseCaseInterface, @unchecked Sendable {

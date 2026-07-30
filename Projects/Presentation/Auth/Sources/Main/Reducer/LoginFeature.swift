@@ -10,12 +10,11 @@ import Foundation
 
 import AuthInterface
 import ComposableArchitecture
-import Entity
 import LogMacro
 
 import AuthDomainInterface
 import PickeDesignKit
-import UseCase
+import AnalyticsServiceInterface
 
 @Reducer
 public struct LoginFeature {

@@ -5,9 +5,9 @@
 
 import SwiftUI
 
-import Entity
 import Kingfisher
 import PickeDesignKit
+import ProfileDomainInterface
 
 public struct RecapMatchCard: View {
   private let card: RecapCard

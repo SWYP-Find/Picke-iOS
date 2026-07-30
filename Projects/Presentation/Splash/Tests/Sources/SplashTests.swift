@@ -8,9 +8,9 @@
 import ComposableArchitecture
 import Testing
 
-import DomainInterface
-import Entity
-import UseCase
+import AnalyticsServiceInterface
+import AppUpdateDomainInterface
+import PickeStorageInterface
 
 @testable import Splash
 

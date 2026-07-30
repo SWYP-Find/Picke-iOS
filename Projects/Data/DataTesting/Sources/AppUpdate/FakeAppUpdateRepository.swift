@@ -3,8 +3,7 @@
 //  DataTesting
 //
 
-import DomainInterface
-import Entity
+import AppUpdateDomainInterface
 
 public struct FakeAppUpdateRepository: AppUpdateInterface {
   public var info: AppUpdateInfo

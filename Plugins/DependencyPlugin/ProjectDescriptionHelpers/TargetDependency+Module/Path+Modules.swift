@@ -8,17 +8,6 @@
 import Foundation
 import ProjectDescription
 
-// MARK: ProjectDescription.Path + PickeDesignKit
-public extension ProjectDescription.Path {
-  static var Shared: Self {
-    return .relativeToRoot("Projects/\(ModulePath.Shareds.name)")
-  }
-  
-  static func Shared(implementation module: ModulePath.Shareds) -> Self {
-    return .relativeToRoot("Projects/\(ModulePath.Shareds .name)/\(module.rawValue)")
-  }
-}
-
 // MARK: - Network
 public extension ProjectDescription.Path {
   static var Networking: Self {

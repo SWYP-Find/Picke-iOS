@@ -7,10 +7,9 @@ import Foundation
 
 import AuthDomainInterface
 import ComposableArchitecture
-import DomainInterface
-import Entity
 import Presentation
 import TCAFlow
+import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "AppProfileScreen", navigation: true)
 public struct AppProfileCoordinator {

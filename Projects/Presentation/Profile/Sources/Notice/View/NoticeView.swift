@@ -6,10 +6,10 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Entity
 import NotificationDomainInterface
 import PickeDesignKit
-import Utill
+import PickeFoundation
+import ProfileDomainInterface
 
 @ViewAction(for: NoticeFeature.self)
 public struct NoticeView: View {

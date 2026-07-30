@@ -4,8 +4,8 @@
 //
 
 import Foundation
+import AppUpdateDomainInterface
 
-import Entity
 
 public extension AppStoreInfoDTO {
   func toEntity(currentVersion: String) -> AppUpdateInfo {

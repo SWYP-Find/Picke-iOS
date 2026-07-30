@@ -5,7 +5,6 @@
 
 import Foundation
 
-import Entity
 import HomeDomainInterface
 import SearchDomainInterface
 

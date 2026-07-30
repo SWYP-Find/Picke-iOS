@@ -7,7 +7,7 @@ import Foundation
 
 import API
 import NetworkHeader
-import Service
+import Remote
 
 
 public enum NotificationService {

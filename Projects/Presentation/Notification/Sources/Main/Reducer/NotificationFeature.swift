@@ -6,11 +6,11 @@
 import Foundation
 
 import ComposableArchitecture
-import Entity
 import LogMacro
 import NotificationDomainInterface
-import Shared
-import UseCase
+import PickeCore
+import AnalyticsServiceInterface
+import CommonDomainInterface
 
 @Reducer
 public struct NotificationFeature {

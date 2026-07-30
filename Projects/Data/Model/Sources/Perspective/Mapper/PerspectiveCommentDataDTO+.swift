@@ -4,7 +4,6 @@
 //
 
 import CommentDomainInterface
-import Entity
 import Foundation
 
 public extension PerspectiveCommentPageDataDTO {

@@ -5,9 +5,9 @@
 
 import Foundation
 
-import Entity
 import LogMacro
-import UseCase
+import DeviceServiceInterface
+import PickeStorageInterface
 
 enum PushTokenStore {
   static var current: String? {

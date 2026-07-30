@@ -8,7 +8,6 @@
 import Foundation
 import WeaveDI
 
-import DomainInterface
 
 public final class MockKeychainManager: KeychainManaging, @unchecked Sendable {
   // MARK: - Configuration

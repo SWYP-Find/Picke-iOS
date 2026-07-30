@@ -9,7 +9,6 @@ import Foundation
 
 import AuthInterface
 import ComposableArchitecture
-import Entity
 import TCAFlow
 
 import AuthDomainInterface

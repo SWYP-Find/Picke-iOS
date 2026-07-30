@@ -7,7 +7,6 @@
 
 import Combine
 import AuthDomainInterface
-import Entity
 import Foundation
 import UIKit
 import WebKit

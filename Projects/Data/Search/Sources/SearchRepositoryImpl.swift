@@ -5,13 +5,13 @@
 
 import Foundation
 
-import Entity
 import HomeDomainInterface
 import Model
 import Repository
 import SearchDomainInterface
 
 import LogMacro
+import BattleDomainInterface
 
 
 public final class SearchRepositoryImpl: SearchInterface, @unchecked Sendable {

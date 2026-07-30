@@ -10,7 +10,8 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .Domain(implements: .UseCase),
+    .Domain(.AppUpdate, .interface),
+    .Service(.Analytics, .interface),
   ],
   sources: ["Sources/**"]
 )

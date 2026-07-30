@@ -6,9 +6,9 @@
 import Foundation
 
 import ComposableArchitecture
-import Entity
 import LogMacro
 import NotificationDomainInterface
+import ProfileDomainInterface
 
 @Reducer
 public struct NoticeFeature {

@@ -1,9 +1,9 @@
 //
+import AnalyticsServiceInterface
 //  NoopAnalyticsUseCase.swift
 //  DomainTesting
 //
 
-import UseCase
 
 public extension AnalyticsUseCase {
   static let noop = AnalyticsUseCase(

@@ -10,8 +10,9 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .Domain(implements: .Entity),
-    .Domain(implements: .DomainInterface),
+    .Domain(.AppUpdate, .interface),
+    
+    .Service(.AudioPlayer),
   ],
   sources: ["Sources/**"]
 )

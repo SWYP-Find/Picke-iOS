@@ -9,8 +9,8 @@ import Testing
 @testable import HomeData
 
 import CommonDomainInterface
-import Entity
 import HomeDomainInterface
+import AuthDomainInterface
 
 struct HomeRepositoryTests {
   private static let fullEnvelope = """

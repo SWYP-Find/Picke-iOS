@@ -7,10 +7,8 @@ import Foundation
 import ProfileDomainInterface
 
 import ComposableArchitecture
-import Entity
 import LogMacro
 import PickeDesignKit
-import UseCase
 
 @Reducer
 public struct PointHistoryFeature {

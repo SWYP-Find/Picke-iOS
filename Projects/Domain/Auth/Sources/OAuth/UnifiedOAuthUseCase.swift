@@ -8,11 +8,10 @@
 @preconcurrency import AuthDomainInterface
 import AuthenticationServices
 import Dependencies
-import DomainInterface
-import Entity
 import Foundation
 import LogMacro
 import Sharing
+import PickeStorageInterface
 
 /// 통합 OAuth UseCase — 소셜 인증 → 백엔드 로그인까지 단일 진입점
 public struct UnifiedOAuthUseCase: UnifiedOAuthUseCaseInterface {

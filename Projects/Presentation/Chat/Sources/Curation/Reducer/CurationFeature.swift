@@ -5,12 +5,10 @@
 
 import Foundation
 
-import ComposableArchitecture
-import DomainInterface
-import Entity
 import BattleDomainInterface
+import ComposableArchitecture
 import LogMacro
-import UseCase
+import AnalyticsServiceInterface
 
 @Reducer
 public struct CurationFeature {
@@ -40,6 +38,7 @@ public struct CurationFeature {
     case backButtonTapped
     case closeButtonTapped
     case battleTapped(battleId: Int)
+    case adNativeClicked
   }
 
   public enum AsyncAction: Equatable {
@@ -102,6 +101,10 @@ extension CurationFeature {
     case let .battleTapped(battleId):
       analyticsUseCase.track(.uiAction(action: .curationBattle, screen: .curation))
       return .send(.delegate(.openBattle(battleId: battleId)))
+
+    case .adNativeClicked:
+      analyticsUseCase.track(.adClick(AdClickData(placement: .curation, format: .native, unit: "ADFIT_NATIVE_2_1")))
+      return .none
     }
   }
 

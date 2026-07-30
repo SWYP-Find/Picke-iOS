@@ -7,10 +7,8 @@ import Foundation
 
 import ComposableArchitecture
 import PickeDesignKit
-import Entity
 import BattleDomainInterface
 import LogMacro
-import UseCase
 
 @Reducer
 public struct BattleProposalFeature {

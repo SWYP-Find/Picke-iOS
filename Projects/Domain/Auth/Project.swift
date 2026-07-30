@@ -10,14 +10,15 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Domain(implements: .Entity),
-    .Domain(implements: .DomainInterface),
+    .Core(.PickeStorage, .interface),
+    
+    .Service(.AudioPlayer),
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.logMarco,
   ],
   interfaceDependencies: [
-    .Domain(implements: .Entity),
+    
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]

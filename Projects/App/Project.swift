@@ -13,12 +13,13 @@ let project = Project.configure(
   settings: .appMainSetting,
   scripts: [.SentryUploadString],
   dependencies: [
+    .Service(.AudioPlayer),
     .Presentation(implements: .Presentation),
     .Domain(implements: .Domain),
     .Data(implements: .Data),
     .Network(implements: .NetworkModule),
-    .Shared(implements: .Shared),
-    .Shared(implements: .AdKit), // 앱 시작 전면 팝업 광고
+    .Core(.PickeCore),
+    .Service(.Ad), // 앱 시작 전면 팝업 광고
     .SPM.googleMobileAds,
     .SPM.firebaseCrashlytics,
     .SPM.mixpanel,
@@ -26,7 +27,6 @@ let project = Project.configure(
     .SPM.kingfisher,
     .SPM.sdwebImageCore,
     .SPM.sentrySwiftUI,
-
   ],
   sources: ["Sources/**"],
   resources: ["Resources/**"],

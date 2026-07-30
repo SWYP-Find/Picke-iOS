@@ -9,7 +9,8 @@ import AuthDomainInterface
 import ComposableArchitecture
 import LogMacro
 import PickeDesignKit
-import UseCase
+import DeviceServiceInterface
+import PickeStorageInterface
 
 @Reducer
 public struct WithdrawReasonFeature {

@@ -7,12 +7,10 @@ import Foundation
 
 import BattleDomainInterface
 import CommonDomainInterface
-import DomainInterface
-import Entity
 import HomeDomainInterface
 import Model
 import Repository
-import Service
+import Remote
 
 import LogMacro
 

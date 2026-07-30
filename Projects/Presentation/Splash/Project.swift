@@ -9,9 +9,13 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Splash"),
   settings: .settings(),
   dependencies: [
+    .DesignSystem,
+    .Domain(.AppUpdate, .interface),
+    .Core(.PickeStorage, .interface),
+    .Service(.Analytics, .interface),
     .SPM.composableArchitecture,
     .SPM.sdwebImageCore,
-    .Domain(implements: .UseCase),
-    .Shared(implements: .Shared),
+    
+    .Core(.PickeCore),
   ]
 )

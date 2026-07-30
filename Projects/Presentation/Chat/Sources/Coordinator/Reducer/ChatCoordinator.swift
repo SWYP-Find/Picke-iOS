@@ -8,11 +8,11 @@ import Foundation
 import ChatInterface
 import CommentDomainInterface
 import ComposableArchitecture
-import DomainInterface
 import LogMacro
 import PickeDesignKit
-import Shared
+import PickeCore
 import TCAFlow
+import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "ChatScreen", navigation: true)
 public struct ChatCoordinator {

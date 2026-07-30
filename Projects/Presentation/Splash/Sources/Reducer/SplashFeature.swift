@@ -7,12 +7,12 @@
 
 import Foundation
 
-import DomainInterface
-import Entity
-import UseCase
 
 import ComposableArchitecture
 import LogMacro
+import AnalyticsServiceInterface
+import AppUpdateDomainInterface
+import PickeStorageInterface
 
 @Reducer
 public struct SplashFeature {

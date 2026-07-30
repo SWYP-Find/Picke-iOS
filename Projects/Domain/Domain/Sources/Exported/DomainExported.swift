@@ -13,8 +13,6 @@
 @_exported import CommentDomainInterface
 @_exported import CommonDomain
 @_exported import CommonDomainInterface
-@_exported import DomainInterface
-@_exported import Entity
 @_exported import HomeDomain
 @_exported import HomeDomainInterface
 @_exported import NotificationDomain
@@ -24,4 +22,4 @@
 @_exported import ProfileDomain
 @_exported import SearchDomain
 @_exported import SearchDomainInterface
-@_exported import UseCase
+@_exported import AppUpdateDomainInterface

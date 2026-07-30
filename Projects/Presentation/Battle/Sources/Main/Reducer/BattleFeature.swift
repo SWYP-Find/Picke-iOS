@@ -6,10 +6,10 @@
 import Foundation
 
 import ComposableArchitecture
-import Entity
 import BattleDomainInterface
 import LogMacro
-import UseCase
+import AnalyticsServiceInterface
+import CommonDomainInterface
 
 @Reducer
 public struct BattleFeature {

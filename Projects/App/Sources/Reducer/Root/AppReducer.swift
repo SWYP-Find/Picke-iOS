@@ -10,7 +10,7 @@ import Domain
 import LogMacro
 import NotificationDomainInterface
 import Presentation
-import Shared
+import PickeCore
 
 @Reducer
 public struct AppReducer: Sendable {
@@ -51,6 +51,8 @@ public struct AppReducer: Sendable {
     case presentView
     case presentRoot
     case presentAuth
+    /// 앱 시작 전면 팝업 광고 클릭.
+    case appStartAdClicked
   }
 
   // MARK: - 앱내에서 사용하는 액션
@@ -83,6 +85,7 @@ public struct AppReducer: Sendable {
   }
 
   @Dependency(\.continuousClock) var clock
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
   // 🎯 PFW 패턴: 강타입 최소 CancelID (3개로 축소)
   private enum CancelID: Hashable {
@@ -159,6 +162,10 @@ public struct AppReducer: Sendable {
 
     case .presentAuth:
       return startTransition(.completeAuthTransition)
+
+    case .appStartAdClicked:
+      analyticsUseCase.track(.adClick(AdClickData(placement: .appStart, format: .popup)))
+      return .none
     }
   }
 

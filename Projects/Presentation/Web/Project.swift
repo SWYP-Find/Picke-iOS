@@ -9,7 +9,8 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Web"),
   settings: .settings(),
   dependencies: [
+    .DesignSystem,
     .SPM.composableArchitecture,
-    .Shared(implements: .Shared),
+    .Core(.PickeCore),
   ]
 )

@@ -8,9 +8,9 @@ import ProfileDomainInterface
 import UIKit
 
 import ComposableArchitecture
-import Entity
 import LogMacro
-import UseCase
+import AnalyticsServiceInterface
+import CommonDomainInterface
 
 @Reducer
 public struct RecapFeature {

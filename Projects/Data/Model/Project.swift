@@ -10,11 +10,11 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.AppUpdate, .interface),
     .Domain(.Common, .interface),
     .Domain(.Comment, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Home, .interface),
-    .Domain(implements: .Entity),
   ],
   sources: ["Sources/**"],
   hasTests: false

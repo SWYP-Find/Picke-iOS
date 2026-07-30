@@ -7,7 +7,7 @@ import SwiftUI
 
 import ComposableArchitecture
 import PickeDesignKit
-import Entity
+import ProfileDomainInterface
 
 @ViewAction(for: NotificationSettingFeature.self)
 public struct NotificationSettingView: View {

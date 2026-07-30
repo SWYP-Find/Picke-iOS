@@ -7,10 +7,11 @@ import Foundation
 
 import AuthDomainInterface
 import ComposableArchitecture
-import Entity
 import LogMacro
 import PickeDesignKit
-import UseCase
+import AnalyticsServiceInterface
+import DeviceServiceInterface
+import PickeStorageInterface
 
 @Reducer
 public struct SettingsFeature {

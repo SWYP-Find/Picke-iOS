@@ -5,13 +5,12 @@
 
 import SwiftUI
 
-import AdKit
 import ComposableArchitecture
-import Entity
 import HomeDomainInterface
 import Kingfisher
 import PickeDesignKit
-import Utill
+import PickeFoundation
+import AdService
 
 @ViewAction(for: HifiFeature.self)
 public struct HifiView: View {
@@ -142,7 +141,8 @@ private extension HifiView {
   func adBannerRow() -> some View {
     AdFitBannerView(
       unit: .size320x100,
-      insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)
+      insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
+      onAdClick: { send(.adBannerClicked) }
     )
   }
 

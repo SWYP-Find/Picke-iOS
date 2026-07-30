@@ -7,12 +7,12 @@ import Foundation
 import SearchDomainInterface
 
 import ComposableArchitecture
-import Entity
 import HifiInterface
 import HomeDomainInterface
 import LogMacro
 import NotificationDomainInterface
-import UseCase
+import AnalyticsServiceInterface
+import BattleDomainInterface
 
 @Reducer
 public struct HifiFeature {
@@ -50,6 +50,8 @@ public struct HifiFeature {
     case itemTapped(id: Int)
     case reachedBottom
     case notificationTapped
+    /// 탐색 화면 배너 광고 클릭
+    case adBannerClicked
   }
 
   public enum AsyncAction: Equatable {
@@ -129,6 +131,10 @@ extension HifiFeature {
       // 무한 스크롤: 다음 페이지가 있고 로딩 중이 아니면 추가 로드.
       guard state.hasNext, !state.isLoading else { return .none }
       return .send(.async(.searchRequested(reset: false)))
+
+    case .adBannerClicked:
+      analyticsUseCase.track(.adClick(AdClickData(placement: .explore, format: .banner, unit: "ADFIT_BANNER_320X100")))
+      return .none
     }
   }
 

@@ -15,13 +15,6 @@ private extension TargetDependency {
   }
 }
 
-// Shared
-public extension TargetDependency {
-  static func Shared(implements module: ModulePath.Shareds) -> Self {
-    projectTarget(module.rawValue, path: .Shared(implementation: module))
-  }
-}
-
 
 // Network
 public extension TargetDependency {

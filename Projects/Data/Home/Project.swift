@@ -10,11 +10,12 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Auth, .interface),
     .Domain(.Home, .interface),
     .Domain(.Common, .interface),
     .Data(implements: .API),
     .Data(implements: .Model),
-    .Data(implements: .Service),
+    .Data(implements: .Remote),
     .Data(implements: .Repository),
     .Network(implements: .NetworkHeader),
     .SPM.weaveDI,

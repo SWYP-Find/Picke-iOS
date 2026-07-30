@@ -4,7 +4,6 @@
 //
 
 import PickeDesignKit
-import Entity
 import BattleDomainInterface
 
 extension PhilosopherAvatar {

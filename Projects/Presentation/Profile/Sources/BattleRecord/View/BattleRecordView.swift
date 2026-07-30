@@ -7,8 +7,8 @@ import SwiftUI
 
 import ComposableArchitecture
 import PickeDesignKit
-import Entity
-import Utill
+import PickeFoundation
+import ProfileDomainInterface
 
 @ViewAction(for: BattleRecordFeature.self)
 public struct BattleRecordView: View {

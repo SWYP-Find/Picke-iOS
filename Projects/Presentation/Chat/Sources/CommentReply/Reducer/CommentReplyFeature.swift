@@ -10,12 +10,10 @@ import Foundation
 import CommentDomainInterface
 import CommonDomainInterface
 import ComposableArchitecture
-import DomainInterface
-import Entity
 import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
-import UseCase
+import AnalyticsServiceInterface
 
 @Reducer
 public struct CommentReplyFeature {

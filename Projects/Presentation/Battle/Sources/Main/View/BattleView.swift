@@ -6,7 +6,6 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Entity
 import Kingfisher
 import PickeDesignKit
 

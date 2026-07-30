@@ -3,7 +3,6 @@
 //  DomainInterface
 //
 
-import Entity
 import Foundation
 import HomeDomainInterface
 

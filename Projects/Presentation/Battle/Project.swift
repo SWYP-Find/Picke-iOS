@@ -9,9 +9,13 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Battle"),
   settings: .settings(),
   dependencies: [
-    .Shared(implements: .Shared),
+    .Domain(.Common, .interface),
+    .DesignSystem,
+    .Core(.PickeFoundation),
+    .Service(.Analytics, .interface),
+    .Core(.PickeCore),
     .Domain(.Battle, .interface),
-    .Domain(implements: .UseCase),
+    
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

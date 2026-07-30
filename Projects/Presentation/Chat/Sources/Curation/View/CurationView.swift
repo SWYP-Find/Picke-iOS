@@ -5,12 +5,11 @@
 
 import SwiftUI
 
-import AdKit
 import BattleDomainInterface
 import ComposableArchitecture
-import Entity
 import PickeDesignKit
-import Utill
+import PickeFoundation
+import AdService
 
 @ViewAction(for: CurationFeature.self)
 public struct CurationView: View {
@@ -29,7 +28,8 @@ public struct CurationView: View {
           // 광고가 없으면 AdFitNativeAdView 가 스스로 자리를 접어 높이 0 이 된다.
           AdFitNativeAdView(
             unit: .wide,
-            insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0)
+            insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0),
+            onAdClick: { send(.adNativeClicked) }
           )
 
           if store.isLoading, store.battles.isEmpty {

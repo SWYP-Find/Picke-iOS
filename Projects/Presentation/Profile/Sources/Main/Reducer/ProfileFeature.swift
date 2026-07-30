@@ -7,11 +7,11 @@ import Foundation
 import ProfileDomainInterface
 
 import ComposableArchitecture
-import Entity
 import LogMacro
 import NotificationDomainInterface
 import PickeDesignKit
-import UseCase
+import AdServiceInterface
+import AnalyticsServiceInterface
 
 @Reducer
 public struct ProfileFeature {
@@ -94,6 +94,7 @@ public struct ProfileFeature {
     case freeChargeTapped
     case philosopherTapped
     case menuTapped(MenuItem)
+    case adNativeClicked
   }
 
   public enum AsyncAction: Equatable {
@@ -227,6 +228,10 @@ extension ProfileFeature {
 
     case let .menuTapped(item):
       return .send(.delegate(.menuSelected(item)))
+
+    case .adNativeClicked:
+      analyticsUseCase.track(.adClick(AdClickData(placement: .mypage, format: .native, unit: "ADFIT_NATIVE_2_1")))
+      return .none
     }
   }
 

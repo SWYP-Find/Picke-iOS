@@ -10,11 +10,15 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Shared(implements: .Shared),
+    .Domain(.Battle, .interface),
+    .DesignSystem,
+    .Core(.PickeFoundation),
+    .Service(.Analytics, .interface),
+    .Core(.PickeCore),
     // 탐색 리스트 인라인 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
-    .Shared(implements: .AdKit),
+    .Service(.Ad),
     .Domain(.Home, .interface),
-    .Domain(implements: .UseCase),
+    
     .Domain(.Search, .interface),
     .Domain(.Notification, .interface),
     .SPM.composableArchitecture,

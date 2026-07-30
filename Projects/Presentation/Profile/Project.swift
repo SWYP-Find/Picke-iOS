@@ -10,13 +10,19 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Common, .interface),
+    .DesignSystem,
+    .Core(.PickeFoundation),
+    .Core(.PickeStorage, .interface),
+    .Service(.Device, .interface),
+    .Service(.Analytics, .interface),
     .Domain(.Profile, .interface),
     .Domain(.Auth, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Notification, .interface),
-    .Domain(implements: .UseCase),
-    .Shared(implements: .Shared),
-    .Shared(implements: .AdKit), // 마이페이지 하단 배너 광고
+    
+    .Core(.PickeCore),
+    .Service(.Ad), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

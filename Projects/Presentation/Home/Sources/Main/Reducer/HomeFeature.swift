@@ -7,15 +7,14 @@
 
 import AttendanceDomainInterface
 import ComposableArchitecture
-import DomainInterface
-import Entity
 import Foundation
 import HomeDomainInterface
 import HomeInterface
 import LogMacro
 import NotificationDomainInterface
-import Shared
-import UseCase
+import PickeCore
+import AnalyticsServiceInterface
+import AuthDomainInterface
 
 @Reducer
 public struct HomeFeature {
@@ -68,6 +67,8 @@ public struct HomeFeature {
     case bestBattleTapped(BestBattle)
     case newBattleTapped(NewBattle)
     case notificationTapped
+    /// 홈 피드 네이티브 광고 클릭
+    case adNativeClicked
   }
 
   public enum Section: Equatable {
@@ -200,6 +201,10 @@ extension HomeFeature {
     case .notificationTapped:
       analyticsUseCase.track(.uiAction(action: .homeNotification, screen: .home))
       return .send(.delegate(.openNotification))
+
+    case .adNativeClicked:
+      analyticsUseCase.track(.adClick(AdClickData(placement: .home, format: .native, unit: "ADFIT_NATIVE_2_1")))
+      return .none
     }
   }
 

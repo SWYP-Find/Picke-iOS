@@ -6,10 +6,10 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Entity
 import Kingfisher
 import PickeDesignKit
-import Utill
+import PickeFoundation
+import ProfileDomainInterface
 
 @ViewAction(for: ContentActivityFeature.self)
 public struct ContentActivityView: View {

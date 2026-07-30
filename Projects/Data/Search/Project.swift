@@ -10,10 +10,11 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Domain(.Battle, .interface),
     .Domain(.Search, .interface),
     .Domain(.Common, .interface),
     .Domain(.Home, .interface),
-    .Domain(implements: .Entity),
+    
     .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Repository),

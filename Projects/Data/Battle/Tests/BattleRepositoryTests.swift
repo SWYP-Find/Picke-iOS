@@ -9,7 +9,6 @@ import Testing
 
 import BattleDomainInterface
 import CommonDomainInterface
-import Entity
 import Foundation
 import HomeDomainInterface
 

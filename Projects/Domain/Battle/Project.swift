@@ -10,13 +10,14 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Common, .interface),
-    .Domain(implements: .Entity),
+    
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ],
   interfaceDependencies: [
+    .Domain(.Home, .interface),
     .Domain(.Common, .interface),
-    .Domain(implements: .Entity),
+    
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]

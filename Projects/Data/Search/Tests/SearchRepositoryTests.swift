@@ -7,8 +7,8 @@ import Testing
 
 @testable import SearchData
 
-import Entity
 import HomeDomainInterface
+import BattleDomainInterface
 
 struct SearchRepositoryTests {
   @Test func searchBattles_은_정상_응답을_ExploreItemPage로_매핑한다() async throws {

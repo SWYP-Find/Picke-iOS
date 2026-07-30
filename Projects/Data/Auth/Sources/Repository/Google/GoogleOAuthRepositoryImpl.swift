@@ -7,7 +7,6 @@
 
 import AuthenticationServices
 import AuthDomainInterface
-import Entity
 import Foundation
 import LogMacro
 import UIKit

@@ -8,11 +8,10 @@
 import Foundation
 
 import AuthDomainInterface
-import DomainInterface
-import Entity
 
 import ComposableArchitecture
 import WeaveDI
+import PickeStorageInterface
 
 public struct AuthUseCaseImpl: AuthUseCaseInterface {
   @Dependency(\.authRepository) var authRepository

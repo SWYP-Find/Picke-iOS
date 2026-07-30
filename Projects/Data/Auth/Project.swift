@@ -11,10 +11,10 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Auth, .interface),
-    .Domain(implements: .Entity),
+    
     .Data(implements: .API),
     .Data(implements: .Model),
-    .Data(implements: .Service),
+    .Data(implements: .Remote),
     .Data(implements: .Repository),
     .Network(implements: .NetworkHeader),
     .SPM.weaveDI,

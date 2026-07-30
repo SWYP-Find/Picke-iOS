@@ -8,7 +8,6 @@
 import AuthDomainInterface
 import AuthenticationServices
 import ComposableArchitecture
-import Entity
 import SwiftUI
 
 struct SocialCircleButtonView: View {

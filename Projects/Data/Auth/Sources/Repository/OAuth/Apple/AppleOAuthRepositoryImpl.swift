@@ -9,7 +9,6 @@ import Foundation
 import AuthenticationServices
 
 @preconcurrency import AuthDomainInterface
-import Entity
 
 import LogMacro
 import WeaveDI

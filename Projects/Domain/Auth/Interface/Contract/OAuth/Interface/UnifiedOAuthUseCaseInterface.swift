@@ -4,9 +4,9 @@
 //
 
 @preconcurrency import AuthenticationServices
-import Entity
 import Foundation
 import WeaveDI
+import AuthDomainInterface
 
 /// 통합 OAuth UseCase 를 위한 Interface 프로토콜
 public protocol UnifiedOAuthUseCaseInterface: Sendable {

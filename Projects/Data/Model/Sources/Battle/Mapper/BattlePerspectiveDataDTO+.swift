@@ -4,7 +4,6 @@
 //
 
 import CommonDomainInterface
-import Entity
 import Foundation
 
 public extension BattlePerspectivePageDataDTO {

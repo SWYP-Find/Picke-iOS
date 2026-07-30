@@ -3,7 +3,6 @@
 //  Model
 //
 
-import Entity
 import Foundation
 import HomeDomainInterface
 

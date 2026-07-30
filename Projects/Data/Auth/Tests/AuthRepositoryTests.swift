@@ -9,7 +9,6 @@ import Testing
 @testable import AuthData
 
 import AuthDomainInterface
-import Entity
 
 struct AuthRepositoryTests {
   // MARK: - login

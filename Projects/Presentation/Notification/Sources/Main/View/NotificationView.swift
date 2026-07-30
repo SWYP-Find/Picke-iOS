@@ -8,7 +8,7 @@ import SwiftUI
 import ComposableArchitecture
 import NotificationDomainInterface
 import PickeDesignKit
-import Utill
+import PickeFoundation
 
 @ViewAction(for: NotificationFeature.self)
 public struct NotificationView: View {

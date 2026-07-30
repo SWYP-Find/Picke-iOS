@@ -3,9 +3,7 @@
 //  DomainTesting
 //
 
-import DomainInterface
-import Entity
-import UseCase
+import AppUpdateDomainInterface
 
 public struct MockAppUpdateUseCase: AppUpdateUseCaseInterface {
   public var info: AppUpdateInfo?

@@ -8,10 +8,9 @@
 import Foundation
 
 import AuthDomainInterface
-import Entity
 import Model
 import Repository
-import Service
+import Remote
 
 import Alamofire
 import Dependencies
