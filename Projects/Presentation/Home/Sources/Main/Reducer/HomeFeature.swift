@@ -249,9 +249,11 @@ extension HomeFeature {
     switch action {
     case let .homeResponse(result):
       state.isLoading = false
-      state.hasLoadedHome = true
       switch result {
       case let .success(bundle):
+        // 실패까지 로드 완료로 굳히면 재진입해도 영영 재요청하지 않아
+        // 빈 홈(광고만 노출)에 갇힌다 — 성공했을 때만 완료로 본다.
+        state.hasLoadedHome = true
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
         state.heroes = home.heroes
