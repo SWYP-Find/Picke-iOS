@@ -178,7 +178,7 @@ extension PreVoteView {
       Spacer()
 
       Button {
-        send(.shareTapped(snapshot: captureCardSnapshot()))
+        shareWithSnapshot()
       } label: {
         Image(systemName: "square.and.arrow.up")
           .font(.system(size: 24, weight: .regular))
@@ -225,11 +225,14 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private func contentSection(_ battle: PreVoteBattle) -> some View {
+  private func contentSection(
+    _ battle: PreVoteBattle,
+    titleColorOverride: Color? = nil
+  ) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       VStack(alignment: .leading, spacing: 20) {
         tagsRow(battle)
-        titleText(battle)
+        titleText(battle, colorOverride: titleColorOverride)
       }
       summaryText(battle)
     }
@@ -247,10 +250,13 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private func titleText(_ battle: PreVoteBattle) -> some View {
+  private func titleText(
+    _ battle: PreVoteBattle,
+    colorOverride: Color? = nil
+  ) -> some View {
     Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
       .pretendardFont(.bold24)
-      .foregroundStyle(titleColor)
+      .foregroundStyle(colorOverride ?? titleColor)
       .kerning(-0.6)
       .lineSpacing(24 * 0.4)
       .multilineTextAlignment(.leading)
@@ -274,11 +280,14 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private func optionSection(_ battle: PreVoteBattle) -> some View {
+  private func optionSection(
+    _ battle: PreVoteBattle,
+    avatarOverrides: [Int: UIImage] = [:]
+  ) -> some View {
     ZStack {
       HStack(spacing: 8) {
-        optionCard(battle.leftOption)
-        optionCard(battle.rightOption)
+        optionCard(battle.leftOption, avatarOverride: avatarOverrides[battle.leftOption.optionId])
+        optionCard(battle.rightOption, avatarOverride: avatarOverrides[battle.rightOption.optionId])
       }
       .frame(maxWidth: .infinity)
       vsBadge()
@@ -286,14 +295,17 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private func optionCard(_ option: PreVoteOption) -> some View {
+  private func optionCard(
+    _ option: PreVoteOption,
+    avatarOverride: UIImage? = nil
+  ) -> some View {
     let isSelected = store.selectedOptionId == option.optionId
 
     return Button {
       send(.optionTapped(optionId: option.optionId))
     } label: {
       VStack(spacing: 12) {
-        avatarView(imageURL: option.imageURL)
+        avatarView(imageURL: option.imageURL, override: avatarOverride)
 
         VStack(spacing: 2) {
           Text(option.stance)
@@ -321,17 +333,27 @@ extension PreVoteView {
     .buttonStyle(.plain)
   }
 
-  private func avatarView(imageURL: String) -> some View {
-    KFImage(URL(string: imageURL))
-      .placeholder {
-        SkeletonView()
-          .frame(width: 28, height: 20)
+  @ViewBuilder
+  private func avatarView(imageURL: String, override: UIImage? = nil) -> some View {
+    Group {
+      if let override {
+        // 공유 스냅샷: 사전 로드된 이미지를 동기 렌더.
+        Image(uiImage: override)
+          .resizable()
+          .scaledToFit()
+      } else {
+        KFImage(URL(string: imageURL))
+          .placeholder {
+            SkeletonView()
+              .frame(width: 28, height: 20)
+          }
+          .resizable()
+          .scaledToFit()
       }
-      .resizable()
-      .scaledToFit()
-      .frame(width: 28, height: 20)
-      .frame(width: 40, height: 40)
-      .background(.beige600, in: Circle())
+    }
+    .frame(width: 28, height: 20)
+    .frame(width: 40, height: 40)
+    .background(.beige600, in: Circle())
   }
 
   @ViewBuilder
@@ -359,19 +381,53 @@ extension PreVoteView {
 // MARK: - Share snapshot
 
 extension PreVoteView {
+  /// 공유 트리거 — 옵션 아바타(철학자) 이미지를 먼저 비동기 로드한 뒤 카드 스냅샷을 렌더한다.
+  /// KFImage 는 ImageRenderer(동기 렌더) 에서 로드 전이라 빈 원으로 캡처되므로,
+  /// Kingfisher 로 미리 받아 `avatarOverrides` 로 주입해 동기 렌더한다. (RecapView 와 동일 패턴)
+  private func shareWithSnapshot() {
+    Task { @MainActor in
+      let avatars = await loadOptionAvatarImages()
+      send(.shareTapped(snapshot: captureCardSnapshot(avatarOverrides: avatars)))
+    }
+  }
+
+  /// 좌/우 옵션의 원격 아바타를 Kingfisher 로 선로드 (실패한 쪽은 제외 → KFImage 폴백).
   @MainActor
-  private func captureCardSnapshot() -> Data? {
+  private func loadOptionAvatarImages() async -> [Int: UIImage] {
+    guard let battle = store.battle else { return [:] }
+    var images: [Int: UIImage] = [:]
+    for option in [battle.leftOption, battle.rightOption] {
+      guard let url = URL(string: option.imageURL) else { continue }
+      let image: UIImage? = await withCheckedContinuation { continuation in
+        KingfisherManager.shared.retrieveImage(with: url) { result in
+          continuation.resume(returning: try? result.get().image)
+        }
+      }
+      if let image {
+        images[option.optionId] = image
+      }
+    }
+    return images
+  }
+
+  @MainActor
+  private func captureCardSnapshot(avatarOverrides: [Int: UIImage]) -> Data? {
     guard let battle = store.battle else { return nil }
-    let renderer = ImageRenderer(content: shareSnapshotCard(battle))
+    let renderer = ImageRenderer(content: shareSnapshotCard(battle, avatarOverrides: avatarOverrides))
     renderer.scale = UIScreen.main.scale
     return renderer.uiImage?.pngData()
   }
 
   @ViewBuilder
-  private func shareSnapshotCard(_ battle: PreVoteBattle) -> some View {
+  private func shareSnapshotCard(
+    _ battle: PreVoteBattle,
+    avatarOverrides: [Int: UIImage]
+  ) -> some View {
     VStack(spacing: PreVoteLayout.contentToOptionSpacing) {
-      contentSection(battle)
-      optionSection(battle)
+      // 스냅샷 배경은 모드와 무관하게 밝은색이라, 사후(post) 화면의 밝은 제목색을
+      // 그대로 쓰면 베이지 위 베이지로 묻힌다 → 항상 어두운 제목색으로 고정.
+      contentSection(battle, titleColorOverride: .neutral500)
+      optionSection(battle, avatarOverrides: avatarOverrides)
     }
     .padding(16)
     .frame(width: PreVoteLayout.snapshotWidth)

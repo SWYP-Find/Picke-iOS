@@ -191,7 +191,7 @@ extension PreVoteFeature {
       let detail = state.battleDetail
       let battle = state.battle
       let title = detail?.battleInfo.title ?? battle?.titleLine1 ?? ""
-      let url = detail?.shareUrl ?? "https://picke.store/battles/\(state.battleId)"
+      let url = PickeShareURL.battle(id: state.battleId, serverShareUrl: detail?.shareUrl)
       let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
       let summary = {
         if let description = detail?.description, !description.isEmpty { return description }

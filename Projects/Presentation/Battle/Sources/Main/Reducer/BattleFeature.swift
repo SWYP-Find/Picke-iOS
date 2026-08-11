@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UIKit
 
 import ComposableArchitecture
 import Entity
@@ -54,10 +55,12 @@ public struct BattleFeature {
 
   public enum AsyncAction: Equatable {
     case fetchRequested
+    case prepareShare(text: String, url: String, imageURL: String?)
   }
 
   public enum InnerAction: Equatable {
     case todayResponse(Result<TodayBattlePage, BattleError>)
+    case sharePrepared(ShareItem)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -126,10 +129,11 @@ extension BattleFeature {
       ]
       .filter { !$0.isEmpty }
       .joined(separator: "\n\n")
-      var items: [Any] = [text]
-      if let urlString = battle.imageURL, let url = URL(string: urlString) { items.append(url) }
-      state.shareItem = ShareItem(items: items)
-      return .none
+      return .send(.async(.prepareShare(
+        text: text,
+        url: PickeShareURL.battle(id: battleId),
+        imageURL: battle.imageURL
+      )))
 
     case let .optionTapped(battleId, optionId):
       analyticsUseCase.track(.uiAction(action: .quickBattleOption, screen: .quickBattle))
@@ -165,6 +169,22 @@ extension BattleFeature {
         return await send(.inner(.todayResponse(result)))
       }
       .cancellable(id: CancelID.fetchToday, cancelInFlight: true)
+
+    case let .prepareShare(text, url, imageURL):
+      return .run { send in
+        var items: [Any] = [text]
+        if let linkURL = URL(string: url) {
+          items.append(linkURL)
+        }
+        if let imageURL,
+           let remoteURL = URL(string: imageURL),
+           let (data, _) = try? await URLSession.shared.data(from: remoteURL),
+           let image = UIImage(data: data)
+        {
+          items.append(image)
+        }
+        await send(.inner(.sharePrepared(ShareItem(items: items))))
+      }
     }
   }
 
@@ -182,6 +202,10 @@ extension BattleFeature {
         state.battles = []
         Log.error("[BattleFeature] fetchTodayBattles failed: \(error.localizedDescription)")
       }
+      return .none
+
+    case let .sharePrepared(item):
+      state.shareItem = item
       return .none
     }
   }
