@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import UIKit
 
 import ComposableArchitecture
 import Entity
@@ -55,7 +54,7 @@ public struct BattleFeature {
 
   public enum AsyncAction: Equatable {
     case fetchRequested
-    case prepareShare(text: String, url: String, imageURL: String?)
+    case prepareShare(ShareContent)
   }
 
   public enum InnerAction: Equatable {
@@ -69,6 +68,7 @@ public struct BattleFeature {
 
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
+  @Dependency(\.shareUseCase) private var shareUseCase
 
   public enum DelegateAction: Equatable {
     /// 배틀 입장 → 채팅방 진입
@@ -122,18 +122,16 @@ extension BattleFeature {
     case let .shareTapped(battleId):
       analyticsUseCase.track(.shareAction(ShareActionData(target: .battle)))
       guard let battle = state.battles.first(where: { $0.battleId == battleId }) else { return .none }
-      let text = [
-        battle.title,
-        battle.question,
-        battle.tags.map { "#\($0)" }.joined(separator: " "),
-      ]
-      .filter { !$0.isEmpty }
-      .joined(separator: "\n\n")
-      return .send(.async(.prepareShare(
-        text: text,
+      let content = ShareContent(
+        title: battle.title,
+        summary: battle.question,
+        hashtags: battle.tags.map { "#\($0)" },
+        optionLine: nil,
         url: PickeShareURL.battle(id: battleId),
-        imageURL: battle.imageURL
-      )))
+        thumbnailURL: battle.imageURL,
+        snapshotData: nil
+      )
+      return .send(.async(.prepareShare(content)))
 
     case let .optionTapped(battleId, optionId):
       analyticsUseCase.track(.uiAction(action: .quickBattleOption, screen: .quickBattle))
@@ -170,20 +168,9 @@ extension BattleFeature {
       }
       .cancellable(id: CancelID.fetchToday, cancelInFlight: true)
 
-    case let .prepareShare(text, url, imageURL):
-      return .run { send in
-        var items: [Any] = [text]
-        if let linkURL = URL(string: url) {
-          items.append(linkURL)
-        }
-        if let imageURL,
-           let remoteURL = URL(string: imageURL),
-           let (data, _) = try? await URLSession.shared.data(from: remoteURL),
-           let image = UIImage(data: data)
-        {
-          items.append(image)
-        }
-        await send(.inner(.sharePrepared(ShareItem(items: items))))
+    case let .prepareShare(content):
+      return .run { [useCase = shareUseCase] send in
+        await send(.inner(.sharePrepared(useCase.makeShareItem(content))))
       }
     }
   }

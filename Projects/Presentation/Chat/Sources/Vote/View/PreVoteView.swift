@@ -51,6 +51,10 @@ public struct PreVoteView: View {
       }
     }
     .onAppear { send(.onAppear) }
+    .onChange(of: store.shareSnapshotRequest) { _, request in
+      guard let request else { return }
+      send(.shareSnapshotRendered(captureCardSnapshot(request)))
+    }
     .sheet(item: $store.shareItem) { item in
       ShareSheet(items: item.items)
         .presentationDetents([.fraction(0.5)])
@@ -178,7 +182,7 @@ extension PreVoteView {
       Spacer()
 
       Button {
-        shareWithSnapshot()
+        send(.shareTapped)
       } label: {
         Image(systemName: "square.and.arrow.up")
           .font(.system(size: 24, weight: .regular))
@@ -381,39 +385,11 @@ extension PreVoteView {
 // MARK: - Share snapshot
 
 extension PreVoteView {
-  /// 공유 트리거 — 옵션 아바타(철학자) 이미지를 먼저 비동기 로드한 뒤 카드 스냅샷을 렌더한다.
-  /// KFImage 는 ImageRenderer(동기 렌더) 에서 로드 전이라 빈 원으로 캡처되므로,
-  /// Kingfisher 로 미리 받아 `avatarOverrides` 로 주입해 동기 렌더한다. (RecapView 와 동일 패턴)
-  private func shareWithSnapshot() {
-    Task { @MainActor in
-      let avatars = await loadOptionAvatarImages()
-      send(.shareTapped(snapshot: captureCardSnapshot(avatarOverrides: avatars)))
-    }
-  }
-
-  /// 좌/우 옵션의 원격 아바타를 Kingfisher 로 선로드 (실패한 쪽은 제외 → KFImage 폴백).
   @MainActor
-  private func loadOptionAvatarImages() async -> [Int: UIImage] {
-    guard let battle = store.battle else { return [:] }
-    var images: [Int: UIImage] = [:]
-    for option in [battle.leftOption, battle.rightOption] {
-      guard let url = URL(string: option.imageURL) else { continue }
-      let image: UIImage? = await withCheckedContinuation { continuation in
-        KingfisherManager.shared.retrieveImage(with: url) { result in
-          continuation.resume(returning: try? result.get().image)
-        }
-      }
-      if let image {
-        images[option.optionId] = image
-      }
-    }
-    return images
-  }
-
-  @MainActor
-  private func captureCardSnapshot(avatarOverrides: [Int: UIImage]) -> Data? {
+  private func captureCardSnapshot(_ request: PreVoteFeature.ShareSnapshotRequest) -> Data? {
     guard let battle = store.battle else { return nil }
-    let renderer = ImageRenderer(content: shareSnapshotCard(battle, avatarOverrides: avatarOverrides))
+    let avatars = request.avatarImageData.compactMapValues(UIImage.init(data:))
+    let renderer = ImageRenderer(content: shareSnapshotCard(battle, avatarOverrides: avatars))
     renderer.scale = UIScreen.main.scale
     return renderer.uiImage?.pngData()
   }

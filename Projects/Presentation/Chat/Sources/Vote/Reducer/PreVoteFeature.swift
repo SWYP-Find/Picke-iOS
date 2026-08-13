@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import UIKit
 
 import BattleDomainInterface
 import CommonDomainInterface
@@ -27,6 +26,20 @@ public struct PreVoteFeature {
     case post
   }
 
+  /// 공유 카드 렌더 요청 — 아바타 선로드가 끝나면 채워지고, 뷰가 이 값으로 카드를 그린다.
+  public struct ShareSnapshotRequest: Equatable, Identifiable {
+    public let id: UUID
+    public let avatarImageData: [Int: Data]
+
+    public init(
+      id: UUID = UUID(),
+      avatarImageData: [Int: Data]
+    ) {
+      self.id = id
+      self.avatarImageData = avatarImageData
+    }
+  }
+
   @ObservableState
   public struct State: Equatable {
     public var battle: PreVoteBattle?
@@ -39,6 +52,7 @@ public struct PreVoteFeature {
     public var detailLoadFailed: Bool = false
     public var isSubmitting: Bool = false
     public var shareItem: ShareItem?
+    public var shareSnapshotRequest: ShareSnapshotRequest?
     public var battleId: Int = 0
     public var voteMode: VoteMode = .pre
     public var myPerspective: BattlePerspective?
@@ -78,7 +92,8 @@ public struct PreVoteFeature {
     case onAppear
     case backButtonTapped
     case retryTapped
-    case shareTapped(snapshot: Data?)
+    case shareTapped
+    case shareSnapshotRendered(Data?)
     case optionTapped(optionId: Int)
     case primaryButtonTapped
   }
@@ -87,6 +102,7 @@ public struct PreVoteFeature {
     case fetchBattleDetail
     case fetchMyPerspective
     case deleteMyPerspective(perspectiveId: Int)
+    case loadShareAvatars
     case prepareShare(ShareContent)
     case submitPreVote(battleId: Int, optionId: Int)
     case submitPostVote(battleId: Int, optionId: Int)
@@ -97,6 +113,7 @@ public struct PreVoteFeature {
     case myPerspectiveResponse(Result<BattlePerspective?, BattleError>)
     case deleteMyPerspectiveResponse(Result<EmptyResult, PerspectiveError>)
     case preVoteResponse(Result<PreVoteResult, BattleError>)
+    case shareAvatarsLoaded([Int: Data])
     case sharePrepared(ShareItem)
     case postVoteResponse(Result<PreVoteResult, BattleError>)
   }
@@ -121,6 +138,7 @@ public struct PreVoteFeature {
     case fetchBattleDetail
     case fetchMyPerspective
     case deleteMyPerspective
+    case loadShareAvatars
     case submitPreVote
     case submitPostVote
   }
@@ -128,6 +146,7 @@ public struct PreVoteFeature {
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
+  @Dependency(\.shareUseCase) private var shareUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -187,39 +206,12 @@ extension PreVoteFeature {
     case .retryTapped:
       return .send(.async(.fetchBattleDetail))
 
-    case let .shareTapped(snapshot):
-      let detail = state.battleDetail
-      let battle = state.battle
-      let title = detail?.battleInfo.title ?? battle?.titleLine1 ?? ""
-      let url = PickeShareURL.battle(id: state.battleId, serverShareUrl: detail?.shareUrl)
-      let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
-      let summary = {
-        if let description = detail?.description, !description.isEmpty { return description }
-        if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty { return infoSummary }
-        return battle?.summary ?? ""
-      }()
-      let hashtags: [String] = {
-        if let tags = detail?.categoryTags, !tags.isEmpty {
-          return tags.map { "#\($0.name)" }
-        }
-        return battle?.tags ?? []
-      }()
-      let optionLine: String? = {
-        guard let left = battle?.leftOption.stance,
-              let right = battle?.rightOption.stance
-        else { return nil }
-        return "🆚 A: \(left)  vs  B: \(right)"
-      }()
-      let content = ShareContent(
-        title: title,
-        summary: summary,
-        hashtags: hashtags,
-        optionLine: optionLine,
-        url: url,
-        thumbnailURL: thumbnailURL,
-        snapshotData: snapshot
-      )
-      return .send(.async(.prepareShare(content)))
+    case .shareTapped:
+      return .send(.async(.loadShareAvatars))
+
+    case let .shareSnapshotRendered(snapshot):
+      state.shareSnapshotRequest = nil
+      return .send(.async(.prepareShare(shareContent(state: state, snapshot: snapshot))))
 
     case let .optionTapped(optionId):
       state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
@@ -236,6 +228,41 @@ extension PreVoteFeature {
         return .send(.async(.submitPostVote(battleId: state.battleId, optionId: optionId)))
       }
     }
+  }
+
+  /// 배틀 상세를 우선하고 프리뷰(battle) 값으로 폴백해 공유 본문을 조립.
+  private func shareContent(state: State, snapshot: Data?) -> ShareContent {
+    let detail = state.battleDetail
+    let battle = state.battle
+    let title = detail?.battleInfo.title ?? battle?.titleLine1 ?? ""
+    let url = PickeShareURL.battle(id: state.battleId, serverShareUrl: detail?.shareUrl)
+    let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
+    let summary = {
+      if let description = detail?.description, !description.isEmpty { return description }
+      if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty { return infoSummary }
+      return battle?.summary ?? ""
+    }()
+    let hashtags: [String] = {
+      if let tags = detail?.categoryTags, !tags.isEmpty {
+        return tags.map { "#\($0.name)" }
+      }
+      return battle?.tags ?? []
+    }()
+    let optionLine: String? = {
+      guard let left = battle?.leftOption.stance,
+            let right = battle?.rightOption.stance
+      else { return nil }
+      return "🆚 A: \(left)  vs  B: \(right)"
+    }()
+    return ShareContent(
+      title: title,
+      summary: summary,
+      hashtags: hashtags,
+      optionLine: optionLine,
+      url: url,
+      thumbnailURL: thumbnailURL,
+      snapshotData: snapshot
+    )
   }
 
   private func handleAsyncAction(
@@ -278,27 +305,26 @@ extension PreVoteFeature {
       }
       .cancellable(id: CancelID.deleteMyPerspective, cancelInFlight: true)
 
+    case .loadShareAvatars:
+      guard let battle = state.battle else {
+        return .send(.async(.prepareShare(shareContent(state: state, snapshot: nil))))
+      }
+        
+      let avatars = [battle.leftOption, battle.rightOption].map { ($0.optionId, $0.imageURL) }
+        
+      return .run { [useCase = shareUseCase] send in
+        var imageData: [Int: Data] = [:]
+          
+        for (optionId, imageURL) in avatars {
+          imageData[optionId] = await useCase.loadImageData(imageURL)
+        }
+        await send(.inner(.shareAvatarsLoaded(imageData)))
+      }
+      .cancellable(id: CancelID.loadShareAvatars, cancelInFlight: true)
+
     case let .prepareShare(content):
-      return .run { send in
-        var items: [Any] = [content.displayText]
-
-        if let url = URL(string: content.url) {
-          items.append(url)
-        } else {
-          items.append(content.url)
-        }
-
-        if let data = content.snapshotData, let image = UIImage(data: data) {
-          items.append(image)
-        } else if let thumbnailURL = content.thumbnailURL,
-                  let remoteURL = URL(string: thumbnailURL),
-                  let (data, _) = try? await URLSession.shared.data(from: remoteURL),
-                  let image = UIImage(data: data)
-        {
-          items.append(image)
-        }
-
-        await send(.inner(.sharePrepared(ShareItem(items: items))))
+      return .run { [useCase = shareUseCase] send in
+        await send(.inner(.sharePrepared(useCase.makeShareItem(content))))
       }
 
     case let .submitPreVote(battleId, optionId):
@@ -381,6 +407,10 @@ extension PreVoteFeature {
         Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
         return .none
       }
+
+    case let .shareAvatarsLoaded(imageData):
+      state.shareSnapshotRequest = ShareSnapshotRequest(avatarImageData: imageData)
+      return .none
 
     case let .sharePrepared(item):
       state.shareItem = item
