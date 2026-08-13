@@ -15,7 +15,10 @@ let suppressWarningsSettings: ProjectDescription.Settings = .settings(
     "SWIFT_ENABLE_EXPLICIT_MODULES": "NO",
     "_EXPERIMENTAL_SWIFT_EXPLICIT_MODULES": "NO",
     "CLANG_ENABLE_EXPLICIT_MODULES": "NO",
-  ]
+  ],
+  // recommended 기본값은 타깃 레벨에 CODE_SIGN_IDENTITY = "iPhone Developer" 를 심어
+  // 프로젝트 설정의 값을 덮는다. match 가 발급하는 건 Apple Development 이므로 이 키만 제외한다.
+  defaultSettings: .recommended(excluding: ["CODE_SIGN_IDENTITY"])
 )
 
 extension Project {

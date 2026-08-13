@@ -65,7 +65,7 @@ extension Settings {
         commonSettings(
           appName: Project.Environment.appStageName,
           displayName: Project.Environment.appName,
-          provisioningProfile: "match AppStore \(Project.Environment.bundlePrefix)",
+          provisioningProfile: "match Development \(Project.Environment.bundlePrefix)",
           setSkipInstall: false
         ),
         xcconfig: .path(.stage)
@@ -93,7 +93,9 @@ extension Settings {
         xcconfig: .path(.prod)
       ),
 
-    ], defaultSettings: .recommended
+      // Tuist 의 recommended 기본값은 타겟 레벨에 CODE_SIGN_IDENTITY = "iPhone Developer" 를 주입해
+      // base 설정을 덮는다. match 가 발급하는 건 Apple Development 이므로 이 키만 제외한다.
+    ], defaultSettings: .recommended(excluding: ["CODE_SIGN_IDENTITY"])
   )
 
   public static func appBaseSetting(appName: String) -> Settings {
