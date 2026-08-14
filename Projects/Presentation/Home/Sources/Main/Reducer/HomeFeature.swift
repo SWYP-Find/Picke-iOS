@@ -249,9 +249,9 @@ extension HomeFeature {
     switch action {
     case let .homeResponse(result):
       state.isLoading = false
-      state.hasLoadedHome = true
       switch result {
       case let .success(bundle):
+        state.hasLoadedHome = true
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
         state.heroes = home.heroes

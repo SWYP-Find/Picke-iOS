@@ -44,13 +44,13 @@ public struct HomeView: View {
 
             if !store.hotBattles.isEmpty {
               hotBattlesSection()
+              adSection()
             }
-            // 광고가 없으면 AdFitNativeAdView 가 스스로 접혀 높이 0 이 된다 —
-            // 섹션 간 spacing 32 가 두 번 겹치지 않도록 여백은 따로 주지 않는다.
-            AdFitNativeAdView(unit: .wide)
-              .frame(maxWidth: .infinity)
             if !store.bestBattles.isEmpty {
               bestBattlesSection()
+              if store.hotBattles.isEmpty {
+                adSection()
+              }
             }
             if !store.quizzes.isEmpty || !store.votes.isEmpty {
               todayPickeSection()
@@ -84,13 +84,22 @@ public struct HomeView: View {
 
 extension HomeView {
   private var shouldShowSkeleton: Bool {
-    store.isLoading &&
+    // hasLoadedHome 이 아직 false 인 첫 프레임(onAppear 도착 전)도 스켈레톤으로
+    // 덮는다 — isLoading 만 보면 빈 콘텐츠 위 광고 자리만 먼저 번쩍인다.
+    (store.isLoading || !store.hasLoadedHome) &&
       store.heroes.isEmpty &&
       store.hotBattles.isEmpty &&
       store.bestBattles.isEmpty &&
       store.quizzes.isEmpty &&
       store.votes.isEmpty &&
       store.newBattles.isEmpty
+  }
+
+  /// 배틀 섹션 아래 네이티브 광고 — AdFit 은 한 화면에 같은 단위 1개만 허용해 호출부에서 하나만 그린다.
+  @ViewBuilder
+  private func adSection() -> some View {
+    AdFitNativeAdView(unit: .wide)
+      .frame(maxWidth: .infinity)
   }
 
   @ViewBuilder
