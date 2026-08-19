@@ -6,15 +6,16 @@
 //
 
 import Foundation
+import NetworkModule
 import UIKit
 
+import AnalyticsServiceInterface
 import BattleDomainInterface
 import CommonDomainInterface
 import ComposableArchitecture
 import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
-import AnalyticsServiceInterface
 
 @Reducer
 public struct PreVoteFeature {
@@ -289,11 +290,36 @@ extension PreVoteFeature {
         if let data = content.snapshotData, let image = UIImage(data: data) {
           items.append(image)
         } else if let thumbnailURL = content.thumbnailURL,
-                  let remoteURL = URL(string: thumbnailURL),
-                  let (data, _) = try? await URLSession.shared.data(from: remoteURL),
-                  let image = UIImage(data: data)
+                  let remoteURL = URL(string: thumbnailURL)
         {
-          items.append(image)
+          let startedAt = Date()
+          do {
+            let (data, response) = try await URLSession.shared.data(from: remoteURL)
+            NetworkTelemetry.shared.record(
+              NetworkTelemetryEvent(
+                source: "vote_share_image",
+                method: "GET",
+                url: remoteURL,
+                statusCode: (response as? HTTPURLResponse)?.statusCode,
+                duration: Date().timeIntervalSince(startedAt),
+                isSuccess: true
+              )
+            )
+            if let image = UIImage(data: data) {
+              items.append(image)
+            }
+          } catch {
+            NetworkTelemetry.shared.record(
+              NetworkTelemetryEvent(
+                source: "vote_share_image",
+                method: "GET",
+                url: remoteURL,
+                statusCode: nil,
+                duration: Date().timeIntervalSince(startedAt),
+                isSuccess: false
+              )
+            )
+          }
         }
 
         await send(.inner(.sharePrepared(ShareItem(items: items))))

@@ -9,6 +9,7 @@ import Model
 
 import AppUpdateDomainInterface
 import LogMacro
+import NetworkModule
 
 public final class AppUpdateRepositoryImpl: AppUpdateInterface {
   private let urlSession: URLSession
@@ -48,8 +49,15 @@ public final class AppUpdateRepositoryImpl: AppUpdateInterface {
     let urlString = "https://itunes.apple.com/lookup?bundleId=\(bundleId)&country=\(country)"
     guard let url = URL(string: urlString) else { throw AppUpdateError.invalidBundleId }
 
+    let startedAt = Date()
     do {
-      let (data, _) = try await urlSession.data(from: url)
+      let (data, urlResponse) = try await urlSession.data(from: url)
+      recordTelemetry(
+        url: url,
+        response: urlResponse,
+        startedAt: startedAt,
+        isSuccess: true
+      )
       let response = try JSONDecoder().decode(AppUpdateResponseDTO.self, from: data)
       guard let appInfo = response.results.first else { throw AppUpdateError.appNotFound }
       return appInfo
@@ -58,9 +66,33 @@ public final class AppUpdateRepositoryImpl: AppUpdateInterface {
     } catch let error as AppUpdateError {
       throw error
     } catch {
+      recordTelemetry(
+        url: url,
+        response: nil,
+        startedAt: startedAt,
+        isSuccess: false
+      )
       Log.error("[AppUpdate] lookup 실패(\(country)): \(error.localizedDescription)")
       throw AppUpdateError.from(error)
     }
+  }
+
+  private func recordTelemetry(
+    url: URL,
+    response: URLResponse?,
+    startedAt: Date,
+    isSuccess: Bool
+  ) {
+    NetworkTelemetry.shared.record(
+      NetworkTelemetryEvent(
+        source: "app_store_lookup",
+        method: "GET",
+        url: url,
+        statusCode: (response as? HTTPURLResponse)?.statusCode,
+        duration: Date().timeIntervalSince(startedAt),
+        isSuccess: isSuccess
+      )
+    )
   }
 
   private func currentLanguage() -> String {

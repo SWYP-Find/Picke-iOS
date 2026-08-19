@@ -8,6 +8,7 @@
 import Alamofire
 import AuthDomainInterface
 import Foundation
+import NetworkModule
 import PickeStorageInterface
 import WeaveDI
 
@@ -25,10 +26,22 @@ public final class OptimizedSessionManager {
 
   private init() {
     // 세션 조립은 SessionFactory 가 담당(config·인터셉터·이벤트 모니터). 동작 보존.
-    session = SessionFactory.authenticated()
-    plainSession = SessionFactory.plain()
+    session = SessionFactory.authenticated(
+      interceptor: AuthInterceptor(),
+      eventMonitors: [SessionInvalidationMonitor()]
+    )
+    plainSession = SessionFactory.plain(
+      eventMonitors: [SessionInvalidationMonitor()]
+    )
 
     setupInitialCredential()
+  }
+
+  public func configureNetworkSessions() {
+    NetworkSessionRegistry.shared.configure(
+      authorizedSession: session,
+      plainSession: plainSession
+    )
   }
 
   public func updateCredential(with tokens: AuthTokens) {

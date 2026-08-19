@@ -20,27 +20,60 @@ public struct AlamofireNetworkProvider<Target: PickeTargetType>: NetworkProvidin
     session: Session? = nil,
     decoder: JSONDecoder = JSONDecoder()
   ) {
-    self.session = session ?? OptimizedSessionManager.shared.session
+    self.session = session ?? NetworkSessionRegistry.shared.authorizedSession()
     self.decoder = decoder
   }
 
   public func request<D: Decodable & Sendable>(_ target: Target) async throws -> D {
     let request = try target.asURLRequest()
-    return try await session
+    let startedAt = Date()
+    let response = await session
       .request(request)
       .validate()
       .serializingDecodable(D.self, decoder: decoder)
-      .value
+      .response
+    recordTelemetry(
+      request: request,
+      response: response.response,
+      startedAt: startedAt,
+      isSuccess: response.error == nil
+    )
+    return try response.result.get()
   }
 
   public func requestResponse(_ target: Target) async throws -> PickeResponse {
     let request = try target.asURLRequest()
+    let startedAt = Date()
     let dataTask = session.request(request).serializingData()
     let response = await dataTask.response
+    recordTelemetry(
+      request: request,
+      response: response.response,
+      startedAt: startedAt,
+      isSuccess: response.error == nil
+    )
     let data = try response.result.get()
     return PickeResponse(
       statusCode: response.response?.statusCode ?? 0,
       data: data
+    )
+  }
+
+  private func recordTelemetry(
+    request: URLRequest,
+    response: HTTPURLResponse?,
+    startedAt: Date,
+    isSuccess: Bool
+  ) {
+    NetworkTelemetry.shared.record(
+      NetworkTelemetryEvent(
+        source: "alamofire",
+        method: request.httpMethod ?? "UNKNOWN",
+        url: request.url,
+        statusCode: response?.statusCode,
+        duration: Date().timeIntervalSince(startedAt),
+        isSuccess: isSuccess
+      )
     )
   }
 }
@@ -48,11 +81,15 @@ public struct AlamofireNetworkProvider<Target: PickeTargetType>: NetworkProvidin
 public extension AlamofireNetworkProvider {
   /// 인증 세션(인터셉터 부착) 기반 provider. 기존 `MoyaProvider.authorized` 대체.
   static var authorized: AlamofireNetworkProvider {
-    AlamofireNetworkProvider(session: OptimizedSessionManager.shared.session)
+    AlamofireNetworkProvider(
+      session: NetworkSessionRegistry.shared.authorizedSession()
+    )
   }
 
   /// 인증 없는 세션 기반 provider. 기존 `MoyaProvider.default` 대체.
   static var `default`: AlamofireNetworkProvider {
-    AlamofireNetworkProvider(session: OptimizedSessionManager.shared.plainSession)
+    AlamofireNetworkProvider(
+      session: NetworkSessionRegistry.shared.plainSession()
+    )
   }
 }

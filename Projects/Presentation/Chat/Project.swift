@@ -17,7 +17,8 @@ let project = Project.configure(
     .Domain(.Common, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Home, .interface),
-    
+    .Network(implements: .NetworkModule),
+
     .Domain(.Comment, .interface),
     .Core(.PickeCore),
     // 큐레이션 리스트 상단 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
