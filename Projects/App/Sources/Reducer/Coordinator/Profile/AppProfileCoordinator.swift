@@ -5,11 +5,11 @@
 
 import Foundation
 
+import AudioPlayerServiceInterface
 import AuthDomainInterface
 import ComposableArchitecture
 import Presentation
 import TCAFlow
-import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "AppProfileScreen", navigation: true)
 public struct AppProfileCoordinator {

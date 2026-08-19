@@ -1,15 +1,14 @@
-import SwiftUI
 import Presentation
+import SwiftUI
 
 public struct ContentView: View {
-    public init() {}
+  public init() {}
 
-    public var body: some View {
-        Text("Hello, World!")
-            .padding()
-    }
+  public var body: some View {
+    Text("Hello, World!")
+      .padding()
+  }
 }
-
 
 #Preview {
   ContentView()
@@ -20,4 +19,3 @@ public struct ContentView: View {
     AppAuthCoordinator()
   }))
 }
-

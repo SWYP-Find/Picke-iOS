@@ -8,8 +8,9 @@
 import Foundation
 
 // 필요 모듈만 사용
-import Domain
 import NetworkModule
+import NetworkToken
+import PickeStorageInterface
 
 struct KeychainTokenProvider: TokenProviding {
   private let keychainManager: KeychainManaging

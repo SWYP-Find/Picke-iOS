@@ -5,12 +5,12 @@
 
 import Foundation
 
+import AudioPlayerServiceInterface
 import ComposableArchitecture
+import PickeCore
 import PickeDesignKit
 import Presentation
-import PickeCore
 import TCAFlow
-import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "AppHomeScreen", navigation: true)
 public struct AppHomeCoordinator {

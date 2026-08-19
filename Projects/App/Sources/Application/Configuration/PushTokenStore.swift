@@ -5,8 +5,8 @@
 
 import Foundation
 
-import LogMacro
 import DeviceServiceInterface
+import LogMacro
 import PickeStorageInterface
 
 enum PushTokenStore {

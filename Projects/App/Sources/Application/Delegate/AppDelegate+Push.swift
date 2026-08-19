@@ -6,7 +6,6 @@
 import LogMacro
 import UIKit
 import UserNotifications
-import WeaveDI
 
 import Domain
 
@@ -39,8 +38,7 @@ extension AppDelegate {
     PushTokenStore.current = tokenString
     #logDebug("[Push] APNs 토큰 수신: \(tokenString.prefix(12))…")
 
-    guard let keychainManager = UnifiedDI.resolve(KeychainManaging.self),
-          keychainManager.accessToken()?.isEmpty == false else { return }
+    guard AppDependencyFactory.keychainManager.accessToken()?.isEmpty == false else { return }
     Task { await PushTokenStore.register() }
   }
 

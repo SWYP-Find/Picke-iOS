@@ -5,10 +5,10 @@
 
 import Foundation
 
+import AudioPlayerServiceInterface
 import ComposableArchitecture
 import Presentation
 import TCAFlow
-import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "AppHifiScreen", navigation: true)
 public struct AppHifiCoordinator {

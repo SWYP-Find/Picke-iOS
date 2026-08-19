@@ -10,8 +10,8 @@ import SwiftUI
 import ComposableArchitecture
 import PickeDesignKit
 
-import Presentation
 import AdService
+import Presentation
 
 struct AppView: View {
   @Bindable var store: StoreOf<AppReducer>

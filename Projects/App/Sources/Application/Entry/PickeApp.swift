@@ -18,6 +18,8 @@ struct PickeApp: App {
         #else
           AppReducer()
         #endif
+      } withDependencies: {
+        AppDependencyFactory.configure(&$0)
       }
 
       SentryTracedView("AppRoot") {

@@ -5,12 +5,13 @@
 //  Created by Wonji Suh  on 5/6/26.
 //
 
+import AnalyticsServiceInterface
 import ComposableArchitecture
 import Domain
 import LogMacro
 import NotificationDomainInterface
-import Presentation
 import PickeCore
+import Presentation
 
 @Reducer
 public struct AppReducer: Sendable {

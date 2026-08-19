@@ -8,8 +8,8 @@ import GoogleMobileAds
 import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
+import NetworkModule
 import UIKit
-import WeaveDI
 
 import Domain
 
@@ -53,6 +53,27 @@ extension AppDelegate {
     ])
 
     initializeMixpanelSessionReplay()
+    configureNetworkTelemetry()
+  }
+
+  private func configureNetworkTelemetry() {
+    NetworkTelemetry.shared.configure { event in
+      var properties: Properties = [
+        "source": event.source,
+        "method": event.method,
+        "host": event.host,
+        "path": event.path,
+        "duration_ms": event.durationMilliseconds,
+        "success": event.isSuccess,
+      ]
+      if let statusCode = event.statusCode {
+        properties["status_code"] = statusCode
+      }
+      Mixpanel.mainInstance().track(
+        event: "network_request",
+        properties: properties
+      )
+    }
   }
 
   /// NOTE: MixpanelSessionReplay 1.4.0의 _UIReparentingView swizzling이
@@ -100,17 +121,6 @@ extension AppDelegate {
   // MARK: - DI
 
   func configureDependencies() {
-    WeaveDI.Container.bootstrapInTask { @DIContainerActor _ in
-      await AppDIManager.shared.registerDefaultDependencies()
-
-      // Kingfisher 글로벌 requestModifier 등록 — DI 등록 직후라 KeychainManaging resolve 보장
-      if let keychainManager = UnifiedDI.resolve(KeychainManaging.self) {
-        await MainActor.run {
-          KingfisherConfigurator.configureAuthorizedDownloader(
-            keychainManager: keychainManager
-          )
-        }
-      }
-    }
+    AppDependencyFactory.configureNetworkInfrastructure()
   }
 }
