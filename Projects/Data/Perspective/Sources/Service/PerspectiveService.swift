@@ -7,7 +7,7 @@ import Foundation
 
 import API
 import NetworkHeader
-
+import Remote
 
 public struct PerspectiveCommentBody: Encodable {
   public let content: String

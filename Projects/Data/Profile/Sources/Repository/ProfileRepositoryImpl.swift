@@ -6,7 +6,7 @@
 import Foundation
 
 import ProfileDomainInterface
-import Repository
+import NetworkModule
 
 import LogMacro
 

@@ -17,7 +17,7 @@ let project = Project.configure(
     
     .Data(implements: .API),
     .Data(implements: .Model),
-    .Data(implements: .Repository),
+    .Network(implements: .NetworkModule),
     .Network(implements: .NetworkHeader),
     .SPM.logMarco,
   ],

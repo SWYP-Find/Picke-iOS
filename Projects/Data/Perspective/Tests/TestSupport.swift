@@ -6,7 +6,7 @@
 import Foundation
 
 import NetworkHeader
-import Repository
+import NetworkModule
 
 struct StubNetworkProvider<Target: PickeTargetType>: NetworkProviding {
   let stubData: Data

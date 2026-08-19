@@ -9,7 +9,7 @@ import Foundation
 
 import AuthDomainInterface
 import Model
-import Repository
+import NetworkModule
 import Remote
 
 import Alamofire

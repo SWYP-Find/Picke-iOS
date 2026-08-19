@@ -9,7 +9,7 @@ import Foundation
 
 import HomeDomainInterface
 import Model
-import Repository
+import NetworkModule
 
 import LogMacro
 import AuthDomainInterface

@@ -9,7 +9,7 @@ import CommentDomainInterface
 import CommonDomainInterface
 import Model
 import PerspectiveDomainInterface
-import Repository
+import NetworkModule
 
 import LogMacro
 

@@ -8,7 +8,7 @@ import Foundation
 import CommentDomainInterface
 import CommonDomainInterface
 import Model
-import Repository
+import NetworkModule
 
 import LogMacro
 

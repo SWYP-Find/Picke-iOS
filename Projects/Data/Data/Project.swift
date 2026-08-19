@@ -10,10 +10,10 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .Data(.AppUpdate),
     .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Remote),
-    .Data(implements: .Repository),
     .Data(.Attendance),
     .Data(.Auth),
     .Data(.Battle),

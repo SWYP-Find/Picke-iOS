@@ -9,7 +9,7 @@ import BattleDomainInterface
 import CommonDomainInterface
 import HomeDomainInterface
 import Model
-import Repository
+import NetworkModule
 import Remote
 
 import LogMacro

@@ -7,7 +7,7 @@ import Foundation
 
 import Model
 import NotificationDomainInterface
-import Repository
+import NetworkModule
 
 import LogMacro
 

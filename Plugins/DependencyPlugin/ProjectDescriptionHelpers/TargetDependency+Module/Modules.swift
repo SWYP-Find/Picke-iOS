@@ -34,7 +34,6 @@ public extension ModulePath {
   enum Datas: String, CaseIterable {
     case Model
     case Data
-    case Repository
     case API
     case Remote
     case DataTesting

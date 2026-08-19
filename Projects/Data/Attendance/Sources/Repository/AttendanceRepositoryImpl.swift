@@ -7,7 +7,7 @@ import Foundation
 
 import AttendanceDomainInterface
 import Model
-import Repository
+import NetworkModule
 
 import LogMacro
 
