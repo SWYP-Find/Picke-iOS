@@ -11,8 +11,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Common),
-    
-    .Service(.AudioPlayer),
     .Domain(.Attendance),
     .Domain(.Auth),
     .Domain(.Battle),

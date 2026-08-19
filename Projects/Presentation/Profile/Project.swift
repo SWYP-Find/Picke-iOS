@@ -20,11 +20,14 @@ let project = Project.configure(
     .Domain(.Auth, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Notification, .interface),
-    
+
     .Core(.PickeCore),
     .Service(.Ad), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,
+  ],
+  interfaceDependencies: [
+    .Domain(.Profile, .interface),
   ]
 )

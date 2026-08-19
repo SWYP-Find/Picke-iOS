@@ -10,7 +10,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Common, .interface),
-    .Domain(.Notification),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ],

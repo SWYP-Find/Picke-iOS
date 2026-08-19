@@ -11,8 +11,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Core(.PickeStorage, .interface),
-    
-    .Service(.AudioPlayer),
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.logMarco,
