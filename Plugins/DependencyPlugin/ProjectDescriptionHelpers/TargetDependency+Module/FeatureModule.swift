@@ -59,6 +59,7 @@ public enum ServiceFeatureModule: String, CaseIterable {
 }
 
 public enum DataFeatureModule: String, CaseIterable {
+  case AppUpdate
   case Attendance
   case Auth
   case Battle
