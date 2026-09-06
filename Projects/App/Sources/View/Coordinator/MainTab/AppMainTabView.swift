@@ -10,7 +10,7 @@ import UIKit
 
 import ComposableArchitecture
 import PickeDesignKit
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 public struct AppMainTabView: View {

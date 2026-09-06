@@ -11,7 +11,7 @@ import Domain
 import LogMacro
 import NotificationDomainInterface
 import PickeCore
-import Presentation
+import FeatureAssembly
 
 @Reducer
 public struct AppReducer: Sendable {

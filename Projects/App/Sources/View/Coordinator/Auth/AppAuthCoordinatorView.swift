@@ -6,7 +6,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 public struct AppAuthCoordinatorView: View {

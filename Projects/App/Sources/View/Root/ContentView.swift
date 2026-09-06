@@ -1,4 +1,4 @@
-import Presentation
+import FeatureAssembly
 import SwiftUI
 
 public struct ContentView: View {

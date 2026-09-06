@@ -10,7 +10,7 @@ import Foundation
 import AnalyticsServiceInterface
 import ComposableArchitecture
 import PickeDesignKit
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 @Reducer

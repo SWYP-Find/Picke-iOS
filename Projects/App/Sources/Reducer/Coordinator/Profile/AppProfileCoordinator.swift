@@ -8,7 +8,7 @@ import Foundation
 import AudioPlayerServiceInterface
 import AuthDomainInterface
 import ComposableArchitecture
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 @FlowCoordinator(screen: "AppProfileScreen", navigation: true)

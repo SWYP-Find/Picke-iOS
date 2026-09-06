@@ -26,7 +26,7 @@ let project = Project.configure(
     .Data(.AppUpdate),
     .Service(.AudioPlayer),
     .Service(.Analytics),
-    .Presentation(implements: .Presentation),
+    .featureAssembly,
     .Domain(implements: .Domain),
     .Data(implements: .Data),
     .Network(implements: .NetworkModule),

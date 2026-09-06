@@ -6,7 +6,7 @@
 import Foundation
 
 import ComposableArchitecture
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 @FlowCoordinator(screen: "AppAuthScreen", navigation: true)

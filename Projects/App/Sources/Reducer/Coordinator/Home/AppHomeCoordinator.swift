@@ -9,7 +9,7 @@ import AudioPlayerServiceInterface
 import ComposableArchitecture
 import PickeCore
 import PickeDesignKit
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 @FlowCoordinator(screen: "AppHomeScreen", navigation: true)

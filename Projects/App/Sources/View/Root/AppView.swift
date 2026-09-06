@@ -11,7 +11,7 @@ import ComposableArchitecture
 import PickeDesignKit
 
 import AdService
-import Presentation
+import FeatureAssembly
 
 struct AppView: View {
   @Bindable var store: StoreOf<AppReducer>

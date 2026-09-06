@@ -7,7 +7,7 @@ import Foundation
 
 import AudioPlayerServiceInterface
 import ComposableArchitecture
-import Presentation
+import FeatureAssembly
 import TCAFlow
 
 @FlowCoordinator(screen: "AppHifiScreen", navigation: true)
