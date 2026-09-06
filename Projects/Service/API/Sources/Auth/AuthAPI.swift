@@ -1,5 +1,5 @@
 //
-//  AuthApI.swift
+//  AuthAPI.swift
 //  API
 //
 //  Created by Wonji Suh  on 5/14/26.
