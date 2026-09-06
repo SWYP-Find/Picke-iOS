@@ -32,6 +32,7 @@ public enum CoreModule: String, CaseIterable {
   case logger = "PickeCoreLogger"
   case network = "PickeNetwork"
   case storage = "PickeStorage"
+  case coreUI = "PickeCoreUI"
   case coreUtility = "PickeCoreUtility"
   case thirdParty = "PickeThirdParty"
 
@@ -71,5 +72,16 @@ public enum DomainModule: String, CaseIterable {
   /// Projects/Domain/<name>
   var path: Path {
     return .relativeToDomain(rawValue)
+  }
+}
+
+public enum UIModule: String, CaseIterable {
+  case animation = "PickeAnimation"
+  case designKit = "PickeDesignKit"
+  case sharedUI = "PickeSharedUI"
+
+  /// Projects/UI/<name>
+  var path: Path {
+    return .relativeToUI(rawValue)
   }
 }

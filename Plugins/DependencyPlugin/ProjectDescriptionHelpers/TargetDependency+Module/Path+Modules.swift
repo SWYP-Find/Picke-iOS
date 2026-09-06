@@ -17,7 +17,6 @@ public extension ProjectDescription.Path {
     return .relativeToRoot("Projects/Core/\(name)")
   }
 
-
   static func relativeToService(_ name: String) -> Self {
     return .relativeToRoot("Projects/Service/\(name)")
   }
@@ -26,9 +25,12 @@ public extension ProjectDescription.Path {
     return .relativeToRoot("Projects/Domain/\(name)")
   }
 
+  static func relativeToUI(_ name: String) -> Self {
+    return .relativeToRoot("Projects/UI/\(name)")
+  }
+
   /// 디자인 시스템은 아직 단일 모듈이라 레이어 디렉토리가 곧 모듈 경로다.
   static var designSystem: Self {
     return .relativeToRoot("Projects/DesignSystem")
   }
-
 }
