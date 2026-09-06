@@ -8,6 +8,7 @@ import SwiftUI
 import BattleDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
+import PickeSharedUI
 import PickeCoreUtility
 import Ad
 

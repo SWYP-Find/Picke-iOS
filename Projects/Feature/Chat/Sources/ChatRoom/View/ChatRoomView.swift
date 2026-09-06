@@ -11,6 +11,7 @@ import ComposableArchitecture
 import HomeDomainInterface
 import Kingfisher
 import PickeDesignKit
+import PickeSharedUI
 
 @ViewAction(for: ChatRoomFeature.self)
 public struct ChatRoomView: View {

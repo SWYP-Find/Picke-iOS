@@ -9,6 +9,7 @@ import ProfileDomainInterface
 import ComposableArchitecture
 import LogMacro
 import PickeDesignKit
+import PickeSharedUI
 
 @Reducer
 public struct PointHistoryFeature {

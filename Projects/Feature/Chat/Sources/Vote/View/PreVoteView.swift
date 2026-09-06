@@ -11,6 +11,7 @@ import BattleDomainInterface
 import ComposableArchitecture
 import Kingfisher
 import PickeDesignKit
+import PickeSharedUI
 
 @ViewAction(for: PreVoteFeature.self)
 public struct PreVoteView: View {

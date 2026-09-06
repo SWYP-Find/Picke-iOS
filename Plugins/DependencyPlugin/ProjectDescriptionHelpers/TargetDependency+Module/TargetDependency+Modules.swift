@@ -81,9 +81,4 @@ public extension TargetDependency {
   static func ui(_ module: UIModule, _ target: ModuleTarget = .implementation) -> Self {
     return .moduleDependency(name: module.rawValue, path: module.path, target: target)
   }
-
-  /// 디자인 시스템(단일 타깃). UI 레이어로 쪼갠 뒤 `ui(_:)` 로 대체한다.
-  static var designSystem: Self {
-    return .project(target: "PickeDesignKit", path: .designSystem)
-  }
 }

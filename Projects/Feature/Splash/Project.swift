@@ -1,8 +1,8 @@
+import DependencyPackagePlugin
+import DependencyPlugin
 import Foundation
 import ProjectDescription
-import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
 
 let project = Project.configure(
   moduleType: .microModule(name: "Splash"),
@@ -10,13 +10,13 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .designSystem,
+    .ui(.designKit),
+    .ui(.animation),
     .domain(.appUpdate, .interface),
     .core(.storage, .interface),
     .service(.analytics, .interface),
     .SPM.composableArchitecture,
-    .SPM.sdwebImageCore,
-    
+
     .core(.thirdParty),
   ]
 )

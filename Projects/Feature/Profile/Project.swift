@@ -10,7 +10,8 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .designSystem,
+    .ui(.designKit),
+    .ui(.sharedUI),
     .core(.coreUtility),
     .core(.storage, .interface),
     .service(.device, .interface),

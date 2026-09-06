@@ -7,6 +7,7 @@ import SwiftUI
 
 import ComposableArchitecture
 import PickeDesignKit
+import PickeSharedUI
 import PickeCoreUtility
 import ProfileDomainInterface
 

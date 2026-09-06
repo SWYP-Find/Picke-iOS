@@ -10,6 +10,7 @@ import SwiftUI
 
 import AuthDomainInterface
 import PickeDesignKit
+import PickeSharedUI
 
 public struct LoginView: View {
   @Bindable var store: StoreOf<LoginFeature>

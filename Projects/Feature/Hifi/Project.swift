@@ -11,7 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .domain(.battle, .interface),
-    .designSystem,
+    .ui(.designKit),
     .core(.coreUtility),
     .service(.analytics, .interface),
     .core(.thirdParty),

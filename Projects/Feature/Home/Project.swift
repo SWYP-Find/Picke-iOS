@@ -11,7 +11,8 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .domain(.auth, .interface),
-    .designSystem,
+    .ui(.designKit),
+    .ui(.sharedUI),
     .service(.analytics, .interface),
     .SPM.tcaFlow,
     .SPM.kingfisher,

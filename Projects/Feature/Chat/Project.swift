@@ -12,7 +12,8 @@ let project = Project.configure(
   dependencies: [
     .service(.audioPlayer, .interface),
     .domain(.perspective, .interface),
-    .designSystem,
+    .ui(.designKit),
+    .ui(.sharedUI),
     .core(.coreUtility),
     .service(.analytics, .interface),
     .domain(.battle, .interface),

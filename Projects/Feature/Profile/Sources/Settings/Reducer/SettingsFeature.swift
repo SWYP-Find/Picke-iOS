@@ -9,6 +9,7 @@ import AuthDomainInterface
 import ComposableArchitecture
 import LogMacro
 import PickeDesignKit
+import PickeSharedUI
 import AnalyticsServiceInterface
 import DeviceServiceInterface
 import PickeStorageInterface

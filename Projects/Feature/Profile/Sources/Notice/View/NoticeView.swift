@@ -8,6 +8,7 @@ import SwiftUI
 import ComposableArchitecture
 import NotificationDomainInterface
 import PickeDesignKit
+import PickeSharedUI
 import PickeCoreUtility
 import ProfileDomainInterface
 
