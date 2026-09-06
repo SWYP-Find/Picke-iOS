@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "PerspectiveDomain"),
   bundleId: .appBundleID(name: ".PerspectiveDomain"),
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .domain(.battle, .interface),

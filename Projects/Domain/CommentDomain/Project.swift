@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "CommentDomain"),
   bundleId: .appBundleID(name: ".CommentDomain"),
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .domain(.battle, .interface),

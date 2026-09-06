@@ -7,7 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "AppUpdateDomain"),
   bundleId: .appBundleID(name: ".AppUpdateDomain"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,

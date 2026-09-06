@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "Auth"),
   bundleId: .appBundleID(name: ".Auth"),
+  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .designSystem,

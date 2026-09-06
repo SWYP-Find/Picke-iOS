@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "NotificationDomain"),
   bundleId: .appBundleID(name: ".NotificationDomain"),
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .SPM.weaveDI,

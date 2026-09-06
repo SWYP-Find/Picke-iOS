@@ -7,6 +7,7 @@ import DependencyPackagePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "Splash"),
   bundleId: .appBundleID(name: ".Splash"),
+  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .designSystem,

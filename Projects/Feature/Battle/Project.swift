@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "Battle"),
   bundleId: .appBundleID(name: ".Battle"),
+  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .designSystem,

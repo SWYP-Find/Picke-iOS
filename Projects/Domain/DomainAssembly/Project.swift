@@ -7,7 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .module(name: "DomainAssembly"),
   bundleId: .appBundleID(name: ".DomainAssembly"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .domain(.appUpdate),

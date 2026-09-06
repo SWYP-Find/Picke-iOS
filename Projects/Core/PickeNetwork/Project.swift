@@ -12,7 +12,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "PickeNetwork"),
   bundleId: .appBundleID(name: ".PickeNetwork"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .core(.logger),

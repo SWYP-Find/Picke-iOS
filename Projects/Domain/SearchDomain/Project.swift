@@ -7,7 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "SearchDomain"),
   bundleId: .appBundleID(name: ".SearchDomain"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .domain(.home, .interface),

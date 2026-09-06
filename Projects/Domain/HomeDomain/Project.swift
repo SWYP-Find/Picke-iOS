@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "HomeDomain"),
   bundleId: .appBundleID(name: ".HomeDomain"),
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .SPM.weaveDI,

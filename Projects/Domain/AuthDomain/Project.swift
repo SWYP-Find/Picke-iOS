@@ -7,7 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "AuthDomain"),
   bundleId: .appBundleID(name: ".AuthDomain"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .core(.storage, .interface),

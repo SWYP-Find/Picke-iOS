@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "Chat"),
   bundleId: .appBundleID(name: ".Chat"),
+  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .service(.audioPlayer, .interface),

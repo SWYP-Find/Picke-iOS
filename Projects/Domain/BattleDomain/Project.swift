@@ -7,6 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .microModule(name: "BattleDomain"),
   bundleId: .appBundleID(name: ".BattleDomain"),
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .SPM.weaveDI,
