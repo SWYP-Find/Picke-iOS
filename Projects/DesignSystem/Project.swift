@@ -16,6 +16,7 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
+    .core(.coreUI),
     .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
