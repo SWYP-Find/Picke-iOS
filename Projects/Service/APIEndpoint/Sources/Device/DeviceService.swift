@@ -6,7 +6,7 @@
 import Foundation
 
 import API
-import NetworkHeader
+import PickeNetwork
 
 public enum DeviceService {
   /// POST /api/v1/devices

@@ -8,7 +8,7 @@ import Foundation
 import APIEndpoint
 import AttendanceDomainInterface
 import Model
-import NetworkModule
+import PickeNetwork
 
 import LogMacro
 

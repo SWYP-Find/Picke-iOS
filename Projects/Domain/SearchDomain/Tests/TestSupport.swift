@@ -5,8 +5,7 @@
 
 import Foundation
 
-import NetworkHeader
-import NetworkModule
+import PickeNetwork
 
 /// 고정 데이터를 그대로 디코딩해 반환하는 스텁 provider.
 struct StubNetworkProvider<Target: PickeTargetType>: NetworkProviding {

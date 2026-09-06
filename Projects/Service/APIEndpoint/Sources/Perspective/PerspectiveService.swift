@@ -6,7 +6,7 @@
 import Foundation
 
 import API
-import NetworkHeader
+import PickeNetwork
 
 public struct PerspectiveCommentBody: Encodable {
   public let content: String

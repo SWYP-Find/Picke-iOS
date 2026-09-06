@@ -8,7 +8,7 @@ import Testing
 @testable import SearchData
 
 import APIEndpoint
-import NetworkHeader
+import PickeNetwork
 
 struct SearchRequestMappingTests {
   @Test func battles_요청은_GET_이며_경로가_api_v1_search_battles_이다() throws {

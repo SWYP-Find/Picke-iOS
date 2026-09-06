@@ -12,7 +12,7 @@ let project = Project.configure(
   dependencies: [
     .SPM.composableArchitecture,
     .data(.model),
-    .network(implements: .networkModule),
+    .core(.network),
     .SPM.logMarco,
   ],
   interfaceDependencies: [

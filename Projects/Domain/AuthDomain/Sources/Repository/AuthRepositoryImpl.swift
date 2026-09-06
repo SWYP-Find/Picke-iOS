@@ -10,7 +10,7 @@ import Foundation
 import APIEndpoint
 import AuthDomainInterface
 import Model
-import NetworkModule
+import PickeNetwork
 
 import Alamofire
 import Dependencies

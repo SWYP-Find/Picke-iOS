@@ -8,7 +8,7 @@
 import Alamofire
 import AuthDomainInterface
 import Foundation
-import NetworkModule
+import PickeNetwork
 import PickeStorageInterface
 import WeaveDI
 

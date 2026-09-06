@@ -8,7 +8,7 @@ import GoogleMobileAds
 import LogMacro
 import Mixpanel
 import MixpanelSessionReplay
-import NetworkModule
+import PickeNetwork
 import UIKit
 
 import DomainAssembly

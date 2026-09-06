@@ -8,8 +8,7 @@
 import Foundation
 
 // 필요 모듈만 사용
-import NetworkModule
-import NetworkToken
+import PickeNetwork
 import PickeStorageInterface
 
 struct KeychainTokenProvider: TokenProviding {

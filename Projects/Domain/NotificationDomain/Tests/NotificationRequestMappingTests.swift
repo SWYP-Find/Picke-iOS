@@ -10,7 +10,7 @@ import Testing
 
 import API
 import APIEndpoint
-import NetworkHeader
+import PickeNetwork
 
 struct NotificationRequestMappingTests {
   @Test

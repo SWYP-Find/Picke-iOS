@@ -9,7 +9,7 @@ import Testing
 
 import APIEndpoint
 import Foundation
-import NetworkHeader
+import PickeNetwork
 
 struct BattleRequestMappingTests {
   // MARK: - today

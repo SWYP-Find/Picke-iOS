@@ -16,7 +16,7 @@ let project = Project.configure(
     .service(.analytics, .interface),
     .domain(.battle, .interface),
     .domain(.home, .interface),
-    .network(implements: .networkModule),
+    .core(.network),
 
     .domain(.comment, .interface),
     .core(.thirdParty),

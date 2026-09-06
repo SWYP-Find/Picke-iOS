@@ -9,7 +9,7 @@ import Foundation
 
 import API
 import AuthDomainInterface
-import NetworkHeader
+import PickeNetwork
 
 public enum AuthService {
   case login(provider: SocialType, body: OAuthLoginRequest)

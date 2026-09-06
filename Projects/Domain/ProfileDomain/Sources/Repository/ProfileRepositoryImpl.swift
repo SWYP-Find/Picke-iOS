@@ -6,7 +6,7 @@
 import Foundation
 
 import APIEndpoint
-import NetworkModule
+import PickeNetwork
 import ProfileDomainInterface
 
 import LogMacro

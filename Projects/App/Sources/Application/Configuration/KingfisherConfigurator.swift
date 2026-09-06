@@ -6,7 +6,7 @@
 import Foundation
 
 import Kingfisher
-import NetworkModule
+import PickeNetwork
 import PickeStorageInterface
 
 import DomainAssembly

@@ -5,8 +5,7 @@
 
 import Foundation
 
-import NetworkHeader
-import NetworkModule
+import PickeNetwork
 
 struct StubNetworkProvider<Target: PickeTargetType>: NetworkProviding {
   let stubData: Data

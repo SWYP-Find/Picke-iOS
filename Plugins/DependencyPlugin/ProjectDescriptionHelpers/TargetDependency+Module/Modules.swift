@@ -29,6 +29,7 @@ public enum FeatureModule: String, CaseIterable {
 public enum CoreModule: String, CaseIterable {
   case assembly = "CoreAssembly"
   case logger = "PickeCoreLogger"
+  case network = "PickeNetwork"
   case storage = "PickeStorage"
   case coreUtility = "PickeCoreUtility"
   case thirdParty = "PickeThirdParty"
@@ -82,21 +83,3 @@ public enum DataModule: String, CaseIterable {
   }
 }
 
-// MARK: - 아직 레이어 카탈로그로 접히지 않은 모듈
-
-/// Network 레이어. Core/PickeNetwork 단일 모듈로 합치기 전까지만 남는다.
-public enum ModulePath {
-  case network(Networks)
-}
-
-public extension ModulePath {
-  enum Networks: String, CaseIterable {
-    case networkModule = "NetworkModule"
-    case networking = "Networking"
-    case networkToken = "NetworkToken"
-    case networkHeader = "NetworkHeader"
-    case thirdPartys = "ThirdPartys"
-
-    public static let name: String = "Network"
-  }
-}

@@ -5,7 +5,7 @@ import ComposableArchitecture
 import DeviceService
 import DeviceServiceInterface
 import DomainAssembly
-import NetworkModule
+import PickeNetwork
 import PickeStorage
 import PickeStorageInterface
 import WeaveDI

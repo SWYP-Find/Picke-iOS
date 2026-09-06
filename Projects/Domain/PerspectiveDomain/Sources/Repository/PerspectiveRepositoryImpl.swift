@@ -9,7 +9,7 @@ import APIEndpoint
 import BattleDomainInterface
 import CommentDomainInterface
 import Model
-import NetworkModule
+import PickeNetwork
 import PerspectiveDomainInterface
 
 import LogMacro

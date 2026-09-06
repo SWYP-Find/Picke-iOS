@@ -13,7 +13,7 @@ let project = Project.configure(
     .service(.api),
     // Auth 엔드포인트가 SocialType 을 경로에 쓴다.
     .domain(.auth, .interface),
-    .network(implements: .networkHeader),
+    .core(.network, .interface),
   ],
   sources: ["Sources/**"],
   hasTests: false

@@ -13,6 +13,7 @@ let project = Project.configure(
   dependencies: [
     .core(.thirdParty),
     .core(.logger),
+    .core(.network),
     .core(.coreUtility),
     .core(.storage, .implementation),
   ],

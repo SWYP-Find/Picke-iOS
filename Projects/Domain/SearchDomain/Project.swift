@@ -17,8 +17,8 @@ let project = Project.configure(
     .service(.api),
     .service(.apiEndpoint),
     .data(.model),
-    .network(implements: .networkModule),
-    .network(implements: .networkHeader),
+    .core(.network),
+    .core(.network, .interface),
     .SPM.logMarco,
   ],
   interfaceDependencies: [

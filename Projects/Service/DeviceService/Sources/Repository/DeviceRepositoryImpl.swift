@@ -7,7 +7,7 @@ import Foundation
 
 import APIEndpoint
 import Model
-import NetworkModule
+import PickeNetwork
 
 import DeviceServiceInterface
 import LogMacro

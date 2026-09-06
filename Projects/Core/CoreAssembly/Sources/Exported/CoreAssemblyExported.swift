@@ -7,5 +7,6 @@
 
 @_exported import PickeThirdParty
 @_exported import PickeCoreLogger
+@_exported import PickeNetwork
 @_exported import PickeCoreUtility
 @_exported import PickeStorage

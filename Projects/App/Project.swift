@@ -19,8 +19,8 @@ let project = Project.configure(
     // Core·Service 구현은 조립 경계 하나로 들어온다.
     // 앱 시작 전면 팝업 광고(AdService)도 여기에 포함된다.
     .serviceAssembly,
-    .network(implements: .networkModule),
-    .network(implements: .networkToken),
+    .core(.network),
+    .core(.network, .interface),
     .SPM.googleMobileAds,
     .SPM.firebaseCrashlytics,
     .SPM.mixpanel,

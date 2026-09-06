@@ -11,7 +11,7 @@ import Testing
 import API
 import APIEndpoint
 import AuthDomainInterface
-import NetworkHeader
+import PickeNetwork
 
 struct AuthRequestMappingTests {
   // MARK: - login

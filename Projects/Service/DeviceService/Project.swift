@@ -12,7 +12,7 @@ let project = Project.configure(
   dependencies: [
     .data(.model),
     .service(.apiEndpoint),
-    .network(implements: .networkModule),
+    .core(.network),
     .SPM.composableArchitecture,
     .SPM.logMarco,
   ],

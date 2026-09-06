@@ -34,7 +34,4 @@ public extension ProjectDescription.Path {
     return .relativeToRoot("Projects/DesignSystem")
   }
 
-  static func network(implementation module: ModulePath.Networks) -> Self {
-    return .relativeToRoot("Projects/\(ModulePath.Networks.name)/\(module.rawValue)")
-  }
 }

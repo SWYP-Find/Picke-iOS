@@ -9,7 +9,7 @@ import APIEndpoint
 import BattleDomainInterface
 import HomeDomainInterface
 import Model
-import NetworkModule
+import PickeNetwork
 
 import LogMacro
 

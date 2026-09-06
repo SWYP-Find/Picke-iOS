@@ -9,7 +9,7 @@ import Testing
 @testable import PerspectiveData
 
 import APIEndpoint
-import NetworkHeader
+import PickeNetwork
 
 struct PerspectiveRequestMappingTests {
   // MARK: - detail

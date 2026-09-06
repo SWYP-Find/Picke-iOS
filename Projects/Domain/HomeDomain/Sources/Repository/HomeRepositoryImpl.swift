@@ -10,7 +10,7 @@ import Foundation
 import APIEndpoint
 import HomeDomainInterface
 import Model
-import NetworkModule
+import PickeNetwork
 
 import LogMacro
 import AuthDomainInterface

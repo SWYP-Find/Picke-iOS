@@ -17,8 +17,8 @@ let project = Project.configure(
     .service(.api),
     .data(.model),
     .service(.apiEndpoint),
-    .network(implements: .networkModule),
-    .network(implements: .networkHeader),
+    .core(.network),
+    .core(.network, .interface),
     .SPM.googleSignIn,
   ],
   interfaceDependencies: [

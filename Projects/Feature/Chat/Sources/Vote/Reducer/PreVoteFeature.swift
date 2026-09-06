@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import NetworkModule
+import PickeNetwork
 import UIKit
 
 import AnalyticsServiceInterface

@@ -9,7 +9,7 @@ import Model
 
 import AppUpdateDomainInterface
 import LogMacro
-import NetworkModule
+import PickeNetwork
 
 public final class AppUpdateRepositoryImpl: AppUpdateInterface {
   private let urlSession: URLSession

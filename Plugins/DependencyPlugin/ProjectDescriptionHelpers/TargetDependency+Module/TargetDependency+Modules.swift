@@ -87,7 +87,4 @@ public extension TargetDependency {
     return .project(target: "PickeDesignKit", path: .designSystem)
   }
 
-  static func network(implements module: ModulePath.Networks) -> Self {
-    return .project(target: module.rawValue, path: .network(implementation: module))
-  }
 }
