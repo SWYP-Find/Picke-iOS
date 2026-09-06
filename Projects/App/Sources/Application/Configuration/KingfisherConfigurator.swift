@@ -9,7 +9,7 @@ import Kingfisher
 import NetworkModule
 import PickeStorageInterface
 
-import Domain
+import DomainAssembly
 
 enum KingfisherConfigurator {
   private static let telemetryDelegate = KingfisherTelemetryDelegate()

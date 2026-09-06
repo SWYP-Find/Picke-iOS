@@ -1,6 +1,6 @@
 //
-//  DomainExported.swift
-//  Domain
+//  DomainAssemblyExported.swift
+//  DomainAssembly
 //
 
 // MARK: - Domain 레이어 한번에 노출

@@ -7,7 +7,7 @@
 
 import AnalyticsServiceInterface
 import ComposableArchitecture
-import Domain
+import DomainAssembly
 import LogMacro
 import NotificationDomainInterface
 import PickeCore

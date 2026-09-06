@@ -5,7 +5,7 @@
 
 import Foundation
 
-import Domain
+import DomainAssembly
 import LogMacro
 
 enum PushDeeplinkBridge {

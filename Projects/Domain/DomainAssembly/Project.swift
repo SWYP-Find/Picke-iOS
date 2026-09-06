@@ -5,8 +5,8 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Domain"),
-  bundleId: .appBundleID(name: ".Domain"),
+  moduleType: .module(name: "DomainAssembly"),
+  bundleId: .appBundleID(name: ".DomainAssembly"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [

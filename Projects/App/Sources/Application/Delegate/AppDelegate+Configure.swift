@@ -11,7 +11,7 @@ import MixpanelSessionReplay
 import NetworkModule
 import UIKit
 
-import Domain
+import DomainAssembly
 
 extension AppDelegate {
   /// 기동 초기화 진입점. 순서에 의미가 있다.

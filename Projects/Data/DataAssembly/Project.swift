@@ -5,8 +5,8 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Data"),
-  bundleId: .appBundleID(name: ".Data"),
+  moduleType: .module(name: "DataAssembly"),
+  bundleId: .appBundleID(name: ".DataAssembly"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [

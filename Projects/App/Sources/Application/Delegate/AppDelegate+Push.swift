@@ -7,7 +7,7 @@ import LogMacro
 import UIKit
 import UserNotifications
 
-import Domain
+import DomainAssembly
 
 extension AppDelegate {
   func configurePushNotifications() {

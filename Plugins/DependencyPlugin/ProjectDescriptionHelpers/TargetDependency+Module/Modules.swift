@@ -31,9 +31,10 @@ public extension ModulePath {
 // MARK: -  CoreMoudule
 
 public extension ModulePath {
+  /// 엄브렐러(DataAssembly)는 모듈이 아니라 조립 경계라 카탈로그에 넣지 않는다.
+  /// `TargetDependency.dataAssembly` 로만 접근한다.
   enum Datas: String, CaseIterable {
     case Model
-    case Data
     case API
     case Remote
     case DataTesting
@@ -45,8 +46,9 @@ public extension ModulePath {
 // MARK: -  CoreMoudule
 
 public extension ModulePath {
+  /// 엄브렐러(DomainAssembly)는 모듈이 아니라 조립 경계라 카탈로그에 넣지 않는다.
+  /// `TargetDependency.domainAssembly` 로만 접근한다.
   enum Domains: String, CaseIterable {
-    case Domain
     case DomainTesting
 
     public static let name: String = "Domain"
