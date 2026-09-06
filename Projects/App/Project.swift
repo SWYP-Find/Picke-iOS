@@ -24,17 +24,14 @@ let project = Project.configure(
     .Domain(.Profile),
     .Domain(.Search),
     .Data(.AppUpdate),
-    .Service(.AudioPlayer),
-    .Service(.Analytics),
     .featureAssembly,
     .domainAssembly,
     .dataAssembly,
+    // Core·Service 구현은 조립 경계 하나로 들어온다.
+    // 앱 시작 전면 팝업 광고(AdService)도 여기에 포함된다.
+    .serviceAssembly,
     .Network(implements: .NetworkModule),
     .Network(implements: .NetworkToken),
-    .Core(.PickeCore),
-    .Core(.PickeStorage),
-    .Service(.Device),
-    .Service(.Ad), // 앱 시작 전면 팝업 광고
     .SPM.googleMobileAds,
     .SPM.firebaseCrashlytics,
     .SPM.mixpanel,

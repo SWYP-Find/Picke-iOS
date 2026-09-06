@@ -149,4 +149,14 @@ public extension TargetDependency {
     }
     return .project(target: "\(module.rawValue)\(suffix)", path: .ServiceFeature(module))
   }
+
+  /// SDK 래핑 서비스 구현을 묶어 제공하는 엄브렐러 모듈.
+  static var serviceAssembly: Self {
+    .project(target: "ServiceAssembly", path: .relativeToRoot("Projects/Service/ServiceAssembly"))
+  }
+
+  /// 최하위 기반 모듈 구현을 묶어 제공하는 엄브렐러 모듈.
+  static var coreAssembly: Self {
+    .project(target: "CoreAssembly", path: .relativeToRoot("Projects/Core/CoreAssembly"))
+  }
 }
