@@ -11,7 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Data(implements: .Model),
-    .Data(implements: .Remote),
+    .apiEndpoint,
     .Network(implements: .NetworkModule),
     .SPM.composableArchitecture,
     .SPM.logMarco,

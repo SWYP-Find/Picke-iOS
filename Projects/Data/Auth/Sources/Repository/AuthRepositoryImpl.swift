@@ -7,10 +7,10 @@
 
 import Foundation
 
+import APIEndpoint
 import AuthDomainInterface
 import Model
 import NetworkModule
-import Remote
 
 import Alamofire
 import Dependencies

@@ -12,7 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Data(.AppUpdate),
     .Data(implements: .Model),
-    .Data(implements: .Remote),
+    .apiEndpoint,
     .Data(.Attendance),
     .Data(.Auth),
     .Data(.Battle),

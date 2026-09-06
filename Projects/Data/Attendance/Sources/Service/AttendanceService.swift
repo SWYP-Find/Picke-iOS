@@ -6,8 +6,8 @@
 import Foundation
 
 import API
+import APIEndpoint
 import NetworkHeader
-import Remote
 
 public enum AttendanceService {
   case check

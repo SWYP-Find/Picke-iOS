@@ -8,9 +8,9 @@
 import Foundation
 
 import API
+import APIEndpoint
 import AuthDomainInterface
 import NetworkHeader
-import Remote
 
 public enum AuthService {
   case login(provider: SocialType, body: OAuthLoginRequest)

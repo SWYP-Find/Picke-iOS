@@ -8,8 +8,8 @@ import Testing
 
 @testable import ProfileData
 
+import APIEndpoint
 import NetworkHeader
-import Remote
 
 struct ProfileRequestMappingTests {
   @Test func mypage_요청은_GET_이며_경로가_api_v1_me_mypage_이다() throws {

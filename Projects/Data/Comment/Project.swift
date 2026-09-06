@@ -14,7 +14,7 @@ let project = Project.configure(
     .Domain(.Common, .interface),
     .api,
     .Data(implements: .Model),
-    .Data(implements: .Remote),
+    .apiEndpoint,
     .Network(implements: .NetworkModule),
     .Network(implements: .NetworkHeader),
     .SPM.logMarco,

@@ -15,7 +15,7 @@ let project = Project.configure(
     .Domain(.Comment, .interface),
     .api,
     .Data(implements: .Model),
-    .Data(implements: .Remote),
+    .apiEndpoint,
     .Network(implements: .NetworkModule),
     .Network(implements: .NetworkHeader),
     .SPM.weaveDI,

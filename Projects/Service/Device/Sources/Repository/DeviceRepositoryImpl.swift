@@ -5,9 +5,9 @@
 
 import Foundation
 
+import APIEndpoint
 import Model
 import NetworkModule
-import Remote
 
 import DeviceServiceInterface
 import LogMacro

@@ -5,13 +5,12 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "Remote"),
-  bundleId: .appBundleID(name: ".Remote"),
+  moduleType: .module(name: "APIEndpoint"),
+  bundleId: .appBundleID(name: ".APIEndpoint"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .api,
-    
     .Network(implements: .NetworkHeader),
   ],
   sources: ["Sources/**"],

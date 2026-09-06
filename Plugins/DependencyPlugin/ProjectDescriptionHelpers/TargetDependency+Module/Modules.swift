@@ -35,7 +35,6 @@ public extension ModulePath {
   /// `TargetDependency.dataAssembly` 로만 접근한다.
   enum Datas: String, CaseIterable {
     case Model
-    case Remote
     case DataTesting
 
     public static let name: String = "Data"

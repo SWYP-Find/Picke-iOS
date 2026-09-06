@@ -155,6 +155,11 @@ public extension TargetDependency {
     .project(target: "API", path: .relativeToRoot("Projects/Service/API"))
   }
 
+  /// 서버 요청 정의(TargetType)와 요청 DTO 를 담는 모듈.
+  static var apiEndpoint: Self {
+    .project(target: "APIEndpoint", path: .relativeToRoot("Projects/Service/APIEndpoint"))
+  }
+
   /// SDK 래핑 서비스 구현을 묶어 제공하는 엄브렐러 모듈.
   static var serviceAssembly: Self {
     .project(target: "ServiceAssembly", path: .relativeToRoot("Projects/Service/ServiceAssembly"))
