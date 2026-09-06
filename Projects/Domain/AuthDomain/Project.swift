@@ -15,7 +15,6 @@ let project = Project.configure(
     .SPM.weaveDI,
     .SPM.logMarco,
     .service(.api),
-    .data(.model),
     .service(.apiEndpoint),
     .core(.network),
     .core(.network, .interface),

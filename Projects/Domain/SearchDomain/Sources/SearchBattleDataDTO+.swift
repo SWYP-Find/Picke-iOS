@@ -1,6 +1,6 @@
 //
 //  SearchBattleDataDTO+.swift
-//  Model
+//  SearchDomain
 //
 
 import Foundation

@@ -7,7 +7,6 @@ import Foundation
 
 import APIEndpoint
 import CommentDomainInterface
-import Model
 import PickeNetwork
 
 import LogMacro

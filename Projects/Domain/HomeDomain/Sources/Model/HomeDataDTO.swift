@@ -1,13 +1,13 @@
 //
 //  HomeDataDTO.swift
-//  Model
+//  HomeDomain
 //
 //  Created by Wonji Suh on 5/16/26.
 //
 
+import PickeNetworkInterface
 import Foundation
 
-import Model
 
 /// `GET /api/v1/home` 의 `data` 필드 페이로드.
 public struct HomeDataDTO: Decodable {

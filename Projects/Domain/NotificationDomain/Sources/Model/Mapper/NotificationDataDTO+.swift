@@ -1,6 +1,6 @@
 //
 //  NotificationDataDTO+.swift
-//  Model
+//  NotificationDomain
 //
 
 import Foundation

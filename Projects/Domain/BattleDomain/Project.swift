@@ -14,7 +14,6 @@ let project = Project.configure(
     .SPM.composableArchitecture,
     .domain(.home, .interface),
     .service(.api),
-    .data(.model),
     .service(.apiEndpoint),
     .core(.network),
     .core(.network, .interface),

@@ -3,8 +3,8 @@
 //  ProfileDomain
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct ProfileUpdateDataDTO: Decodable {
   public let userTag: String?

@@ -1,10 +1,10 @@
 //
 //  BattleRecordDataDTO.swift
-//  Model
+//  ProfileDomain
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct BattleRecordDataDTO: Decodable {
   public let items: [BattleRecordItemDTO]?

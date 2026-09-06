@@ -5,7 +5,6 @@
 
 import Foundation
 
-import Model
 
 import AppUpdateDomainInterface
 import LogMacro

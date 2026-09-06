@@ -13,7 +13,6 @@ let project = Project.configure(
     .SPM.weaveDI,
     .SPM.composableArchitecture,
     .service(.api),
-    .data(.model),
     .service(.apiEndpoint),
     .core(.network),
     .core(.network, .interface),

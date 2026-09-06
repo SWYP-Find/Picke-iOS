@@ -1,11 +1,11 @@
 //
 //  AttendanceCheckDataDTO.swift
-//  Model
+//  AttendanceDomain
 //
 
+import PickeNetworkInterface
 import Foundation
 
-import Model
 
 public struct AttendanceCheckDataDTO: Decodable {
   public let userTag: String?

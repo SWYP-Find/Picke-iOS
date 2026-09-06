@@ -1,6 +1,6 @@
 //
 //  BattleRecordDataDTO+.swift
-//  Model
+//  ProfileDomain
 //
 
 import ProfileDomainInterface

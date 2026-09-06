@@ -6,7 +6,6 @@
 import Foundation
 
 import APIEndpoint
-import Model
 import PickeNetwork
 import NotificationDomainInterface
 

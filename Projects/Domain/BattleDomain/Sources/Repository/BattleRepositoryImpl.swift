@@ -8,7 +8,6 @@ import Foundation
 import APIEndpoint
 import BattleDomainInterface
 import HomeDomainInterface
-import Model
 import PickeNetwork
 
 import LogMacro

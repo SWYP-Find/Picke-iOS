@@ -12,7 +12,6 @@ let project = Project.configure(
   dependencies: [
     .SPM.composableArchitecture,
     .service(.api),
-    .data(.model),
     .service(.apiEndpoint),
     .core(.network),
     .core(.network, .interface),

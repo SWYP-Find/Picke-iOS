@@ -74,12 +74,3 @@ public enum DomainModule: String, CaseIterable {
   }
 }
 
-public enum DataModule: String, CaseIterable {
-  case model = "Model"
-
-  /// Projects/Data/<name>
-  var path: Path {
-    return .relativeToData(rawValue)
-  }
-}
-

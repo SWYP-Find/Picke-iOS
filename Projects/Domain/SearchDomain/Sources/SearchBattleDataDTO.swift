@@ -1,11 +1,11 @@
 //
 //  SearchBattleDataDTO.swift
-//  Model
+//  SearchDomain
 //
 
+import PickeNetworkInterface
 import Foundation
 
-import Model
 
 public struct SearchBattlePageDataDTO: Decodable {
   public let items: [SearchBattleDTO]

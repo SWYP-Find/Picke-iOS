@@ -1,11 +1,11 @@
 //
 //  NotificationDataDTO.swift
-//  Model
+//  NotificationDomain
 //
 
+import PickeNetworkInterface
 import Foundation
 
-import Model
 
 public struct NotificationDataDTO: Decodable {
   public let items: [NotificationItemDTO]?

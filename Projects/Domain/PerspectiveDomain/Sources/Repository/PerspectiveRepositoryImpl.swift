@@ -8,7 +8,6 @@ import Foundation
 import APIEndpoint
 import BattleDomainInterface
 import CommentDomainInterface
-import Model
 import PickeNetwork
 import PerspectiveDomainInterface
 

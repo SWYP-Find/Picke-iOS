@@ -1,10 +1,10 @@
 //
 //  CreditHistoryDataDTO.swift
-//  Model
+//  ProfileDomain
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct CreditHistoryDataDTO: Decodable {
   public let items: [CreditHistoryItemDTO]?

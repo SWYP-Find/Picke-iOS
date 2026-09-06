@@ -1,6 +1,6 @@
 //
 //  HomeDataDTO+.swift
-//  Model
+//  HomeDomain
 //
 //  Created by Wonji Suh on 5/16/26.
 //

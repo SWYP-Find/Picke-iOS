@@ -17,9 +17,6 @@ public extension ProjectDescription.Path {
     return .relativeToRoot("Projects/Core/\(name)")
   }
 
-  static func relativeToData(_ name: String) -> Self {
-    return .relativeToRoot("Projects/Data/\(name)")
-  }
 
   static func relativeToService(_ name: String) -> Self {
     return .relativeToRoot("Projects/Service/\(name)")

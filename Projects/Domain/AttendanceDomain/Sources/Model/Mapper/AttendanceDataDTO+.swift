@@ -1,6 +1,6 @@
 //
 //  AttendanceDataDTO+.swift
-//  Model
+//  AttendanceDomain
 //
 
 import Foundation

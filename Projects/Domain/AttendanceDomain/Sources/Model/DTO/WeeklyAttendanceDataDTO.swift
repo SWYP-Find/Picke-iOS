@@ -1,11 +1,11 @@
 //
 //  WeeklyAttendanceDataDTO.swift
-//  Model
+//  AttendanceDomain
 //
 
+import PickeNetworkInterface
 import Foundation
 
-import Model
 
 public struct WeeklyAttendanceDataDTO: Decodable {
   public let userTag: String?

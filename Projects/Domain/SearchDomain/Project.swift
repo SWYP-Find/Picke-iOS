@@ -16,7 +16,6 @@ let project = Project.configure(
     .domain(.battle, .interface),
     .service(.api),
     .service(.apiEndpoint),
-    .data(.model),
     .core(.network),
     .core(.network, .interface),
     .SPM.logMarco,

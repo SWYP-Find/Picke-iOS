@@ -1,6 +1,6 @@
 //
 //  NotificationSettingsDataDTO+.swift
-//  Model
+//  ProfileDomain
 //
 
 import ProfileDomainInterface

@@ -1,6 +1,6 @@
 //
 //  WithdrawDTO+.swift
-//  Model
+//  AuthDomain
 //
 //  Created by Wonji Suh on 5/14/26.
 //

@@ -1,10 +1,10 @@
 //
 //  ContentActivityDataDTO.swift
-//  Model
+//  ProfileDomain
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct ContentActivityDataDTO: Decodable {
   public let items: [ContentActivityItemDTO]?

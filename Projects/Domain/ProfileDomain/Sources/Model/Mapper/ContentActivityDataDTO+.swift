@@ -1,6 +1,6 @@
 //
 //  ContentActivityDataDTO+.swift
-//  Model
+//  ProfileDomain
 //
 
 import ProfileDomainInterface

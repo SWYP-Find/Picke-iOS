@@ -1,12 +1,12 @@
 //
 //  LoginDataDTO.swift
-//  Model
+//  AuthDomain
 //
 //  Created by Wonji Suh on 5/14/26.
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct LoginDataDTO: Decodable {
   public let accessToken: String

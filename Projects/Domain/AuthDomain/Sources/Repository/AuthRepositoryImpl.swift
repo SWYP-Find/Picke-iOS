@@ -9,7 +9,6 @@ import Foundation
 
 import APIEndpoint
 import AuthDomainInterface
-import Model
 import PickeNetwork
 
 import Alamofire

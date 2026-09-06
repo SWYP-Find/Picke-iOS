@@ -1,6 +1,6 @@
 //
 //  RecapDataDTO+.swift
-//  Model
+//  ProfileDomain
 //
 
 import ProfileDomainInterface

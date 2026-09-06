@@ -1,10 +1,10 @@
 //
 //  RecapDataDTO.swift
-//  Model
+//  ProfileDomain
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct RecapDataDTO: Decodable {
   public let myCard: RecapCardDTO?

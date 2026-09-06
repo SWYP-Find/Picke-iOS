@@ -1,6 +1,6 @@
 //
 //  MyPageDataDTO+.swift
-//  Model
+//  ProfileDomain
 //
 
 import ProfileDomainInterface

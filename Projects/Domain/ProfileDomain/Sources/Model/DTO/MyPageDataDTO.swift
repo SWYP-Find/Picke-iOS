@@ -1,10 +1,10 @@
 //
 //  MyPageDataDTO.swift
-//  Model
+//  ProfileDomain
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct MyPageDataDTO: Decodable {
   // philosopher 는 미확정(배틀 5개 미만) 시 null 로 내려와 옵셔널로 둔다.

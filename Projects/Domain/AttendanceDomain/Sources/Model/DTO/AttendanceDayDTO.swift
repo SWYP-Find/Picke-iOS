@@ -1,6 +1,6 @@
 //
 //  AttendanceDayDTO.swift
-//  Model
+//  AttendanceDomain
 //
 
 import Foundation

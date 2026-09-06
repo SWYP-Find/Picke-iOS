@@ -9,7 +9,6 @@ import Foundation
 
 import APIEndpoint
 import HomeDomainInterface
-import Model
 import PickeNetwork
 
 import LogMacro

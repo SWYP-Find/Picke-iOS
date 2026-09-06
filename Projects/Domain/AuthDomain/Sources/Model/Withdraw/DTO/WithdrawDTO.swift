@@ -1,12 +1,12 @@
 //
 //  WithdrawDTO.swift
-//  Model
+//  AuthDomain
 //
 //  Created by Wonji Suh on 5/14/26.
 //
 
+import PickeNetworkInterface
 import Foundation
-import Model
 
 public struct WithdrawDataDTO: Decodable, Equatable {
   public let withdrawn: Bool

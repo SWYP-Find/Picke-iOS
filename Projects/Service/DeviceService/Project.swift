@@ -10,7 +10,6 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .data(.model),
     .service(.apiEndpoint),
     .core(.network),
     .SPM.composableArchitecture,
