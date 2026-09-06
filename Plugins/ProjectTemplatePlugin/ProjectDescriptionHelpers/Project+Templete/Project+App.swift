@@ -88,6 +88,7 @@ extension Project {
     return Project(
       name: name,
       options: .options(
+        automaticSchemesOptions: .enabled(codeCoverageEnabled: true),
         defaultKnownRegions: ["en", "ko"],
         developmentRegion: "ko"
       ),

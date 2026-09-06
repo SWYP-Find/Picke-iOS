@@ -56,7 +56,9 @@ extension Project {
     }
 
     var allSchemes = schemes
+    var hasDemo = false
     if let demoDisplayName {
+      hasDemo = true
       let demoName = "\(name)Demo"
       targets.append(
         .target(
@@ -74,18 +76,20 @@ extension Project {
           settings: suppressWarningsSettings
         )
       )
-      allSchemes.append(
-        .scheme(
-          name: demoName,
-          shared: true,
-          buildAction: .buildAction(targets: [.target(demoName)]),
-          runAction: .runAction(configuration: .stage, executable: "\(demoName)")
-        )
-      )
+      allSchemes.append(contentsOf: [
+        .module(name: name, hasTests: hasTests),
+        .demo(name: demoName),
+      ])
     }
 
     return Project(
       name: name,
+      options: .options(
+        // Demo 가 있으면 자동 스킴이 구현·Demo 를 한 BuildAction 으로 묶으므로 직접 나눈 스킴만 쓴다.
+        automaticSchemesOptions: hasDemo ? .disabled : .enabled(codeCoverageEnabled: true),
+        defaultKnownRegions: ["en", "ko"],
+        developmentRegion: "ko"
+      ),
       packages: packages,
       settings: settings.injectingModuleConfigurationsIfNeeded(),
       targets: targets,
