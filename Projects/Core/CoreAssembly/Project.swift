@@ -12,6 +12,7 @@ let project = Project.configure(
   // 최하위 기반 모듈의 구현을 한곳에서 묶는 조립 경계.
   dependencies: [
     .core(.thirdParty),
+    .core(.logger),
     .core(.coreUtility),
     .core(.storage, .implementation),
   ],
