@@ -7,7 +7,7 @@ import ProjectTemplatePlugin
 let project = Project.configure(
   moduleType: .module(name: "PickeThirdParty"),
   bundleId: .appBundleID(name: ".PickeThirdParty"),
-  product: .framework,
+  product: .staticFramework,
   settings: .settings(),
   dependencies: [
     .core(.coreUtility),
