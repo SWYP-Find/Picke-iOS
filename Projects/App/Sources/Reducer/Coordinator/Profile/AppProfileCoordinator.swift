@@ -6,8 +6,8 @@
 import Foundation
 
 import AudioPlayerServiceInterface
-import AuthDomainInterface
 import ComposableArchitecture
+import DomainAssembly
 import FeatureAssembly
 import TCAFlow
 

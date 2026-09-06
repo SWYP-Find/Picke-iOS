@@ -1,13 +1,11 @@
 import AnalyticsService
 import AnalyticsServiceInterface
-import AppUpdateData
-import AppUpdateDomain
 import AudioPlayerService
-import AuthData
-import AuthDomain
 import ComposableArchitecture
+import DataAssembly
 import DeviceService
 import DeviceServiceInterface
+import DomainAssembly
 import NetworkModule
 import PickeStorage
 import PickeStorageInterface

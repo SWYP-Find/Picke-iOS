@@ -13,17 +13,7 @@ let project = Project.configure(
   settings: .appMainSetting,
   scripts: [.SentryUploadString],
   dependencies: [
-    .Domain(.AppUpdate),
-    .Domain(.Attendance),
-    .Domain(.Auth),
-    .Domain(.Battle),
-    .Domain(.Comment),
-    .Domain(.Home),
-    .Domain(.Notification),
-    .Domain(.Perspective),
-    .Domain(.Profile),
-    .Domain(.Search),
-    .Data(.AppUpdate),
+    // 화면·도메인·데이터 구현은 각 레이어의 조립 경계 하나로 들어온다.
     .featureAssembly,
     .domainAssembly,
     .dataAssembly,
