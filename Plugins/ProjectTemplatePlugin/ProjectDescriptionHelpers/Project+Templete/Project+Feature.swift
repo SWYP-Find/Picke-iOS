@@ -85,7 +85,8 @@ extension Project {
         testingTarget,
         testTarget,
       ],
-      schemes: schemes
+      schemes: schemes,
+      fileHeaderTemplate: .default
     )
   }
 }

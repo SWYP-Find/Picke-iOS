@@ -94,7 +94,8 @@ extension Project {
       packages: packages,
       settings: settings,
       targets: targets,
-      schemes: schemes
+      schemes: schemes,
+      fileHeaderTemplate: .default
     )
   }
 }

@@ -89,7 +89,8 @@ extension Project {
       packages: packages,
       settings: settings.injectingModuleConfigurationsIfNeeded(),
       targets: targets,
-      schemes: allSchemes
+      schemes: allSchemes,
+      fileHeaderTemplate: .default
     )
   }
 }
