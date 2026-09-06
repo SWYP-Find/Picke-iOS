@@ -9,12 +9,12 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Notification"),
   settings: .settings(),
   dependencies: [
-    .DesignSystem,
-    .Core(.PickeCoreUtility),
-    .Service(.Analytics, .interface),
-    .Domain(.Notification, .interface),
+    .designSystem,
+    .core(.coreUtility),
+    .service(.analytics, .interface),
+    .domain(.notification, .interface),
     
-    .Core(.PickeThirdParty),
+    .core(.thirdParty),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
   ]

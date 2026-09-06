@@ -10,9 +10,9 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Domain(.AppUpdate, .interface),
-    .Data(implements: .Model),
-    .Network(implements: .NetworkModule),
+    .domain(.appUpdate, .interface),
+    .data(implements: .model),
+    .network(implements: .networkModule),
     .SPM.logMarco,
     .SPM.composableArchitecture,
   ],

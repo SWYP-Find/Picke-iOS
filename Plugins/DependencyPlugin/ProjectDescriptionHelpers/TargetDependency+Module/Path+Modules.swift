@@ -10,33 +10,33 @@ import ProjectDescription
 
 // MARK: - Network
 public extension ProjectDescription.Path {
-  static var Networking: Self {
+  static var networking: Self {
     return .relativeToRoot("Projects/\(ModulePath.Networks.name)")
   }
   
-  static func Network(implementation module: ModulePath.Networks) -> Self {
+  static func network(implementation module: ModulePath.Networks) -> Self {
     return .relativeToRoot("Projects/\(ModulePath.Networks.name)/\(module.rawValue)")
   }
 }
 
 // MARK: - Domain
 public extension ProjectDescription.Path {
-  static var Domain: Self {
+  static var domain: Self {
     return .relativeToRoot("Projects/\(ModulePath.Domains.name)")
   }
 
-  static func Domain(implementation module: ModulePath.Domains) -> Self {
+  static func domain(implementation module: ModulePath.Domains) -> Self {
     return .relativeToRoot("Projects/\(ModulePath.Domains.name)/\(module.rawValue)")
   }
 }
 
 // MARK: - Data
 public extension ProjectDescription.Path {
-  static var Data: Self {
+  static var data: Self {
     return .relativeToRoot("Projects/\(ModulePath.Datas.name)")
   }
 
-  static func Data(implementation module: ModulePath.Datas) -> Self {
+  static func data(implementation module: ModulePath.Datas) -> Self {
     return .relativeToRoot("Projects/\(ModulePath.Datas.name)/\(module.rawValue)")
   }
 }

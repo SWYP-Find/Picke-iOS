@@ -9,11 +9,11 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Battle"),
   settings: .settings(),
   dependencies: [
-    .DesignSystem,
-    .Core(.PickeCoreUtility),
-    .Service(.Analytics, .interface),
-    .Core(.PickeThirdParty),
-    .Domain(.Battle, .interface),
+    .designSystem,
+    .core(.coreUtility),
+    .service(.analytics, .interface),
+    .core(.thirdParty),
+    .domain(.battle, .interface),
     
     .SPM.composableArchitecture,
     .SPM.tcaFlow,

@@ -10,8 +10,8 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .Core(.PickeCoreUtility),
-    .DesignSystem,
+    .core(.coreUtility),
+    .designSystem,
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.sdwebImage,

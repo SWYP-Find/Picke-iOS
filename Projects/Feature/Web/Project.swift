@@ -9,8 +9,8 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Web"),
   settings: .settings(),
   dependencies: [
-    .DesignSystem,
+    .designSystem,
     .SPM.composableArchitecture,
-    .Core(.PickeThirdParty),
+    .core(.thirdParty),
   ]
 )

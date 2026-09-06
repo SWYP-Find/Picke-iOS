@@ -9,12 +9,12 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".CommentDomain"),
   settings: .settings(),
   dependencies: [
-    .Domain(.Battle, .interface),
+    .domain(.battle, .interface),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ],
   interfaceDependencies: [
-    .Domain(.Battle, .interface),
+    .domain(.battle, .interface),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]

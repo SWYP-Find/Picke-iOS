@@ -11,9 +11,9 @@ let project = Project.configure(
   settings: .settings(),
   // 최하위 기반 모듈의 구현을 한곳에서 묶는 조립 경계.
   dependencies: [
-    .Core(.PickeThirdParty),
-    .Core(.PickeCoreUtility),
-    .Core(.PickeStorage, .implementation),
+    .core(.thirdParty),
+    .core(.coreUtility),
+    .core(.storage, .implementation),
   ],
   sources: ["Sources/**"],
   hasTests: false

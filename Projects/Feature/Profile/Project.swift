@@ -10,23 +10,23 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .DesignSystem,
-    .Core(.PickeCoreUtility),
-    .Core(.PickeStorage, .interface),
-    .Service(.Device, .interface),
-    .Service(.Analytics, .interface),
-    .Domain(.Profile, .interface),
-    .Domain(.Auth, .interface),
-    .Domain(.Battle, .interface),
-    .Domain(.Notification, .interface),
+    .designSystem,
+    .core(.coreUtility),
+    .core(.storage, .interface),
+    .service(.device, .interface),
+    .service(.analytics, .interface),
+    .domain(.profile, .interface),
+    .domain(.auth, .interface),
+    .domain(.battle, .interface),
+    .domain(.notification, .interface),
 
-    .Core(.PickeThirdParty),
-    .Service(.Ad), // 마이페이지 하단 배너 광고
+    .core(.thirdParty),
+    .service(.ad), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,
   ],
   interfaceDependencies: [
-    .Domain(.Profile, .interface),
+    .domain(.profile, .interface),
   ]
 )

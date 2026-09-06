@@ -15,7 +15,7 @@ let project = Project.configure(
   dependencies: [
     .SPM.adFit,
     .SPM.googleMobileAds,
-    .Service(.Analytics, .interface),
+    .service(.analytics, .interface),
   ],
   interfaceDependencies: [
     .SPM.composableArchitecture,

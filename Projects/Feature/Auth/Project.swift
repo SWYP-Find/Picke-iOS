@@ -9,13 +9,13 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Auth"),
   settings: .settings(),
   dependencies: [
-    .DesignSystem,
-    .Service(.Analytics, .interface),
+    .designSystem,
+    .service(.analytics, .interface),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
-    .Domain(.Auth, .interface),
+    .domain(.auth, .interface),
     
     
-    .Core(.PickeThirdParty),
+    .core(.thirdParty),
   ]
 )

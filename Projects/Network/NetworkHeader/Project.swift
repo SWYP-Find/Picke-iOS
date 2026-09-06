@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Network(implements: .NetworkToken),
+    .network(implements: .networkToken),
     .SPM.alamofire,
   ],
   sources: ["Sources/**"],

@@ -14,7 +14,7 @@ let project = Project.configure(
     .SPM.composableArchitecture,
   ],
   interfaceDependencies: [
-    .Domain(.Home, .interface),
+    .domain(.home, .interface),
     
     .SPM.weaveDI,
     .SPM.composableArchitecture,

@@ -13,10 +13,10 @@ let project = Project.configure(
   dependencies: [
     .coreAssembly,
     .api,
-    .Service(.Ad),
-    .Service(.Analytics),
-    .Service(.AudioPlayer),
-    .Service(.Device),
+    .service(.ad),
+    .service(.analytics),
+    .service(.audioPlayer),
+    .service(.device),
   ],
   sources: ["Sources/**"],
   hasTests: false

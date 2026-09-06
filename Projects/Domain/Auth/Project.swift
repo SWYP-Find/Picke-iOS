@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Core(.PickeStorage, .interface),
+    .core(.storage, .interface),
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.logMarco,

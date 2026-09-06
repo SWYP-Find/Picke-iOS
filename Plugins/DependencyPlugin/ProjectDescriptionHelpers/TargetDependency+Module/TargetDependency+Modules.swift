@@ -17,15 +17,15 @@ private extension TargetDependency {
 
 // Network
 public extension TargetDependency {
-  static func Network(implements module: ModulePath.Networks) -> Self {
-    projectTarget(module.rawValue, path: .Network(implementation: module))
+  static func network(implements module: ModulePath.Networks) -> Self {
+    projectTarget(module.rawValue, path: .network(implementation: module))
   }
 }
 
 // Domain
 public extension TargetDependency {
-  static func Domain(implements module: ModulePath.Domains) -> Self {
-    projectTarget(module.rawValue, path: .Domain(implementation: module))
+  static func domain(implements module: ModulePath.Domains) -> Self {
+    projectTarget(module.rawValue, path: .domain(implementation: module))
   }
 
   /// 컨텍스트별 Domain 구현을 묶어 제공하는 엄브렐러 모듈.
@@ -36,8 +36,8 @@ public extension TargetDependency {
 
 // Data
 public extension TargetDependency {
-  static func Data(implements module: ModulePath.Datas) -> Self {
-    projectTarget(module.rawValue, path: .Data(implementation: module))
+  static func data(implements module: ModulePath.Datas) -> Self {
+    projectTarget(module.rawValue, path: .data(implementation: module))
   }
 
   /// 컨텍스트별 Repository 구현을 묶어 제공하는 엄브렐러 모듈.
