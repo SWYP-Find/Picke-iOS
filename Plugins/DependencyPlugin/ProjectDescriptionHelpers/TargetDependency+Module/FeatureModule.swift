@@ -131,6 +131,11 @@ public extension TargetDependency {
     return .project(target: "\(module.rawValue)\(suffix)", path: .coreFeature(module))
   }
 
+  /// Data 레이어가 공유하는 DTO 모듈(단일 타깃 `Model`).
+  static var model: Self {
+    .project(target: "Model", path: .relativeToRoot("Projects/Data/Model"))
+  }
+
   /// 디자인 시스템(단일 타깃).
   static var designSystem: Self {
     .project(target: "PickeDesignKit", path: .designSystem)

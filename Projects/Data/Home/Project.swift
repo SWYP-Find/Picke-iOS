@@ -13,7 +13,7 @@ let project = Project.configure(
     .domain(.auth, .interface),
     .domain(.home, .interface),
     .api,
-    .data(implements: .model),
+    .model,
     .apiEndpoint,
     .network(implements: .networkModule),
     .network(implements: .networkHeader),

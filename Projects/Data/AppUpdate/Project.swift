@@ -11,7 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .domain(.appUpdate, .interface),
-    .data(implements: .model),
+    .model,
     .network(implements: .networkModule),
     .SPM.logMarco,
     .SPM.composableArchitecture,
