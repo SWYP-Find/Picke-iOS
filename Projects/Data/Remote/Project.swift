@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Data(implements: .API),
+    .api,
     
     .Network(implements: .NetworkHeader),
   ],

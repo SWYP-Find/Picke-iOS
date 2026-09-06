@@ -12,6 +12,7 @@ let project = Project.configure(
   // SDK 를 링크하는 서비스 구현을 한곳에서 묶는 조립 경계.
   dependencies: [
     .coreAssembly,
+    .api,
     .Service(.Ad),
     .Service(.Analytics),
     .Service(.AudioPlayer),

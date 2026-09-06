@@ -5,7 +5,6 @@
 
 // MARK: - Data 레이어 한번에 노출
 
-@_exported import API
 @_exported import AppUpdateData
 @_exported import AttendanceData
 @_exported import AuthData

@@ -12,7 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Domain(.Auth, .interface),
     
-    .Data(implements: .API),
+    .api,
     .Data(implements: .Model),
     .Data(implements: .Remote),
     .Network(implements: .NetworkModule),

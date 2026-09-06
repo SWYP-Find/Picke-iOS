@@ -13,7 +13,7 @@ let project = Project.configure(
     .Domain(.Perspective, .interface),
     .Domain(.Common, .interface),
     .Domain(.Comment, .interface),
-    .Data(implements: .API),
+    .api,
     .Data(implements: .Model),
     .Data(implements: .Remote),
     .Network(implements: .NetworkModule),

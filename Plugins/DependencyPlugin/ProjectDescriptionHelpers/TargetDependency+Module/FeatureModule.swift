@@ -150,6 +150,11 @@ public extension TargetDependency {
     return .project(target: "\(module.rawValue)\(suffix)", path: .ServiceFeature(module))
   }
 
+  /// 서버 계약(베이스 URL·도메인 경로)만 담는 모듈. SDK 도 도메인 규칙도 링크하지 않는다.
+  static var api: Self {
+    .project(target: "API", path: .relativeToRoot("Projects/Service/API"))
+  }
+
   /// SDK 래핑 서비스 구현을 묶어 제공하는 엄브렐러 모듈.
   static var serviceAssembly: Self {
     .project(target: "ServiceAssembly", path: .relativeToRoot("Projects/Service/ServiceAssembly"))

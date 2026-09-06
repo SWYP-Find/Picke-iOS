@@ -15,7 +15,7 @@ let project = Project.configure(
     .Domain(.Common, .interface),
     .Domain(.Home, .interface),
     
-    .Data(implements: .API),
+    .api,
     .Data(implements: .Model),
     .Network(implements: .NetworkModule),
     .Network(implements: .NetworkHeader),

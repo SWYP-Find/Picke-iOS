@@ -14,7 +14,7 @@ let project = Project.configure(
     .Domain(.Battle, .interface),
     .Domain(.Common, .interface),
     
-    .Data(implements: .API),
+    .api,
     .Data(implements: .Model),
     .Data(implements: .Remote),
     .Network(implements: .NetworkModule),

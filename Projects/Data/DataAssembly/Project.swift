@@ -11,7 +11,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Data(.AppUpdate),
-    .Data(implements: .API),
     .Data(implements: .Model),
     .Data(implements: .Remote),
     .Data(.Attendance),
