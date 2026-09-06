@@ -132,7 +132,7 @@ extension NewBattleCardView {
         .frame(width: 40, height: 40)
       if let imageURL {
         KFImage(imageURL)
-          .placeholder { SkeletonView(cornerRadius: 20) }
+          .placeholder { SkeletonView(.round(cornerRadius: 20)) }
           .resizable()
           .scaledToFit()
           .frame(width: 20, height: 38)

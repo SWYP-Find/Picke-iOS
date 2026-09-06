@@ -18,7 +18,7 @@ struct CommentReplySkeletonView: View {
         .bottomDivider(.beige600)
 
       VStack(alignment: .leading, spacing: 8) {
-        SkeletonView(cornerRadius: 4)
+        SkeletonView(.round(cornerRadius: 4))
           .frame(width: 64, height: 14)
           .padding(.horizontal, 12)
           .padding(.top, 12)
@@ -44,19 +44,19 @@ struct CommentReplySkeletonView: View {
   private func card() -> some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(alignment: .top, spacing: 8) {
-        SkeletonView(cornerRadius: 18)
+        SkeletonView(.round(cornerRadius: 18))
           .frame(width: 36, height: 36)
         VStack(alignment: .leading, spacing: 4) {
-          SkeletonView(cornerRadius: 4).frame(width: 90, height: 14)
-          SkeletonView(cornerRadius: 4).frame(width: 56, height: 16)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 90, height: 14)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 56, height: 16)
         }
         Spacer()
       }
-      SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 12)
-      SkeletonView(cornerRadius: 4).frame(width: 220, height: 12)
+      SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 12)
+      SkeletonView(.round(cornerRadius: 4)).frame(width: 220, height: 12)
       HStack {
         Spacer()
-        SkeletonView(cornerRadius: 4).frame(width: 44, height: 14)
+        SkeletonView(.round(cornerRadius: 4)).frame(width: 44, height: 14)
       }
     }
     .padding(12)

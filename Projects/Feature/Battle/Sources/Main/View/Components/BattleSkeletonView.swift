@@ -44,32 +44,16 @@ struct BattleSkeletonView: View {
 
 /// 다크 배경용 skeleton 블록 (어두운 base + 옅은 흰색 shimmer).
 private struct DarkSkeletonBlock: View {
+  private static let baseColor = Color.white.opacity(0.08)
+  private static let shimmerColor = Color.white.opacity(0.20)
+
   let cornerRadius: CGFloat
 
-  @State private var phase: CGFloat = -1
-
-  private let baseColor = Color.white.opacity(0.08)
-  private let shimmerColor = Color.white.opacity(0.20)
-
   var body: some View {
-    RoundedRectangle(cornerRadius: cornerRadius)
-      .fill(baseColor)
-      .overlay {
-        LinearGradient(
-          stops: [
-            .init(color: shimmerColor.opacity(0), location: 0),
-            .init(color: shimmerColor, location: 0.5),
-            .init(color: shimmerColor.opacity(0), location: 1),
-          ],
-          startPoint: UnitPoint(x: phase, y: 0.5),
-          endPoint: UnitPoint(x: phase + 1, y: 0.5)
-        )
-      }
-      .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-      .onAppear {
-        withAnimation(.linear(duration: 1.2).repeatForever(autoreverses: false)) {
-          phase = 2
-        }
-      }
+    SkeletonView(
+      .round(cornerRadius: cornerRadius),
+      base: Self.baseColor,
+      highlight: Self.shimmerColor
+    )
   }
 }

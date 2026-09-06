@@ -41,7 +41,7 @@ struct BattleRecordSkeletonView: View {
     maxWidth: Bool = false,
     height: CGFloat
   ) -> some View {
-    SkeletonBlock(cornerRadius: 4, tone: .light)
+    SkeletonView(.round(cornerRadius: 4))
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)

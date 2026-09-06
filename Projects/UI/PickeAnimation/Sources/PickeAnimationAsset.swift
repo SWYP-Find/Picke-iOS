@@ -18,8 +18,16 @@ public enum PickeAnimationAsset: String, CaseIterable {
   private static let images: [PickeAnimationAsset: SDAnimatedImage?] = {
     var loaded: [PickeAnimationAsset: SDAnimatedImage?] = [:]
     for asset in allCases {
-      loaded[asset] = SDAnimatedImage(named: asset.rawValue, in: Bundle.module, compatibleWith: nil)
+      loaded[asset] = SDAnimatedImage(named: asset.rawValue, in: .pickeAnimation, compatibleWith: nil)
     }
     return loaded
   }()
+}
+
+private final class BundleToken {}
+
+private extension Bundle {
+  /// 이 모듈은 동적 프레임워크라 에셋이 자기 번들에 들어 있다.
+  /// Tuist 가 리소스 접근자(`Bundle.module`)를 만들어주지 않아 직접 잡는다.
+  static let pickeAnimation = Bundle(for: BundleToken.self)
 }

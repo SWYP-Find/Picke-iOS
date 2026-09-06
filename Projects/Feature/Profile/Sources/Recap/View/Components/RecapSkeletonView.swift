@@ -16,7 +16,7 @@ struct RecapSkeletonView: View {
           VStack(spacing: 16) {
             block(width: 100, height: 13)
             block(width: 120, height: 24)
-            SkeletonBlock(cornerRadius: 34, tone: .light).frame(width: 68, height: 68)
+            SkeletonView(.round(cornerRadius: 34)).frame(width: 68, height: 68)
             block(width: nil, maxWidth: true, height: 40)
             HStack(spacing: 8) {
               ForEach(0 ..< 3, id: \.self) { _ in block(width: 56, height: 20) }
@@ -30,7 +30,7 @@ struct RecapSkeletonView: View {
           block(width: 70, height: 13)
           cardBox {
             VStack(spacing: 12) {
-              SkeletonBlock(cornerRadius: 8, tone: .light).frame(height: 160)
+              SkeletonView(.round(cornerRadius: 8)).frame(height: 160)
               LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(0 ..< 6, id: \.self) { _ in block(width: nil, maxWidth: true, height: 28) }
               }
@@ -65,7 +65,7 @@ struct RecapSkeletonView: View {
               cardBox {
                 VStack(spacing: 8) {
                   block(width: 40, height: 12)
-                  SkeletonBlock(cornerRadius: 20, tone: .light).frame(width: 40, height: 40)
+                  SkeletonView(.round(cornerRadius: 20)).frame(width: 40, height: 40)
                   block(width: 60, height: 13)
                   block(width: nil, maxWidth: true, height: 22)
                 }
@@ -75,7 +75,7 @@ struct RecapSkeletonView: View {
           }
         }
 
-        SkeletonBlock(cornerRadius: .radiusDefault, tone: .light).frame(height: 52)
+        SkeletonView(.round(cornerRadius: .radiusDefault)).frame(height: 52)
       }
       .padding(.top, 20)
       .padding(.horizontal, 16)
@@ -93,7 +93,7 @@ struct RecapSkeletonView: View {
 
   @ViewBuilder
   private func block(width: CGFloat?, maxWidth: Bool = false, height: CGFloat) -> some View {
-    SkeletonBlock(cornerRadius: 4, tone: .light)
+    SkeletonView(.round(cornerRadius: 4))
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)

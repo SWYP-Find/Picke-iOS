@@ -14,7 +14,7 @@ struct ContentActivitySkeletonView: View {
         ForEach(0 ..< 5, id: \.self) { _ in
           VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-              SkeletonBlock(cornerRadius: 18, tone: .light)
+              SkeletonView(.round(cornerRadius: 18))
                 .frame(width: 36, height: 36)
               VStack(alignment: .leading, spacing: 4) {
                 block(width: 120, height: 14)
@@ -49,7 +49,7 @@ struct ContentActivitySkeletonView: View {
     maxWidth: Bool = false,
     height: CGFloat
   ) -> some View {
-    SkeletonBlock(cornerRadius: 4, tone: .light)
+    SkeletonView(.round(cornerRadius: 4))
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)

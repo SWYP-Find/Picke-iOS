@@ -280,7 +280,7 @@ extension ChatRoomView {
   private func avatar(_ speaker: ChatSpeaker) -> some View {
     KFImage(URL(string: speaker.imageURL ?? ""))
       .placeholder {
-        SkeletonView(cornerRadius: Metric.avatarSize / 2)
+        SkeletonView(.round(cornerRadius: Metric.avatarSize / 2))
       }
       .resizable()
       .scaledToFit()

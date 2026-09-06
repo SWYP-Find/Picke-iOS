@@ -23,19 +23,19 @@ struct CurationSkeletonView: View {
     VStack(alignment: .leading, spacing: 16) {
       // meta
       HStack(spacing: 10) {
-        SkeletonView(cornerRadius: .radiusDefault).frame(width: 44, height: 18)
+        SkeletonView(.round(cornerRadius: .radiusDefault)).frame(width: 44, height: 18)
         Spacer()
-        SkeletonView(cornerRadius: 4).frame(width: 36, height: 12)
-        SkeletonView(cornerRadius: 4).frame(width: 36, height: 12)
+        SkeletonView(.round(cornerRadius: 4)).frame(width: 36, height: 12)
+        SkeletonView(.round(cornerRadius: 4)).frame(width: 36, height: 12)
       }
       VStack(alignment: .leading, spacing: 4) {
-        SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 14)
-        SkeletonView(cornerRadius: 4).frame(width: 220, height: 12)
+        SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 14)
+        SkeletonView(.round(cornerRadius: 4)).frame(width: 220, height: 12)
       }
       // versus
       HStack(spacing: 8) {
         optionPlaceholder()
-        SkeletonView(cornerRadius: 12).frame(width: 24, height: 24)
+        SkeletonView(.round(cornerRadius: 12)).frame(width: 24, height: 24)
         optionPlaceholder()
       }
     }
@@ -47,10 +47,10 @@ struct CurationSkeletonView: View {
   @ViewBuilder
   private func optionPlaceholder() -> some View {
     HStack(spacing: 4) {
-      SkeletonView(cornerRadius: 20).frame(width: 40, height: 40)
+      SkeletonView(.round(cornerRadius: 20)).frame(width: 40, height: 40)
       VStack(spacing: 2) {
-        SkeletonView(cornerRadius: 4).frame(width: 44, height: 11)
-        SkeletonView(cornerRadius: 4).frame(width: 30, height: 10)
+        SkeletonView(.round(cornerRadius: 4)).frame(width: 44, height: 11)
+        SkeletonView(.round(cornerRadius: 4)).frame(width: 30, height: 10)
       }
     }
     .frame(maxWidth: .infinity)

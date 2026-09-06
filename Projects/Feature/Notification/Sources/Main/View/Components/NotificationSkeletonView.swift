@@ -13,7 +13,7 @@ struct NotificationSkeletonView: View {
       VStack(spacing: 8) {
         ForEach(0 ..< 7, id: \.self) { _ in
           HStack(alignment: .center, spacing: 16) {
-            SkeletonBlock(cornerRadius: 12, tone: .light)
+            SkeletonView(.round(cornerRadius: 12))
               .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 6) {
@@ -42,7 +42,7 @@ struct NotificationSkeletonView: View {
     maxWidth: Bool = false,
     height: CGFloat
   ) -> some View {
-    SkeletonBlock(cornerRadius: 4, tone: .light)
+    SkeletonView(.round(cornerRadius: 4))
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)

@@ -263,62 +263,8 @@ private struct SkeletonBlock: View {
   }
 
   var body: some View {
-    RoundedRectangle(cornerRadius: cornerRadius)
-      .fill(color)
+    SkeletonView(.round(cornerRadius: cornerRadius), base: color)
       .frame(width: width, height: height)
       .frame(maxWidth: width == nil ? .infinity : nil)
-      .skeletonShimmer(cornerRadius: cornerRadius)
-  }
-}
-
-private struct SkeletonShimmerModifier: ViewModifier {
-  @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
-  @State private var isShimmering = false
-
-  let cornerRadius: CGFloat
-
-  func body(content: Content) -> some View {
-    content
-      .overlay {
-        if !accessibilityReduceMotion {
-          shimmer
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-        }
-      }
-      .onAppear {
-        guard !accessibilityReduceMotion else { return }
-        isShimmering = true
-      }
-  }
-
-  @ViewBuilder
-  private var shimmer: some View {
-    GeometryReader { proxy in
-      LinearGradient(
-        colors: [
-          .clear,
-          .white.opacity(0.32),
-          .clear
-        ],
-        startPoint: .leading,
-        endPoint: .trailing
-      )
-      .frame(width: proxy.size.width * 0.55, height: proxy.size.height)
-      .offset(x: isShimmering ? proxy.size.width : -proxy.size.width)
-      .blendMode(.screen)
-      .allowsHitTesting(false)
-      .animation(
-      .linear(duration: 1.6)
-      .delay(0.15)
-      .repeatForever(autoreverses: false),
-        value: isShimmering
-      )
-    }
-  }
-}
-
-private extension View {
-  func skeletonShimmer(cornerRadius: CGFloat) -> some View {
-    modifier(SkeletonShimmerModifier(cornerRadius: cornerRadius))
   }
 }

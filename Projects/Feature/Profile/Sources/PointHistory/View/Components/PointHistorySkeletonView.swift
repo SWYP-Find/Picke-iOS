@@ -40,7 +40,7 @@ struct PointHistorySkeletonView: View {
 
   @ViewBuilder
   private func block(width: CGFloat, height: CGFloat) -> some View {
-    SkeletonBlock(cornerRadius: 4, tone: .light)
+    SkeletonView(.round(cornerRadius: 4))
       .frame(width: width, height: height)
   }
 }

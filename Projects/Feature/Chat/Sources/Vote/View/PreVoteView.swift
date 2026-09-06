@@ -127,7 +127,7 @@ extension PreVoteView {
          let url = URL(string: urlString)
       {
         KFImage(url)
-          .placeholder { SkeletonView() }
+          .placeholder { SkeletonView(.round()) }
           .resizable()
           .scaledToFill()
       } else {
@@ -324,7 +324,7 @@ extension PreVoteView {
   private func avatarView(imageURL: String) -> some View {
     KFImage(URL(string: imageURL))
       .placeholder {
-        SkeletonView()
+        SkeletonView(.round())
           .frame(width: 28, height: 20)
       }
       .resizable()

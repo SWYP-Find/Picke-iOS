@@ -25,7 +25,7 @@ struct NotificationSettingSkeletonView: View {
                   block(width: 180, height: 11)
                 }
                 Spacer(minLength: 8)
-                SkeletonBlock(cornerRadius: 9, tone: .light)
+                SkeletonView(.round(cornerRadius: 9))
                   .frame(width: 32, height: 18)
               }
               .padding(.vertical, 16)
@@ -42,7 +42,7 @@ struct NotificationSettingSkeletonView: View {
 
   @ViewBuilder
   private func block(width: CGFloat, height: CGFloat) -> some View {
-    SkeletonBlock(cornerRadius: 4, tone: .light)
+    SkeletonView(.round(cornerRadius: 4))
       .frame(width: width, height: height)
   }
 }

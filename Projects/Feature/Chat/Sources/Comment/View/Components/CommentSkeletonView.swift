@@ -22,16 +22,16 @@ struct CommentSkeletonView: View {
   private func card() -> some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 6) {
-        SkeletonView(cornerRadius: 14)
+        SkeletonView(.round(cornerRadius: 14))
           .frame(width: 28, height: 28)
         VStack(alignment: .leading, spacing: 4) {
-          SkeletonView(cornerRadius: 4).frame(width: 80, height: 12)
-          SkeletonView(cornerRadius: 4).frame(width: 48, height: 10)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 80, height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 48, height: 10)
         }
         Spacer()
       }
-      SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 12)
-      SkeletonView(cornerRadius: 4).frame(width: 200, height: 12)
+      SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 12)
+      SkeletonView(.round(cornerRadius: 4)).frame(width: 200, height: 12)
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)

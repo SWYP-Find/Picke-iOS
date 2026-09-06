@@ -51,7 +51,7 @@ struct ProfileSkeletonView: View {
     height: CGFloat,
     radius: CGFloat = 4
   ) -> some View {
-    SkeletonBlock(cornerRadius: radius, tone: .light)
+    SkeletonView(.round(cornerRadius: radius))
       .frame(width: width)
       .frame(maxWidth: maxWidth ? .infinity : nil)
       .frame(height: height)

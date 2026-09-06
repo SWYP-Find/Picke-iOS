@@ -21,23 +21,23 @@ struct ExploreSkeletonView: View {
   @ViewBuilder
   private func row() -> some View {
     HStack(alignment: .center, spacing: 8) {
-      SkeletonView(cornerRadius: .radiusDefault)
+      SkeletonView(.round(cornerRadius: .radiusDefault))
         .frame(width: 76, height: 76)
 
       VStack(alignment: .leading, spacing: 24) {
         VStack(alignment: .leading, spacing: 8) {
           HStack(spacing: 6) {
-            SkeletonView(cornerRadius: .radiusDefault).frame(width: 44, height: 18)
-            SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 14)
+            SkeletonView(.round(cornerRadius: .radiusDefault)).frame(width: 44, height: 18)
+            SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 14)
           }
-          SkeletonView(cornerRadius: 4).frame(maxWidth: .infinity).frame(height: 12)
-          SkeletonView(cornerRadius: 4).frame(width: 180, height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 180, height: 12)
         }
 
         HStack(spacing: 6) {
           Spacer()
-          SkeletonView(cornerRadius: 4).frame(width: 36, height: 12)
-          SkeletonView(cornerRadius: 4).frame(width: 44, height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 36, height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 44, height: 12)
         }
       }
     }

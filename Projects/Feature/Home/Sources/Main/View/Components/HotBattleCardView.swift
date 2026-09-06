@@ -48,7 +48,7 @@ struct HotBattleCardView: View {
     Group {
       if let url = battle.thumbnailURL {
         KFImage(url)
-          .placeholder { SkeletonView() }
+          .placeholder { SkeletonView(.round()) }
           .resizable()
           .scaledToFill()
       } else {

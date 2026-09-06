@@ -14,8 +14,8 @@ struct PreVoteSkeletonView: View {
   /// 다크 배경에선 shimmer 도 어두운 톤으로 (안드로이드 VoteScreen: base neutral600 / highlight neutral400).
   private func bar(cornerRadius: CGFloat) -> SkeletonView {
     isDark
-      ? SkeletonView(cornerRadius: cornerRadius, baseColor: .neutral600, shimmerColor: .neutral400)
-      : SkeletonView(cornerRadius: cornerRadius)
+      ? SkeletonView(.round(cornerRadius: cornerRadius), base: .neutral600, highlight: .neutral400)
+      : SkeletonView(.round(cornerRadius: cornerRadius))
   }
 
   var body: some View {

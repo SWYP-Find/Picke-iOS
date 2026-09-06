@@ -24,10 +24,10 @@ private extension ChatRoomSkeletonView {
   @ViewBuilder
   func navigationBarSkeleton() -> some View {
     HStack(spacing: 12) {
-      SkeletonView(cornerRadius: 6)
+      SkeletonView(.round(cornerRadius: 6))
         .frame(width: 20, height: 24)
       Spacer()
-      SkeletonView(cornerRadius: 6)
+      SkeletonView(.round(cornerRadius: 6))
         .frame(width: 24, height: 24)
     }
     .padding(.horizontal, 20)
@@ -54,16 +54,16 @@ private extension ChatRoomSkeletonView {
   @ViewBuilder
   func leftGroup() -> some View {
     HStack(alignment: .top, spacing: 8) {
-      SkeletonView(cornerRadius: 20)
+      SkeletonView(.round(cornerRadius: 20))
         .frame(width: 40, height: 40)
       VStack(alignment: .leading, spacing: 8) {
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 37, height: 20)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 256, height: 54)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 256, height: 36)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 256, height: 36)
       }
       Spacer(minLength: 0)
@@ -75,16 +75,16 @@ private extension ChatRoomSkeletonView {
     HStack(alignment: .top, spacing: 8) {
       Spacer(minLength: 0)
       VStack(alignment: .trailing, spacing: 8) {
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 49, height: 20)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 256, height: 54)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 256, height: 36)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 256, height: 54)
       }
-      SkeletonView(cornerRadius: 20)
+      SkeletonView(.round(cornerRadius: 20))
         .frame(width: 40, height: 40)
     }
   }
@@ -96,15 +96,15 @@ private extension ChatRoomSkeletonView {
   @ViewBuilder
   func playerBarSkeleton() -> some View {
     VStack(spacing: 16) {
-      SkeletonView(cornerRadius: 6)
+      SkeletonView(.round(cornerRadius: 6))
         .frame(height: 18)
 
       HStack(alignment: .top, spacing: 32) {
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 24, height: 55)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 55, height: 55)
-        SkeletonView(cornerRadius: 6)
+        SkeletonView(.round(cornerRadius: 6))
           .frame(width: 24, height: 55)
       }
     }

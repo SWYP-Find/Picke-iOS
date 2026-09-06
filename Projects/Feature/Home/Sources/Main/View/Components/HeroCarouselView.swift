@@ -107,7 +107,7 @@ struct HeroCardView: View {
 
         if let url = hero.thumbnailURL {
           KFImage(url)
-            .placeholder { SkeletonView() }
+            .placeholder { SkeletonView(.round()) }
             .resizable()
             .aspectRatio(contentMode: .fill)
             .frame(
