@@ -2,8 +2,6 @@ import AnalyticsService
 import AnalyticsServiceInterface
 import AppUpdateData
 import AppUpdateDomain
-import AttendanceData
-import AttendanceDomain
 import AudioPlayerService
 import AuthData
 import AuthDomain
@@ -84,8 +82,6 @@ private enum HomeFeatureFactory {
     values.homeUseCase = HomeUseCaseImpl()
     values.notificationRepository = NotificationRepositoryImpl()
     values.notificationUseCase = NotificationUseCaseImpl()
-    values.attendanceRepository = AttendanceRepositoryImpl()
-    values.attendanceUseCase = AttendanceUseCaseImpl()
   }
 }
 

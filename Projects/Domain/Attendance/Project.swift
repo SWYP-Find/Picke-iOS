@@ -9,5 +9,5 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".AttendanceDomain"),
   settings: .settings(),
   dependencies: [.SPM.weaveDI, .SPM.composableArchitecture],
-  interfaceDependencies: [.SPM.weaveDI, .SPM.composableArchitecture]
+  interfaceDependencies: [.SPM.composableArchitecture]
 )
