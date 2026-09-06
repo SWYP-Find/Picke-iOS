@@ -5,20 +5,19 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "ProfileData"),
-  bundleId: .appBundleID(name: ".ProfileData"),
+  moduleType: .microModule(name: "DeviceService"),
+  bundleId: .appBundleID(name: ".DeviceService"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .domain(.profile, .interface),
-    .api,
-    .model,
-    .apiEndpoint,
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
-    .network(implements: .networkHeader),
-    .SPM.logMarco,
     .SPM.composableArchitecture,
+    .SPM.logMarco,
   ],
-  sources: ["Sources/**"],
-  hasTests: true
+  interfaceDependencies: [
+    .SPM.composableArchitecture,
+    .SPM.weaveDI,
+  ]
 )

@@ -71,21 +71,6 @@ public extension Project {
         hasTests: hasTests,
         demoDisplayName: demoDisplayName
       )
-    case let .feature(module):
-      return configureFeature(
-        name: module.rawValue,
-        bundleId: bundleId,
-        platform: platform,
-        product: product,
-        deploymentTarget: deploymentTarget,
-        destinations: destinations,
-        settings: settings,
-        interfaceDependencies: interfaceDependencies,
-        dependencies: dependencies,
-        testingDependencies: testingDependencies,
-        resources: resources,
-        schemes: schemes
-      )
     case let .microModule(name):
       return configureFeature(
         name: name,

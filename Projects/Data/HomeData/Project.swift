@@ -12,9 +12,9 @@ let project = Project.configure(
   dependencies: [
     .domain(.auth, .interface),
     .domain(.home, .interface),
-    .api,
-    .model,
-    .apiEndpoint,
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
     .network(implements: .networkHeader),
     .SPM.weaveDI,

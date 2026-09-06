@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.notification),
+  moduleType: .microModule(name: "Notification"),
   bundleId: .appBundleID(name: ".Notification"),
   settings: .settings(),
   dependencies: [

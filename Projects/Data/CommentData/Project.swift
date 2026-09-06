@@ -5,18 +5,15 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "SearchData"),
-  bundleId: .appBundleID(name: ".SearchData"),
+  moduleType: .module(name: "CommentData"),
+  bundleId: .appBundleID(name: ".CommentData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .domain(.battle, .interface),
-    .domain(.search, .interface),
-    .domain(.home, .interface),
-    
-    .api,
-    .apiEndpoint,
-    .model,
+    .domain(.comment, .interface),
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
     .network(implements: .networkHeader),
     .SPM.logMarco,

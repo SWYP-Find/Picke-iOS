@@ -5,20 +5,17 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "AttendanceData"),
-  bundleId: .appBundleID(name: ".AttendanceData"),
+  moduleType: .module(name: "AppUpdateData"),
+  bundleId: .appBundleID(name: ".AppUpdateData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .domain(.attendance, .interface),
-    .api,
-    .model,
-    .apiEndpoint,
+    .domain(.appUpdate, .interface),
+    .data(.model),
     .network(implements: .networkModule),
-    .network(implements: .networkHeader),
     .SPM.logMarco,
     .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
-  hasTests: true
+  hasTests: false
 )

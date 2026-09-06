@@ -5,19 +5,23 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .microModule(name: "DeviceService"),
-  bundleId: .appBundleID(name: ".DeviceService"),
+  moduleType: .module(name: "AuthData"),
+  bundleId: .appBundleID(name: ".AuthData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .model,
-    .apiEndpoint,
+    .domain(.auth, .interface),
+    
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
-    .SPM.composableArchitecture,
-    .SPM.logMarco,
-  ],
-  interfaceDependencies: [
-    .SPM.composableArchitecture,
+    .network(implements: .networkHeader),
     .SPM.weaveDI,
-  ]
+    .SPM.logMarco,
+    .SPM.composableArchitecture,
+    .SPM.googleSignIn,
+  ],
+  sources: ["Sources/**"],
+  hasTests: true
 )

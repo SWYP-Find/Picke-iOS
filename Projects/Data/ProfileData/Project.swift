@@ -5,20 +5,17 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "BattleData"),
-  bundleId: .appBundleID(name: ".BattleData"),
+  moduleType: .module(name: "ProfileData"),
+  bundleId: .appBundleID(name: ".ProfileData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .domain(.home, .interface),
-    .domain(.battle, .interface),
-    
-    .api,
-    .model,
-    .apiEndpoint,
+    .domain(.profile, .interface),
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
     .network(implements: .networkHeader),
-    .SPM.weaveDI,
     .SPM.logMarco,
     .SPM.composableArchitecture,
   ],

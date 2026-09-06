@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .api,
+    .service(.api),
     // Auth 엔드포인트가 SocialType 을 경로에 쓴다.
     .domain(.auth, .interface),
     .network(implements: .networkHeader),

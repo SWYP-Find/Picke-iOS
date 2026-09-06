@@ -5,7 +5,7 @@ import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.splash),
+  moduleType: .microModule(name: "Splash"),
   bundleId: .appBundleID(name: ".Splash"),
   settings: .settings(),
   dependencies: [

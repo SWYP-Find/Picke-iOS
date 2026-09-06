@@ -11,8 +11,8 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .data(.appUpdate),
-    .model,
-    .apiEndpoint,
+    .data(.model),
+    .service(.apiEndpoint),
     .data(.attendance),
     .data(.auth),
     .data(.battle),

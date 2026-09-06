@@ -5,17 +5,23 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "AppUpdateData"),
-  bundleId: .appBundleID(name: ".AppUpdateData"),
+  moduleType: .module(name: "BattleData"),
+  bundleId: .appBundleID(name: ".BattleData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .domain(.appUpdate, .interface),
-    .model,
+    .domain(.home, .interface),
+    .domain(.battle, .interface),
+    
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
+    .network(implements: .networkHeader),
+    .SPM.weaveDI,
     .SPM.logMarco,
     .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

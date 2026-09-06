@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.home),
+  moduleType: .microModule(name: "Home"),
   bundleId: .appBundleID(name: ".Home"),
   product: .staticFramework,
   settings: .settings(),

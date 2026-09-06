@@ -5,17 +5,20 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "NotificationData"),
-  bundleId: .appBundleID(name: ".NotificationData"),
+  moduleType: .module(name: "PerspectiveData"),
+  bundleId: .appBundleID(name: ".PerspectiveData"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .domain(.notification, .interface),
-    .api,
-    .model,
-    .apiEndpoint,
+    .domain(.perspective, .interface),
+    .domain(.battle, .interface),
+    .domain(.comment, .interface),
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
     .network(implements: .networkModule),
     .network(implements: .networkHeader),
+    .SPM.weaveDI,
     .SPM.logMarco,
     .SPM.composableArchitecture,
   ],

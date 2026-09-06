@@ -5,7 +5,7 @@ import ProjectTemplatePlugin
 import DependencyPackagePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.web),
+  moduleType: .microModule(name: "Web"),
   bundleId: .appBundleID(name: ".Web"),
   settings: .settings(),
   dependencies: [

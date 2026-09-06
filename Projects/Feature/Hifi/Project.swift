@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.hifi),
+  moduleType: .microModule(name: "Hifi"),
   bundleId: .appBundleID(name: ".Hifi"),
   product: .staticFramework,
   settings: .settings(),

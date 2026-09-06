@@ -82,12 +82,12 @@ OAuth(Apple/Google/Kakao), AudioPlayer, Deeplink, Error, Share, Base/Common.
 
 **"xcodeproj 수는 A 수준, 경계는 B 수준"** — Presentation 이 이미 쓰는 마이크로피처 패턴 그대로.
 
-- `Projects/Domain/<Feature>/` = 1 xcodeproj, 내부 4타깃:
+- `Projects/Domain/<Feature>Domain/` = 1 xcodeproj, 내부 4타깃:
   - `<Feature>DomainInterface` (Entity + Repository 프로토콜 + UseCase 프로토콜) — 기존 Entity/DomainInterface 폴더 병합
   - `<Feature>Domain` (UseCase 구현)
   - `<Feature>DomainTesting` (목 — 기존 DomainTesting·DataTesting 의 해당 feature 목 흡수)
   - `<Feature>DomainTests`
-- `Projects/Data/<Feature>/` = 1 xcodeproj, 내부 2타깃:
+- `Projects/Data/<Feature>Data/` = 1 xcodeproj, 내부 2타깃:
   - `<Feature>Data` (API + Model + Service + Repository 를 **폴더로** 내장 — Data 내부 레이어는 한 feature 안에서 항상 같이 바뀌므로 타깃 분리 실익 없음)
   - `<Feature>DataTests`
 - Data 쪽에 Interface 타깃을 두지 않는 이유: Repository 가 구현하는 계약은 이미 `<Feature>DomainInterface` 에 있다. DataInterface 는 내용이 없는 빈 타깃이 된다 — 단순함 우선.
@@ -240,7 +240,7 @@ App ──▶ Domain(엄브렐라)·Data(엄브렐라)  [DI 등록용]          
 ### 7.1 ModuleType — 기존 `microModule` 활용, 신규 case 불필요
 
 ```swift
-// Domain feature — Projects/Domain/Auth/Project.swift (예시)
+// Domain feature — Projects/Domain/AuthDomain/Project.swift (예시)
 let project = Project.configure(
   moduleType: .microModule(name: "AuthDomain"),   // 이미 존재, configureFeature 위임
   bundleId: .appBundleID(name: ".AuthDomain"),
@@ -249,7 +249,7 @@ let project = Project.configure(
   dependencies: [ .SPM.weaveDI, .SPM.composableArchitecture ]
 )
 
-// Data feature — Projects/Data/Auth/Project.swift (예시)
+// Data feature — Projects/Data/AuthData/Project.swift (예시)
 let project = Project.configure(
   moduleType: .module(name: "AuthData"),
   bundleId: .appBundleID(name: ".AuthData"),

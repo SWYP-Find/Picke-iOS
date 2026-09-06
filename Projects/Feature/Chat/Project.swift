@@ -5,7 +5,7 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .feature(.chat),
+  moduleType: .microModule(name: "Chat"),
   bundleId: .appBundleID(name: ".Chat"),
   settings: .settings(),
   dependencies: [
