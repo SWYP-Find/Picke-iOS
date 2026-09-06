@@ -10,7 +10,7 @@ import HomeDomainInterface
 import Kingfisher
 import PickeDesignKit
 import PickeCoreUtility
-import AdService
+import Ad
 
 @ViewAction(for: HifiFeature.self)
 public struct HifiView: View {

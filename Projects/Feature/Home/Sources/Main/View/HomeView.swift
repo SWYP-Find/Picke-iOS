@@ -11,7 +11,7 @@ import HomeDomainInterface
 import PickeDesignKit
 
 import ComposableArchitecture
-import AdService
+import Ad
 
 @ViewAction(for: HomeFeature.self)
 public struct HomeView: View {

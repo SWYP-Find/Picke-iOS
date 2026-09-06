@@ -17,7 +17,7 @@ let project = Project.configure(
     .featureAssembly,
     .domainAssembly,
     // Core·Service 구현은 조립 경계 하나로 들어온다.
-    // 앱 시작 전면 팝업 광고(AdService)도 여기에 포함된다.
+    // 앱 시작 전면 팝업 광고(Ad)도 여기에 포함된다.
     .serviceAssembly,
     .core(.network),
     .core(.network, .interface),

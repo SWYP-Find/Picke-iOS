@@ -13,7 +13,6 @@ let project = Project.configure(
   dependencies: [
     .coreAssembly,
     .service(.api),
-    .service(.ad),
     .service(.analytics),
     .service(.audioPlayer),
     .service(.device),

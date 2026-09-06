@@ -10,7 +10,7 @@ import ComposableArchitecture
 import LogMacro
 import NotificationDomainInterface
 import PickeDesignKit
-import AdServiceInterface
+import AdInterface
 import AnalyticsServiceInterface
 
 @Reducer

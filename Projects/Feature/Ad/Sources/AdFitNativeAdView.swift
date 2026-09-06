@@ -1,6 +1,6 @@
 //
 //  AdFitNativeAdView.swift
-//  AdService
+//  Ad
 //
 
 import OSLog

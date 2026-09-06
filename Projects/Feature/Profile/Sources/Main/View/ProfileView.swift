@@ -8,7 +8,7 @@ import SwiftUI
 import ComposableArchitecture
 import Kingfisher
 import PickeDesignKit
-import AdService
+import Ad
 
 @ViewAction(for: ProfileFeature.self)
 public struct ProfileView: View {

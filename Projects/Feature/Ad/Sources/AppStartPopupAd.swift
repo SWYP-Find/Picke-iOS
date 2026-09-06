@@ -1,6 +1,6 @@
 //
 //  AppStartPopupAd.swift
-//  AdService
+//  Ad
 //
 
 import OSLog

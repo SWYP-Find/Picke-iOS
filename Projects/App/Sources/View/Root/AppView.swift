@@ -10,7 +10,7 @@ import SwiftUI
 import ComposableArchitecture
 import PickeDesignKit
 
-import AdService
+import Ad
 import FeatureAssembly
 
 struct AppView: View {

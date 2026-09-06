@@ -7,6 +7,7 @@
 
 // MARK: - 여기에 한번에 호출 할꺼 추가
 
+@_exported import Ad
 @_exported import Auth
 @_exported import Battle
 @_exported import Chat

@@ -1,6 +1,6 @@
 //
 //  RewardedAdClient.swift
-//  AdService
+//  Ad
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import ComposableArchitecture
 /// 리워드 광고 표시 계약.
 ///
 /// 이 타입은 GoogleMobileAds 를 알지 못한다. 실제로 광고를 로드/표시하는 구현은
-/// `AdService`(Sources) 의 `liveValue` 에만 있고, 화면들은 이 인터페이스만 의존한다.
+/// `Ad`(Sources) 의 `liveValue` 에만 있고, 화면들은 이 인터페이스만 의존한다.
 public struct RewardedAdClient: Sendable {
   /// 리워드 광고를 로드/표시하고 보상 획득 여부를 반환.
   public var showRewardedAd: @Sendable () async -> Bool

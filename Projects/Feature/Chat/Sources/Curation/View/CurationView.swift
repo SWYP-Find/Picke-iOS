@@ -9,7 +9,7 @@ import BattleDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
 import PickeCoreUtility
-import AdService
+import Ad
 
 @ViewAction(for: CurationFeature.self)
 public struct CurationView: View {

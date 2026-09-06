@@ -1,6 +1,6 @@
 //
 //  AdBannerSkeletonView.swift
-//  AdService
+//  Ad
 //
 
 import SwiftUI

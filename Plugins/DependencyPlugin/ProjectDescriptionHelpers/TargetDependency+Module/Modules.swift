@@ -19,6 +19,7 @@ public enum FeatureModule: String, CaseIterable {
   case battle = "Battle"
   case profile = "Profile"
   case notification = "Notification"
+  case ad = "Ad"
 
   /// Projects/Feature/<name>
   var path: Path {
@@ -44,7 +45,6 @@ public enum ServiceModule: String, CaseIterable {
   case assembly = "ServiceAssembly"
   case api = "API"
   case apiEndpoint = "APIEndpoint"
-  case ad = "AdService"
   case analytics = "AnalyticsService"
   case audioPlayer = "AudioPlayerService"
   case device = "DeviceService"
@@ -73,4 +73,3 @@ public enum DomainModule: String, CaseIterable {
     return .relativeToDomain(rawValue)
   }
 }
-

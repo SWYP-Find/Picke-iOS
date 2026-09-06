@@ -21,7 +21,7 @@ let project = Project.configure(
     .domain(.notification, .interface),
 
     .core(.thirdParty),
-    .service(.ad), // 마이페이지 하단 배너 광고
+    .feature(.ad), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

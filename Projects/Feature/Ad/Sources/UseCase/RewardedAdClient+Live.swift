@@ -1,12 +1,12 @@
 //
 //  RewardedAdClient+Live.swift
-//  AdService
+//  Ad
 //
 
 import Foundation
 import UIKit
 
-import AdServiceInterface
+import AdInterface
 import AnalyticsServiceInterface
 import ComposableArchitecture
 import GoogleMobileAds

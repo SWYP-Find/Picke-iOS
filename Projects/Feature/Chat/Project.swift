@@ -22,7 +22,7 @@ let project = Project.configure(
     .domain(.comment, .interface),
     .core(.thirdParty),
     // 큐레이션 리스트 상단 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
-    .service(.ad),
+    .feature(.ad),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

@@ -19,6 +19,7 @@ let project = Project.configure(
     .feature(.battle),
     .feature(.profile),
     .feature(.notification),
+    .feature(.ad),
   ],
   sources: ["Sources/**"]
 )
