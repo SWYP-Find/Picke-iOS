@@ -8,6 +8,7 @@ import Testing
 
 @testable import PerspectiveData
 
+import APIEndpoint
 import NetworkHeader
 
 struct PerspectiveRequestMappingTests {

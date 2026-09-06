@@ -5,6 +5,7 @@
 
 import Foundation
 
+import APIEndpoint
 import CommentDomainInterface
 import CommonDomainInterface
 import Model

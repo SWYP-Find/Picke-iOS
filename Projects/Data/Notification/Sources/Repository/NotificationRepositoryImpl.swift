@@ -5,9 +5,10 @@
 
 import Foundation
 
+import APIEndpoint
 import Model
-import NotificationDomainInterface
 import NetworkModule
+import NotificationDomainInterface
 
 import LogMacro
 

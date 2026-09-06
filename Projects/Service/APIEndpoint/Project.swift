@@ -11,6 +11,8 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .api,
+    // Auth 엔드포인트가 SocialType 을 경로에 쓴다.
+    .Domain(.Auth, .interface),
     .Network(implements: .NetworkHeader),
   ],
   sources: ["Sources/**"],

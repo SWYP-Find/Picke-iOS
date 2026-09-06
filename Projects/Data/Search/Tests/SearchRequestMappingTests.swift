@@ -7,6 +7,7 @@ import Testing
 
 @testable import SearchData
 
+import APIEndpoint
 import NetworkHeader
 
 struct SearchRequestMappingTests {

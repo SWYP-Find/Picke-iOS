@@ -9,6 +9,7 @@ import Testing
 @testable import NotificationData
 
 import API
+import APIEndpoint
 import NetworkHeader
 
 struct NotificationRequestMappingTests {

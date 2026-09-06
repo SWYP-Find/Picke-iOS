@@ -7,6 +7,7 @@ import Testing
 
 @testable import BattleData
 
+import APIEndpoint
 import Foundation
 import NetworkHeader
 

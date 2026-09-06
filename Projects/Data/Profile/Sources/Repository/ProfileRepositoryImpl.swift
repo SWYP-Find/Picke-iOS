@@ -5,8 +5,9 @@
 
 import Foundation
 
-import ProfileDomainInterface
+import APIEndpoint
 import NetworkModule
+import ProfileDomainInterface
 
 import LogMacro
 

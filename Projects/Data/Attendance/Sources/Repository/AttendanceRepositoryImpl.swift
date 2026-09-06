@@ -5,6 +5,7 @@
 
 import Foundation
 
+import APIEndpoint
 import AttendanceDomainInterface
 import Model
 import NetworkModule

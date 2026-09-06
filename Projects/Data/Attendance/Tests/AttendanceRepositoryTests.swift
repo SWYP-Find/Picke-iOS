@@ -6,6 +6,7 @@
 import Foundation
 import Testing
 
+import APIEndpoint
 import AttendanceDomainInterface
 
 @testable import AttendanceData

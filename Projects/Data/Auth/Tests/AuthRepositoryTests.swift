@@ -8,6 +8,7 @@ import Testing
 
 @testable import AuthData
 
+import APIEndpoint
 import AuthDomainInterface
 
 struct AuthRepositoryTests {

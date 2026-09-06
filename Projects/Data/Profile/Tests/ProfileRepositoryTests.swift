@@ -8,6 +8,7 @@ import Testing
 
 @testable import ProfileData
 
+import APIEndpoint
 import ProfileDomainInterface
 
 struct ProfileRepositoryTests {

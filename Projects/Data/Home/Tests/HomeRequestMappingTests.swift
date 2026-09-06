@@ -8,6 +8,7 @@ import Testing
 
 @testable import HomeData
 
+import APIEndpoint
 import NetworkHeader
 
 struct HomeRequestMappingTests {

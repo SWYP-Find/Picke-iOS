@@ -9,6 +9,7 @@ import Testing
 @testable import AuthData
 
 import API
+import APIEndpoint
 import AuthDomainInterface
 import NetworkHeader
 

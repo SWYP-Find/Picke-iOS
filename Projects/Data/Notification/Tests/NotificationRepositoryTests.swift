@@ -8,6 +8,7 @@ import Testing
 
 @testable import NotificationData
 
+import APIEndpoint
 import NotificationDomainInterface
 
 struct NotificationRepositoryTests {

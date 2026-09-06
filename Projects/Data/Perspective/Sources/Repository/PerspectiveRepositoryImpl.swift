@@ -5,11 +5,12 @@
 
 import Foundation
 
+import APIEndpoint
 import CommentDomainInterface
 import CommonDomainInterface
 import Model
-import PerspectiveDomainInterface
 import NetworkModule
+import PerspectiveDomainInterface
 
 import LogMacro
 

@@ -8,6 +8,7 @@ import Testing
 
 @testable import CommentData
 
+import APIEndpoint
 import CommentDomainInterface
 import CommonDomainInterface
 
