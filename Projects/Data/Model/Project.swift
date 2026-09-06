@@ -11,7 +11,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.AppUpdate, .interface),
-    .Domain(.Common, .interface),
     .Domain(.Comment, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Home, .interface),

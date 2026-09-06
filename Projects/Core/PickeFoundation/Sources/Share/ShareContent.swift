@@ -1,6 +1,6 @@
 //
 //  ShareContent.swift
-//  CommonDomainInterface
+//  PickeFoundation
 //
 
 import Foundation

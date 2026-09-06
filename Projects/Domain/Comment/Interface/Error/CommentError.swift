@@ -1,6 +1,6 @@
 //
 //  CommentError.swift
-//  Entity
+//  CommentDomainInterface
 //
 
 import Foundation

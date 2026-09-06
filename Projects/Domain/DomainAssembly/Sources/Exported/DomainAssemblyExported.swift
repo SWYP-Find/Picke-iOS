@@ -15,8 +15,6 @@
 @_exported import BattleDomainInterface
 @_exported import CommentDomain
 @_exported import CommentDomainInterface
-@_exported import CommonDomain
-@_exported import CommonDomainInterface
 @_exported import HomeDomain
 @_exported import HomeDomainInterface
 @_exported import NotificationDomain

@@ -1,6 +1,6 @@
 //
 //  CommentLikeResult.swift
-//  Entity
+//  CommentDomainInterface
 //
 
 import Foundation

@@ -10,7 +10,6 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .Domain(.Common, .interface),
     .DesignSystem,
     .Core(.PickeFoundation),
     .Core(.PickeStorage, .interface),

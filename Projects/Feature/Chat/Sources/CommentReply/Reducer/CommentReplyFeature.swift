@@ -8,7 +8,7 @@
 import Foundation
 
 import CommentDomainInterface
-import CommonDomainInterface
+import BattleDomainInterface
 import ComposableArchitecture
 import LogMacro
 import PerspectiveDomainInterface

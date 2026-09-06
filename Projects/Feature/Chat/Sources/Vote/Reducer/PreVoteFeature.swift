@@ -11,11 +11,11 @@ import UIKit
 
 import AnalyticsServiceInterface
 import BattleDomainInterface
-import CommonDomainInterface
 import ComposableArchitecture
 import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
+import PickeFoundation
 
 @Reducer
 public struct PreVoteFeature {

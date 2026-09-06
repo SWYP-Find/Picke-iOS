@@ -26,8 +26,6 @@ public enum DomainFeatureModule: String, CaseIterable {
   case Perspective
   case Profile
   case Search
-  /// 여러 feature 가 공유하는 저변경 횡단 계약
-  case Common
   /// 앱 강제/권장 업데이트 판정.
   case AppUpdate
 }
@@ -69,7 +67,6 @@ public enum DataFeatureModule: String, CaseIterable {
   case Perspective
   case Profile
   case Search
-  case Common
 }
 
 /// Domain feature 모듈 내 대상 타깃 종류.

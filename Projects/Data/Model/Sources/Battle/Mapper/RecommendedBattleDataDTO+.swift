@@ -4,7 +4,6 @@
 //
 
 import BattleDomainInterface
-import CommonDomainInterface
 import Foundation
 
 public extension RecommendedBattlePageDataDTO {

@@ -1,6 +1,6 @@
 //
 //  BattlePerspective.swift
-//  Entity
+//  BattleDomainInterface
 //
 
 import Foundation

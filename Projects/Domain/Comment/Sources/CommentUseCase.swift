@@ -6,7 +6,6 @@
 import Foundation
 
 import CommentDomainInterface
-import CommonDomainInterface
 
 import ComposableArchitecture
 

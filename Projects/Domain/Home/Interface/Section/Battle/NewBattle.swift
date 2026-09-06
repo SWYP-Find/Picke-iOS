@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CommonDomainInterface
 
 /// "새로운 배틀" 리스트 아이템 — API 의 newBattles.
 public struct NewBattle: Equatable, Identifiable {

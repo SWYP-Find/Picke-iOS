@@ -3,7 +3,7 @@
 //  Entity
 //
 
-import CommonDomainInterface
+import BattleDomainInterface
 import Foundation
 
 public enum CommentSort: String, CaseIterable, Equatable {

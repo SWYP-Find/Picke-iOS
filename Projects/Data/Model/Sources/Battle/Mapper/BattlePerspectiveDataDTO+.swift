@@ -3,7 +3,7 @@
 //  Model
 //
 
-import CommonDomainInterface
+import BattleDomainInterface
 import Foundation
 
 public extension BattlePerspectivePageDataDTO {

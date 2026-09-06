@@ -1,6 +1,6 @@
 //
 //  ShareItem.swift
-//  CommonDomainInterface
+//  PickeFoundation
 //
 
 import Foundation

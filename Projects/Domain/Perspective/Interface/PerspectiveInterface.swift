@@ -4,7 +4,7 @@
 //
 
 import CommentDomainInterface
-import CommonDomainInterface
+import BattleDomainInterface
 import Dependencies
 import Foundation
 import ComposableArchitecture

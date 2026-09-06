@@ -14,7 +14,6 @@ let project = Project.configure(
     .DesignSystem,
     .Core(.PickeFoundation),
     .Service(.Analytics, .interface),
-    .Domain(.Common, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Home, .interface),
     .Network(implements: .NetworkModule),

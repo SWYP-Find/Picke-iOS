@@ -6,8 +6,8 @@
 import Foundation
 
 import APIEndpoint
+import BattleDomainInterface
 import CommentDomainInterface
-import CommonDomainInterface
 import Model
 import NetworkModule
 import PerspectiveDomainInterface

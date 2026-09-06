@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import CommonDomainInterface
 
 import Model
 

@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CommonDomainInterface
 
 /// 홈 화면 최상단 "EDITOR PICK" 카드 — API 의 editorPicks.
 public struct HeroBattle: Equatable, Identifiable {

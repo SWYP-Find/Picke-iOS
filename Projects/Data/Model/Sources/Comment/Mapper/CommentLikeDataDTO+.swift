@@ -3,7 +3,7 @@
 //  Model
 //
 
-import CommonDomainInterface
+import CommentDomainInterface
 import Foundation
 
 public extension CommentLikeDataDTO {

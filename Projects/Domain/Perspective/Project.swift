@@ -9,13 +9,13 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".PerspectiveDomain"),
   settings: .settings(),
   dependencies: [
-    .Domain(.Common, .interface),
+    .Domain(.Battle, .interface),
     .Domain(.Comment, .interface),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ],
   interfaceDependencies: [
-    .Domain(.Common, .interface),
+    .Domain(.Battle, .interface),
     .Domain(.Comment, .interface),
     .SPM.weaveDI,
     .SPM.composableArchitecture,

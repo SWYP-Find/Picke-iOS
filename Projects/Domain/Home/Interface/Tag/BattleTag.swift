@@ -1,6 +1,6 @@
 //
 //  BattleTag.swift
-//  CommonDomain
+//  HomeDomainInterface
 //
 //  Created by Wonji Suh on 5/16/26.
 //

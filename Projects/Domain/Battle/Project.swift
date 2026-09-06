@@ -9,14 +9,12 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".BattleDomain"),
   settings: .settings(),
   dependencies: [
-    .Domain(.Common, .interface),
     
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ],
   interfaceDependencies: [
     .Domain(.Home, .interface),
-    .Domain(.Common, .interface),
     
     .SPM.weaveDI,
     .SPM.composableArchitecture,

@@ -11,7 +11,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .Domain(.Comment, .interface),
-    .Domain(.Common, .interface),
     .api,
     .Data(implements: .Model),
     .apiEndpoint,

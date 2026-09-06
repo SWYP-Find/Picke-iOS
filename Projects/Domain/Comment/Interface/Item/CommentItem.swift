@@ -3,7 +3,7 @@
 //  Entity
 //
 
-import CommonDomainInterface
+import BattleDomainInterface
 import Foundation
 
 public struct CommentItem: Equatable, Identifiable {

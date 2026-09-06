@@ -6,7 +6,6 @@
 import Foundation
 
 import BattleDomainInterface
-import CommonDomainInterface
 import HomeDomainInterface
 
 import ComposableArchitecture

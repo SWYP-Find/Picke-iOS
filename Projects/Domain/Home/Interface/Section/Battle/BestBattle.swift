@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CommonDomainInterface
 
 /// "Best 배틀" 랭킹 카드 — API 의 bestBattles.
 public struct BestBattle: Equatable, Identifiable {

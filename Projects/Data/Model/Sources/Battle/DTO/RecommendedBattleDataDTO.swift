@@ -4,7 +4,6 @@
 //
 
 import Foundation
-import CommonDomainInterface
 
 public struct RecommendedBattlePageDataDTO: Decodable {
   public let items: [RecommendedBattleDTO]

@@ -7,7 +7,6 @@ import Foundation
 
 import APIEndpoint
 import BattleDomainInterface
-import CommonDomainInterface
 import HomeDomainInterface
 import Model
 import NetworkModule

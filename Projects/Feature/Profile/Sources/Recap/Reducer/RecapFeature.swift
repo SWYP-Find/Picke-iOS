@@ -10,7 +10,7 @@ import UIKit
 import ComposableArchitecture
 import LogMacro
 import AnalyticsServiceInterface
-import CommonDomainInterface
+import PickeFoundation
 
 @Reducer
 public struct RecapFeature {

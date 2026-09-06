@@ -1,6 +1,6 @@
 //
 //  PickeDeeplink.swift
-//  CommonDomainInterface
+//  PickeFoundation
 //
 
 import Foundation

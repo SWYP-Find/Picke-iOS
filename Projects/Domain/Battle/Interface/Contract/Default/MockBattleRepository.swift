@@ -3,7 +3,6 @@
 //  DomainInterface
 //
 
-import CommonDomainInterface
 import Foundation
 import HomeDomainInterface
 

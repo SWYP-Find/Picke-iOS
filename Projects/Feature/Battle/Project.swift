@@ -9,7 +9,6 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".Battle"),
   settings: .settings(),
   dependencies: [
-    .Domain(.Common, .interface),
     .DesignSystem,
     .Core(.PickeFoundation),
     .Service(.Analytics, .interface),

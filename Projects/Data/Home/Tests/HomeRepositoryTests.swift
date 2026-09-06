@@ -10,7 +10,6 @@ import Testing
 
 import APIEndpoint
 import AuthDomainInterface
-import CommonDomainInterface
 import HomeDomainInterface
 
 struct HomeRepositoryTests {

@@ -4,8 +4,8 @@
 //
 
 import BattleDomainInterface
-import CommonDomainInterface
 import Foundation
+import HomeDomainInterface
 
 public extension BattleDetailDataDTO {
   func toDomain() -> BattleDetail {

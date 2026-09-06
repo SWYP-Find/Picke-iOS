@@ -3,7 +3,6 @@
 //  DomainInterface
 //
 
-import CommonDomainInterface
 import Dependencies
 import Foundation
 import ComposableArchitecture

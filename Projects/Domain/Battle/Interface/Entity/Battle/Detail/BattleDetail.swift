@@ -4,7 +4,7 @@
 //
 
 import Foundation
-import CommonDomainInterface
+import HomeDomainInterface
 
 public struct BattleDetail: Equatable, Identifiable {
   public let battleInfo: BattleInfo

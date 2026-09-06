@@ -1,6 +1,6 @@
 //
 //  TagType.swift
-//  CommonDomain
+//  HomeDomainInterface
 //
 
 import Foundation

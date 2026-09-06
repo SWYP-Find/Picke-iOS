@@ -5,8 +5,8 @@
 //  Created by Wonji Suh  on 6/3/26.
 //
 
+import BattleDomainInterface
 import CommentDomainInterface
-import CommonDomainInterface
 import Foundation
 
 public struct MockPerspectiveRepository: PerspectiveInterface {

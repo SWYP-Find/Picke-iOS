@@ -10,7 +10,6 @@ import Testing
 
 import APIEndpoint
 import CommentDomainInterface
-import CommonDomainInterface
 
 struct CommentRepositoryTests {
   // MARK: - likeComment

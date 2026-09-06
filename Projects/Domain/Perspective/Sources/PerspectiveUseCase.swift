@@ -5,8 +5,8 @@
 
 import Foundation
 
+import BattleDomainInterface
 import CommentDomainInterface
-import CommonDomainInterface
 import PerspectiveDomainInterface
 
 import ComposableArchitecture
