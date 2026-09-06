@@ -12,7 +12,6 @@ import HomeDomainInterface
 import HomeInterface
 import LogMacro
 import NotificationDomainInterface
-import PickeCore
 import AnalyticsServiceInterface
 import AuthDomainInterface
 

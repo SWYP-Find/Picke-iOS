@@ -8,7 +8,6 @@ import Foundation
 import ComposableArchitecture
 import LogMacro
 import NotificationDomainInterface
-import PickeCore
 import AnalyticsServiceInterface
 import PickeCoreUtility
 

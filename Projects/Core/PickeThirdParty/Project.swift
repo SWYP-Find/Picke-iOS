@@ -5,8 +5,8 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "PickeCore"),
-  bundleId: .appBundleID(name: ".PickeCore"),
+  moduleType: .module(name: "PickeThirdParty"),
+  bundleId: .appBundleID(name: ".PickeThirdParty"),
   product: .framework,
   settings: .settings(),
   dependencies: [

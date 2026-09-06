@@ -16,6 +16,6 @@ let project = Project.configure(
     .SPM.composableArchitecture,
     .SPM.sdwebImageCore,
     
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
   ]
 )

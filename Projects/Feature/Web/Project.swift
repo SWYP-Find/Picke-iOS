@@ -11,6 +11,6 @@ let project = Project.configure(
   dependencies: [
     .DesignSystem,
     .SPM.composableArchitecture,
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
   ]
 )

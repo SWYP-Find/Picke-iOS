@@ -16,6 +16,6 @@ let project = Project.configure(
     .Domain(.Auth, .interface),
     
     
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
   ]
 )

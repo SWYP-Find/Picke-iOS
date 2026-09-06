@@ -20,7 +20,7 @@ let project = Project.configure(
     .Domain(.Battle, .interface),
     .Domain(.Notification, .interface),
 
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
     .Service(.Ad), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,

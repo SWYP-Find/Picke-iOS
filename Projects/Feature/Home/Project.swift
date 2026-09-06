@@ -20,7 +20,7 @@ let project = Project.configure(
     .Domain(.Home, .interface),
     
     .Domain(.Notification, .interface),
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
     // 홈 피드 중간 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
     .Service(.Ad),
   ]

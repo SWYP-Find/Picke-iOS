@@ -7,7 +7,7 @@ import Foundation
 
 import AudioPlayerServiceInterface
 import ComposableArchitecture
-import PickeCore
+import PickeCoreUtility
 import PickeDesignKit
 import FeatureAssembly
 import TCAFlow

@@ -14,7 +14,7 @@ let project = Project.configure(
     .Service(.Analytics, .interface),
     .Domain(.Notification, .interface),
     
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
   ]

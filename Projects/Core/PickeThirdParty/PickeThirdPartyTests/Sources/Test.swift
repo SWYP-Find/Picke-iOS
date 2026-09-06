@@ -1,11 +1,11 @@
 //
 //  Test.swift
-//  PickeCoreTests
+//  PickeThirdPartyTests
 //
 
 import Testing
 
-struct PickeCoreTests {
+struct PickeThirdPartyTests {
   @Test
   func pickeCoreExample() {
     #expect(true)

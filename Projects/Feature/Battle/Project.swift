@@ -12,7 +12,7 @@ let project = Project.configure(
     .DesignSystem,
     .Core(.PickeCoreUtility),
     .Service(.Analytics, .interface),
-    .Core(.PickeCore),
+    .Core(.PickeThirdParty),
     .Domain(.Battle, .interface),
     
     .SPM.composableArchitecture,
