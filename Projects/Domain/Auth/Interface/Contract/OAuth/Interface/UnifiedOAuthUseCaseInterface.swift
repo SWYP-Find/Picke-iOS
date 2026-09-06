@@ -5,7 +5,7 @@
 
 @preconcurrency import AuthenticationServices
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 import AuthDomainInterface
 
 /// 통합 OAuth UseCase 를 위한 Interface 프로토콜
@@ -21,16 +21,8 @@ public protocol UnifiedOAuthUseCaseInterface: Sendable {
 }
 
 /// 통합 OAuth UseCase 의 DependencyKey 구조체
-public struct UnifiedOAuthUseCaseDependency: DependencyKey {
-  public static var liveValue: UnifiedOAuthUseCaseInterface {
-    return UnifiedDI.resolve(UnifiedOAuthUseCaseInterface.self) ?? DefaultUnifiedOAuthUseCaseImpl()
-  }
-
-  public static var testValue: UnifiedOAuthUseCaseInterface {
-    return UnifiedDI.resolve(UnifiedOAuthUseCaseInterface.self) ?? DefaultUnifiedOAuthUseCaseImpl()
-  }
-
-  public static var previewValue: UnifiedOAuthUseCaseInterface = liveValue
+public enum UnifiedOAuthUseCaseDependency: TestDependencyKey {
+  public static var testValue: UnifiedOAuthUseCaseInterface { MockUnifiedOAuthUseCase() }
 }
 
 public extension DependencyValues {

@@ -4,7 +4,7 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 public protocol NotificationInterface: Sendable {
   func fetchNotifications(
@@ -20,16 +20,12 @@ public protocol NotificationInterface: Sendable {
   func markAllAsRead() async throws -> Bool
 }
 
-public struct NotificationRepositoryDependency: DependencyKey {
-  public static var liveValue: NotificationInterface {
-    UnifiedDI.resolve(NotificationInterface.self) ?? DefaultNotificationRepositoryImpl()
-  }
+public enum NotificationRepositoryDependency: TestDependencyKey {
+  public static var testValue: NotificationInterface { MockNotificationRepository() }
+}
 
-  public static var testValue: NotificationInterface {
-    UnifiedDI.resolve(NotificationInterface.self) ?? DefaultNotificationRepositoryImpl()
-  }
-
-  public static var previewValue: NotificationInterface = liveValue
+public enum NotificationUseCaseDependency: TestDependencyKey {
+  public static var testValue: NotificationInterface { MockNotificationRepository() }
 }
 
 public extension DependencyValues {
@@ -42,7 +38,7 @@ public extension DependencyValues {
 // UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
 public extension DependencyValues {
   var notificationUseCase: NotificationInterface {
-    get { self[NotificationRepositoryDependency.self] }
-    set { self[NotificationRepositoryDependency.self] = newValue }
+    get { self[NotificationUseCaseDependency.self] }
+    set { self[NotificationUseCaseDependency.self] = newValue }
   }
 }

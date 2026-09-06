@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 /// 홈 화면 데이터 조회 Repository 인터페이스.
 public protocol HomeInterface: Sendable {
@@ -15,16 +15,12 @@ public protocol HomeInterface: Sendable {
 
 // MARK: - Dependency
 
-public struct HomeRepositoryDependency: DependencyKey {
-  public static var liveValue: HomeInterface {
-    return UnifiedDI.resolve(HomeInterface.self) ?? DefaultHomeRepositoryImpl()
-  }
+public enum HomeRepositoryDependency: TestDependencyKey {
+  public static var testValue: HomeInterface { MockHomeRepository() }
+}
 
-  public static var testValue: HomeInterface {
-    return UnifiedDI.resolve(HomeInterface.self) ?? DefaultHomeRepositoryImpl()
-  }
-
-  public static var previewValue: HomeInterface = liveValue
+public enum HomeUseCaseDependency: TestDependencyKey {
+  public static var testValue: HomeInterface { MockHomeRepository() }
 }
 
 public extension DependencyValues {
@@ -37,7 +33,7 @@ public extension DependencyValues {
 // UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
 public extension DependencyValues {
   var homeUseCase: HomeInterface {
-    get { self[HomeRepositoryDependency.self] }
-    set { self[HomeRepositoryDependency.self] = newValue }
+    get { self[HomeUseCaseDependency.self] }
+    set { self[HomeUseCaseDependency.self] = newValue }
   }
 }

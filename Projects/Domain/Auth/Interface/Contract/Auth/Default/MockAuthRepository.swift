@@ -1,12 +1,14 @@
 //
-//  DefaultAuthUseCaseImpl.swift
+//  MockAuthRepository.swift
 //  DomainInterface
+//
+//  Created by Wonji Suh on 5/14/26.
 //
 
 import Foundation
 
-/// Auth UseCase 의 기본 구현체 (테스트 / 프리뷰용 no-op)
-public final class DefaultAuthUseCaseImpl: AuthUseCaseInterface, @unchecked Sendable {
+/// Auth Repository 의 기본 구현체 (테스트 / 프리뷰용 no-op)
+public final class MockAuthRepository: AuthInterface, @unchecked Sendable {
   public init() {}
 
   public func login(

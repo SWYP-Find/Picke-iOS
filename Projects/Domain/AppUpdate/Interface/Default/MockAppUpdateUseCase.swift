@@ -1,5 +1,5 @@
 //
-//  DefaultAppUpdateUseCaseImpl.swift
+//  MockAppUpdateUseCase.swift
 //  AppUpdateDomain
 //
 
@@ -7,7 +7,7 @@ import Foundation
 
 import AppUpdateDomainInterface
 
-public struct DefaultAppUpdateUseCaseImpl: AppUpdateUseCaseInterface {
+public struct MockAppUpdateUseCase: AppUpdateUseCaseInterface {
   public init() {}
 
   public func checkForUpdate() async throws -> AppUpdateInfo? {

@@ -4,22 +4,14 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 /// Auth 관련 비즈니스 로직 UseCase 를 위한 Interface 프로토콜
 public protocol AuthUseCaseInterface: AuthInterface {}
 
 /// Auth UseCase 의 DependencyKey 구조체
-public struct AuthUseCaseDependency: DependencyKey {
-  public static var liveValue: AuthUseCaseInterface {
-    return UnifiedDI.resolve(AuthUseCaseInterface.self) ?? DefaultAuthUseCaseImpl()
-  }
-
-  public static var testValue: AuthUseCaseInterface {
-    return UnifiedDI.resolve(AuthUseCaseInterface.self) ?? DefaultAuthUseCaseImpl()
-  }
-
-  public static var previewValue: AuthUseCaseInterface = liveValue
+public enum AuthUseCaseDependency: TestDependencyKey {
+  public static var testValue: AuthUseCaseInterface { MockAuthUseCase() }
 }
 
 public extension DependencyValues {

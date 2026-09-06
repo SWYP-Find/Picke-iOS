@@ -7,7 +7,7 @@ import CommentDomainInterface
 import CommonDomainInterface
 import Dependencies
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 public protocol PerspectiveInterface: Sendable {
   func fetchPerspective(perspectiveId: Int) async throws -> BattlePerspective
@@ -38,16 +38,12 @@ public protocol PerspectiveInterface: Sendable {
   func reportComment(perspectiveId: Int, commentId: Int) async throws
 }
 
-public struct PerspectiveRepositoryDependency: DependencyKey {
-  public static var liveValue: PerspectiveInterface {
-    UnifiedDI.resolve(PerspectiveInterface.self) ?? DefaultPerspectiveRepositoryImpl()
-  }
+public enum PerspectiveRepositoryDependency: TestDependencyKey {
+  public static var testValue: PerspectiveInterface { MockPerspectiveRepository() }
+}
 
-  public static var testValue: PerspectiveInterface {
-    UnifiedDI.resolve(PerspectiveInterface.self) ?? DefaultPerspectiveRepositoryImpl()
-  }
-
-  public static var previewValue: PerspectiveInterface = liveValue
+public enum PerspectiveUseCaseDependency: TestDependencyKey {
+  public static var testValue: PerspectiveInterface { MockPerspectiveRepository() }
 }
 
 public extension DependencyValues {
@@ -60,7 +56,7 @@ public extension DependencyValues {
 // UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
 public extension DependencyValues {
   var perspectiveUseCase: PerspectiveInterface {
-    get { self[PerspectiveRepositoryDependency.self] }
-    set { self[PerspectiveRepositoryDependency.self] = newValue }
+    get { self[PerspectiveUseCaseDependency.self] }
+    set { self[PerspectiveUseCaseDependency.self] = newValue }
   }
 }

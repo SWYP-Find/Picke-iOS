@@ -1,12 +1,12 @@
 //
-//  DefaultSearchRepositoryImpl.swift
+//  MockSearchRepository.swift
 //  DomainInterface
 //
 
 import Foundation
 import HomeDomainInterface
 
-public struct DefaultSearchRepositoryImpl: SearchInterface {
+public struct MockSearchRepository: SearchInterface {
   public init() {}
 
   public func searchBattles(

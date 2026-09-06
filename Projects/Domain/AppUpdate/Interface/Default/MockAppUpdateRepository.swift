@@ -1,5 +1,5 @@
 //
-//  DefaultAppUpdateRepositoryImpl.swift
+//  MockAppUpdateRepository.swift
 //  AppUpdateDomain
 //
 
@@ -7,7 +7,7 @@ import Foundation
 
 import AppUpdateDomainInterface
 
-public final class DefaultAppUpdateRepositoryImpl: AppUpdateInterface {
+public final class MockAppUpdateRepository: AppUpdateInterface {
   public init() {}
 
   public func checkForUpdate() async throws -> AppUpdateInfo {

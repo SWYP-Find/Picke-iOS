@@ -7,7 +7,7 @@
 
 import Dependencies
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 public protocol KakaoOAuthInterface: Sendable {
   func signIn() async throws -> KakaoOAuthPayload
@@ -15,13 +15,8 @@ public protocol KakaoOAuthInterface: Sendable {
 
 // MARK: - Dependencies
 
-public struct KakaoOAuthRepositoryDependencyKey: DependencyKey {
-  public static var liveValue: KakaoOAuthInterface {
-    return UnifiedDI.resolve(KakaoOAuthInterface.self) ?? MockKakaoOAuthRepository()
-  }
-
-  public static var previewValue: KakaoOAuthInterface = MockKakaoOAuthRepository()
-  public static var testValue: KakaoOAuthInterface = MockKakaoOAuthRepository()
+public enum KakaoOAuthRepositoryDependencyKey: TestDependencyKey {
+  public static var testValue: KakaoOAuthInterface { MockKakaoOAuthRepository() }
 }
 
 public extension DependencyValues {

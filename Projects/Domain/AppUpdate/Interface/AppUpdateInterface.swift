@@ -5,22 +5,14 @@
 
 import Foundation
 
-import WeaveDI
+import ComposableArchitecture
 
 public protocol AppUpdateInterface: Sendable {
   func checkForUpdate() async throws -> AppUpdateInfo
 }
 
-public struct AppUpdateRepositoryDependency: DependencyKey {
-  public static var liveValue: AppUpdateInterface {
-    UnifiedDI.resolve(AppUpdateInterface.self) ?? DefaultAppUpdateRepositoryImpl()
-  }
-
-  public static var testValue: AppUpdateInterface {
-    UnifiedDI.resolve(AppUpdateInterface.self) ?? DefaultAppUpdateRepositoryImpl()
-  }
-
-  public static var previewValue: AppUpdateInterface = liveValue
+public enum AppUpdateRepositoryDependency: TestDependencyKey {
+  public static var testValue: AppUpdateInterface { MockAppUpdateRepository() }
 }
 
 public extension DependencyValues {

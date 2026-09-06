@@ -1,5 +1,5 @@
 //
-//  DefaultPerspectiveRepositoryImpl.swift
+//  MockPerspectiveRepository.swift
 //  PerspectiveDomainInterface
 //
 //  Created by Wonji Suh  on 6/3/26.
@@ -9,7 +9,7 @@ import CommentDomainInterface
 import CommonDomainInterface
 import Foundation
 
-public struct DefaultPerspectiveRepositoryImpl: PerspectiveInterface {
+public struct MockPerspectiveRepository: PerspectiveInterface {
   public init() {}
 
   public func fetchPerspective(perspectiveId: Int) async throws -> BattlePerspective {

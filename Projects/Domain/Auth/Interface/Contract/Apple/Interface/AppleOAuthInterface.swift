@@ -9,7 +9,7 @@ import Foundation
 import AuthenticationServices
 
 
-import WeaveDI
+import ComposableArchitecture
 
 public protocol AppleOAuthInterface: Sendable {
   func signIn() async throws -> AppleOAuthPayload
@@ -20,14 +20,8 @@ public protocol AppleOAuthInterface: Sendable {
 }
 
 // MARK: - Dependencies
-public struct AppleOAuthRepositoryDependencyKey: DependencyKey {
-  public static var liveValue:  AppleOAuthInterface {
-    UnifiedDI.resolve(AppleOAuthInterface.self) ?? MockAppleOAuthRepository()
-  }
-  public static var previewValue:  AppleOAuthInterface  {
-    UnifiedDI.resolve(AppleOAuthInterface.self) ?? MockAppleOAuthRepository()
-  }
-  public static var testValue:  AppleOAuthInterface = MockAppleOAuthRepository()
+public enum AppleOAuthRepositoryDependencyKey: TestDependencyKey {
+  public static var testValue: AppleOAuthInterface { MockAppleOAuthRepository() }
 }
 
 public extension DependencyValues {

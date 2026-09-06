@@ -6,7 +6,7 @@
 import CommonDomainInterface
 import Foundation
 import HomeDomainInterface
-import WeaveDI
+import ComposableArchitecture
 
 public protocol BattleInterface: Sendable {
   func fetchTodayBattles() async throws -> TodayBattlePage
@@ -39,16 +39,12 @@ public protocol BattleInterface: Sendable {
   func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal
 }
 
-public struct BattleRepositoryDependency: DependencyKey {
-  public static var liveValue: BattleInterface {
-    UnifiedDI.resolve(BattleInterface.self) ?? DefaultBattleRepositoryImpl()
-  }
+public enum BattleRepositoryDependency: TestDependencyKey {
+  public static var testValue: BattleInterface { MockBattleRepository() }
+}
 
-  public static var testValue: BattleInterface {
-    UnifiedDI.resolve(BattleInterface.self) ?? DefaultBattleRepositoryImpl()
-  }
-
-  public static var previewValue: BattleInterface = liveValue
+public enum BattleUseCaseDependency: TestDependencyKey {
+  public static var testValue: BattleInterface { MockBattleRepository() }
 }
 
 public extension DependencyValues {
@@ -61,7 +57,7 @@ public extension DependencyValues {
 // UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
 public extension DependencyValues {
   var battleUseCase: BattleInterface {
-    get { self[BattleRepositoryDependency.self] }
-    set { self[BattleRepositoryDependency.self] = newValue }
+    get { self[BattleUseCaseDependency.self] }
+    set { self[BattleUseCaseDependency.self] = newValue }
   }
 }

@@ -6,14 +6,14 @@
 import CommonDomainInterface
 import Dependencies
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 public protocol CommentInterface: Sendable {
   func likeComment(commentId: Int) async throws -> CommentLikeResult
   func unlikeComment(commentId: Int) async throws -> CommentLikeResult
 }
 
-public struct DefaultCommentRepositoryImpl: CommentInterface {
+public struct MockCommentRepository: CommentInterface {
   public init() {}
 
   public func likeComment(commentId: Int) async throws -> CommentLikeResult {
@@ -25,16 +25,12 @@ public struct DefaultCommentRepositoryImpl: CommentInterface {
   }
 }
 
-public struct CommentRepositoryDependency: DependencyKey {
-  public static var liveValue: CommentInterface {
-    UnifiedDI.resolve(CommentInterface.self) ?? DefaultCommentRepositoryImpl()
-  }
+public enum CommentRepositoryDependency: TestDependencyKey {
+  public static var testValue: CommentInterface { MockCommentRepository() }
+}
 
-  public static var testValue: CommentInterface {
-    UnifiedDI.resolve(CommentInterface.self) ?? DefaultCommentRepositoryImpl()
-  }
-
-  public static var previewValue: CommentInterface = liveValue
+public enum CommentUseCaseDependency: TestDependencyKey {
+  public static var testValue: CommentInterface { MockCommentRepository() }
 }
 
 public extension DependencyValues {
@@ -47,7 +43,7 @@ public extension DependencyValues {
 // UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
 public extension DependencyValues {
   var commentUseCase: CommentInterface {
-    get { self[CommentRepositoryDependency.self] }
-    set { self[CommentRepositoryDependency.self] = newValue }
+    get { self[CommentUseCaseDependency.self] }
+    set { self[CommentUseCaseDependency.self] = newValue }
   }
 }

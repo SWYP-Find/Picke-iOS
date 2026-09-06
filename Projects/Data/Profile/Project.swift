@@ -17,6 +17,7 @@ let project = Project.configure(
     .Network(implements: .NetworkModule),
     .Network(implements: .NetworkHeader),
     .SPM.logMarco,
+    .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
   hasTests: true

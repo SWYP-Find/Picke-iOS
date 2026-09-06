@@ -14,6 +14,7 @@ let project = Project.configure(
     .Data(implements: .Model),
     .Network(implements: .NetworkModule),
     .SPM.logMarco,
+    .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
   hasTests: false

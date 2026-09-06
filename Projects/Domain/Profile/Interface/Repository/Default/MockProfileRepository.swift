@@ -1,11 +1,11 @@
 //
-//  DefaultProfileRepositoryImpl.swift
+//  MockProfileRepository.swift
 //  DomainInterface
 //
 
 import Foundation
 
-public struct DefaultProfileRepositoryImpl: ProfileInterface {
+public struct MockProfileRepository: ProfileInterface {
   public init() {}
 
   public func fetchMyPage() async throws -> MyPage {

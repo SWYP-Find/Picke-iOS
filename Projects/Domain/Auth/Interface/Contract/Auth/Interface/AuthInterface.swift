@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 /// Auth 관련 비즈니스 로직을 위한 Interface 프로토콜
 public protocol AuthInterface: Sendable {
@@ -23,16 +23,8 @@ public protocol AuthInterface: Sendable {
 }
 
 /// Auth Repository 의 DependencyKey 구조체
-public struct AuthRepositoryDependency: DependencyKey {
-  public static var liveValue: AuthInterface {
-    return UnifiedDI.resolve(AuthInterface.self) ?? DefaultAuthRepositoryImpl()
-  }
-
-  public static var testValue: AuthInterface {
-    return UnifiedDI.resolve(AuthInterface.self) ?? DefaultAuthRepositoryImpl()
-  }
-
-  public static var previewValue: AuthInterface = liveValue
+public enum AuthRepositoryDependency: TestDependencyKey {
+  public static var testValue: AuthInterface { MockAuthRepository() }
 }
 
 public extension DependencyValues {

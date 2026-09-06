@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 /// Google OAuth Provider Interface 프로토콜
 public protocol GoogleOAuthProviderInterface: Sendable {
@@ -14,16 +14,8 @@ public protocol GoogleOAuthProviderInterface: Sendable {
 }
 
 /// Google OAuth Provider 의 DependencyKey 구조체
-public struct GoogleOAuthProviderDependency: DependencyKey {
-  public static var liveValue: GoogleOAuthProviderInterface {
-    return UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
-  }
-
-  public static var testValue: GoogleOAuthProviderInterface {
-    return UnifiedDI.resolve(GoogleOAuthProviderInterface.self) ?? MockGoogleOAuthProvider()
-  }
-
-  public static var previewValue: GoogleOAuthProviderInterface = testValue
+public enum GoogleOAuthProviderDependency: TestDependencyKey {
+  public static var testValue: GoogleOAuthProviderInterface { MockGoogleOAuthProvider() }
 }
 
 public extension DependencyValues {

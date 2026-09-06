@@ -4,7 +4,7 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 public protocol ProfileInterface: Sendable {
   func fetchMyPage() async throws -> MyPage
@@ -31,16 +31,12 @@ public protocol ProfileInterface: Sendable {
   ) async throws -> UpdatedProfile
 }
 
-public struct ProfileRepositoryDependency: DependencyKey {
-  public static var liveValue: ProfileInterface {
-    UnifiedDI.resolve(ProfileInterface.self) ?? DefaultProfileRepositoryImpl()
-  }
+public enum ProfileRepositoryDependency: TestDependencyKey {
+  public static var testValue: ProfileInterface { MockProfileRepository() }
+}
 
-  public static var testValue: ProfileInterface {
-    UnifiedDI.resolve(ProfileInterface.self) ?? DefaultProfileRepositoryImpl()
-  }
-
-  public static var previewValue: ProfileInterface = liveValue
+public enum ProfileUseCaseDependency: TestDependencyKey {
+  public static var testValue: ProfileInterface { MockProfileRepository() }
 }
 
 public extension DependencyValues {
@@ -53,7 +49,7 @@ public extension DependencyValues {
 // UseCase 소비자용 별칭 — 인터페이스 강제(구현 모듈 import 불필요). pass-through 라 리포지토리 키로 해소.
 public extension DependencyValues {
   var profileUseCase: ProfileInterface {
-    get { self[ProfileRepositoryDependency.self] }
-    set { self[ProfileRepositoryDependency.self] = newValue }
+    get { self[ProfileUseCaseDependency.self] }
+    set { self[ProfileUseCaseDependency.self] = newValue }
   }
 }

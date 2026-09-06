@@ -21,6 +21,7 @@ let project = Project.configure(
     .Network(implements: .NetworkHeader),
     .SPM.weaveDI,
     .SPM.logMarco,
+    .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
   hasTests: true

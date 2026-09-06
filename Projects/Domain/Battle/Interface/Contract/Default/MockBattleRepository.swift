@@ -1,5 +1,5 @@
 //
-//  DefaultBattleRepositoryImpl.swift
+//  MockBattleRepository.swift
 //  DomainInterface
 //
 
@@ -7,7 +7,7 @@ import CommonDomainInterface
 import Foundation
 import HomeDomainInterface
 
-public struct DefaultBattleRepositoryImpl: BattleInterface {
+public struct MockBattleRepository: BattleInterface {
   public init() {}
 
   public func fetchTodayBattles() async throws -> TodayBattlePage {

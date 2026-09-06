@@ -7,7 +7,7 @@
 
 import Foundation
 import AuthenticationServices
-import WeaveDI
+import ComposableArchitecture
 
 /// Apple OAuth Provider Interface 프로토콜
 public protocol AppleOAuthProviderInterface: Sendable {
@@ -20,16 +20,8 @@ public protocol AppleOAuthProviderInterface: Sendable {
 }
 
 /// Apple OAuth Provider의 DependencyKey 구조체
-public struct AppleOAuthProviderDependency: DependencyKey {
-  public static var liveValue: AppleOAuthProviderInterface {
-    UnifiedDI.resolve(AppleOAuthProviderInterface.self) ?? MockAppleOAuthProvider()
-  }
-
-  public static var testValue: AppleOAuthProviderInterface {
-    UnifiedDI.resolve(AppleOAuthProviderInterface.self) ?? MockAppleOAuthProvider()
-  }
-
-  public static var previewValue: AppleOAuthProviderInterface = testValue
+public enum AppleOAuthProviderDependency: TestDependencyKey {
+  public static var testValue: AppleOAuthProviderInterface { MockAppleOAuthProvider() }
 }
 
 /// DependencyValues extension으로 간편한 접근 제공

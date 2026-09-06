@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import WeaveDI
+import ComposableArchitecture
 
 /// Kakao OAuth Provider Interface 프로토콜
 public protocol KakaoOAuthProviderInterface: Sendable {
@@ -14,16 +14,8 @@ public protocol KakaoOAuthProviderInterface: Sendable {
 }
 
 /// Kakao OAuth Provider의 DependencyKey 구조체
-public struct KakaoOAuthProviderDependency: DependencyKey {
-  public static var liveValue: KakaoOAuthProviderInterface {
-    return UnifiedDI.resolve(KakaoOAuthProviderInterface.self) ?? MockKakaoOAuthProvider()
-  }
-
-  public static var testValue: KakaoOAuthProviderInterface {
-    return UnifiedDI.resolve(KakaoOAuthProviderInterface.self) ?? MockKakaoOAuthProvider()
-  }
-
-  public static var previewValue: KakaoOAuthProviderInterface = testValue
+public enum KakaoOAuthProviderDependency: TestDependencyKey {
+  public static var testValue: KakaoOAuthProviderInterface { MockKakaoOAuthProvider() }
 }
 
 /// DependencyValues extension으로 간편한 접근 제공

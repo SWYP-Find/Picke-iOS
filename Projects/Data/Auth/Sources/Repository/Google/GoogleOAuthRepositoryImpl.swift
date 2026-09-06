@@ -5,8 +5,8 @@
 //  Created by Wonji Suh  on 12/29/25.
 //
 
-import AuthenticationServices
 import AuthDomainInterface
+import AuthenticationServices
 import Foundation
 import LogMacro
 import UIKit
@@ -27,7 +27,9 @@ public final class GoogleOAuthRepositoryImpl: NSObject, GoogleOAuthInterface {
   /// DI 호환을 위해 유지 (WKWebView 기반에서는 미사용)
   private let presentationContextProvider: ASWebAuthenticationPresentationContextProviding
 
-  public init(presentationContextProvider: ASWebAuthenticationPresentationContextProviding) {
+  /// 저장 프로퍼티 대입만 하므로 격리가 필요 없다.
+  /// DependencyKey 의 nonisolated `liveValue` 에서 생성된다.
+  public nonisolated init(presentationContextProvider: ASWebAuthenticationPresentationContextProviding) {
     self.presentationContextProvider = presentationContextProvider
   }
 

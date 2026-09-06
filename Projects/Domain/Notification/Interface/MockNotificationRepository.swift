@@ -1,11 +1,11 @@
 //
-//  DefaultNotificationRepositoryImpl.swift
+//  MockNotificationRepository.swift
 //  DomainInterface
 //
 
 import Foundation
 
-public struct DefaultNotificationRepositoryImpl: NotificationInterface {
+public struct MockNotificationRepository: NotificationInterface {
   public init() {}
 
   public func fetchNotifications(
