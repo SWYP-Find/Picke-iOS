@@ -6,7 +6,7 @@
 import Foundation
 
 import BattleDomainInterface
-import PickeFoundation
+import PickeCoreUtility
 
 public struct DailyBattle: Equatable, Identifiable {
   public var battleId: Int

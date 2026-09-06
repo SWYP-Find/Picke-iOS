@@ -1,6 +1,6 @@
 //
 //  UUID+Deterministic.swift
-//  PickeFoundation
+//  PickeCoreUtility
 //
 
 import Foundation

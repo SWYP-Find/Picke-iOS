@@ -13,7 +13,7 @@ import ComposableArchitecture
 import HomeDomainInterface
 import LogMacro
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 import AnalyticsServiceInterface
 import AudioPlayerServiceInterface
 

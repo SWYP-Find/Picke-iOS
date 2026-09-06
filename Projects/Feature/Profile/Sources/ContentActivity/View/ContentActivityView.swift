@@ -8,7 +8,7 @@ import SwiftUI
 import ComposableArchitecture
 import Kingfisher
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 import ProfileDomainInterface
 
 @ViewAction(for: ContentActivityFeature.self)

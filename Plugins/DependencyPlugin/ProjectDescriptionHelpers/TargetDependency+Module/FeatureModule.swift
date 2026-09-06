@@ -35,7 +35,7 @@ public enum CoreFeatureModule: String, CaseIterable {
   /// 하위 Core 모듈과 공용 외부 라이브러리를 한 번에 노출하는 우산.
   case PickeCore
   /// 표준 타입 확장 등 순수 유틸.
-  case PickeFoundation
+  case PickeCoreUtility
   /// 키체인 등 로컬 보관소.
   case PickeStorage
 }
@@ -120,7 +120,7 @@ public extension TargetDependency {
     .project(target: "\(module.rawValue)Data", path: .DataFeature(module))
   }
 
-  /// 최하위 기반 모듈. 단일 타깃 모듈(PickeCore/PickeFoundation)은 kind 를 생략하고,
+  /// 최하위 기반 모듈. 단일 타깃 모듈(PickeCore/PickeCoreUtility)은 kind 를 생략하고,
   /// 계약을 가르는 모듈(PickeStorage)만 `.interface` 를 지정한다.
   static func Core(_ module: CoreFeatureModule, _ kind: FeatureTargetKind? = nil) -> Self {
     let suffix = switch kind {

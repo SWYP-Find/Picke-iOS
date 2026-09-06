@@ -5,8 +5,8 @@ import ProjectDescription
 import ProjectTemplatePlugin
 
 let project = Project.configure(
-  moduleType: .module(name: "PickeFoundation"),
-  bundleId: .appBundleID(name: ".PickeFoundation"),
+  moduleType: .module(name: "PickeCoreUtility"),
+  bundleId: .appBundleID(name: ".PickeCoreUtility"),
   product: .staticFramework,
   settings: .settings(),
   dependencies: [

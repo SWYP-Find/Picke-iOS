@@ -1,6 +1,6 @@
 //
 //  PickeDeeplink.swift
-//  PickeFoundation
+//  PickeCoreUtility
 //
 
 import Foundation

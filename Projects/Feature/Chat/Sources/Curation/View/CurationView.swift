@@ -8,7 +8,7 @@ import SwiftUI
 import BattleDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 import AdService
 
 @ViewAction(for: CurationFeature.self)

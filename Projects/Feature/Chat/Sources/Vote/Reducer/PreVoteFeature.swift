@@ -15,7 +15,7 @@ import ComposableArchitecture
 import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 
 @Reducer
 public struct PreVoteFeature {

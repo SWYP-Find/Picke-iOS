@@ -10,7 +10,7 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .Core(.PickeFoundation),
+    .Core(.PickeCoreUtility),
     .DesignSystem,
     .SPM.composableArchitecture,
     .SPM.tcaFlow,

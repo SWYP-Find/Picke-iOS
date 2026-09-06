@@ -1,6 +1,6 @@
 //
 //  ShareItem.swift
-//  PickeFoundation
+//  PickeCoreUtility
 //
 
 import Foundation

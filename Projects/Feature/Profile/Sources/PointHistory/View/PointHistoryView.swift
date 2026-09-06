@@ -7,7 +7,7 @@ import SwiftUI
 
 import ComposableArchitecture
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 import ProfileDomainInterface
 
 @ViewAction(for: PointHistoryFeature.self)

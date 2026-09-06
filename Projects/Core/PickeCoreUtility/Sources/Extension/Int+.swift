@@ -1,6 +1,6 @@
 //
 //  Int+DecimalFormat.swift
-//  PickeFoundation
+//  PickeCoreUtility
 //
 
 import Foundation

@@ -12,7 +12,7 @@ let project = Project.configure(
     .Service(.AudioPlayer, .interface),
     .Domain(.Perspective, .interface),
     .DesignSystem,
-    .Core(.PickeFoundation),
+    .Core(.PickeCoreUtility),
     .Service(.Analytics, .interface),
     .Domain(.Battle, .interface),
     .Domain(.Home, .interface),

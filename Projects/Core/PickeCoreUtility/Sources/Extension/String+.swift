@@ -1,6 +1,6 @@
 //
 //  String+Sentence.swift
-//  PickeFoundation
+//  PickeCoreUtility
 //
 
 import Foundation

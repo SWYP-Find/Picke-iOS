@@ -11,7 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .DesignSystem,
-    .Core(.PickeFoundation),
+    .Core(.PickeCoreUtility),
     .Core(.PickeStorage, .interface),
     .Service(.Device, .interface),
     .Service(.Analytics, .interface),

@@ -10,7 +10,7 @@ import LogMacro
 import NotificationDomainInterface
 import PickeCore
 import AnalyticsServiceInterface
-import PickeFoundation
+import PickeCoreUtility
 
 @Reducer
 public struct NotificationFeature {

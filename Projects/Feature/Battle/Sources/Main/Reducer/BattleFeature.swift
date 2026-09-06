@@ -9,7 +9,7 @@ import ComposableArchitecture
 import BattleDomainInterface
 import LogMacro
 import AnalyticsServiceInterface
-import PickeFoundation
+import PickeCoreUtility
 
 @Reducer
 public struct BattleFeature {

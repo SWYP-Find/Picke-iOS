@@ -8,7 +8,7 @@ import SwiftUI
 import CommentDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {

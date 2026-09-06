@@ -9,7 +9,7 @@ import ComposableArchitecture
 import HomeDomainInterface
 import Kingfisher
 import PickeDesignKit
-import PickeFoundation
+import PickeCoreUtility
 import AdService
 
 @ViewAction(for: HifiFeature.self)

@@ -10,7 +10,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .DesignSystem,
-    .Core(.PickeFoundation),
+    .Core(.PickeCoreUtility),
     .Service(.Analytics, .interface),
     .Core(.PickeCore),
     .Domain(.Battle, .interface),

@@ -12,7 +12,7 @@ let project = Project.configure(
   dependencies: [
     .Domain(.Battle, .interface),
     .DesignSystem,
-    .Core(.PickeFoundation),
+    .Core(.PickeCoreUtility),
     .Service(.Analytics, .interface),
     .Core(.PickeCore),
     // 탐색 리스트 인라인 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
