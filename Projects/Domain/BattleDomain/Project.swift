@@ -9,9 +9,15 @@ let project = Project.configure(
   bundleId: .appBundleID(name: ".BattleDomain"),
   settings: .settings(),
   dependencies: [
-    
     .SPM.weaveDI,
     .SPM.composableArchitecture,
+    .domain(.home, .interface),
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
+    .network(implements: .networkModule),
+    .network(implements: .networkHeader),
+    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .domain(.home, .interface),

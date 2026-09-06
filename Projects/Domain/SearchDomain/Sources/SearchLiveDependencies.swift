@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension SearchUseCaseDependency: DependencyKey {
   public static var liveValue: SearchInterface { SearchUseCaseImpl() }
 }
+
+extension SearchRepositoryDependency: DependencyKey {
+  public static var liveValue: SearchInterface { SearchRepositoryImpl() }
+}

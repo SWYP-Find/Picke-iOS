@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension AppUpdateUseCaseDependency: DependencyKey {
   public static var liveValue: AppUpdateUseCaseInterface { AppUpdateUseCaseImpl() }
 }
+
+extension AppUpdateRepositoryDependency: DependencyKey {
+  public static var liveValue: AppUpdateInterface { AppUpdateRepositoryImpl() }
+}

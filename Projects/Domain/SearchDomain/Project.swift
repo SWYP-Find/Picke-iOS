@@ -11,9 +11,15 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .domain(.home, .interface),
-    
     .SPM.weaveDI,
     .SPM.composableArchitecture,
+    .domain(.battle, .interface),
+    .service(.api),
+    .service(.apiEndpoint),
+    .data(.model),
+    .network(implements: .networkModule),
+    .network(implements: .networkHeader),
+    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .domain(.home, .interface),

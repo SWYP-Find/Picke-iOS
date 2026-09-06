@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension NotificationUseCaseDependency: DependencyKey {
   public static var liveValue: NotificationInterface { NotificationUseCaseImpl() }
 }
+
+extension NotificationRepositoryDependency: DependencyKey {
+  public static var liveValue: NotificationInterface { NotificationRepositoryImpl() }
+}

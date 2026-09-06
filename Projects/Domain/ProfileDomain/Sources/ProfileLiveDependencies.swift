@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension ProfileUseCaseDependency: DependencyKey {
   public static var liveValue: ProfileInterface { ProfileUseCaseImpl() }
 }
+
+extension ProfileRepositoryDependency: DependencyKey {
+  public static var liveValue: ProfileInterface { ProfileRepositoryImpl() }
+}

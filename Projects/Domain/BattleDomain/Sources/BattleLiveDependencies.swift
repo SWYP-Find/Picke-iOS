@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension BattleUseCaseDependency: DependencyKey {
   public static var liveValue: BattleInterface { BattleUseCaseImpl() }
 }
+
+extension BattleRepositoryDependency: DependencyKey {
+  public static var liveValue: BattleInterface { BattleRepositoryImpl() }
+}

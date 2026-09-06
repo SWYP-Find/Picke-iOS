@@ -82,11 +82,6 @@ public extension TargetDependency {
     return .moduleDependency(name: module.rawValue, path: module.path, target: target)
   }
 
-  /// 컨텍스트별 Repository 구현을 묶어 제공하는 엄브렐러 모듈.
-  static var dataAssembly: Self {
-    return .data(.assembly)
-  }
-
   /// 디자인 시스템(단일 타깃). UI 레이어로 쪼갠 뒤 `ui(_:)` 로 대체한다.
   static var designSystem: Self {
     return .project(target: "PickeDesignKit", path: .designSystem)

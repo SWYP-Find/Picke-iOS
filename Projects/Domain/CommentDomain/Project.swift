@@ -12,6 +12,12 @@ let project = Project.configure(
     .domain(.battle, .interface),
     .SPM.weaveDI,
     .SPM.composableArchitecture,
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
+    .network(implements: .networkModule),
+    .network(implements: .networkHeader),
+    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .domain(.battle, .interface),

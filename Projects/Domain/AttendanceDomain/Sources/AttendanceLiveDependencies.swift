@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension AttendanceUseCaseDependency: DependencyKey {
   public static var liveValue: AttendanceInterface { AttendanceUseCaseImpl() }
 }
+
+extension AttendanceRepositoryDependency: DependencyKey {
+  public static var liveValue: AttendanceInterface { AttendanceRepositoryImpl() }
+}

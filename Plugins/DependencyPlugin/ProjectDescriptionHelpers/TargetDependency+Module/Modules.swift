@@ -74,18 +74,7 @@ public enum DomainModule: String, CaseIterable {
 }
 
 public enum DataModule: String, CaseIterable {
-  case assembly = "DataAssembly"
   case model = "Model"
-  case appUpdate = "AppUpdateData"
-  case attendance = "AttendanceData"
-  case auth = "AuthData"
-  case battle = "BattleData"
-  case comment = "CommentData"
-  case home = "HomeData"
-  case notification = "NotificationData"
-  case perspective = "PerspectiveData"
-  case profile = "ProfileData"
-  case search = "SearchData"
 
   /// Projects/Data/<name>
   var path: Path {

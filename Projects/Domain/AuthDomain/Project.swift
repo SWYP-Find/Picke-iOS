@@ -14,6 +14,12 @@ let project = Project.configure(
     .SPM.composableArchitecture,
     .SPM.weaveDI,
     .SPM.logMarco,
+    .service(.api),
+    .data(.model),
+    .service(.apiEndpoint),
+    .network(implements: .networkModule),
+    .network(implements: .networkHeader),
+    .SPM.googleSignIn,
   ],
   interfaceDependencies: [
     

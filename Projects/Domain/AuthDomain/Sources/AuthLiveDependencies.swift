@@ -27,3 +27,27 @@ extension GoogleOAuthProviderDependency: DependencyKey {
 extension KakaoOAuthProviderDependency: DependencyKey {
   public static var liveValue: KakaoOAuthProviderInterface { KakaoOAuthProvider() }
 }
+
+extension AuthRepositoryDependency: DependencyKey {
+  public static var liveValue: AuthInterface { AuthRepositoryImpl() }
+}
+
+extension AppleAuthRequestDependency: DependencyKey {
+  public static var liveValue: AppleAuthRequestInterface { AppleLoginRepositoryImpl() }
+}
+
+extension AppleOAuthRepositoryDependencyKey: DependencyKey {
+  public static var liveValue: AppleOAuthInterface { AppleOAuthRepositoryImpl() }
+}
+
+extension GoogleOAuthRepositoryDependencyKey: DependencyKey {
+  public static var liveValue: GoogleOAuthInterface {
+    GoogleOAuthRepositoryImpl(presentationContextProvider: AuthPresentationContextProvider())
+  }
+}
+
+extension KakaoOAuthRepositoryDependencyKey: DependencyKey {
+  public static var liveValue: KakaoOAuthInterface {
+    KakaoOAuthRepository(presentationContextProvider: AuthPresentationContextProvider())
+  }
+}

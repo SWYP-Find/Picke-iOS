@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension HomeUseCaseDependency: DependencyKey {
   public static var liveValue: HomeInterface { HomeUseCaseImpl() }
 }
+
+extension HomeRepositoryDependency: DependencyKey {
+  public static var liveValue: HomeInterface { HomeRepositoryImpl() }
+}

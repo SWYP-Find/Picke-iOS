@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension PerspectiveUseCaseDependency: DependencyKey {
   public static var liveValue: PerspectiveInterface { PerspectiveUseCaseImpl() }
 }
+
+extension PerspectiveRepositoryDependency: DependencyKey {
+  public static var liveValue: PerspectiveInterface { PerspectiveRepositoryImpl() }
+}

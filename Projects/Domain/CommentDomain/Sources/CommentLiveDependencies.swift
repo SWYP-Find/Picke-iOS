@@ -11,3 +11,7 @@ import ComposableArchitecture
 extension CommentUseCaseDependency: DependencyKey {
   public static var liveValue: CommentInterface { CommentUseCaseImpl() }
 }
+
+extension CommentRepositoryDependency: DependencyKey {
+  public static var liveValue: CommentInterface { CommentRepositoryImpl() }
+}

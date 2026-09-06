@@ -11,6 +11,9 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .SPM.composableArchitecture,
+    .data(.model),
+    .network(implements: .networkModule),
+    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .SPM.weaveDI,
