@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct BattleProposalRequest: Encodable {
+public struct BattleProposalRequest: Encodable, Sendable {
   public let category: String
   public let topic: String
   public let positionA: String

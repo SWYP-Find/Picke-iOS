@@ -10,7 +10,7 @@ import Foundation
 /// `/api/v1/auth/login/{provider}` 요청 바디.
 /// - `idToken`: Apple 로그인에서만 채워서 보낸다 (JSON key: `identityToken`).
 /// - `redirectUri`: Apple 은 nil 로 보낸다 (서버에서 redirect 사용 X).
-public struct OAuthLoginRequest: Encodable {
+public struct OAuthLoginRequest: Encodable, Sendable {
   public let authorizationCode: String
   public let redirectUri: String?
   public let idToken: String?

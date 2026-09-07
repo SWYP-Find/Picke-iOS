@@ -15,6 +15,7 @@ let project = Project.configure(
     .domain(.home, .interface),
     .service(.api),
     .service(.apiEndpoint),
+    .core(.coreUtility),
     .core(.network),
     .core(.network, .interface),
     .SPM.logMarco,

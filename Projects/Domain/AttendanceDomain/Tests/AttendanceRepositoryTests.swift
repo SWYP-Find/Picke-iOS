@@ -4,6 +4,8 @@
 //
 
 import Foundation
+
+import Dependencies
 import Testing
 
 import APIEndpoint
@@ -30,9 +32,11 @@ struct AttendanceRepositoryTests {
       "error": null
     }
     """
-    let sut = AttendanceRepositoryImpl(
-      provider: StubNetworkProvider<AttendanceService>(stubData: Data(json.utf8))
-    )
+    let sut = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      AttendanceRepositoryImpl()
+    }
 
     let result = try await sut.checkAttendance()
 
@@ -63,9 +67,11 @@ struct AttendanceRepositoryTests {
       "error": null
     }
     """
-    let sut = AttendanceRepositoryImpl(
-      provider: StubNetworkProvider<AttendanceService>(stubData: Data(json.utf8))
-    )
+    let sut = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      AttendanceRepositoryImpl()
+    }
 
     let weekly = try await sut.fetchWeeklyAttendance()
 
@@ -84,9 +90,11 @@ struct AttendanceRepositoryTests {
     let json = """
     { "statusCode": 500, "data": null, "error": { "code": "E500", "message": "서버 오류" } }
     """
-    let sut = AttendanceRepositoryImpl(
-      provider: StubNetworkProvider<AttendanceService>(stubData: Data(json.utf8))
-    )
+    let sut = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      AttendanceRepositoryImpl()
+    }
 
     await #expect(throws: AttendanceError.backendError("서버 오류")) {
       try await sut.checkAttendance()

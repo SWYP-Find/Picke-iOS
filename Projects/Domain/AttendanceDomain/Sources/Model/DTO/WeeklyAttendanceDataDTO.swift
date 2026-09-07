@@ -24,5 +24,3 @@ public struct WeeklyAttendanceDataDTO: Decodable {
     case streakRewardPoints = "streak_reward_points"
   }
 }
-
-public typealias WeeklyAttendanceResponseDTO = BaseResponseDTO<WeeklyAttendanceDataDTO>

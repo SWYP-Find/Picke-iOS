@@ -48,7 +48,7 @@ public final class MockAuthUseCase: AuthUseCaseInterface, @unchecked Sendable {
     )
   }
 
-  public func updateSessionCredential(with _: AuthTokens) {
+  public func updateSessionCredential(with _: AuthTokens) async {
     // no-op
   }
 }

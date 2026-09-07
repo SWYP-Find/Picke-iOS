@@ -20,7 +20,7 @@ public struct UnifiedOAuthUseCase: UnifiedOAuthUseCaseInterface {
   @Dependency(\.googleOAuthProvider) private var googleProvider: GoogleOAuthProviderInterface
   @Dependency(\.kakaoOAuthProvider) private var kakaoProvider: KakaoOAuthProviderInterface
   @Dependency(\.keychainManager) private var keychainManager: KeychainManaging
-  @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
+  @Shared(.userSession) var userSession: UserSession
   @Shared(.appStorage("appleUserName")) var savedAppleUserName: String?
 
   public init() {}
@@ -100,7 +100,7 @@ public extension UnifiedOAuthUseCase {
       accessToken: loginEntity.token.accessToken,
       refreshToken: loginEntity.token.refreshToken
     )
-    authRepository.updateSessionCredential(with: loginEntity.token)
+    await authRepository.updateSessionCredential(with: loginEntity.token)
 
     return loginEntity
   }
@@ -129,7 +129,7 @@ public extension UnifiedOAuthUseCase {
       accessToken: loginEntity.token.accessToken,
       refreshToken: loginEntity.token.refreshToken
     )
-    authRepository.updateSessionCredential(with: loginEntity.token)
+    await authRepository.updateSessionCredential(with: loginEntity.token)
 
     return loginEntity
   }
@@ -156,7 +156,7 @@ public extension UnifiedOAuthUseCase {
       accessToken: loginEntity.token.accessToken,
       refreshToken: loginEntity.token.refreshToken
     )
-    authRepository.updateSessionCredential(with: loginEntity.token)
+    await authRepository.updateSessionCredential(with: loginEntity.token)
 
     return loginEntity
   }

@@ -45,6 +45,4 @@ public struct NotificationUnreadDTO: Decodable {
   public let hasUnread: Bool?
 }
 
-public typealias NotificationResponseDTO = BaseResponseDTO<NotificationDataDTO>
-public typealias NotificationDetailResponseDTO = BaseResponseDTO<NotificationDetailDTO>
-public typealias NotificationUnreadResponseDTO = BaseResponseDTO<NotificationUnreadDTO>
+

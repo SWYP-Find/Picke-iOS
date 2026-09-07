@@ -8,7 +8,6 @@ import Foundation
 import API
 import PickeNetwork
 
-
 public enum BattleService {
   case today
   case detail(battleId: Int)
@@ -23,12 +22,10 @@ public enum BattleService {
   case createProposal(body: BattleProposalRequest)
 }
 
-extension BattleService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension BattleService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.battle }
 
-  public var domain: PieckeDomain { .battle }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case .today:
       return BattleAPI.today.description
@@ -55,7 +52,6 @@ extension BattleService: PickeTargetType {
     }
   }
 
-
   public var method: HTTPMethod {
     switch self {
     case .today, .detail, .scenario, .voteStats, .perspectives, .myPerspective, .recommendations:
@@ -65,35 +61,20 @@ extension BattleService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
-    case .today:
-      return nil
-    case .detail:
-      return nil
     case let .preVote(_, body):
-      return body.toDictionary
+      return body
     case let .postVote(_, body):
-      return body.toDictionary
-    case .scenario:
-      return nil
-    case .voteStats:
-      return nil
+      return body
     case let .perspectives(_, query):
-      guard let dict = query.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
+      return query
     case let .createPerspective(_, body):
-      return body.toDictionary
+      return body
     case let .createProposal(body):
-      return body.toDictionary
-    case .myPerspective:
-      return nil
-    case .recommendations:
+      return body
+    case .today, .detail, .scenario, .voteStats, .myPerspective, .recommendations:
       return nil
     }
-  }
-
-  public var headers: [String: String]? {
-    return APIHeader.baseHeader
   }
 }

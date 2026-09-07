@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct ContentActivitiesQueryRequest: Encodable {
+public struct ContentActivitiesQueryRequest: Encodable, Sendable {
   public let offset: Int?
   public let size: Int?
   /// 활동 유형 필터 (COMMENT / LIKE). nil 이면 전체.

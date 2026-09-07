@@ -8,7 +8,7 @@ import Foundation
 import API
 import PickeNetwork
 
-public struct PerspectiveCommentBody: Encodable {
+public struct PerspectiveCommentBody: Encodable, Sendable {
   public let content: String
   public init(content: String) { self.content = content }
 }
@@ -28,12 +28,10 @@ public enum PerspectiveService {
   case reportComment(perspectiveId: Int, commentId: Int)
 }
 
-extension PerspectiveService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension PerspectiveService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.perspective }
 
-  public var domain: PieckeDomain { .perspective }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case let .detail(perspectiveId):
       return PerspectiveAPI.detail(perspectiveId: perspectiveId).description
@@ -62,7 +60,6 @@ extension PerspectiveService: PickeTargetType {
     }
   }
 
-
   public var method: HTTPMethod {
     switch self {
     case .detail, .listLabeledComments, .fetchPerspectiveLikes:
@@ -76,33 +73,25 @@ extension PerspectiveService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
-    case .detail:
-      return nil
     case let .listLabeledComments(_, cursor, size):
-      var query: [String: Any] = [:]
-      if let cursor { query["cursor"] = cursor }
-      if let size { query["size"] = size }
-      return query.isEmpty ? nil : query
+      return PerspectiveCommentsQueryRequest(cursor: cursor, size: size)
     case let .createComment(_, body):
-      return body.toDictionary
+      return body
     case let .updateComment(_, _, body):
-      return body.toDictionary
+      return body
     case let .updatePerspective(_, body):
-      return body.toDictionary
-    case .deleteComment:
-      return nil
-    case .deletePerspective:
-      return nil
-    case .likePerspective, .unlikePerspective, .fetchPerspectiveLikes:
-      return nil
-    case .reportPerspective, .reportComment:
+      return body
+    case .detail,
+         .deleteComment,
+         .deletePerspective,
+         .likePerspective,
+         .unlikePerspective,
+         .fetchPerspectiveLikes,
+         .reportPerspective,
+         .reportComment:
       return nil
     }
-  }
-
-  public var headers: [String: String]? {
-    APIHeader.baseHeader
   }
 }

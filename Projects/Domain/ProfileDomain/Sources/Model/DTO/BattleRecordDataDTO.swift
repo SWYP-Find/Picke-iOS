@@ -21,5 +21,3 @@ public struct BattleRecordItemDTO: Decodable {
   public let summary: String?
   public let createdAt: String?
 }
-
-public typealias BattleRecordResponseDTO = BaseResponseDTO<BattleRecordDataDTO>

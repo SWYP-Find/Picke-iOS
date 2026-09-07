@@ -4,6 +4,8 @@
 //
 
 import Foundation
+
+import Dependencies
 import Testing
 
 @testable import AuthData
@@ -30,10 +32,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: StubNetworkProvider(stubData: fixture),
-      authProvider: ThrowingStubNetworkProvider()
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.login(
       provider: .kakao,
@@ -60,10 +63,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: StubNetworkProvider(stubData: fixture),
-      authProvider: ThrowingStubNetworkProvider()
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     do {
       _ = try await repo.login(
@@ -95,10 +99,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: StubNetworkProvider(stubData: fixture),
-      authProvider: ThrowingStubNetworkProvider()
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let tokens = try await repo.refresh()
 
@@ -116,10 +121,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: StubNetworkProvider(stubData: fixture),
-      authProvider: ThrowingStubNetworkProvider()
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     do {
       _ = try await repo.refresh()
@@ -133,15 +139,16 @@ struct AuthRepositoryTests {
 
   @Test
   func refresh_providerThrows_rethrowsOriginalError() async throws {
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: ThrowingStubNetworkProvider()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     do {
       _ = try await repo.refresh()
       Issue.record("provider 가 에러를 던졌는데 refresh() 가 에러를 던지지 않았습니다")
-    } catch is ThrowingStubNetworkProvider<AuthService>.StubError {
+    } catch is ThrowingStubNetworkClient.StubError {
       // AFError 도, "statusCodeError(401)" 문자열도 아니므로 원본 에러가 그대로 다시 던져져야 한다.
     } catch {
       Issue.record("예상치 못한 에러 타입: \(error)")
@@ -160,10 +167,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: StubNetworkProvider(stubData: fixture, statusCode: 200)
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture, statusCode: 200)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.logout()
 
@@ -174,10 +182,11 @@ struct AuthRepositoryTests {
 
   @Test
   func logout_emptyBody_defaultsToLoggedOutTrue() async throws {
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: StubNetworkProvider(stubData: Data(), statusCode: 200)
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(), statusCode: 200)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.logout()
 
@@ -194,10 +203,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: StubNetworkProvider(stubData: fixture, statusCode: 500)
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture, statusCode: 500)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.logout()
 
@@ -218,10 +228,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: StubNetworkProvider(stubData: fixture, statusCode: 200)
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture, statusCode: 200)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.withDraw(reason: "NOT_USED_OFTEN")
 
@@ -232,10 +243,11 @@ struct AuthRepositoryTests {
 
   @Test
   func withDraw_emptyBody_defaultsToSuccessTrue() async throws {
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: StubNetworkProvider(stubData: Data(), statusCode: 200)
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(), statusCode: 200)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.withDraw(reason: "NOT_USED_OFTEN")
 
@@ -253,10 +265,11 @@ struct AuthRepositoryTests {
     }
     """.utf8)
 
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: StubNetworkProvider(stubData: fixture, statusCode: 403)
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: fixture, statusCode: 403)
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     let entity = try await repo.withDraw(reason: "NOT_USED_OFTEN")
 
@@ -269,10 +282,11 @@ struct AuthRepositoryTests {
 
   @Test
   func updateSessionCredential_doesNotCrash() {
-    let repo = AuthRepositoryImpl(
-      provider: ThrowingStubNetworkProvider(),
-      authProvider: ThrowingStubNetworkProvider()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      AuthRepositoryImpl()
+    }
 
     repo.updateSessionCredential(with: AuthTokens(accessToken: "a", refreshToken: "r"))
   }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct PreVoteRequest: Encodable {
+public struct PreVoteRequest: Encodable, Sendable {
   public let optionId: Int
   
   public init(optionId: Int) {

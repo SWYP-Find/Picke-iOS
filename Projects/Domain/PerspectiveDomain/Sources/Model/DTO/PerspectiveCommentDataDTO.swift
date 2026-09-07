@@ -5,6 +5,8 @@
 
 import Foundation
 
+import PickeNetworkInterface
+
 public struct PerspectiveCommentPageDataDTO: Decodable {
   public let items: [PerspectiveCommentDTO]
   public let nextCursor: String?
@@ -36,6 +38,3 @@ public struct PerspectiveCommentMutationDataDTO: Decodable {
   public let updatedAt: String?
 }
 
-public typealias PerspectiveCommentPageResponseDTO = BaseResponseDTO<PerspectiveCommentPageDataDTO>
-public typealias PerspectiveCommentMutationResponseDTO = BaseResponseDTO<PerspectiveCommentMutationDataDTO>
-public typealias PerspectiveDetailResponseDTO = BaseResponseDTO<BattlePerspectiveDTO>

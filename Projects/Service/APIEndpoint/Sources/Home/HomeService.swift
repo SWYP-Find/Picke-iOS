@@ -10,34 +10,24 @@ import Foundation
 import API
 import PickeNetwork
 
-
 public enum HomeService {
   case home
 }
 
-extension HomeService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension HomeService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.home }
 
-  public var domain: PieckeDomain { .home }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case .home:
       return HomeAPI.home.description
     }
   }
 
-
   public var method: HTTPMethod {
     switch self {
     case .home:
       return .get
     }
-  }
-
-  public var parameters: [String: Any]? { nil }
-
-  public var headers: [String: String]? {
-    return APIHeader.baseHeader // 인증 헤더 포함 (액세스 토큰)
   }
 }

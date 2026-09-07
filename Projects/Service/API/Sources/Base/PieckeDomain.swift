@@ -7,7 +7,7 @@
 
 import Foundation
 
-import PickeNetwork
+import PickeNetworkInterface
 
 public enum PieckeDomain {
   case attendance

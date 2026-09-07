@@ -24,5 +24,3 @@ public struct AttendanceSummaryDataDTO: Decodable {
     case lastAttendedAt = "last_attended_at"
   }
 }
-
-public typealias AttendanceSummaryResponseDTO = BaseResponseDTO<AttendanceSummaryDataDTO>

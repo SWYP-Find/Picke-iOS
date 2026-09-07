@@ -44,5 +44,3 @@ public struct FavoriteTopicDTO: Decodable {
   public let participationCount: Int?
   public let tagName: String?
 }
-
-public typealias RecapResponseDTO = BaseResponseDTO<RecapDataDTO>

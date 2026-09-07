@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct CreditHistoryQueryRequest: Encodable {
+public struct CreditHistoryQueryRequest: Encodable, Sendable {
   public let offset: Int?
   public let size: Int?
 

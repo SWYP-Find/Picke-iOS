@@ -14,12 +14,10 @@ public enum AttendanceService {
   case summary
 }
 
-extension AttendanceService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension AttendanceService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.attendance }
 
-  public var domain: PieckeDomain { .attendance }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case .check:
       return AttendanceAPI.check.description
@@ -37,13 +35,5 @@ extension AttendanceService: PickeTargetType {
     case .weekly, .summary:
       return .get
     }
-  }
-
-  public var parameters: [String: Any]? {
-    return nil
-  }
-
-  public var headers: [String: String]? {
-    return APIHeader.baseHeader
   }
 }

@@ -18,19 +18,17 @@ public enum AuthService {
   case logout
 }
 
-extension AuthService: PickeTargetType {
-  public typealias Domain = PieckeDomain
-
-  public var domain: PieckeDomain {
+extension AuthService: PickeDataRequest {
+  public var domain: any PickeDomainType {
     switch self {
     case .login, .refresh, .logout:
-      return .auth
+      return PieckeDomain.auth
     case .withdraw:
-      return .profile
+      return PieckeDomain.profile
     }
   }
 
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case let .login(provider, _):
       return "\(AuthAPI.login.description)/\(provider.rawValue)"
@@ -52,29 +50,43 @@ extension AuthService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
     case let .login(_, body):
-      return body.toDictionary
-    case .refresh:
-      return nil
+      return body
     case let .withdraw(reason):
-      return reason.toDictionary(key: "reason")
-    case .logout:
+      return WithdrawRequest(reason: reason)
+    case .refresh, .logout:
       return nil
     }
   }
 
-  public var headers: [String: String]? {
+  /// withdraw 는 DELETE 지만 reason 을 JSON 바디로 보낸다(서버 규약).
+  public var parameterEncoder: ParameterEncoder? {
+    switch self {
+    case .withdraw:
+      return JSONParameterEncoder.default
+    default:
+      return nil
+    }
+  }
+
+  public var headers: HTTPHeaders {
     switch self {
     case let .refresh(refreshToken):
-      var headers = APIHeader.notAccessTokenHeader
-      headers[APIHeader.refreshToken] = refreshToken
-      return headers
-    case .withdraw, .logout:
-      return APIHeader.baseHeader
+      return [APIHeader.refreshToken: refreshToken]
     default:
-      return APIHeader.notAccessTokenHeader
+      return [:]
+    }
+  }
+
+  /// 로그인·토큰 재발급은 아직 액세스 토큰이 없거나 자기 자신이 갱신 경로다 — 인증 파이프라인을 우회한다.
+  public var authorization: PickeAuthorization {
+    switch self {
+    case .login, .refresh:
+      return .none
+    case .withdraw, .logout:
+      return .automatic
     }
   }
 }

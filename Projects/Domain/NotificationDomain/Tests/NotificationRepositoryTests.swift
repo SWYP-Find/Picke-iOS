@@ -4,6 +4,8 @@
 //
 
 import Foundation
+
+import Dependencies
 import Testing
 
 @testable import NotificationData
@@ -36,9 +38,11 @@ struct NotificationRepositoryTests {
       "error": null
     }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     let page = try await repo.fetchNotifications(category: .all, page: 0, size: 20)
 
@@ -67,9 +71,11 @@ struct NotificationRepositoryTests {
       "error": null
     }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     let page = try await repo.fetchNotifications(category: .all, page: 0, size: 20)
 
@@ -86,9 +92,11 @@ struct NotificationRepositoryTests {
       "error": { "code": "NOT_FOUND", "message": "알림이 없습니다" }
     }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     await #expect(throws: NotificationError.backendError("알림이 없습니다")) {
       try await repo.fetchNotifications(category: .all, page: 0, size: 20)
@@ -115,9 +123,11 @@ struct NotificationRepositoryTests {
       "error": null
     }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     let detail = try await repo.fetchNotificationDetail(notificationId: 5)
 
@@ -141,9 +151,11 @@ struct NotificationRepositoryTests {
       "error": { "code": "NOT_FOUND", "message": "알림 상세가 없습니다" }
     }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     await #expect(throws: NotificationError.backendError("알림 상세가 없습니다")) {
       try await repo.fetchNotificationDetail(notificationId: 5)
@@ -155,9 +167,11 @@ struct NotificationRepositoryTests {
     let json = """
     { "statusCode": 200, "data": { "hasUnread": true }, "error": null }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     let hasUnread = try await repo.hasUnreadNotifications()
 
@@ -169,9 +183,11 @@ struct NotificationRepositoryTests {
     let json = """
     { "statusCode": 200, "data": { "hasUnread": false }, "error": null }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     let hasUnread = try await repo.hasUnreadNotifications()
 
@@ -183,9 +199,11 @@ struct NotificationRepositoryTests {
     let json = """
     { "statusCode": 200, "data": null, "error": null }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     let hasUnread = try await repo.hasUnreadNotifications()
 
@@ -197,9 +215,11 @@ struct NotificationRepositoryTests {
     let json = """
     { "statusCode": 200, "data": "OK", "error": null }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     try await repo.markAsRead(notificationId: 1)
   }
@@ -209,9 +229,11 @@ struct NotificationRepositoryTests {
     let json = """
     { "statusCode": 200, "data": "OK", "error": null }
     """
-    let repo = NotificationRepositoryImpl(
-      provider: StubNetworkProvider<NotificationService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      NotificationRepositoryImpl()
+    }
 
     try await repo.markAllAsRead()
   }

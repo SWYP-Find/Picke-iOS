@@ -112,4 +112,3 @@ public struct NewBattleDTO: Decodable, Identifiable {
 }
 
 /// `GET /api/v1/home` 응답 타입 별칭.
-public typealias HomeResponseDTO = BaseResponseDTO<HomeDataDTO>

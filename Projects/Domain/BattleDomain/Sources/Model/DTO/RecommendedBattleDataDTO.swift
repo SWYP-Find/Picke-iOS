@@ -5,6 +5,8 @@
 
 import Foundation
 
+import PickeNetworkInterface
+
 public struct RecommendedBattlePageDataDTO: Decodable {
   public let items: [RecommendedBattleDTO]
   public let nextCursor: String?
@@ -34,5 +36,3 @@ public struct RecommendedBattleOptionDTO: Decodable {
   public let representative: String?
   public let imageUrl: String?
 }
-
-public typealias RecommendedBattlePageResponseDTO = BaseResponseDTO<RecommendedBattlePageDataDTO>

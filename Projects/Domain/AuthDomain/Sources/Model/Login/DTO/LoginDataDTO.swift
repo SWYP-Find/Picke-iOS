@@ -25,4 +25,3 @@ public struct LoginDataDTO: Decodable {
 }
 
 /// `/api/v1/auth/login/{provider}` 응답 타입 별칭
-public typealias LoginResponseDTO = BaseResponseDTO<LoginDataDTO>

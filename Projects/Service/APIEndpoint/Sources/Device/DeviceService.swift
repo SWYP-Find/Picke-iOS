@@ -15,12 +15,10 @@ public enum DeviceService {
   case unregister(fcmToken: String)
 }
 
-extension DeviceService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension DeviceService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.device }
 
-  public var domain: PieckeDomain { .device }
-
-  public var urlPath: String { "" }
+  public var path: String { "" }
 
   public var method: HTTPMethod {
     switch self {
@@ -31,26 +29,12 @@ extension DeviceService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
     case let .register(body):
-      return body.toDictionary
+      return body
     case let .unregister(fcmToken):
-      return ["fcmToken": fcmToken]
+      return DeviceUnregisterQueryRequest(fcmToken: fcmToken)
     }
-  }
-
-  /// unregister 는 쿼리 파라미터, register 는 JSON 바디로 인코딩.
-  public var parameterEncoding: ParameterEncoding {
-    switch self {
-    case .register:
-      return JSONEncoding.default
-    case .unregister:
-      return URLEncoding.queryString
-    }
-  }
-
-  public var headers: [String: String]? {
-    APIHeader.baseHeader
   }
 }

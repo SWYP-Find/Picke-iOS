@@ -7,6 +7,8 @@
 
 import Foundation
 
+import Dependencies
+
 import APIEndpoint
 import HomeDomainInterface
 import PickeNetwork
@@ -14,24 +16,16 @@ import PickeNetwork
 import LogMacro
 import AuthDomainInterface
 
-
 public final class HomeRepositoryImpl: HomeInterface, @unchecked Sendable {
-  private let provider: any NetworkProviding<HomeService>
+  @Dependency(\.networkClient) private var client
 
-  public init(
-    provider: any NetworkProviding<HomeService> = AlamofireNetworkProvider<HomeService>.authorized
-  ) {
-    self.provider = provider
-  }
+  public init() {}
 
   public func fetchHome() async throws -> HomeBundle {
-    let dto: HomeResponseDTO = try await provider.request(.home)
-
-    guard let data = dto.data else {
-      let message = dto.error?.message ?? "홈 데이터 응답이 비어 있습니다"
-      Log.error("[HomeRepositoryImpl] empty home payload: \(message)")
-      throw AuthError.backendError(message)
-    }
+    let data = try await client.send(
+      HomeService.home,
+      as: HomeDataDTO.self
+    )
 
     return data.toDomain()
   }

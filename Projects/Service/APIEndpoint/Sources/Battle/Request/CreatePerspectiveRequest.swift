@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct CreatePerspectiveRequest: Encodable {
+public struct CreatePerspectiveRequest: Encodable, Sendable {
   public let content: String
   public let optionId: Int?
 

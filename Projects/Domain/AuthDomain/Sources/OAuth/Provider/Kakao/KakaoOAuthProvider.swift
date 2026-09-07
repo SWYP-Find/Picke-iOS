@@ -13,7 +13,7 @@ import Sharing
 
 public final class KakaoOAuthProvider: KakaoOAuthProviderInterface, @unchecked Sendable {
   @Dependency(\.kakaoOAuthRepository) private var kakaoRepository: KakaoOAuthInterface
-  @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
+  @Shared(.userSession) var userSession: UserSession
   public init() {}
 
   public func signInWithToken(token _: String) async throws -> KakaoOAuthPayload {

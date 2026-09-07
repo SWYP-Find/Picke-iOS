@@ -8,7 +8,6 @@ import Foundation
 import API
 import PickeNetwork
 
-
 public enum NotificationService {
   case list(query: NotificationsQueryRequest)
   case unread
@@ -17,12 +16,10 @@ public enum NotificationService {
   case readAll
 }
 
-extension NotificationService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension NotificationService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.notification }
 
-  public var domain: PieckeDomain { .notification }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case .list:
       return NotificationAPI.list.description
@@ -37,7 +34,6 @@ extension NotificationService: PickeTargetType {
     }
   }
 
-
   public var method: HTTPMethod {
     switch self {
     case .list, .unread, .detail:
@@ -47,17 +43,12 @@ extension NotificationService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
     case let .list(query):
-      guard let dict = query.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
+      return query
     case .unread, .detail, .read, .readAll:
       return nil
     }
-  }
-
-  public var headers: [String: String]? {
-    return APIHeader.baseHeader
   }
 }

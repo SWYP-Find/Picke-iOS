@@ -31,5 +31,3 @@ public struct ContentActivityAuthorDTO: Decodable {
   public let characterType: String?
   public let characterImageUrl: String?
 }
-
-public typealias ContentActivityResponseDTO = BaseResponseDTO<ContentActivityDataDTO>

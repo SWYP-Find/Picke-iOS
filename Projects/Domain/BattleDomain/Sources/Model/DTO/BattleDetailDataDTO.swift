@@ -5,6 +5,8 @@
 
 import Foundation
 
+import PickeNetworkInterface
+
 public struct BattleDetailDataDTO: Decodable {
   public let battleInfo: BattleInfoDTO
   public let description: String
@@ -96,5 +98,3 @@ public struct BattleTagDTO: Decodable {
   public let name: String
   public let type: String
 }
-
-public typealias BattleDetailResponseDTO = BaseResponseDTO<BattleDetailDataDTO>

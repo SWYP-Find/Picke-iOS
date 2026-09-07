@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct DeviceRegisterRequest: Encodable {
+public struct DeviceRegisterRequest: Encodable, Sendable {
   public let fcmToken: String
   public let platform: String
 

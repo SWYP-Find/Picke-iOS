@@ -9,26 +9,18 @@ import Foundation
 
 import APIEndpoint
 import AuthDomainInterface
+import PickeAuthInterface
 import PickeNetwork
 
-import Alamofire
 import Dependencies
 import LogMacro
 import WeaveDI
 
 public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
-  @Dependency(\.keychainManager) private var keychainManager
+  @Dependency(\.networkClient) private var client
+  @Dependency(\.authService) private var authService
 
-  private let provider: any NetworkProviding<AuthService>
-  private let authProvider: any NetworkProviding<AuthService>
-
-  public init(
-    provider: any NetworkProviding<AuthService> = AlamofireNetworkProvider<AuthService>.default,
-    authProvider: any NetworkProviding<AuthService> = AlamofireNetworkProvider<AuthService>.authorized
-  ) {
-    self.provider = provider
-    self.authProvider = authProvider
-  }
+  public init() {}
 
   // MARK: - 로그인
 
@@ -49,14 +41,10 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
       Log.debug("[AuthRepository] POST /api/v1/auth/login/\(socialProvider.rawValue) body=\(json)")
     }
 
-    let dto: LoginResponseDTO = try await provider.request(
-      .login(provider: socialProvider, body: body)
+    let data = try await client.send(
+      AuthService.login(provider: socialProvider, body: body),
+      as: LoginDataDTO.self
     )
-
-    guard let data = dto.data else {
-      let message = dto.error?.message ?? "로그인 응답이 비어 있습니다"
-      throw AuthError.backendError(message)
-    }
 
     return data.toDomain(provider: socialProvider)
   }
@@ -64,31 +52,21 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   // MARK: - 토큰 재발급
 
   public func refresh() async throws -> AuthTokens {
-    let refreshToken = keychainManager.refreshToken() ?? ""
+    let refreshToken = await authService.refreshToken ?? ""
 
     do {
-      let dto: RefreshResponseDTO = try await provider.request(.refresh(refreshToken: refreshToken))
-      guard let token = dto.data else {
-        let message = dto.error?.message ?? "토큰 재발급 응답이 비어 있습니다"
-        throw AuthError.backendError(message)
-      }
-      return token.toDomain()
+      let data = try await client.send(
+        AuthService.refresh(refreshToken: refreshToken),
+        as: TokenDTO.self
+      )
+      return data.toDomain()
     } catch {
       Log.error("🔍 [AuthRepositoryImpl] Refresh failed: \(error)")
 
-      if let afError = error.asAFError,
-         case let .responseValidationFailed(reason) = afError,
-         case let .unacceptableStatusCode(code) = reason,
-         code == 401
-      {
+      // 서버가 refresh token 을 거부한 경우만 재로그인으로 보낸다(5xx 는 일시 장애).
+      if case let .response(response) = error, response.isUnauthorized {
         throw AuthError.refreshTokenExpired
       }
-
-      let errorString = String(describing: error)
-      if errorString.contains("statusCodeError(401)") {
-        throw AuthError.refreshTokenExpired
-      }
-
       throw error
     }
   }
@@ -96,11 +74,11 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   // MARK: - 로그아웃
 
   public func logout() async throws -> AuthExitEntity {
-    let response = try await authProvider.requestResponse(.logout)
+    let response = try await client.sendResponse(AuthService.logout)
     let decoder = JSONDecoder()
 
     if (200 ... 299).contains(response.statusCode) {
-      clearLocalSession()
+      await authService.signOut()
       if response.data.isEmpty { return AuthExitEntity(loggedOut: true) }
       if let success = try? decoder.decode(LogOutDTO.self, from: response.data) {
         return success.toDomain()
@@ -117,7 +95,7 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   // MARK: - 회원 탈퇴
 
   public func withDraw(reason: String) async throws -> WithdrawEntity {
-    let response = try await authProvider.requestResponse(.withdraw(reason: reason))
+    let response = try await client.sendResponse(AuthService.withdraw(reason: reason))
     let decoder = JSONDecoder()
 
     if (200 ... 299).contains(response.statusCode) {
@@ -139,14 +117,11 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
 
   // MARK: - 세션 Credential 업데이트
 
-  public func updateSessionCredential(with tokens: AuthTokens) {
-    AuthSessionManager.shared.updateCredential(with: tokens)
-    OptimizedSessionManager.shared.updateCredential(with: tokens)
-  }
-
-  private func clearLocalSession() {
-    keychainManager.clear()
-    AuthSessionManager.shared.clear()
-    OptimizedSessionManager.shared.clear()
+  /// 로그인 토큰을 Keychain 과 실행 중인 인증 세션에 함께 반영한다.
+  public func updateSessionCredential(with tokens: AuthTokens) async {
+    await authService.signIn(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
+    )
   }
 }

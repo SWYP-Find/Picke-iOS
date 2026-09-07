@@ -5,7 +5,6 @@
 
 import Foundation
 
-
 import AppUpdateDomainInterface
 import LogMacro
 import PickeNetwork

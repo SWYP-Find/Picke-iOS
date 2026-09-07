@@ -19,4 +19,3 @@ public struct TokenDTO: Decodable {
 }
 
 /// `/api/v1/auth/refresh` 응답 타입 별칭
-public typealias RefreshResponseDTO = BaseResponseDTO<TokenDTO>

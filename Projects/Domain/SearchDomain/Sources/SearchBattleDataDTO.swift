@@ -28,5 +28,3 @@ public struct SearchBattleTagDTO: Decodable {
   public let name: String?
   public let type: String?
 }
-
-public typealias SearchBattlePageResponseDTO = BaseResponseDTO<SearchBattlePageDataDTO>

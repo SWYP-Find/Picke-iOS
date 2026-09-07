@@ -19,5 +19,3 @@ public struct CreditHistoryItemDTO: Decodable {
   public let referenceId: Int?
   public let createdAt: String?
 }
-
-public typealias CreditHistoryResponseDTO = BaseResponseDTO<CreditHistoryDataDTO>

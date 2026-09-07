@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct NotificationSettingsRequest: Encodable {
+public struct NotificationSettingsRequest: Encodable, Sendable {
   public let newBattleEnabled: Bool
   public let battleResultEnabled: Bool
   public let commentReplyEnabled: Bool

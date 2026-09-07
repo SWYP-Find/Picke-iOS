@@ -35,5 +35,3 @@ public struct MyTierDTO: Decodable {
   public let tierLabel: String?
   public let currentPoint: Int?
 }
-
-public typealias MyPageResponseDTO = BaseResponseDTO<MyPageDataDTO>

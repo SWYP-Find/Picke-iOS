@@ -4,6 +4,8 @@
 //
 
 import Foundation
+
+import Dependencies
 import Testing
 
 @testable import PerspectiveData
@@ -44,9 +46,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.fetchPerspective(perspectiveId: 42)
 
@@ -70,9 +74,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "PERSPECTIVE_404", "message": "존재하지 않는 관점입니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: PerspectiveError.backendError("존재하지 않는 관점입니다")) {
       try await repo.fetchPerspective(perspectiveId: 42)
@@ -81,9 +87,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func fetchPerspective_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.fetchPerspective(perspectiveId: 42)
@@ -121,9 +129,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.fetchLabeledComments(perspectiveId: 42, cursor: nil, size: 20)
 
@@ -148,9 +158,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.fetchLabeledComments(perspectiveId: 42, cursor: nil, size: nil)
 
@@ -168,9 +180,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("대댓글 목록 응답이 비어 있습니다")) {
       try await repo.fetchLabeledComments(perspectiveId: 42, cursor: nil, size: nil)
@@ -179,9 +193,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func fetchLabeledComments_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.fetchLabeledComments(perspectiveId: 42, cursor: nil, size: nil)
@@ -203,9 +219,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.createComment(perspectiveId: 42, content: "새 댓글")
 
@@ -221,9 +239,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "COMMENT_400", "message": "댓글 작성에 실패했습니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("댓글 작성에 실패했습니다")) {
       try await repo.createComment(perspectiveId: 42, content: "새 댓글")
@@ -232,9 +252,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func createComment_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.createComment(perspectiveId: 42, content: "새 댓글")
@@ -256,9 +278,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.updateComment(perspectiveId: 42, commentId: 9, content: "수정된 댓글")
 
@@ -276,9 +300,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "COMMENT_400", "message": "댓글 수정에 실패했습니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("댓글 수정에 실패했습니다")) {
       try await repo.updateComment(perspectiveId: 42, commentId: 9, content: "수정된 댓글")
@@ -287,9 +313,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func updateComment_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.updateComment(perspectiveId: 42, commentId: 9, content: "수정된 댓글")
@@ -307,9 +335,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     try await repo.deleteComment(perspectiveId: 42, commentId: 9)
   }
@@ -323,9 +353,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "COMMENT_400", "message": "댓글 삭제에 실패했습니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("댓글 삭제에 실패했습니다")) {
       try await repo.deleteComment(perspectiveId: 42, commentId: 9)
@@ -334,9 +366,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func deleteComment_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.deleteComment(perspectiveId: 42, commentId: 9)
@@ -354,9 +388,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     try await repo.updatePerspective(perspectiveId: 42, content: "관점 수정 내용")
   }
@@ -370,9 +406,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "PERSPECTIVE_400", "message": "관점 수정에 실패했습니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: PerspectiveError.backendError("관점 수정에 실패했습니다")) {
       try await repo.updatePerspective(perspectiveId: 42, content: "관점 수정 내용")
@@ -381,9 +419,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func updatePerspective_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.updatePerspective(perspectiveId: 42, content: "관점 수정 내용")
@@ -401,9 +441,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     try await repo.deletePerspective(perspectiveId: 42)
   }
@@ -417,9 +459,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "PERSPECTIVE_400", "message": "관점 삭제에 실패했습니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: PerspectiveError.backendError("관점 삭제에 실패했습니다")) {
       try await repo.deletePerspective(perspectiveId: 42)
@@ -428,9 +472,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func deletePerspective_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.deletePerspective(perspectiveId: 42)
@@ -452,9 +498,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.likePerspective(perspectiveId: 42)
 
@@ -470,9 +518,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "PERSPECTIVE_400", "message": "이미 좋아요한 관점입니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("이미 좋아요한 관점입니다")) {
       try await repo.likePerspective(perspectiveId: 42)
@@ -481,9 +531,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func likePerspective_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.likePerspective(perspectiveId: 42)
@@ -505,9 +557,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.unlikePerspective(perspectiveId: 42)
 
@@ -523,9 +577,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("관점 좋아요 취소 응답이 비어 있습니다")) {
       try await repo.unlikePerspective(perspectiveId: 42)
@@ -534,9 +590,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func unlikePerspective_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.unlikePerspective(perspectiveId: 42)
@@ -558,9 +616,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.fetchPerspectiveLikes(perspectiveId: 42)
 
@@ -580,9 +640,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     let result = try await repo.fetchPerspectiveLikes(perspectiveId: 42)
 
@@ -598,9 +660,11 @@ struct PerspectiveRepositoryTests {
       "error": { "code": "PERSPECTIVE_404", "message": "좋아요 정보를 찾을 수 없습니다" }
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("좋아요 정보를 찾을 수 없습니다")) {
       try await repo.fetchPerspectiveLikes(perspectiveId: 42)
@@ -609,9 +673,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func fetchPerspectiveLikes_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.fetchPerspectiveLikes(perspectiveId: 42)
@@ -629,9 +695,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     try await repo.reportPerspective(perspectiveId: 42)
   }
@@ -645,9 +713,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("관점 신고 실패")) {
       try await repo.reportPerspective(perspectiveId: 42)
@@ -656,9 +726,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func reportPerspective_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.reportPerspective(perspectiveId: 42)
@@ -676,9 +748,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     try await repo.reportComment(perspectiveId: 42, commentId: 9)
   }
@@ -692,9 +766,11 @@ struct PerspectiveRepositoryTests {
       "error": null
     }
     """
-    let repo = PerspectiveRepositoryImpl(
-      provider: StubNetworkProvider<PerspectiveService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: CommentError.backendError("댓글 신고 실패")) {
       try await repo.reportComment(perspectiveId: 42, commentId: 9)
@@ -703,9 +779,11 @@ struct PerspectiveRepositoryTests {
 
   @Test
   func reportComment_networkFailure_throws() async throws {
-    let repo = PerspectiveRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<PerspectiveService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.reportComment(perspectiveId: 42, commentId: 9)

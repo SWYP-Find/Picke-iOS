@@ -8,18 +8,15 @@ import Foundation
 import API
 import PickeNetwork
 
-
 public enum CommentService {
   case like(commentId: Int)
   case unlike(commentId: Int)
 }
 
-extension CommentService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension CommentService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.comment }
 
-  public var domain: PieckeDomain { .comment }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case let .like(commentId):
       CommentAPI.like(commentId: commentId).description
@@ -28,7 +25,6 @@ extension CommentService: PickeTargetType {
     }
   }
 
-
   public var method: HTTPMethod {
     switch self {
     case .like:
@@ -36,11 +32,5 @@ extension CommentService: PickeTargetType {
     case .unlike:
       .delete
     }
-  }
-
-  public var parameters: [String: Any]? { nil }
-
-  public var headers: [String: String]? {
-    APIHeader.baseHeader
   }
 }

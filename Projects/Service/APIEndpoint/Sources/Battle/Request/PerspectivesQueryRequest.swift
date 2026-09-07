@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct PerspectivesQueryRequest: Encodable {
+public struct PerspectivesQueryRequest: Encodable, Sendable {
   public let cursor: String?
   public let size: Int?
   public let optionId: Int?

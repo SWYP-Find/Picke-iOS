@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct BattleRecordsQueryRequest: Encodable {
+public struct BattleRecordsQueryRequest: Encodable, Sendable {
   public let offset: Int?
   public let size: Int?
   /// 투표 진영 필터 (PRO / CON). nil 이면 전체.

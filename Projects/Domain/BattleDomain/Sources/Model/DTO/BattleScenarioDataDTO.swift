@@ -5,6 +5,8 @@
 
 import Foundation
 
+import PickeNetworkInterface
+
 public struct BattleScenarioDataDTO: Decodable {
   public let battleId: Int
   public let title: String
@@ -76,5 +78,3 @@ public struct ScenarioInteractiveOptionDTO: Decodable {
   public let label: String
   public let nextNodeId: Int
 }
-
-public typealias BattleScenarioResponseDTO = BaseResponseDTO<BattleScenarioDataDTO>

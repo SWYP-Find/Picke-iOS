@@ -44,7 +44,11 @@ struct SearchRepositoryTests {
     }
     """.data(using: .utf8)!
 
-    let repo = SearchRepositoryImpl(provider: StubNetworkProvider<SearchService>(stubData: json))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: json)
+    } operation: {
+      SearchRepositoryImpl()
+    }
 
     let page = try await repo.searchBattles(category: "연애", sort: "popular", offset: 0, size: 20)
 
@@ -84,7 +88,11 @@ struct SearchRepositoryTests {
     }
     """.data(using: .utf8)!
 
-    let repo = SearchRepositoryImpl(provider: StubNetworkProvider<SearchService>(stubData: json))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: json)
+    } operation: {
+      SearchRepositoryImpl()
+    }
 
     let page = try await repo.searchBattles(category: nil, sort: nil, offset: nil, size: nil)
 
@@ -102,7 +110,11 @@ struct SearchRepositoryTests {
     }
     """.data(using: .utf8)!
 
-    let repo = SearchRepositoryImpl(provider: StubNetworkProvider<SearchService>(stubData: json))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: json)
+    } operation: {
+      SearchRepositoryImpl()
+    }
 
     await #expect(throws: BattleError.backendError("잘못된 검색 조건입니다")) {
       try await repo.searchBattles(category: nil, sort: nil, offset: nil, size: nil)
@@ -110,7 +122,11 @@ struct SearchRepositoryTests {
   }
 
   @Test func searchBattles_은_네트워크_에러를_전파한다() async throws {
-    let repo = SearchRepositoryImpl(provider: ThrowingStubNetworkProvider<SearchService>())
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      SearchRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.searchBattles(category: nil, sort: nil, offset: nil, size: nil)

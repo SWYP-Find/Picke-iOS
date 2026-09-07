@@ -50,7 +50,7 @@ public final class MockAuthRepository: AuthInterface, @unchecked Sendable {
     )
   }
 
-  public func updateSessionCredential(with _: AuthTokens) {
+  public func updateSessionCredential(with _: AuthTokens) async {
     // no-op
   }
 }

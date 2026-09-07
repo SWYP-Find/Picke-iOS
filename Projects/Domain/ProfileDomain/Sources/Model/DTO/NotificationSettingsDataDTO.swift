@@ -14,5 +14,3 @@ public struct NotificationSettingsDataDTO: Decodable {
   public let contentLikeEnabled: Bool?
   public let marketingEventEnabled: Bool?
 }
-
-public typealias NotificationSettingsResponseDTO = BaseResponseDTO<NotificationSettingsDataDTO>

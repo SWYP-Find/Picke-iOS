@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct NotificationsQueryRequest: Encodable {
+public struct NotificationsQueryRequest: Encodable, Sendable {
   /// ALL / CONTENT / NOTICE / EVENT.
   public let category: String?
   public let page: Int?

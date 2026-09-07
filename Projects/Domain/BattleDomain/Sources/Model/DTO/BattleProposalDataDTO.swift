@@ -5,6 +5,8 @@
 
 import Foundation
 
+import PickeNetworkInterface
+
 public struct BattleProposalDataDTO: Decodable {
   public let id: Int?
   public let userId: Int?
@@ -17,5 +19,3 @@ public struct BattleProposalDataDTO: Decodable {
   public let status: String?
   public let createdAt: String?
 }
-
-public typealias BattleProposalResponseDTO = BaseResponseDTO<BattleProposalDataDTO>

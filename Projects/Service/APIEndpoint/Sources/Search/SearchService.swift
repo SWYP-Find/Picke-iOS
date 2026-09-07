@@ -8,23 +8,19 @@ import Foundation
 import API
 import PickeNetwork
 
-
 public enum SearchService {
   case battles(category: String?, sort: String?, offset: Int?, size: Int?)
 }
 
-extension SearchService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension SearchService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.search }
 
-  public var domain: PieckeDomain { .search }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case .battles:
       return SearchAPI.battles.description
     }
   }
-
 
   public var method: HTTPMethod {
     switch self {
@@ -33,19 +29,15 @@ extension SearchService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
     case let .battles(category, sort, offset, size):
-      var query: [String: Any] = [:]
-      if let category, !category.isEmpty { query["category"] = category }
-      if let sort, !sort.isEmpty { query["sort"] = sort }
-      if let offset { query["offset"] = offset }
-      if let size { query["size"] = size }
-      return query.isEmpty ? nil : query
+      return SearchBattlesQueryRequest(
+        category: category,
+        sort: sort,
+        offset: offset,
+        size: size
+      )
     }
-  }
-
-  public var headers: [String: String]? {
-    return APIHeader.baseHeader
   }
 }

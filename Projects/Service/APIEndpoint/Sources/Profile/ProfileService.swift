@@ -8,7 +8,6 @@ import Foundation
 import API
 import PickeNetwork
 
-
 public enum ProfileService {
   case mypage
   case recap
@@ -20,12 +19,10 @@ public enum ProfileService {
   case updateProfile(body: ProfileUpdateRequest)
 }
 
-extension ProfileService: PickeTargetType {
-  public typealias Domain = PieckeDomain
+extension ProfileService: PickeDataRequest {
+  public var domain: any PickeDomainType { PieckeDomain.profile }
 
-  public var domain: PieckeDomain { .profile }
-
-  public var urlPath: String {
+  public var path: String {
     switch self {
     case .mypage:
       return ProfileAPI.mypage.description
@@ -46,7 +43,6 @@ extension ProfileService: PickeTargetType {
     }
   }
 
-
   public var method: HTTPMethod {
     switch self {
     case .mypage, .recap, .creditsHistory, .battleRecords, .contentActivities, .notificationSettings:
@@ -56,33 +52,20 @@ extension ProfileService: PickeTargetType {
     }
   }
 
-  public var parameters: [String: Any]? {
+  public var parameters: (any Encodable & Sendable)? {
     switch self {
-    case .mypage:
-      return nil
-    case .recap:
-      return nil
     case let .creditsHistory(query):
-      guard let dict = query.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
+      return query
     case let .battleRecords(query):
-      guard let dict = query.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
+      return query
     case let .contentActivities(query):
-      guard let dict = query.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
-    case .notificationSettings:
-      return nil
+      return query
     case let .updateNotificationSettings(body):
-      guard let dict = body.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
+      return body
     case let .updateProfile(body):
-      guard let dict = body.toDictionary else { return nil }
-      return dict.isEmpty ? nil : dict
+      return body
+    case .mypage, .recap, .notificationSettings:
+      return nil
     }
-  }
-
-  public var headers: [String: String]? {
-    return APIHeader.baseHeader
   }
 }

@@ -21,7 +21,9 @@ let project = Project.configure(
     .SPM.googleSignIn,
   ],
   interfaceDependencies: [
-    
+    // UserSessionSharedKey 가 PersistentSharedKey(PickeStorageInterface)와 Sharing 을 직접 쓴다.
+    .core(.storage, .interface),
+    .SPM.sharing,
     .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]

@@ -5,6 +5,8 @@
 
 import Foundation
 
+import PickeNetworkInterface
+
 public struct BattleVoteStatsDataDTO: Decodable {
   public let options: [BattleVoteStatsOptionDTO]
   public let totalCount: Int
@@ -21,5 +23,3 @@ public struct BattleVoteStatsOptionDTO: Decodable {
   public let stance: String?
   public let imageUrl: String?
 }
-
-public typealias BattleVoteStatsResponseDTO = BaseResponseDTO<BattleVoteStatsDataDTO>

@@ -4,6 +4,8 @@
 //
 
 import Foundation
+
+import Dependencies
 import Testing
 
 @testable import ProfileData
@@ -43,9 +45,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchMyPage()
 
@@ -65,9 +69,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "NOT_FOUND", "message": "마이페이지 없음"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("마이페이지 없음")) {
       try await repo.fetchMyPage()
@@ -75,9 +81,11 @@ struct ProfileRepositoryTests {
   }
 
   @Test func fetchMyPage_은_네트워크_계층_에러를_그대로_전파한다() async throws {
-    let repo = ProfileRepositoryImpl(
-      provider: ThrowingStubNetworkProvider<ProfileService>()
-    )
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       try await repo.fetchMyPage()
@@ -99,9 +107,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.updateProfile(
       nickname: "새 닉네임",
@@ -118,9 +128,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "INVALID", "message": "프로필 수정 실패"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("프로필 수정 실패")) {
       try await repo.updateProfile(
@@ -181,9 +193,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchRecap()
 
@@ -202,9 +216,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": null}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchRecap()
 
@@ -241,9 +257,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchCreditHistory(offset: 0, size: 20)
 
@@ -263,9 +281,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "크레딧 내역 없음"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("크레딧 내역 없음")) {
       try await repo.fetchCreditHistory(offset: 0, size: 20)
@@ -296,9 +316,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchBattleRecords(offset: 0, size: 20, voteSide: nil)
 
@@ -317,9 +339,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "배틀 기록 없음"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("배틀 기록 없음")) {
       try await repo.fetchBattleRecords(offset: 0, size: 20, voteSide: .pro)
@@ -358,9 +382,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchContentActivities(offset: 0, size: 20, activityType: nil)
 
@@ -379,9 +405,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "콘텐츠 활동 없음"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("콘텐츠 활동 없음")) {
       try await repo.fetchContentActivities(offset: 0, size: 20, activityType: .comment)
@@ -405,9 +433,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.fetchNotificationSettings()
 
@@ -423,9 +453,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "알림 설정 없음"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("알림 설정 없음")) {
       try await repo.fetchNotificationSettings()
@@ -449,9 +481,11 @@ struct ProfileRepositoryTests {
       "error": null
     }
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     let result = try await repo.updateNotificationSettings(NotificationSettings())
 
@@ -467,9 +501,11 @@ struct ProfileRepositoryTests {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "알림 설정 갱신 실패"}}
     """
-    let repo = ProfileRepositoryImpl(
-      provider: StubNetworkProvider<ProfileService>(stubData: Data(json.utf8))
-    )
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      ProfileRepositoryImpl()
+    }
 
     await #expect(throws: ProfileError.backendError("알림 설정 갱신 실패")) {
       try await repo.updateNotificationSettings(NotificationSettings())

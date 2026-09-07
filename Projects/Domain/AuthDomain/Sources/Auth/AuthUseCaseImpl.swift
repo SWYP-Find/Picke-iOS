@@ -16,7 +16,7 @@ import PickeStorageInterface
 public struct AuthUseCaseImpl: AuthUseCaseInterface {
   @Dependency(\.authRepository) var authRepository
   @Dependency(\.keychainManager) private var keychainManager: KeychainManaging
-  @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
+  @Shared(.userSession) var userSession: UserSession
 
   public init() {}
 
@@ -45,7 +45,7 @@ public struct AuthUseCaseImpl: AuthUseCaseInterface {
       accessToken: result.token.accessToken,
       refreshToken: result.token.refreshToken
     )
-    authRepository.updateSessionCredential(with: result.token)
+    await authRepository.updateSessionCredential(with: result.token)
 
     return result
   }
@@ -53,7 +53,7 @@ public struct AuthUseCaseImpl: AuthUseCaseInterface {
   public func refresh() async throws -> AuthTokens {
     let tokens = try await authRepository.refresh()
     keychainManager.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken)
-    authRepository.updateSessionCredential(with: tokens)
+    await authRepository.updateSessionCredential(with: tokens)
     return tokens
   }
 
@@ -71,7 +71,7 @@ public struct AuthUseCaseImpl: AuthUseCaseInterface {
     return result
   }
 
-  public func updateSessionCredential(with tokens: AuthTokens) {
-    authRepository.updateSessionCredential(with: tokens)
+  public func updateSessionCredential(with tokens: AuthTokens) async {
+    await authRepository.updateSessionCredential(with: tokens)
   }
 }

@@ -5,6 +5,7 @@
 
 import BattleDomainInterface
 import Foundation
+import PickeCoreUtility
 
 public extension BattlePerspectivePageDataDTO {
   func toDomain() -> BattlePerspectivePage {
@@ -32,7 +33,7 @@ public extension BattlePerspectiveDTO {
   }
 
   private static func parseISO8601(_ value: String) -> Date? {
-    PerspectiveDateParser.parse(value)
+    ServerDateParser.parse(value)
   }
 }
 

@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct ProfileUpdateRequest: Encodable {
+public struct ProfileUpdateRequest: Encodable, Sendable {
   public let nickname: String
   public let characterType: String
 

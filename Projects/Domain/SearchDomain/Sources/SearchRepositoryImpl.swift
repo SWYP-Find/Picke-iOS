@@ -5,6 +5,8 @@
 
 import Foundation
 
+import Dependencies
+
 import APIEndpoint
 import HomeDomainInterface
 import PickeNetwork
@@ -13,15 +15,10 @@ import SearchDomainInterface
 import LogMacro
 import BattleDomainInterface
 
-
 public final class SearchRepositoryImpl: SearchInterface, @unchecked Sendable {
-  private let provider: any NetworkProviding<SearchService>
+  @Dependency(\.networkClient) private var client
 
-  public init(
-    provider: any NetworkProviding<SearchService> = AlamofireNetworkProvider<SearchService>.authorized
-  ) {
-    self.provider = provider
-  }
+  public init() {}
 
   public func searchBattles(
     category: String?,
@@ -29,15 +26,10 @@ public final class SearchRepositoryImpl: SearchInterface, @unchecked Sendable {
     offset: Int?,
     size: Int?
   ) async throws -> ExploreItemPage {
-    let dto: SearchBattlePageResponseDTO = try await provider.request(
-      .battles(category: category, sort: sort, offset: offset, size: size)
+    let data = try await client.send(
+      SearchService.battles(category: category, sort: sort, offset: offset, size: size),
+      as: SearchBattlePageDataDTO.self
     )
-
-    guard let data = dto.data else {
-      let message = dto.error?.message ?? "배틀 검색 응답이 비어 있습니다"
-      Log.error("[SearchRepositoryImpl] empty searchBattles payload: \(message)")
-      throw BattleError.backendError(message)
-    }
 
     return data.toDomain()
   }

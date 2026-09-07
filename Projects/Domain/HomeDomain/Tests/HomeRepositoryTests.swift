@@ -4,6 +4,8 @@
 //
 
 import Foundation
+
+import Dependencies
 import Testing
 
 @testable import HomeData
@@ -143,7 +145,11 @@ struct HomeRepositoryTests {
 
   @Test func fetchHome_성공시_도메인_번들로_매핑된다() async throws {
     let data = try #require(Self.fullEnvelope.data(using: .utf8))
-    let repository = HomeRepositoryImpl(provider: StubNetworkProvider<HomeService>(stubData: data))
+    let repository = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: data)
+    } operation: {
+      HomeRepositoryImpl()
+    }
 
     let bundle = try await repository.fetchHome()
 
@@ -185,7 +191,11 @@ struct HomeRepositoryTests {
 
   @Test func fetchHome_빈_섹션이면_빈_배열로_매핑된다() async throws {
     let data = try #require(Self.emptyEnvelope.data(using: .utf8))
-    let repository = HomeRepositoryImpl(provider: StubNetworkProvider<HomeService>(stubData: data))
+    let repository = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: data)
+    } operation: {
+      HomeRepositoryImpl()
+    }
 
     let bundle = try await repository.fetchHome()
 
@@ -200,7 +210,11 @@ struct HomeRepositoryTests {
 
   @Test func fetchHome_data가_비어있으면_backendError_를_던진다() async throws {
     let data = try #require(Self.emptyDataEnvelope.data(using: .utf8))
-    let repository = HomeRepositoryImpl(provider: StubNetworkProvider<HomeService>(stubData: data))
+    let repository = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: data)
+    } operation: {
+      HomeRepositoryImpl()
+    }
 
     await #expect(throws: AuthError.backendError("홈 데이터를 불러오지 못했습니다")) {
       _ = try await repository.fetchHome()
@@ -208,7 +222,11 @@ struct HomeRepositoryTests {
   }
 
   @Test func fetchHome_네트워크_에러_시_에러를_전파한다() async throws {
-    let repository = HomeRepositoryImpl(provider: ThrowingStubNetworkProvider<HomeService>())
+    let repository = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      HomeRepositoryImpl()
+    }
 
     await #expect(throws: (any Error).self) {
       _ = try await repository.fetchHome()

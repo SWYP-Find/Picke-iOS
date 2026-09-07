@@ -19,7 +19,7 @@ public protocol AuthInterface: Sendable {
   func refresh() async throws -> AuthTokens
   func withDraw(reason: String) async throws -> WithdrawEntity
   func logout() async throws -> AuthExitEntity
-  func updateSessionCredential(with tokens: AuthTokens)
+  func updateSessionCredential(with tokens: AuthTokens) async
 }
 
 /// Auth Repository 의 DependencyKey 구조체

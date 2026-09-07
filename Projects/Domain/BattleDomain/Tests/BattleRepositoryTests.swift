@@ -10,6 +10,8 @@ import Testing
 import APIEndpoint
 import BattleDomainInterface
 import Foundation
+
+import Dependencies
 import HomeDomainInterface
 
 struct BattleRepositoryTests {
@@ -40,7 +42,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let page = try await repo.fetchTodayBattles()
 
@@ -55,7 +61,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 200, "data": { "items": [], "totalCount": 0 }, "error": null }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let page = try await repo.fetchTodayBattles()
 
@@ -67,7 +77,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 400, "data": null, "error": {"code": "BAD_REQUEST", "message": "오늘의 배틀 조회 실패"} }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     do {
       _ = try await repo.fetchTodayBattles()
@@ -110,7 +124,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let detail = try await repo.fetchBattle(battleId: 1)
 
@@ -126,7 +144,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 200, "data": {"voteId": 10, "status": "CREATED"}, "error": null }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let result = try await repo.submitPreVote(battleId: 1, optionId: 7)
 
@@ -140,7 +162,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 200, "data": {"voteId": 11, "status": "UPDATED"}, "error": null }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let result = try await repo.submitPostVote(battleId: 1, optionId: 3)
 
@@ -165,7 +191,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let stats = try await repo.fetchVoteStats(battleId: 1)
 
@@ -201,7 +231,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let page = try await repo.fetchPerspectives(battleId: 1, cursor: nil, size: nil, optionId: nil, sort: nil)
 
@@ -215,7 +249,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 200, "data": {"items": [], "nextCursor": null, "hasNext": false}, "error": null }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let page = try await repo.fetchPerspectives(battleId: 1, cursor: nil, size: nil, optionId: nil, sort: .popular)
 
@@ -226,7 +264,7 @@ struct BattleRepositoryTests {
   // MARK: - createPerspective
 
   // createPerspective 는 생성 응답 확인 후 fetchMyPerspective 를 재호출한다.
-  // StubNetworkProvider 는 요청 target 과 무관하게 동일한 stubData 를 디코딩하므로,
+  // StubNetworkClient 는 요청 target 과 무관하게 동일한 stubData 를 디코딩하므로,
   // 이 fixture 는 CreatePerspectiveDataDTO(perspectiveId/status/createdAt) 와
   // BattlePerspectiveDTO(perspectiveId/user/option/content/likeCount/commentCount/...) 양쪽 모두를
   // 디코딩할 수 있도록 두 DTO 의 필드를 모두 포함한다.
@@ -250,7 +288,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let perspective = try await repo.createPerspective(battleId: 1, content: "내 의견입니다", optionId: 1)
 
@@ -273,7 +315,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let perspective = try await repo.createPerspective(battleId: 39, content: "ㄴㄴㄴ", optionId: 75)
 
@@ -284,7 +330,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 400, "data": null, "error": {"code": "BAD_REQUEST", "message": "댓글 작성 실패"} }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     do {
       _ = try await repo.createPerspective(battleId: 1, content: "내용", optionId: nil)
@@ -318,7 +368,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let perspective = try await repo.fetchMyPerspective(battleId: 1)
 
@@ -329,7 +383,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 404, "data": null, "error": {"code": "NOT_FOUND", "message": "참여 이력 없음"} }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let perspective = try await repo.fetchMyPerspective(battleId: 1)
 
@@ -337,7 +395,11 @@ struct BattleRepositoryTests {
   }
 
   @Test func fetchMyPerspective_는_provider_가_에러를_던지면_nil_을_반환한다() async throws {
-    let repo = BattleRepositoryImpl(provider: ThrowingStubNetworkProvider<BattleService>())
+    let repo = withDependencies {
+      $0.networkClient = ThrowingStubNetworkClient()
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let perspective = try await repo.fetchMyPerspective(battleId: 1)
 
@@ -372,7 +434,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let scenario = try await repo.fetchScenario(battleId: 1)
 
@@ -402,7 +468,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let scenario = try await repo.fetchScenario(battleId: 1)
 
@@ -435,7 +505,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let page = try await repo.fetchRecommendedBattles(battleId: 1)
 
@@ -456,7 +530,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
 
     let page = try await repo.fetchRecommendedBattles(battleId: 1)
 
@@ -487,7 +565,11 @@ struct BattleRepositoryTests {
       "error": null
     }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
     let draft = BattleProposalDraft(
       category: "철학",
       topic: "AI는 의식이 있는가",
@@ -507,7 +589,11 @@ struct BattleRepositoryTests {
     let json = """
     { "statusCode": 400, "data": null, "error": {"code": "BAD_REQUEST", "message": "배틀 제안 실패"} }
     """
-    let repo = BattleRepositoryImpl(provider: StubNetworkProvider<BattleService>(stubData: Data(json.utf8)))
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
     let draft = BattleProposalDraft(
       category: "철학",
       topic: "주제",

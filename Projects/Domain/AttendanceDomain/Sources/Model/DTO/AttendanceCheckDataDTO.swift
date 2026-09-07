@@ -26,5 +26,3 @@ public struct AttendanceCheckDataDTO: Decodable {
     case totalPoints = "total_points"
   }
 }
-
-public typealias AttendanceCheckResponseDTO = BaseResponseDTO<AttendanceCheckDataDTO>

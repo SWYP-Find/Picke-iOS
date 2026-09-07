@@ -12,5 +12,3 @@ public struct ProfileUpdateDataDTO: Decodable {
   public let characterType: String?
   public let updatedAt: String?
 }
-
-public typealias ProfileUpdateResponseDTO = BaseResponseDTO<ProfileUpdateDataDTO>
