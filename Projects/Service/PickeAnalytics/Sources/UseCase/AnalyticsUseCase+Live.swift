@@ -76,9 +76,6 @@ extension AnalyticsUseCase: DependencyKey {
   )
 
   /// 트래킹한 유저 액션을 Sentry 에도 남긴다. 셋 다 목적이 다르다.
-  /// - breadcrumb: 크래시 직전 행동 흐름. Mixpanel 을 따로 열지 않고 이슈 화면에서 바로 읽는다.
-  /// - `user.action.count`: 액션 종류별 발생량. 배포 후 특정 화면 진입이 끊기면 여기서 먼저 보인다.
-  /// - `ad.click.count`: 광고 클릭만 따로 집계. 지면·형태별로 나눠 본다.
   private static func monitorInSentry(name: String, properties: Properties, event: AnalyticsEvent) {
     let attributes = properties.compactMapValues { $0 as? String }
 
@@ -107,7 +104,6 @@ extension AnalyticsUseCase: DependencyKey {
   }
 
   /// Mixpanel 유저 프로필 누적. 이벤트만으론 "이 유저가 광고를 얼마나 누르는 사람인지" 를
-  /// 코호트로 못 뽑아서, 사람 단위 지표를 함께 쌓는다.
   private static func enrichPeopleProfile(_ mixpanel: MixpanelInstance, event: AnalyticsEvent) {
     switch event {
     case let .adClick(data):

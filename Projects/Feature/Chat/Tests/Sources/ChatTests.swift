@@ -17,7 +17,6 @@ struct ChatTests {
 
   @Test
   func chatLogicTest() {
-    // Add your test logic here.
     let result = true
     #expect(result == true)
   }

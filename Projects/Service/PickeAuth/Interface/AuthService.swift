@@ -6,7 +6,6 @@
 import Foundation
 
 /// 앱의 인증 상태를 저장소와 네트워크 세션에 동시에 반영하는 단일 진입점.
-/// Repository 는 Keychain 이나 `CredentialUpdating` 을 직접 다루지 않고 이 계약만 사용한다.
 public protocol AuthService: Sendable {
   /// 저장소에 유효한 access/refresh token 쌍이 있는지 확인한다.
   var isLoggedIn: Bool { get async }

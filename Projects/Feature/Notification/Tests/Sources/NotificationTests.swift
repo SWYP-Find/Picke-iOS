@@ -17,7 +17,6 @@ struct NotificationTests {
 
   @Test
   func notificationLogicTest() {
-    // Add your test logic here.
     let result = true
     #expect(result == true)
   }

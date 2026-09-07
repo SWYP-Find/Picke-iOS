@@ -11,8 +11,6 @@ import Sharing
 
 public extension SharedReaderKey where Self == PersistentSharedKey<String?>.Default {
   /// Apple 로그인이 최초 1회만 내려주는 표시 이름.
-  ///
-  /// 재로그인 시에는 Apple 이 이름을 주지 않으므로 앱이 직접 들고 있어야 한다.
   static var appleUserName: Self {
     Self[
       .persistent(

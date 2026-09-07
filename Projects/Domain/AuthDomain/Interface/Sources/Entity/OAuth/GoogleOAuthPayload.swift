@@ -8,7 +8,6 @@
 import Foundation
 
 /// Google OAuth 콜백에서 받은 백엔드 로그인 결과
-/// 백엔드가 redirect_uri 를 직접 처리하고 picke:// 딥링크에 토큰을 실어 보내는 흐름.
 public struct GoogleOAuthPayload {
   public let idToken: String
   public let accessToken: String?

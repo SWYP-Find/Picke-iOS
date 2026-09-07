@@ -9,7 +9,6 @@ import XCTest
 
 final class PickeTests: XCTestCase {
   override func setUpWithError() throws {
-    // Put setup code here.
   }
 
   override func tearDownWithError() throws {

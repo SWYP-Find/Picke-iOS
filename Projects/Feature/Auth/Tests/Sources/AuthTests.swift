@@ -18,7 +18,6 @@ struct AuthTests {
 
     @Test
     func authLogicTest() {
-        // Add your test logic here.
         let result = true
         #expect(result == true)
     }

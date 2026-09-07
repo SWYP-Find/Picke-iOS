@@ -6,7 +6,6 @@
 import Foundation
 
 /// 멀티파트 바디의 한 조각. (파일 또는 폼 필드)
-/// Alamofire `MultipartFormData` 조립은 구현(PickeNetwork)이 맡는다.
 public struct PickeMultipartPart: Sendable {
   /// 파트 바이트의 출처
   public enum Source: Sendable {

@@ -6,8 +6,6 @@
 import Foundation
 
 /// 서버가 명시적으로 내려준 에러 응답.
-/// Picke 서버는 실패를 HTTP status(4xx/5xx)로 알리고 바디의 `error` 에 `{ code, message }` 를 담아 준다.
-/// 사람에게 보여줄 문구는 `message`, 분기는 `code` 로 한다.
 public struct ResponseError: Error, Sendable, Equatable {
   /// HTTP status
   public let httpStatus: Int

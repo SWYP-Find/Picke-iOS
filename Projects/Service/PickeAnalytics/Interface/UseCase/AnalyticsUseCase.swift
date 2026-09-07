@@ -10,9 +10,6 @@ import ComposableArchitecture
 // MARK: - UseCase
 
 /// 유저 액션 트래킹 계약.
-///
-/// 이 타입은 어떤 분석 SDK 도 알지 못한다. Mixpanel·Sentry 로 실제로 보내는 구현은
-/// `PickeAnalytics`(Sources) 의 `liveValue` 에만 있고, 화면들은 이 인터페이스만 의존한다.
 public struct AnalyticsUseCase: Sendable {
   /// 앱 시작 시 공통 슈퍼 프로퍼티(os_type/app_version/build) 등록.
   public var registerBaseProperties: @Sendable () -> Void
@@ -37,7 +34,6 @@ public struct AnalyticsUseCase: Sendable {
 }
 
 /// 테스트/프리뷰 기본값은 인터페이스가 갖는다. `liveValue` 는 구현 모듈이 `DependencyKey` 로 채운다
-/// — 그래야 테스트 타깃이 분석 SDK 를 링크하지 않는다.
 extension AnalyticsUseCase: TestDependencyKey {
   public static let testValue = AnalyticsUseCase(
     registerBaseProperties: {},

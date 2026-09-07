@@ -13,9 +13,6 @@ public extension BattleScenario {
   }
 
   /// 노드 종료 시간(초).
-  /// 다음 노드(autoNext 또는 인터랙티브 분기)의 시작 시각이 실제 오디오 경계이므로 우선 사용한다.
-  /// (audioDuration 합산은 실제 오디오와 어긋나, 선택지가 마지막 대사 도중에 떠 음성이 끊기는 문제가 있음)
-  /// 다음 노드가 없으면(클로징) 노드 시작 + audioDuration.
   func nodeEndTime(for node: ScenarioNode) -> TimeInterval {
     let nextNodeIds: [Int] = {
       if let auto = node.autoNextNodeId { return [auto] }

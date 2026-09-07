@@ -101,11 +101,9 @@ public actor MockAppleOAuthRepository: AppleOAuthInterface {
     _ credential: ASAuthorizationAppleIDCredential,
     nonce: String
   ) async throws -> AppleOAuthPayload {
-    // Track call
     signInCallCount += 1
     lastSignInCall = Date()
 
-    // Apply delay
     if configuration.delay > 0 {
       try await Task.sleep(for: .seconds(configuration.delay))
     }
@@ -125,11 +123,9 @@ public actor MockAppleOAuthRepository: AppleOAuthInterface {
   }
 
   public func signIn() async throws -> AppleOAuthPayload {
-    // Track call
     signInCallCount += 1
     lastSignInCall = Date()
     
-    // Apply delay
     if configuration.delay > 0 {
       try await Task.sleep(for: .seconds(configuration.delay))
     }

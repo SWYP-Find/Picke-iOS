@@ -18,7 +18,6 @@ struct HifiTests {
 
     @Test
     func hifiLogicTest() {
-        // Add your test logic here.
         let result = true
         #expect(result == true)
     }

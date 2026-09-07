@@ -18,7 +18,6 @@ struct BattleTests {
 
     @Test
     func battleLogicTest() {
-        // Add your test logic here.
         let result = true
         #expect(result == true)
     }

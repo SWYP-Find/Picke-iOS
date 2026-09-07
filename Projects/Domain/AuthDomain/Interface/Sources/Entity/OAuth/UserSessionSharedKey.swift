@@ -11,8 +11,6 @@ import Sharing
 
 public extension SharedReaderKey where Self == PersistentSharedKey<UserSession>.Default {
   /// 앱 실행 사이에 유지되는 사용자 세션 메타데이터.
-  ///
-  /// OAuth 토큰과 서버 access token 은 SQLite 에 기록하지 않고 Keychain 수명주기를 그대로 둔다.
   static var userSession: Self {
     Self[
       .persistent(

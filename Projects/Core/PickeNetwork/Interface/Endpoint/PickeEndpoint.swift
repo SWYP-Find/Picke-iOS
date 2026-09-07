@@ -8,18 +8,12 @@ import Foundation
 import Alamofire
 
 /// 엔드포인트가 속한 도메인. base URL 과 도메인 경로 접두사를 묶는다.
-/// (Picke 서버는 `api/v1/battles/` 처럼 도메인마다 경로 접두사가 달라 엔드포인트가 도메인을 들고 있는다.)
 public protocol PickeDomainType: Sendable {
   var baseURLString: String { get }
   var url: String { get }
 }
 
 /// 일반 요청(`PickeDataRequest`)·멀티파트 업로드(`PickeUploadRequest`)가 공유하는 엔드포인트 메타.
-/// 바디 표현(parameters / parts)만 각 프로토콜이 따로 더한다.
-///
-/// 응답 타입은 여기서 고정하지 않는다. 한 enum 이 케이스마다 다른 응답을 갖는
-/// Moya 식 선언(`case login` / `case logout`)을 그대로 쓸 수 있게 하기 위함이다.
-/// 응답 타입까지 타입으로 묶고 싶으면 `PickeDataRequest` 를 쓴다.
 public protocol PickeEndpoint {
   /// 엔드포인트가 속한 도메인 (base URL + 경로 접두사)
   var domain: any PickeDomainType { get }

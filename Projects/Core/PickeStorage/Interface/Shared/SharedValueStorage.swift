@@ -16,8 +16,6 @@ public struct SharedValueStorageIdentifier: Hashable, Sendable {
 }
 
 /// `@Shared` 값의 직렬화 결과를 보관하는 저장소 경계.
-///
-/// 도메인은 SQLite 구현을 모르고 이 계약만 쓴다.
 public protocol SharedValueStorage: Sendable {
   var identifier: SharedValueStorageIdentifier { get }
 
@@ -38,7 +36,6 @@ public extension DependencyValues {
 }
 
 /// 저장소를 갈아끼우지 않은 채 영속 경로를 타면 알려주는 기본값.
-/// 조용히 nil 을 돌려주면 테스트가 통과해버려 누락을 놓친다.
 private struct UnimplementedSharedValueStorage: SharedValueStorage {
   let identifier = SharedValueStorageIdentifier()
 

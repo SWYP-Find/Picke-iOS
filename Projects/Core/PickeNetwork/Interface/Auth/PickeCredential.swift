@@ -29,7 +29,6 @@ public struct PickeCredential: AuthenticationCredential, Sendable, Equatable {
   }
 
   /// 만료(leeway 포함) 임박 시 refresh 필요.
-  /// Alamofire `AuthenticationInterceptor` 가 요청 전에 이 값을 검사해 401 을 받기 전에 미리 갱신한다.
   public var requiresRefresh: Bool {
     guard let expiresAt else { return false }
     return Date() >= expiresAt.addingTimeInterval(-refreshLeeway)

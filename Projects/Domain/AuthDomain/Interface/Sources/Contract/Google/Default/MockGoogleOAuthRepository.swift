@@ -82,11 +82,9 @@ public actor MockGoogleOAuthRepository: GoogleOAuthInterface {
   // MARK: - GoogleOAuthRepositoryProtocol Implementation
 
   public func signIn() async throws -> GoogleOAuthPayload {
-    // Track call
     signInCallCount += 1
     lastSignInCall = Date()
 
-    // Apply delay
     if configuration.delay > 0 {
       try await Task.sleep(for: .seconds(configuration.delay))
     }

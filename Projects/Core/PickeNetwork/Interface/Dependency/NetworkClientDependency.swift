@@ -26,7 +26,6 @@ public extension DependencyValues {
 }
 
 /// 테스트에서 클라이언트를 갈아끼우지 않은 채 네트워크를 타면 알려주는 기본값.
-/// 조용히 빈 응답을 돌려주면 테스트가 통과해버려 누락을 놓친다.
 public struct UnimplementedNetworkClient: PickeNetworkClient {
   public init() {}
 

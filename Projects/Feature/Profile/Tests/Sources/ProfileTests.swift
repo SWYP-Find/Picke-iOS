@@ -17,7 +17,6 @@ struct ProfileTests {
 
   @Test
   func profileLogicTest() {
-    // Add your test logic here.
     let result = true
     #expect(result == true)
   }

@@ -18,7 +18,6 @@ struct WebTests {
 
     @Test
     func webLogicTest() {
-        // Add your test logic here.
         let result = true
         #expect(result == true)
     }

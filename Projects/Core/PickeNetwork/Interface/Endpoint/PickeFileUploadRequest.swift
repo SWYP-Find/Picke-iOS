@@ -6,7 +6,6 @@
 import Foundation
 
 /// presigned URL 에 원본 바이트를 PUT 업로드하는 요청.
-/// 앱 서버 응답 규약을 타지 않는 스토리지 직접 업로드라 baseURL 을 쓰지 않고 URL 을 통째로 받는다.
 public protocol PickeFileUploadRequest: Sendable {
   /// 업로드 대상 presigned URL
   var uploadURL: URL { get }

@@ -26,7 +26,6 @@ public extension DependencyValues {
 }
 
 /// 등록하지 않은 채 인증을 건드리면 알려주는 기본값.
-/// 조용히 성공을 돌려주면 로그인 관련 테스트가 통과해버린다.
 public struct UnimplementedAuthService: AuthService {
   public init() {}
 

@@ -8,10 +8,6 @@ import Foundation
 import Alamofire
 
 /// 본문(payload)이 없는 응답. 성공만 받으면 되는 요청(POST/DELETE 등)의
-/// `Response` 로 쓰면, 서버가 바디를 안 내려도 에러 없이 성공 처리된다.
-///
-/// Alamofire 의 `EmptyResponse` 를 채택해, 응답 바디가 비었을 때
-/// 시리얼라이저가 값을 직접 만들어 성공으로 처리하게 한다.
 public struct PickeEmptyResponse: Decodable, Sendable, EmptyResponse {
   public init() {}
 
