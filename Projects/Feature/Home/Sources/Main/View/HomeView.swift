@@ -12,7 +12,7 @@ import PickeDesignKit
 import PickeSharedUI
 
 import ComposableArchitecture
-import Ad
+import FeatureSharedUI
 
 @ViewAction(for: HomeFeature.self)
 public struct HomeView: View {

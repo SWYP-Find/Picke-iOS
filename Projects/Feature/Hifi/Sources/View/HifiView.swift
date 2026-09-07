@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-import Ad
+import FeatureSharedUI
 import ComposableArchitecture
 import HomeDomainInterface
 import PickeSharedUI

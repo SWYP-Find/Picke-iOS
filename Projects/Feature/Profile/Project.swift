@@ -22,7 +22,9 @@ let project = Project.makeModule(
     .domain(.auth, .interface),
     .domain(.battle, .interface),
     .domain(.notification, .interface),
-    .feature(.ad, .implementation), // 마이페이지 하단 배너 광고
+    .feature(.featureSharedUI, .implementation), // 마이페이지 하단 배너 광고
+    // 리워드 광고 계약(RewardedAdClient)은 Ad Interface 에서 온다.
+    .feature(.ad),
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

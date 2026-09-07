@@ -24,7 +24,7 @@ let project = Project.makeModule(
     .domain(.home, .interface),
     .domain(.notification, .interface),
     // 홈 피드 중간 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
-    .feature(.ad, .implementation),
+    .feature(.featureSharedUI, .implementation),
   ],
   hasTests: true,
   hasInterface: true,

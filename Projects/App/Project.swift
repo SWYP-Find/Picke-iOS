@@ -14,6 +14,10 @@ let project = Project.makeAppModule(
   dependencies: [
     // 화면·도메인·데이터 구현은 각 레이어의 조립 경계 하나로 들어온다.
     .featureAssembly,
+    .domainAssembly,
+    .serviceAssembly,
+    // Splash 가 App 으로 올라오며 애니메이션 에셋을 직접 쓴다.
+    .ui(.animation),
     .SPM.googleMobileAds,
     .SPM.kingfisher,
   ],
@@ -21,5 +25,5 @@ let project = Project.makeAppModule(
   infoPlist: .appInfoPlist,
   entitlements: .file(path: "../../Entitlements/Picke.entitlements"),
   schemes: Scheme.appSchemes(appName: appName),
-  hasTests: false
+  hasTests: true
 )

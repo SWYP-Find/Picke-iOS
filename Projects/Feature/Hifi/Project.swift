@@ -18,7 +18,7 @@ let project = Project.makeModule(
     .core(.coreUtility),
     .service(.analytics, .interface),
     // 탐색 리스트 인라인 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
-    .feature(.ad, .implementation),
+    .feature(.featureSharedUI, .implementation),
     .domain(.home, .interface),
     .domain(.search, .interface),
     .domain(.notification, .interface),

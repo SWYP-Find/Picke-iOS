@@ -12,7 +12,6 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .feature(.splash, .implementation),
     .feature(.auth, .implementation),
     .feature(.web, .implementation),
     .feature(.home, .implementation),
@@ -22,5 +21,6 @@ let project = Project.makeModule(
     .feature(.profile, .implementation),
     .feature(.notification, .implementation),
     .feature(.ad, .implementation),
+    .feature(.featureSharedUI, .implementation),
   ]
 )

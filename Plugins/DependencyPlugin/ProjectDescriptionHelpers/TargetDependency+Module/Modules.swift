@@ -10,7 +10,6 @@ import Foundation
 import ProjectDescription
 
 public enum FeatureModule: String, CaseIterable {
-  case splash = "Splash"
   case auth = "Auth"
   case home = "Home"
   case chat = "Chat"
@@ -20,6 +19,7 @@ public enum FeatureModule: String, CaseIterable {
   case profile = "Profile"
   case notification = "Notification"
   case ad = "Ad"
+  case featureSharedUI = "FeatureSharedUI"
 
   /// Projects/Feature/<name>
   var path: Path {

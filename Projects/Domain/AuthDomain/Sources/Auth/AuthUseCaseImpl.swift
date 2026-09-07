@@ -10,11 +10,13 @@ import Foundation
 import AuthDomainInterface
 
 import ComposableArchitecture
+import PickeStorageInterface
 import PickeAuthInterface
 
 public struct AuthUseCaseImpl: AuthUseCaseInterface {
   @Dependency(\.authRepository) var authRepository
   @Dependency(\.authService) private var authService: any AuthService
+  @Dependency(\.sessionCacheInvalidator) private var sessionCacheInvalidator
   @Shared(.userSession) var userSession: UserSession
 
   public init() {}
@@ -54,6 +56,7 @@ public struct AuthUseCaseImpl: AuthUseCaseInterface {
   public func logout() async throws -> AuthExitEntity {
     let result = try await authRepository.logout()
     await authService.signOut()
+    await sessionCacheInvalidator.invalidate()
     return result
   }
 
@@ -61,6 +64,7 @@ public struct AuthUseCaseImpl: AuthUseCaseInterface {
     let result = try await authRepository.withDraw(reason: reason)
     if result.withdrawn {
       await authService.signOut()
+      await sessionCacheInvalidator.invalidate()
     }
     return result
   }

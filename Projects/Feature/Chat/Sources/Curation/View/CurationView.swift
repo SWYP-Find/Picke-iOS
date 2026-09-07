@@ -10,7 +10,7 @@ import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
 import PickeCoreUtility
-import Ad
+import FeatureSharedUI
 
 @ViewAction(for: CurationFeature.self)
 public struct CurationView: View {
