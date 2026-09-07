@@ -3,6 +3,7 @@
 //  ServiceAssemblyTests
 //
 
+import Foundation
 import Testing
 
 @testable import ServiceAssembly
@@ -22,15 +23,18 @@ struct ServiceDependencyAssemblyTests {
     #expect(NetworkContainer.authService as AnyObject === NetworkContainer.authService as AnyObject)
   }
 
-  /// 앱 부팅 시 이 한 번의 등록으로 네트워크·인증·저장소가 모두 live 로 바뀌어야 한다.
+  /// 앱 부팅 시 이 한 번의 등록으로 네트워크·인증이 모두 live 로 바뀌어야 한다.
   @Test
-  func register_는_네트워크_인증_저장소를_한번에_등록한다() {
+  func register_는_네트워크와_인증을_한번에_등록한다() throws {
     var values = DependencyValues()
     ServiceDependencyAssembly.register(into: &values)
 
     #expect(values.networkClient as AnyObject === NetworkContainer.authenticatedClient as AnyObject)
     #expect(values.authService as AnyObject === NetworkContainer.authService as AnyObject)
-    #expect(String(describing: type(of: values.sharedValueStorage)).isEmpty == false)
+    // 저장소 조립도 함께 타야 공유 값이 앱 재실행 후에도 남는다.
+    let key = "ServiceDependencyAssemblyTests-\(UUID().uuidString)"
+    try values.sharedValueStorage.save(Data("값".utf8), forKey: key)
+    defer { try? values.sharedValueStorage.remove(forKey: key) }
   }
 
   @Test

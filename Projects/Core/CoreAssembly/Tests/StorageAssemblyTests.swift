@@ -3,28 +3,34 @@
 //  CoreAssemblyTests
 //
 
+import Foundation
 import Testing
 
 @testable import CoreAssembly
+import PickeStorage
 import PickeStorageInterface
 
 import Dependencies
 
-@Suite("StorageAssembly")
 struct StorageAssemblyTests {
-  /// 조립이 빠지면 앱이 보안 저장소 없이 뜨고 재실행 시 로그인이 풀린다.
-  @Test("secureStorage 는 SecureStorage 구현을 제공한다")
-  func secureStorageProvidesStorage() {
-    let storage: any SecureStorage = StorageAssembly.secureStorage()
-
-    #expect(String(describing: type(of: storage)).isEmpty == false)
-  }
-
-  @Test("register 는 공유값 저장소 의존성을 꽂는다")
-  func registerInstallsSharedValueStorage() {
+  /// 등록을 빼먹으면 공유 값 경로가 Unimplemented 기본값에 걸려 전부 throw 한다.
+  /// 실제 읽고 쓰는 데까지 가봐야 그 누락이 드러난다.
+  @Test
+  func register_후에는_공유값을_실제로_읽고_쓴다() throws {
     var values = DependencyValues()
     StorageAssembly.register(into: &values)
+    let storage = values.sharedValueStorage
+    let key = "StorageAssemblyTests-\(UUID().uuidString)"
+    let payload = Data("값".utf8)
 
-    #expect(String(describing: type(of: values.sharedValueStorage)).isEmpty == false)
+    try storage.save(payload, forKey: key)
+    defer { try? storage.remove(forKey: key) }
+
+    #expect(try storage.load(forKey: key) == payload)
+  }
+
+  @Test
+  func secureStorage_는_Keychain_구현을_내놓는다() {
+    #expect(StorageAssembly.secureStorage() is KeychainStorage)
   }
 }
