@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 struct CustomConfirmationPopup: View {
   @Environment(\.dynamicTypeSize) var dynamicTypeSize
 

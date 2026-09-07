@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 public struct PickeRetryErrorView: View {
   private let message: String
   private let retryTitle: String

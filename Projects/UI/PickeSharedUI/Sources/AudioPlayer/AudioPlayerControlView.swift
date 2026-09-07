@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 public struct AudioPlayerControlView: View {
   @Binding private var isPlaying: Bool
   private let onBackward: () -> Void

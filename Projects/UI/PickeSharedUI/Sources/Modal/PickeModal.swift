@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 import ComposableArchitecture
 
 public extension View {

@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 public struct PickeEmptyStateView: View {
   private let message: String
   private let imageAsset: ImageAsset

@@ -6,6 +6,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 extension CustomConfirmationPopup {
   @ViewBuilder
   var reportContent: some View {

@@ -6,6 +6,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 extension CustomConfirmationPopup {
   /// 베이지 카드 + primary 보더 컨테이너 (width 313, top padding 20).
   func pickeAlertCard(

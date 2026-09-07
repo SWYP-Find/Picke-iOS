@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 public struct AudioEqualizerView: View {
   private let isPlaying: Bool
   private let barCount: Int

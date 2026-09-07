@@ -5,6 +5,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 /// 하단 고정 댓글 입력 바.
 public struct PickeCommentInputBar: View {
   @Binding private var text: String

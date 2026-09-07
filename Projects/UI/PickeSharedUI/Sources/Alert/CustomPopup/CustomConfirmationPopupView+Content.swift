@@ -6,6 +6,8 @@
 
 import SwiftUI
 
+import PickeDesignKit
+
 extension CustomConfirmationPopup {
   func popupMaxWidth(for containerWidth: CGFloat) -> CGFloat {
     max(0, min(containerWidth - popupHorizontalPadding * 2, 360))

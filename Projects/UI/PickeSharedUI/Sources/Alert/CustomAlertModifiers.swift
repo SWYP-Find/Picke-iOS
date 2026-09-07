@@ -6,6 +6,8 @@
 import ComposableArchitecture
 import SwiftUI
 
+import PickeDesignKit
+
 public extension View {
   func customAlert(
     _ store: Binding<Store<CustomAlertState<CustomAlertAction>, CustomAlertAction>?>
