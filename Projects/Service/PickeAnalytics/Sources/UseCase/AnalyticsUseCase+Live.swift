@@ -1,11 +1,11 @@
 //
 //  AnalyticsUseCase+Live.swift
-//  AnalyticsService
+//  PickeAnalytics
 //
 
 import Foundation
 
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import ComposableArchitecture
 import LogMacro
 import Mixpanel

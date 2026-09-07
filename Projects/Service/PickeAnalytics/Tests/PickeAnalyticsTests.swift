@@ -1,12 +1,12 @@
 //
-//  AnalyticsServiceTests.swift
-//  AnalyticsServiceTests
+//  PickeAnalyticsTests.swift
+//  PickeAnalyticsTests
 //
 
-@testable import AnalyticsService
+@testable import PickeAnalytics
 import Testing
 
-struct AnalyticsServiceTests {
+struct PickeAnalyticsTests {
   @Test
   func analyticsServiceExample() {
     #expect(true)

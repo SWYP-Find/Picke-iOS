@@ -1,6 +1,6 @@
 //
 //  AnalyticsUseCase.swift
-//  AnalyticsService
+//  PickeAnalytics
 //
 
 import Foundation
@@ -12,7 +12,7 @@ import ComposableArchitecture
 /// 유저 액션 트래킹 계약.
 ///
 /// 이 타입은 어떤 분석 SDK 도 알지 못한다. Mixpanel·Sentry 로 실제로 보내는 구현은
-/// `AnalyticsService`(Sources) 의 `liveValue` 에만 있고, 화면들은 이 인터페이스만 의존한다.
+/// `PickeAnalytics`(Sources) 의 `liveValue` 에만 있고, 화면들은 이 인터페이스만 의존한다.
 public struct AnalyticsUseCase: Sendable {
   /// 앱 시작 시 공통 슈퍼 프로퍼티(os_type/app_version/build) 등록.
   public var registerBaseProperties: @Sendable () -> Void

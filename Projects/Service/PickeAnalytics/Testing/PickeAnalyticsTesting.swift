@@ -1,8 +1,8 @@
 //
-//  AnalyticsServiceTesting.swift
-//  AnalyticsServiceTesting
+//  PickeAnalyticsTesting.swift
+//  PickeAnalyticsTesting
 //
 
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 
-public enum AnalyticsServiceTesting {}
+public enum PickeAnalyticsTesting {}
