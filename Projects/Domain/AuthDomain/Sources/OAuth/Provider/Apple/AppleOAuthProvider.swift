@@ -7,7 +7,6 @@
 
 import Foundation
 import Dependencies
-import LogMacro
 import AuthenticationServices
 @preconcurrency import AuthDomainInterface
 import Sharing

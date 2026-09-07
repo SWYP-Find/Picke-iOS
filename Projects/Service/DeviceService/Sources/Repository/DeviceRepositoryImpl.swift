@@ -11,7 +11,6 @@ import APIEndpoint
 import PickeNetwork
 
 import DeviceServiceInterface
-import LogMacro
 
 public final class DeviceRepositoryImpl: DeviceInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

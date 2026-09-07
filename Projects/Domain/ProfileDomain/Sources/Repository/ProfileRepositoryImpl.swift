@@ -11,7 +11,6 @@ import APIEndpoint
 import PickeNetwork
 import ProfileDomainInterface
 
-import LogMacro
 
 public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

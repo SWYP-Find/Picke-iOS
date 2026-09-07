@@ -10,7 +10,6 @@ import AdInterface
 import PickeAnalyticsInterface
 import ComposableArchitecture
 import GoogleMobileAds
-import LogMacro
 
 // MARK: - Live
 

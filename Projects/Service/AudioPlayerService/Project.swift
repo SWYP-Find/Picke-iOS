@@ -13,7 +13,7 @@ let project = Project.configure(
   settings: .settings(),
   // AVFoundation 은 시스템 프레임워크라 별도 선언이 필요 없다.
   dependencies: [
-    .SPM.composableArchitecture,
+    
   ],
   interfaceDependencies: [
     .SPM.composableArchitecture,

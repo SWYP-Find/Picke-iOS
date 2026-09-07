@@ -21,7 +21,7 @@ let project = Project.configure(
     .SPM.mixpanelSessionReplay,
     .SPM.sentry,
     .SPM.sentrySwiftUI,
-    .SPM.logMarco,
+    .core(.logger),
   ],
   interfaceDependencies: [
     .SPM.composableArchitecture,

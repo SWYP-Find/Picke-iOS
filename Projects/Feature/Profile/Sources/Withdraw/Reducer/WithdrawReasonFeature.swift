@@ -7,7 +7,6 @@ import Foundation
 
 import AuthDomainInterface
 import ComposableArchitecture
-import LogMacro
 import PickeDesignKit
 import PickeSharedUI
 import DeviceServiceInterface

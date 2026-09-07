@@ -15,7 +15,7 @@ let project = Project.configure(
     .service(.apiEndpoint),
     .core(.network),
     .SPM.composableArchitecture,
-    .SPM.logMarco,
+    .core(.logger),
   ],
   interfaceDependencies: [
     .SPM.composableArchitecture,

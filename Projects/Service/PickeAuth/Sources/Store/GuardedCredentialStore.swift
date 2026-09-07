@@ -6,7 +6,6 @@
 import Foundation
 import os
 
-import LogMacro
 import PickeNetworkInterface
 
 /// 로그아웃 뒤 이미 진행 중이던 refresh 가 완료되어 죽은 세션을 되살리는 race 를 차단한다.

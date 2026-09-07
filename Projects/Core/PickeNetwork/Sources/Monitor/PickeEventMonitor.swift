@@ -5,7 +5,6 @@
 
 import Alamofire
 import Foundation
-import LogMacro
 
 struct PickeEventMonitor: EventMonitor {
   let queue = DispatchQueue(label: "store.picke.network.logger")

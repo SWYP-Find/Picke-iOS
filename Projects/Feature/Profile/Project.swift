@@ -22,8 +22,6 @@ let project = Project.configure(
     .domain(.auth, .interface),
     .domain(.battle, .interface),
     .domain(.notification, .interface),
-
-    .core(.thirdParty),
     .feature(.ad, .implementation), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,

@@ -15,8 +15,6 @@ let project = Project.configure(
     .serviceAssembly,
     .domain(.battle, .interface),
     .domain(.comment, .interface),
-    .SPM.composableArchitecture,
-    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .domain(.battle, .interface),

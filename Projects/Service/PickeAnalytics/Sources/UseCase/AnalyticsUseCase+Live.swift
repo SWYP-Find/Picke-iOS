@@ -7,7 +7,7 @@ import Foundation
 
 import PickeAnalyticsInterface
 import ComposableArchitecture
-import LogMacro
+import PickeCoreLogger
 import Mixpanel
 import MixpanelSessionReplay
 @preconcurrency import Sentry
@@ -62,7 +62,7 @@ extension AnalyticsUseCase: DependencyKey {
       let mixpanel = Mixpanel.mainInstance()
       let name = eventName(event)
       let properties = eventProperties(event)
-      #logDebug("Mixpanel track", ["event": name, "properties": String(describing: properties)])
+      PickeLogger.debug("Mixpanel track — event: \(name), properties: \(String(describing: properties))", category: .app)
       mixpanel.track(event: name, properties: properties)
       enrichPeopleProfile(mixpanel, event: event)
       monitorInSentry(name: name, properties: properties, event: event)

@@ -8,7 +8,6 @@ import Foundation
 import ChatInterface
 import CommentDomainInterface
 import ComposableArchitecture
-import LogMacro
 import PickeDesignKit
 import PickeCoreUtility
 import TCAFlow

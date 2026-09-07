@@ -12,7 +12,6 @@ import BattleDomainInterface
 import HomeDomainInterface
 import PickeNetwork
 
-import LogMacro
 
 public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

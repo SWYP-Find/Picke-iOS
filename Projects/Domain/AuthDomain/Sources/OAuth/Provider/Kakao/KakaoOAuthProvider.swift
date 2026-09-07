@@ -8,7 +8,6 @@
 import Dependencies
 @preconcurrency import AuthDomainInterface
 import Foundation
-import LogMacro
 import Sharing
 
 public final class KakaoOAuthProvider: KakaoOAuthProviderInterface, @unchecked Sendable {

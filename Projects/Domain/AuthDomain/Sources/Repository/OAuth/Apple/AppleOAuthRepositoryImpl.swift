@@ -10,15 +10,14 @@ import AuthenticationServices
 
 @preconcurrency import AuthDomainInterface
 
-import LogMacro
 import ComposableArchitecture
+import PickeCoreLogger
 
 #if canImport(UIKit)
 import UIKit
 #endif
 
 public final class AppleOAuthRepositoryImpl: NSObject, AppleOAuthInterface, @unchecked Sendable {
-  private let logger = LogMacro.Log.self
   @Dependency(\.appleManger) var appleLoginManger
   @Shared(.appleUserName) var appleUserName: String?
 
@@ -125,7 +124,7 @@ extension AppleOAuthRepositoryImpl: ASAuthorizationControllerDelegate {
 
     self.$appleUserName.withLock { $0 = displayName }
 
-    logger.info("Apple Sign In successful for user: \(displayName ?? "unknown"), \(appleUserName)")
+    PickeLogger.info("Apple Sign In 성공 — user: \(displayName ?? "unknown"), 저장된 이름: \(String(describing: appleUserName))", category: .auth)
     finishSignIn(with: .success(payload))
   }
 
@@ -138,7 +137,7 @@ extension AppleOAuthRepositoryImpl: ASAuthorizationControllerDelegate {
     if nsError.code == ASAuthorizationError.canceled.rawValue {
       finishSignIn(with: .failure(AuthError.userCancelled))
     } else {
-      logger.error("Apple Sign In failed: \(error.localizedDescription)")
+      PickeLogger.error("Apple Sign In 실패: \(error.localizedDescription)", category: .auth)
       finishSignIn(with: .failure(AuthError.invalidCredential(error.localizedDescription)))
     }
   }

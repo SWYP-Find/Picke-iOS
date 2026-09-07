@@ -15,11 +15,9 @@ let project = Project.configure(
     .serviceAssembly,
     .SPM.composableArchitecture,
     .domain(.home, .interface),
-    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .domain(.home, .interface),
-    
     .SPM.composableArchitecture,
   ]
 )

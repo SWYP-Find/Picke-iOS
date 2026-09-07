@@ -8,7 +8,6 @@ import ProfileDomainInterface
 import UIKit
 
 import ComposableArchitecture
-import LogMacro
 import PickeAnalyticsInterface
 import PickeCoreUtility
 

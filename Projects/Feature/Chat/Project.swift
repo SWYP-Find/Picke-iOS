@@ -12,6 +12,8 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .SPM.tcaFlow,
+    .SPM.composableArchitecture,
     .service(.audioPlayer, .interface),
     .domain(.perspective, .interface),
     .ui(.designKit),
@@ -23,11 +25,6 @@ let project = Project.configure(
     .core(.network),
 
     .domain(.comment, .interface),
-    .core(.thirdParty),
     .feature(.ad, .implementation),
-    .SPM.composableArchitecture,
-    .SPM.tcaFlow,
-    .SPM.kingfisher,
-    .SPM.logMarco,
   ]
 )

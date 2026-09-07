@@ -13,7 +13,6 @@ import APIEndpoint
 import HomeDomainInterface
 import PickeNetwork
 
-import LogMacro
 import AuthDomainInterface
 
 public final class HomeRepositoryImpl: HomeInterface, @unchecked Sendable {

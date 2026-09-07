@@ -13,9 +13,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .serviceAssembly,
-    .SPM.composableArchitecture,
     .domain(.auth, .interface),
-    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .SPM.composableArchitecture,

@@ -6,7 +6,7 @@
 import Foundation
 
 import DeviceServiceInterface
-import LogMacro
+import PickeCoreLogger
 import PickeStorageInterface
 
 enum PushTokenStore {
@@ -20,9 +20,9 @@ enum PushTokenStore {
     guard let token = current, !token.isEmpty else { return }
     do {
       try await DeviceUseCaseImpl().registerDevice(fcmToken: token, platform: .ios)
-      #logDebug("[Push] 디바이스 등록 완료")
+      PickeLogger.debug("[Push] 디바이스 등록 완료", category: .network)
     } catch {
-      #logError("[Push] 디바이스 등록 실패: \(error.localizedDescription)")
+      PickeLogger.error("[Push] 디바이스 등록 실패: \(error.localizedDescription)", category: .network)
     }
   }
 
@@ -31,9 +31,9 @@ enum PushTokenStore {
     guard let token = current, !token.isEmpty else { return }
     do {
       try await DeviceUseCaseImpl().unregisterDevice(fcmToken: token)
-      #logDebug("[Push] 디바이스 해제 완료")
+      PickeLogger.debug("[Push] 디바이스 해제 완료", category: .network)
     } catch {
-      #logError("[Push] 디바이스 해제 실패: \(error.localizedDescription)")
+      PickeLogger.error("[Push] 디바이스 해제 실패: \(error.localizedDescription)", category: .network)
     }
   }
 }

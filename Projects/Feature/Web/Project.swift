@@ -14,6 +14,5 @@ let project = Project.configure(
   dependencies: [
     .ui(.designKit),
     .SPM.composableArchitecture,
-    .core(.thirdParty),
   ]
 )

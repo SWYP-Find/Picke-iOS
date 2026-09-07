@@ -9,7 +9,6 @@ import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
 import BattleDomainInterface
-import LogMacro
 
 @Reducer
 public struct BattleProposalFeature {

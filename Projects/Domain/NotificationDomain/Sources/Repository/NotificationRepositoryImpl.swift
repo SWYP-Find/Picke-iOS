@@ -11,7 +11,6 @@ import APIEndpoint
 import PickeNetwork
 import NotificationDomainInterface
 
-import LogMacro
 
 public final class NotificationRepositoryImpl: NotificationInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

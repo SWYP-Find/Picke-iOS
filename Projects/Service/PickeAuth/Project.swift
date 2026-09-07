@@ -16,8 +16,7 @@ let project = Project.configure(
     .core(.network),
     .core(.storage),
     .core(.storage, .interface),
-    .SPM.composableArchitecture,
-    .SPM.logMarco,
+    .core(.logger),
   ],
   interfaceDependencies: [
     .core(.network, .interface),

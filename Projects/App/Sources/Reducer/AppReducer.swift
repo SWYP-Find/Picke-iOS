@@ -8,7 +8,6 @@
 import PickeAnalyticsInterface
 import ComposableArchitecture
 import DomainAssembly
-import LogMacro
 import FeatureAssembly
 import PickeCoreUtility
 

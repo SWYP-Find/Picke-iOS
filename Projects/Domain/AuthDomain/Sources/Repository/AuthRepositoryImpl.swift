@@ -13,7 +13,6 @@ import PickeAuthInterface
 import PickeNetwork
 
 import Dependencies
-import LogMacro
 
 public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

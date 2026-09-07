@@ -10,7 +10,6 @@ import Foundation
 import CommentDomainInterface
 import BattleDomainInterface
 import ComposableArchitecture
-import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
 import PickeSharedUI

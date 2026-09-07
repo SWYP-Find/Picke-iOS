@@ -18,8 +18,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .core(.logger),
-    .SPM.alamofire,
-    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .SPM.alamofire,

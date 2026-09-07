@@ -9,7 +9,6 @@ import SearchDomainInterface
 import ComposableArchitecture
 import HifiInterface
 import HomeDomainInterface
-import LogMacro
 import NotificationDomainInterface
 import PickeAnalyticsInterface
 import BattleDomainInterface

@@ -4,7 +4,7 @@
 //
 
 import AppTrackingTransparency
-import LogMacro
+import PickeCoreLogger
 import UIKit
 
 extension AppDelegate {
@@ -28,7 +28,7 @@ extension AppDelegate {
           self.trackingAuthorizationObserver = nil
         }
         let status = await ATTrackingManager.requestTrackingAuthorization()
-        #logDebug("[ATT] 추적 권한 상태: \(status.rawValue)")
+        PickeLogger.debug("[ATT] 추적 권한 상태: \(status.rawValue)", category: .app)
       }
     }
   }

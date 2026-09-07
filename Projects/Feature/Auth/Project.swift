@@ -12,14 +12,10 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .SPM.composableArchitecture,
     .ui(.designKit),
     .ui(.sharedUI),
     .service(.analytics, .interface),
-    .SPM.composableArchitecture,
-    .SPM.tcaFlow,
     .domain(.auth, .interface),
-    
-    
-    .core(.thirdParty),
   ]
 )

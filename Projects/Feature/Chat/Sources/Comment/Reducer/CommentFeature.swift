@@ -8,7 +8,6 @@ import Foundation
 import BattleDomainInterface
 import CommentDomainInterface
 import ComposableArchitecture
-import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
 import PickeSharedUI

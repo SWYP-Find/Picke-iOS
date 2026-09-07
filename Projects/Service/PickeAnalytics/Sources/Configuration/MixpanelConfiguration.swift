@@ -5,7 +5,7 @@
 
 import Foundation
 
-import LogMacro
+import PickeCoreLogger
 import Mixpanel
 import MixpanelSessionReplay
 import PickeNetwork
@@ -18,12 +18,9 @@ enum MixpanelConfiguration {
 
   static func configure() {
     let token = token
-    #logDebug(
-      "Mixpanel initialize",
-      [
-        "token_exists": !(token?.isEmpty ?? true),
-        "token_prefix": String((token ?? "").prefix(6)),
-      ]
+    PickeLogger.debug(
+      "Mixpanel initialize — token_exists: \(!(token?.isEmpty ?? true)), token_prefix: \(String((token ?? "").prefix(6)))",
+      category: .app
     )
     Mixpanel.initialize(token: token ?? "", trackAutomaticEvents: true)
 

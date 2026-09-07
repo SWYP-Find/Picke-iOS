@@ -8,7 +8,6 @@
 import AuthDomainInterface
 import AuthenticationServices
 import Foundation
-import LogMacro
 import UIKit
 
 /// Kakao OAuth — WKWebView 로 authorize URL 띄우고 redirect 콜백을 navigation 단계에서 가로채는 흐름.

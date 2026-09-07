@@ -9,7 +9,6 @@
 import AuthenticationServices
 import Dependencies
 import Foundation
-import LogMacro
 import Sharing
 
 /// 통합 OAuth UseCase — 소셜 인증 → 백엔드 로그인까지 단일 진입점

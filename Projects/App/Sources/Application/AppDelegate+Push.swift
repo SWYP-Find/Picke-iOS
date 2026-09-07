@@ -3,7 +3,7 @@
 //  Picke
 //
 
-import LogMacro
+import PickeCoreLogger
 import UIKit
 import UserNotifications
 
@@ -17,11 +17,11 @@ extension AppDelegate {
 
     center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
       if let error {
-        #logError("[Push] 권한 요청 실패: \(error.localizedDescription)")
+        PickeLogger.error("[Push] 권한 요청 실패: \(error.localizedDescription)", category: .app)
         return
       }
       guard granted else {
-        #logDebug("[Push] 알림 권한 거부됨")
+        PickeLogger.debug("[Push] 알림 권한 거부됨", category: .app)
         return
       }
       Task { @MainActor in
@@ -37,7 +37,7 @@ extension AppDelegate {
   ) {
     let tokenString = deviceToken.map { String(format: "%02x", $0) }.joined()
     PushTokenStore.current = tokenString
-    #logDebug("[Push] APNs 토큰 수신: \(tokenString.prefix(12))…")
+    PickeLogger.debug("[Push] APNs 토큰 수신: \(tokenString.prefix(12))…", category: .app)
 
     Task {
       guard await AppDependencyFactory.authService.isLoggedIn else { return }
@@ -49,7 +49,7 @@ extension AppDelegate {
     _: UIApplication,
     didFailToRegisterForRemoteNotificationsWithError error: Error
   ) {
-    #logError("[Push] APNs 등록 실패: \(error.localizedDescription)")
+    PickeLogger.error("[Push] APNs 등록 실패: \(error.localizedDescription)", category: .app)
   }
 }
 

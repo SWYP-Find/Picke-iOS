@@ -14,13 +14,10 @@ let project = Project.configure(
   dependencies: [
     .serviceAssembly,
     .domain(.home, .interface),
-    .SPM.composableArchitecture,
     .domain(.battle, .interface),
-    .SPM.logMarco,
   ],
   interfaceDependencies: [
     .domain(.home, .interface),
-    
     .SPM.composableArchitecture,
   ]
 )

@@ -11,7 +11,6 @@ import BattleDomainInterface
 import ChatInterface
 import ComposableArchitecture
 import HomeDomainInterface
-import LogMacro
 import PickeDesignKit
 import PickeSharedUI
 import PickeCoreUtility

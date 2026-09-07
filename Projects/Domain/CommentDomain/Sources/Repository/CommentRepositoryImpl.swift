@@ -11,7 +11,6 @@ import APIEndpoint
 import CommentDomainInterface
 import PickeNetwork
 
-import LogMacro
 
 public final class CommentRepositoryImpl: CommentInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

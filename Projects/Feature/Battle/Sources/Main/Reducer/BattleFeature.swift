@@ -7,7 +7,6 @@ import Foundation
 
 import ComposableArchitecture
 import BattleDomainInterface
-import LogMacro
 import PickeAnalyticsInterface
 import PickeCoreUtility
 

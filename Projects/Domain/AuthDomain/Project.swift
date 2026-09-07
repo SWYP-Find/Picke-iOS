@@ -14,7 +14,6 @@ let project = Project.configure(
   dependencies: [
     .serviceAssembly,
     .core(.storage, .interface),
-    .SPM.logMarco,
     .service(.auth, .interface),
     .SPM.googleSignIn,
   ],

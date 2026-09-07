@@ -10,7 +10,7 @@ import Foundation
 
 import AuthInterface
 import ComposableArchitecture
-import LogMacro
+import PickeCoreLogger
 
 import AuthDomainInterface
 import PickeDesignKit
@@ -214,7 +214,7 @@ extension LoginFeature {
         return .send(.delegate(.presentOnboarding))
 
       case let .failure(error):
-        #logNetwork("로그인 실패", error.localizedDescription)
+        PickeLogger.error("로그인 실패: \(error.localizedDescription)", category: .auth)
         let socialType = state.currentSocialType
         return .run { _ in
           await MainActor.run {

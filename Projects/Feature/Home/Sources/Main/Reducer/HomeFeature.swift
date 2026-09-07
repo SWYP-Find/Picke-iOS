@@ -10,7 +10,6 @@ import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
 import HomeInterface
-import LogMacro
 import NotificationDomainInterface
 import PickeAnalyticsInterface
 import AuthDomainInterface

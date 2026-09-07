@@ -6,7 +6,6 @@
 import Foundation
 
 import AppUpdateDomainInterface
-import LogMacro
 import PickeNetwork
 
 public final class AppUpdateRepositoryImpl: AppUpdateInterface {

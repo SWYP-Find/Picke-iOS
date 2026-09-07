@@ -12,7 +12,6 @@ import UIKit
 import PickeAnalyticsInterface
 import BattleDomainInterface
 import ComposableArchitecture
-import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
 import PickeSharedUI

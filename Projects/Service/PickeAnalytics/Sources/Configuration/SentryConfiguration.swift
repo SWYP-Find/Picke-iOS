@@ -5,7 +5,7 @@
 
 import Foundation
 
-import LogMacro
+import PickeCoreLogger
 @preconcurrency import Sentry
 
 /// Sentry 기동과 런치 메트릭 전송.
@@ -17,7 +17,7 @@ enum SentryConfiguration {
     // SENTRY_DSN 은 xcconfig 에서 스킴(https://)을 제외하고 저장 → 코드에서 붙인다.
     let dsnHost = (info?["SENTRY_DSN"] as? String)?.trimmingCharacters(in: .whitespaces) ?? ""
     guard !dsnHost.isEmpty else {
-      #logError("[Sentry] SENTRY_DSN 미설정 — 초기화 스킵")
+      PickeLogger.error("[Sentry] SENTRY_DSN 미설정 — 초기화 스킵", category: .app)
       return
     }
     let environment = (info?["SENTRY_ENVIRONMENT"] as? String)?

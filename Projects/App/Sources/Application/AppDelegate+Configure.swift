@@ -4,7 +4,7 @@
 //
 
 import GoogleMobileAds
-import LogMacro
+import PickeCoreLogger
 import UIKit
 
 import DomainAssembly
@@ -43,7 +43,7 @@ extension AppDelegate {
       let internalDeviceIdentifiers: [String] = []
 
       MobileAds.shared.requestConfiguration.testDeviceIdentifiers = internalDeviceIdentifiers
-      #logDebug("[AdMob] 테스트 디바이스 등록 — 내부 기기 \(internalDeviceIdentifiers.count)대 + 시뮬레이터")
+      PickeLogger.debug("[AdMob] 테스트 디바이스 등록 — 내부 기기 \(internalDeviceIdentifiers.count)대 + 시뮬레이터", category: .app)
     #endif
   }
 

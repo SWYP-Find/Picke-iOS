@@ -11,7 +11,6 @@ import APIEndpoint
 import AttendanceDomainInterface
 import PickeNetwork
 
-import LogMacro
 
 public final class AttendanceRepositoryImpl: AttendanceInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

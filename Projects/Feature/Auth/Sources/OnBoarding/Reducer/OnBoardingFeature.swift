@@ -9,7 +9,6 @@ import ComposableArchitecture
 import AuthInterface
 import PickeDesignKit
 import Foundation
-import LogMacro
 
 @Reducer
 public struct OnBoardingFeature {

@@ -18,7 +18,5 @@ let project = Project.configure(
     .service(.auth, .interface),
     .service(.analytics, .interface),
     .SPM.composableArchitecture,
-
-    .core(.thirdParty),
   ]
 )

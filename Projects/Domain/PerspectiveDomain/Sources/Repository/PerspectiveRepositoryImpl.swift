@@ -13,7 +13,6 @@ import CommentDomainInterface
 import PickeNetwork
 import PerspectiveDomainInterface
 
-import LogMacro
 
 public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

@@ -7,7 +7,6 @@ import Foundation
 import ProfileDomainInterface
 
 import ComposableArchitecture
-import LogMacro
 
 @Reducer
 public struct NotificationSettingFeature {

@@ -11,8 +11,6 @@ import ProjectDescription
 let project = Project.configure(
   moduleType: .module(name: "PickeCoreUI"),
   bundleId: .appBundleID(name: ".PickeCoreUI"),
-  // 동적 프레임워크. 동적인 PickeDesignKit 이 링크하므로 정적으로 두면
-  // 앱과 DesignKit 양쪽에 중복으로 박힌다.
   product: .framework,
   settings: .settings(),
   dependencies: [

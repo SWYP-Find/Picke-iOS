@@ -12,7 +12,6 @@ import HomeDomainInterface
 import PickeNetwork
 import SearchDomainInterface
 
-import LogMacro
 import BattleDomainInterface
 
 public final class SearchRepositoryImpl: SearchInterface, @unchecked Sendable {

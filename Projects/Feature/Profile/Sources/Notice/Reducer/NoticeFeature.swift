@@ -6,7 +6,6 @@
 import Foundation
 
 import ComposableArchitecture
-import LogMacro
 import NotificationDomainInterface
 import ProfileDomainInterface
 
