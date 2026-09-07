@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "Profile"),
@@ -13,7 +15,7 @@ let project = Project.configure(
     .ui(.designKit),
     .ui(.sharedUI),
     .core(.coreUtility),
-    .core(.storage, .interface),
+    .service(.auth, .interface),
     .service(.device, .interface),
     .service(.analytics, .interface),
     .domain(.profile, .interface),
@@ -22,7 +24,7 @@ let project = Project.configure(
     .domain(.notification, .interface),
 
     .core(.thirdParty),
-    .feature(.ad), // 마이페이지 하단 배너 광고
+    .feature(.ad, .implementation), // 마이페이지 하단 배너 광고
     .SPM.composableArchitecture,
     .SPM.tcaFlow,
     .SPM.kingfisher,

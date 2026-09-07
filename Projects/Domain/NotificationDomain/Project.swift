@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "NotificationDomain"),
@@ -10,11 +12,8 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
+    .serviceAssembly,
     .SPM.composableArchitecture,
-    .service(.api),
-    .service(.apiEndpoint),
-    .core(.network),
-    .core(.network, .interface),
     .SPM.logMarco,
   ],
   interfaceDependencies: [

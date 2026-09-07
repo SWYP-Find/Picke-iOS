@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "SearchDomain"),
@@ -10,13 +12,10 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
+    .serviceAssembly,
     .domain(.home, .interface),
     .SPM.composableArchitecture,
     .domain(.battle, .interface),
-    .service(.api),
-    .service(.apiEndpoint),
-    .core(.network),
-    .core(.network, .interface),
     .SPM.logMarco,
   ],
   interfaceDependencies: [

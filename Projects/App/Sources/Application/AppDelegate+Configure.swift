@@ -18,7 +18,7 @@ extension AppDelegate {
     configureAdMob()
     requestTrackingAuthorizationWhenActive()
     configurePushNotifications()
-    configureDependencies()
+    configureImageDownloader()
   }
 
   // MARK: - AdMob
@@ -47,9 +47,12 @@ extension AppDelegate {
     #endif
   }
 
-  // MARK: - DI
+  // MARK: - 이미지 다운로더
 
-  func configureDependencies() {
-    AppDependencyFactory.configureNetworkInfrastructure()
+  /// Store 수명 밖에서 도는 인프라라 기동 시 한 번만 설정한다.
+  func configureImageDownloader() {
+    KingfisherConfigurator.configureAuthorizedDownloader(
+      storage: AppDependencyFactory.secureStorage
+    )
   }
 }

@@ -1,13 +1,15 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "DeviceService"),
   bundleId: .appBundleID(name: ".DeviceService"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     .service(.apiEndpoint),

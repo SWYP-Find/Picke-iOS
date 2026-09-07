@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "AuthDomain"),
@@ -10,14 +12,10 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
+    .serviceAssembly,
     .core(.storage, .interface),
-    .SPM.composableArchitecture,
     .SPM.logMarco,
-    .service(.api),
-    .service(.apiEndpoint),
     .service(.auth, .interface),
-    .core(.network),
-    .core(.network, .interface),
     .SPM.googleSignIn,
   ],
   interfaceDependencies: [

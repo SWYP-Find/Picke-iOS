@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "Splash"),
@@ -13,7 +15,7 @@ let project = Project.configure(
     .ui(.designKit),
     .ui(.animation),
     .domain(.appUpdate, .interface),
-    .core(.storage, .interface),
+    .service(.auth, .interface),
     .service(.analytics, .interface),
     .SPM.composableArchitecture,
 

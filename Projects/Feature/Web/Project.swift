@@ -1,8 +1,10 @@
 import Foundation
-import ProjectDescription
+
+import DependencyPackagePlugin
 import DependencyPlugin
 import ProjectTemplatePlugin
-import DependencyPackagePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "Web"),

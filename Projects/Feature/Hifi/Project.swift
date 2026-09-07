@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "Hifi"),
@@ -17,7 +19,7 @@ let project = Project.configure(
     .service(.analytics, .interface),
     .core(.thirdParty),
     // 탐색 리스트 인라인 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
-    .feature(.ad),
+    .feature(.ad, .implementation),
     .domain(.home, .interface),
     
     .domain(.search, .interface),

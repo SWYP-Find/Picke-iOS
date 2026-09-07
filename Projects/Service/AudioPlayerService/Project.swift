@@ -1,13 +1,15 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "AudioPlayerService"),
   bundleId: .appBundleID(name: ".AudioPlayerService"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   // AVFoundation 은 시스템 프레임워크라 별도 선언이 필요 없다.
   dependencies: [

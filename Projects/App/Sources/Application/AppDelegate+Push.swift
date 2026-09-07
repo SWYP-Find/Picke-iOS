@@ -8,6 +8,7 @@ import UIKit
 import UserNotifications
 
 import DomainAssembly
+import PickeStorageInterface
 
 extension AppDelegate {
   func configurePushNotifications() {
@@ -38,8 +39,10 @@ extension AppDelegate {
     PushTokenStore.current = tokenString
     #logDebug("[Push] APNs 토큰 수신: \(tokenString.prefix(12))…")
 
-    guard AppDependencyFactory.keychainManager.accessToken()?.isEmpty == false else { return }
-    Task { await PushTokenStore.register() }
+    Task {
+      guard await AppDependencyFactory.authService.isLoggedIn else { return }
+      await PushTokenStore.register()
+    }
   }
 
   func application(

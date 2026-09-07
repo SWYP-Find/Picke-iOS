@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .module(name: "DomainAssembly"),
@@ -10,16 +12,16 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .domain(.appUpdate),
-    .domain(.attendance),
-    .domain(.auth),
-    .domain(.battle),
-    .domain(.search),
-    .domain(.comment),
-    .domain(.home),
-    .domain(.notification),
-    .domain(.perspective),
-    .domain(.profile),
+    .domain(.appUpdate, .implementation),
+    .domain(.attendance, .implementation),
+    .domain(.auth, .implementation),
+    .domain(.battle, .implementation),
+    .domain(.search, .implementation),
+    .domain(.comment, .implementation),
+    .domain(.home, .implementation),
+    .domain(.notification, .implementation),
+    .domain(.perspective, .implementation),
+    .domain(.profile, .implementation),
   ],
   sources: ["Sources/**"],
   hasTests: true

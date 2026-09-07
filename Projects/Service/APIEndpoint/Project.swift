@@ -1,13 +1,15 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .module(name: "APIEndpoint"),
   bundleId: .appBundleID(name: ".APIEndpoint"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   dependencies: [
     // 엔드포인트가 HTTPMethod·HTTPHeaders 를 직접 쓴다. PickeNetwork 가 더는 재노출하지 않는다.

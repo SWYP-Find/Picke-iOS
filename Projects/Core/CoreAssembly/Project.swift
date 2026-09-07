@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .module(name: "CoreAssembly"),
@@ -15,6 +17,7 @@ let project = Project.configure(
     .core(.logger),
     .core(.network),
     .core(.coreUtility),
+    .core(.coreUI),
     .core(.storage, .implementation),
     .SPM.composableArchitecture,
   ],

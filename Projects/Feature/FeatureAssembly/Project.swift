@@ -1,8 +1,10 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .module(name: "FeatureAssembly"),
@@ -10,16 +12,16 @@ let project = Project.configure(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
-    .feature(.splash),
-    .feature(.auth),
-    .feature(.web),
-    .feature(.home),
-    .feature(.chat),
-    .feature(.hifi),
-    .feature(.battle),
-    .feature(.profile),
-    .feature(.notification),
-    .feature(.ad),
+    .feature(.splash, .implementation),
+    .feature(.auth, .implementation),
+    .feature(.web, .implementation),
+    .feature(.home, .implementation),
+    .feature(.chat, .implementation),
+    .feature(.hifi, .implementation),
+    .feature(.battle, .implementation),
+    .feature(.profile, .implementation),
+    .feature(.notification, .implementation),
+    .feature(.ad, .implementation),
   ],
   sources: ["Sources/**"]
 )

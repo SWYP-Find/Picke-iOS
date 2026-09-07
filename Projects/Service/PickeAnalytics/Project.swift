@@ -1,13 +1,15 @@
+import Foundation
+
 import DependencyPackagePlugin
 import DependencyPlugin
-import Foundation
-import ProjectDescription
 import ProjectTemplatePlugin
+
+import ProjectDescription
 
 let project = Project.configure(
   moduleType: .microModule(name: "PickeAnalytics"),
   bundleId: .appBundleID(name: ".PickeAnalytics"),
-  product: .staticFramework,
+  product: .framework,
   settings: .settings(),
   // 관측 SDK 는 구현 타깃에만 붙인다 — 화면들은 Interface 만 의존하므로
   // Mixpanel·Sentry·Firebase 를 링크하지도, 이들이 바뀔 때 재컴파일되지도 않는다.

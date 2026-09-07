@@ -22,7 +22,7 @@ enum KingfisherConfigurator {
   ]
 
   static func configureAuthorizedDownloader(
-    keychainManager: KeychainManaging
+    storage: any SecureStorage
   ) {
     let modifier = AnyModifier { request in
       var req = request
@@ -32,7 +32,7 @@ enum KingfisherConfigurator {
         let host = url.host?.lowercased(),
         protectedHostSuffixes.contains(where: { host == $0 || host.hasSuffix(".\($0)") }),
         url.path.hasPrefix("/api/"),
-        let token = keychainManager.accessToken(), !token.isEmpty
+        let token = try? storage.load(.accessToken), let token, !token.isEmpty
       else {
         return req
       }

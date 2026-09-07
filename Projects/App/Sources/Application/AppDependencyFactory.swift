@@ -6,12 +6,15 @@ import CoreAssembly
 import DeviceService
 import DeviceServiceInterface
 import DomainAssembly
+import PickeAuthInterface
 import PickeStorageInterface
 import ServiceAssembly
 
 enum AppDependencyFactory {
   /// 네트워크·인증·저장소 live 구현은 ServiceAssembly 가 단일 출처로 조립한다.
   static var secureStorage: any SecureStorage { StorageAssembly.secureStorage() }
+  /// 로그인 여부·토큰 판정은 PickeAuth 가 단독으로 책임진다. App 은 저장소를 직접 열지 않는다.
+  static var authService: any AuthService { NetworkContainer.authService }
 
   @MainActor
   static func configure(_ values: inout DependencyValues) {
@@ -21,13 +24,6 @@ enum AppDependencyFactory {
     AppServiceFactory.configure(&values)
   }
 
-  /// Store 수명 밖에서 도는 인프라(이미지 다운로더)를 앱 시작 시 한 번 설정한다.
-  /// 화면 Reducer 의존성은 위 `configure(_:)`에서 명시적으로 주입한다.
-  static func configureNetworkInfrastructure() {
-    KingfisherConfigurator.configureAuthorizedDownloader(
-      storage: secureStorage
-    )
-  }
 }
 
 private enum ChatFeatureFactory {

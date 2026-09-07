@@ -10,7 +10,7 @@ import Testing
 
 import PickeAnalyticsInterface
 import AppUpdateDomainInterface
-import PickeStorageInterface
+import PickeAuthInterface
 
 @testable import Splash
 
@@ -18,6 +18,21 @@ import PickeStorageInterface
 private struct StubAppUpdateUseCase: AppUpdateUseCaseInterface {
   var info: AppUpdateInfo?
   func checkForUpdate() async throws -> AppUpdateInfo? { info }
+}
+
+/// 저장된 토큰 유무만 흉내내는 인증 서비스 스텁.
+private actor StubAuthService: AuthService {
+  private var loggedIn: Bool
+
+  init(loggedIn: Bool) {
+    self.loggedIn = loggedIn
+  }
+
+  var isLoggedIn: Bool { loggedIn }
+  var refreshToken: String? { loggedIn ? "refresh-token" : nil }
+
+  func signIn(accessToken _: String, refreshToken _: String) { loggedIn = true }
+  func signOut() { loggedIn = false }
 }
 
 /// Mixpanel 을 건드리지 않는 no-op 분석 UseCase.
@@ -31,17 +46,13 @@ private let noopAnalytics = AnalyticsUseCase(
 struct SplashTests {
   @Test
   func onAppearRoutesToMainTabWhenTokensExist() async {
-    let keychainManager = InMemoryKeychainManager()
-    keychainManager.save(accessToken: "access-token", refreshToken: "refresh-token")
     let clock = TestClock()
 
     let store = TestStore(initialState: SplashFeature.State()) {
       SplashFeature()
     } withDependencies: {
       $0.continuousClock = clock
-      // keychainManager 접근자가 DomainInterface/UseCase 양쪽에 중복 정의되어 모호하므로,
-      // SplashFeature 가 실제로 읽는 UseCase 의 키를 모듈 한정 subscript 로 오버라이드한다.
-      $0.keychainManager = keychainManager
+      $0.authService = StubAuthService(loggedIn: true)
       $0.appUpdateUseCase = StubAppUpdateUseCase(info: nil)
       $0.analyticsUseCase = noopAnalytics
     }
@@ -61,7 +72,7 @@ struct SplashTests {
       SplashFeature()
     } withDependencies: {
       $0.continuousClock = clock
-      $0.keychainManager = InMemoryKeychainManager()
+      $0.authService = StubAuthService(loggedIn: false)
       $0.appUpdateUseCase = StubAppUpdateUseCase(info: nil)
       $0.analyticsUseCase = noopAnalytics
     }
