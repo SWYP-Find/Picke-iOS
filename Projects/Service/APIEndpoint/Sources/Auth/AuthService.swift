@@ -7,6 +7,7 @@
 
 import Foundation
 
+import Alamofire
 import API
 import AuthDomainInterface
 import PickeNetwork

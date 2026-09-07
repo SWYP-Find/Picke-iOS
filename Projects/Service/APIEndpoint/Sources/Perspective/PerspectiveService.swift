@@ -5,6 +5,7 @@
 
 import Foundation
 
+import Alamofire
 import API
 import PickeNetwork
 

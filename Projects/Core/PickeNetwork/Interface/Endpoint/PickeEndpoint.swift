@@ -5,7 +5,7 @@
 
 import Foundation
 
-@_exported import Alamofire
+import Alamofire
 
 /// 엔드포인트가 속한 도메인. base URL 과 도메인 경로 접두사를 묶는다.
 /// (Picke 서버는 `api/v1/battles/` 처럼 도메인마다 경로 접두사가 달라 엔드포인트가 도메인을 들고 있는다.)

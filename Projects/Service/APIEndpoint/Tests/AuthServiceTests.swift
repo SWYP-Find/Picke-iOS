@@ -7,6 +7,7 @@ import Testing
 
 @testable import APIEndpoint
 
+import Alamofire
 import API
 import AuthDomainInterface
 import PickeNetwork
