@@ -3,34 +3,38 @@
 //  PickeNetwork
 //
 
-import Alamofire
 import Foundation
 
-/// 인증(authenticated) / 비인증(plain) 세션 조립 팩토리.
-///
-/// 인터셉터·부가 이벤트 모니터는 호출자가 주입한다(PickeNetwork 는 인증 주체를 모른다).
-public enum SessionFactory {
-  /// 인증 세션. 호출자가 넘긴 `interceptor`(401 자동 refresh·retry 등)를 얹는다. 대부분의 요청에 사용.
-  public static func authenticated(interceptor: RequestInterceptor, eventMonitors: [any EventMonitor] = []) -> Session {
+import Alamofire
+import PickeNetworkInterface
+
+enum SessionFactory {
+  static func plain(eventMonitors: [any EventMonitor] = []) -> Session {
     Session(
-      configuration: configuration(),
-      interceptor: interceptor,
-      eventMonitors: monitors() + eventMonitors
+      configuration: configuration,
+      eventMonitors: [PickeEventMonitor()] + eventMonitors
     )
   }
 
-  /// 비인증 세션. 로그인/토큰 재발급처럼 아직 토큰이 없는 요청에 사용(인터셉터 없음).
-  public static func plain(eventMonitors: [any EventMonitor] = []) -> Session {
-    Session(
-      configuration: configuration(),
-      eventMonitors: monitors() + eventMonitors
+  /// 요청별 인증 조립용 공유 인터셉터 묶음.
+  /// `AuthenticationInterceptor` 인스턴스가 하나여야 refresh single-flight 가 보장된다 —
+  /// authorizing(요청 조립)과 credentials(로그인 / 로그아웃 교체)가 같은 인스턴스를 본다.
+  static func authorization(
+    store: any CredentialStore,
+    refresher: any TokenRefreshing
+  ) -> (authorizing: AuthorizingInterceptor, credentials: any CredentialUpdating) {
+    let interceptor = AuthenticationInterceptor(
+      authenticator: PickeAuthenticator(refresher: refresher, store: store),
+      credential: store.load()
+    )
+    return (
+      AuthorizingInterceptor(base: interceptor),
+      CredentialUpdater(interceptor: interceptor)
     )
   }
-}
 
-private extension SessionFactory {
-  /// 성능 최적화된 URLSession 설정(커넥션 풀 / 캐시 / keep-alive).
-  static func configuration() -> URLSessionConfiguration {
+  /// 성능 최적화된 URLSession 설정(커넥션 풀 / 캐시 / keep-alive) + 공통 정적 헤더.
+  private static var configuration: URLSessionConfiguration {
     let configuration = URLSessionConfiguration.default
 
     configuration.httpMaximumConnectionsPerHost = 6
@@ -50,16 +54,11 @@ private extension SessionFactory {
     configuration.allowsExpensiveNetworkAccess = true
     configuration.allowsConstrainedNetworkAccess = false
 
-    configuration.httpAdditionalHeaders = [
-      "Connection": "keep-alive",
-      "Keep-Alive": "timeout=120, max=1000",
-    ]
+    var headers = DefaultHeaders.headers.dictionary
+    headers["Connection"] = "keep-alive"
+    headers["Keep-Alive"] = "timeout=120, max=1000"
+    configuration.httpAdditionalHeaders = headers
 
     return configuration
-  }
-
-  /// 두 세션 공통 기본 이벤트 모니터(요청/응답 로깅). 인증 관련 모니터는 호출자가 `eventMonitors` 로 추가.
-  static func monitors() -> [any EventMonitor] {
-    [PickeEventMonitor()]
   }
 }

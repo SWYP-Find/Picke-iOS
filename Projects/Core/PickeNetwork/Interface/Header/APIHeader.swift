@@ -6,70 +6,14 @@
 //
 
 import Foundation
-import WeaveDI
 
-public struct APIHeader {
+/// 요청 헤더 키 상수.
+///
+/// 공통 헤더(Accept 등)는 세션이, `Authorization` 은 `PickeAuthenticator` 가 붙인다.
+/// 여기엔 엔드포인트가 직접 헤더를 조립할 때 쓰는 키 이름만 둔다.
+public enum APIHeader {
   public static let contentType = "Content-Type"
   public static let accessToken = "Authorization"
   public static let refreshToken = "X-Refresh-Token"
   public static let accept = "accept"
-
-  @Dependency(\.tokenProvider) private static var tokenProvider
-
-  public static var accessTokenKeyChain: String {
-    get {
-      let token = tokenProvider.accessToken() ?? ""
-      return token
-    }
-    set { updateAccessToken(newValue) }
-  }
-
-  public static func updateAccessToken(_ token: String?) {
-    guard let newToken = token, !newToken.isEmpty else {
-      tokenProvider.clearAccessToken()
-      return
-    }
-    tokenProvider.saveAccessToken(newToken)
-  }
-
-  public init() {}
-}
-
-public extension APIHeader {
-  internal static func baseHeaders(_ headers: [String: String]?) -> [String: String] {
-    var baseHeaders = baseHeader
-    if let headers {
-      baseHeaders.merge(headers) { $1 }
-    }
-    return baseHeaders
-  }
-
-  static var baseHeader: [String: String] {
-    [
-      contentType: APIHeaderManger.contentType,
-      accessToken: "Bearer \(accessTokenKeyChain)",
-      accept: APIHeaderManger.contentType,
-    ]
-  }
-
-  static var notAccessTokenHeader: [String: String] {
-    [
-      contentType: APIHeaderManger.contentType,
-      accept: APIHeaderManger.contentType,
-    ]
-  }
-
-  static var mutiPartbaseHeader: [String: String] {
-    [
-      contentType: APIHeaderManger.multipartContentType,
-      accessToken: "Bearer \(accessTokenKeyChain)",
-    ]
-  }
-
-  static var applebaseHeader: [String: String] {
-    [
-      contentType: APIHeaderManger.contentType,
-      accept: APIHeaderManger.contentType,
-    ]
-  }
 }

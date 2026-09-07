@@ -8,10 +8,8 @@
 import Foundation
 
 public enum APIHeaderManger {
-  
-  static let appPackageName: String = "-"
-  static let contentType: String = "application/json"
-  static let multipartContentType: String = "multipart/form-data"
-  static let contentAppleType: String = "application/x-www-form-urlencoded"
-  static let csrf: String = "BNazqxDLBzmlYFKCwAMMJYNcmkAq6kAt"
+  public static let appPackageName: String = "-"
+  public static let contentType: String = "application/json"
+  public static let multipartContentType: String = "multipart/form-data"
+  public static let contentAppleType: String = "application/x-www-form-urlencoded"
 }
