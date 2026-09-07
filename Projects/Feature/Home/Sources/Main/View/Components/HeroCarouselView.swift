@@ -10,7 +10,7 @@ import SwiftUI
 import HomeDomainInterface
 import PickeDesignKit
 
-import Kingfisher
+import PickeSharedUI
 
 /// 최상단 Editor Pick 캐러셀. 좌우 스와이프 + 3초마다 자동 스크롤, 마지막 뒤엔 처음으로 wrap.
 struct HeroCarouselView: View {
@@ -106,10 +106,7 @@ struct HeroCardView: View {
           .fill(.neutral500.opacity(0.4))
 
         if let url = hero.thumbnailURL {
-          KFImage(url)
-            .placeholder { SkeletonView(.round()) }
-            .resizable()
-            .aspectRatio(contentMode: .fill)
+          PickeRemoteImage(url: url)
             .frame(
               width: proxy.size.width,
               height: proxy.size.height,

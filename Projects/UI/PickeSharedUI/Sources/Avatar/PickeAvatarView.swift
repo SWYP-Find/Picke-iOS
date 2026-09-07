@@ -5,7 +5,6 @@
 
 import SwiftUI
 
-import Kingfisher
 
 /// 원형 아바타. 이미지가 없으면 이름 첫 글자를 대신 보여준다.
 public struct PickeAvatarView: View {
@@ -34,10 +33,7 @@ public struct PickeAvatarView: View {
   @ViewBuilder
   private func avatarContent() -> some View {
     if let imageURL, let url = URL(string: imageURL) {
-      KFImage(url)
-        .placeholder { Color.beige600 }
-        .resizable()
-        .scaledToFill()
+      PickeRemoteImage(url: url) { Color.beige600 }
         .frame(width: 24, height: 24)
         .scaleEffect(imageScale)
     } else {

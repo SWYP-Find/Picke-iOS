@@ -9,7 +9,6 @@ import SwiftUI
 
 import ComposableArchitecture
 import HomeDomainInterface
-import Kingfisher
 import PickeDesignKit
 import PickeSharedUI
 
@@ -278,15 +277,14 @@ extension ChatRoomView {
 
   @ViewBuilder
   private func avatar(_ speaker: ChatSpeaker) -> some View {
-    KFImage(URL(string: speaker.imageURL ?? ""))
-      .placeholder {
-        SkeletonView(.round(cornerRadius: Metric.avatarSize / 2))
-      }
-      .resizable()
-      .scaledToFit()
-      .frame(width: Metric.avatarImageWidth, height: Metric.avatarImageHeight)
-      .frame(width: Metric.avatarSize, height: Metric.avatarSize)
-      .background(.beige600, in: Circle())
+    PickeRemoteImage(
+      url: speaker.imageURL ?? "",
+      shape: .round(cornerRadius: Metric.avatarSize / 2)
+    )
+    .content(.fit)
+    .frame(width: Metric.avatarImageWidth, height: Metric.avatarImageHeight)
+    .frame(width: Metric.avatarSize, height: Metric.avatarSize)
+    .background(.beige600, in: Circle())
   }
 
   @ViewBuilder

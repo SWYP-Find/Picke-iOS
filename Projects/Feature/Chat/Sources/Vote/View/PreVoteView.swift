@@ -9,7 +9,6 @@ import SwiftUI
 
 import BattleDomainInterface
 import ComposableArchitecture
-import Kingfisher
 import PickeDesignKit
 import PickeSharedUI
 
@@ -126,10 +125,7 @@ extension PreVoteView {
       if let urlString = battle.backgroundImageURL,
          let url = URL(string: urlString)
       {
-        KFImage(url)
-          .placeholder { SkeletonView(.round()) }
-          .resizable()
-          .scaledToFill()
+        PickeRemoteImage(url: url)
       } else {
         Color.neutral200
       }
@@ -322,16 +318,14 @@ extension PreVoteView {
   }
 
   private func avatarView(imageURL: String) -> some View {
-    KFImage(URL(string: imageURL))
-      .placeholder {
-        SkeletonView(.round())
-          .frame(width: 28, height: 20)
-      }
-      .resizable()
-      .scaledToFit()
-      .frame(width: 28, height: 20)
-      .frame(width: 40, height: 40)
-      .background(.beige600, in: Circle())
+    PickeRemoteImage(url: imageURL) {
+      SkeletonView(.round())
+        .frame(width: 28, height: 20)
+    }
+    .content(.fit)
+    .frame(width: 28, height: 20)
+    .frame(width: 40, height: 40)
+    .background(.beige600, in: Circle())
   }
 
   @ViewBuilder

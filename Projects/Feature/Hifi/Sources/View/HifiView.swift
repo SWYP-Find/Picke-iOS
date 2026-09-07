@@ -5,12 +5,12 @@
 
 import SwiftUI
 
+import Ad
 import ComposableArchitecture
 import HomeDomainInterface
-import Kingfisher
-import PickeDesignKit
+import PickeSharedUI
 import PickeCoreUtility
-import Ad
+import PickeDesignKit
 
 @ViewAction(for: HifiFeature.self)
 public struct HifiView: View {
@@ -269,10 +269,7 @@ private extension HifiView {
   func thumbnail(_ url: String?) -> some View {
     Group {
       if let url, let imageURL = URL(string: url) {
-        KFImage(imageURL)
-          .placeholder { Color.beige600 }
-          .resizable()
-          .scaledToFill()
+        PickeRemoteImage(url: imageURL) { Color.beige600 }
       } else {
         Color.beige600
       }

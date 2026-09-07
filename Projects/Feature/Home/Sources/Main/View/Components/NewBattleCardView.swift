@@ -10,7 +10,7 @@ import SwiftUI
 import HomeDomainInterface
 import PickeDesignKit
 
-import Kingfisher
+import PickeSharedUI
 
 /// "새로운 배틀" 리스트 카드 (.pen `Card/BattleListCard` 의 thumbnail 제외 구성).
 struct NewBattleCardView: View {
@@ -131,10 +131,8 @@ extension NewBattleCardView {
         .fill(.beige600)
         .frame(width: 40, height: 40)
       if let imageURL {
-        KFImage(imageURL)
-          .placeholder { SkeletonView(.round(cornerRadius: 20)) }
-          .resizable()
-          .scaledToFit()
+        PickeRemoteImage(url: imageURL, shape: .round(cornerRadius: 20))
+          .content(.fit)
           .frame(width: 20, height: 38)
       }
     }

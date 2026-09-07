@@ -6,7 +6,7 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Kingfisher
+import PickeSharedUI
 import PickeDesignKit
 
 @ViewAction(for: BattleFeature.self)
@@ -119,10 +119,7 @@ private extension BattleView {
   func backgroundImage(_ imageURL: String?) -> some View {
     ZStack {
       if let imageURL, let url = URL(string: imageURL) {
-        KFImage(url)
-          .placeholder { Color.neutral800 }
-          .resizable()
-          .scaledToFill()
+        PickeRemoteImage(url: url) { Color.neutral800 }
       } else {
         Color.neutral800
       }

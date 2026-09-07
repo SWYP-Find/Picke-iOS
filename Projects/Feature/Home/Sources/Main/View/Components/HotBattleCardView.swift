@@ -10,7 +10,7 @@ import SwiftUI
 import HomeDomainInterface
 import PickeDesignKit
 
-import Kingfisher
+import PickeSharedUI
 
 /// "지금 뜨는 배틀" 가로 스크롤 카드 (220 wide).
 struct HotBattleCardView: View {
@@ -47,10 +47,7 @@ struct HotBattleCardView: View {
     // QA-43: Figma node 3888-3736 기준 — height 140, border 4pt(.borderBeigeSelected), radius 2.
     Group {
       if let url = battle.thumbnailURL {
-        KFImage(url)
-          .placeholder { SkeletonView(.round()) }
-          .resizable()
-          .scaledToFill()
+        PickeRemoteImage(url: url)
       } else {
         Rectangle()
           .fill(.beige500)

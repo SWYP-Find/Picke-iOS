@@ -5,11 +5,10 @@
 
 import SwiftUI
 
+import Ad
 import ComposableArchitecture
-import Kingfisher
 import PickeDesignKit
 import PickeSharedUI
-import Ad
 
 @ViewAction(for: ProfileFeature.self)
 public struct ProfileView: View {
@@ -128,9 +127,8 @@ private extension ProfileView {
     // 디자인(oFtBQ): 항상 beige600 원 배경 위에 캐릭터 이미지/기본 아이콘을 올린다.
     ZStack {
       if let urlString = store.profileImageURL, let url = URL(string: urlString) {
-        KFImage(url)
-          .resizable()
-          .scaledToFit()
+        PickeRemoteImage(url: url) { EmptyView() }
+          .content(.fit)
           .padding(4)
       } else {
         Image(systemName: "cat.fill")
@@ -207,9 +205,8 @@ private extension ProfileView {
               .scaledToFit()
               .frame(width: 20, height: 20)
           } else if let urlString = store.philosopherImageURL, let url = URL(string: urlString) {
-            KFImage(url)
-              .resizable()
-              .scaledToFit()
+            PickeRemoteImage(url: url) { EmptyView() }
+              .content(.fit)
               .padding(4)
           } else {
             Image(systemName: "brain.head.profile")

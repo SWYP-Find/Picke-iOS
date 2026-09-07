@@ -6,10 +6,9 @@
 import SwiftUI
 
 import ComposableArchitecture
-import Kingfisher
+import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
-import PickeCoreUtility
 import ProfileDomainInterface
 
 @ViewAction(for: ContentActivityFeature.self)
@@ -188,9 +187,8 @@ private extension ContentActivityView {
     // 디자인(Z5YAW): 항상 beige600 원 배경 위에 캐릭터/기본 아이콘.
     ZStack {
       if !author.characterImageURL.isEmpty, let url = URL(string: author.characterImageURL) {
-        KFImage(url)
-          .resizable()
-          .scaledToFit()
+        PickeRemoteImage(url: url) { EmptyView() }
+          .content(.fit)
           .padding(3)
       } else {
         Image(systemName: "cat.fill")

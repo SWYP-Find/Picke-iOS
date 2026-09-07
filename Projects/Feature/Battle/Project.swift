@@ -11,6 +11,7 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .ui(.designKit),
+    .ui(.sharedUI),
     .core(.coreUtility),
     .service(.analytics, .interface),
     .core(.thirdParty),
