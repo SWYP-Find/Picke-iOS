@@ -14,12 +14,6 @@ extension AppDatabaseDependency: DependencyKey {
   }
 }
 
-extension KeychainManagerDependency: DependencyKey {
-  public static var liveValue: KeychainManaging {
-    KeychainManager()
-  }
-}
-
 extension SharedValueStorageDependency: DependencyKey {
   public static var liveValue: any SharedValueStorage {
     StorageFactory.sharedValueStorage

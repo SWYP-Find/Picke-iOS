@@ -12,7 +12,7 @@ import PickeDesignKit
 import PickeSharedUI
 import PickeAnalyticsInterface
 import DeviceServiceInterface
-import PickeStorageInterface
+import PickeAuthInterface
 
 @Reducer
 public struct SettingsFeature {
@@ -90,7 +90,7 @@ public struct SettingsFeature {
   }
 
   @Dependency(\.authUseCase) private var authUseCase
-  @Dependency(\.keychainManager) private var keychainManager
+  @Dependency(\.authService) private var authService
   @Dependency(\.deviceUseCase) private var deviceUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
 
@@ -183,11 +183,14 @@ extension SettingsFeature {
     switch action {
     case .sessionCleared:
       state.isProcessing = false
-      // 서버 호출 성공/실패와 무관하게 로컬 세션은 정리하고 로그인으로 전환.
-      keychainManager.clear()
       // 계정 분리 — Mixpanel distinct_id/슈퍼프로퍼티 초기화(다음 유저와 혼선 방지).
       analyticsUseCase.reset()
-      return .send(.delegate(.sessionEnded))
+      // 서버 호출 성공/실패와 무관하게 로컬 세션은 정리하고 로그인으로 전환.
+      let authService = authService
+      return .run { send in
+        await authService.signOut()
+        await send(.delegate(.sessionEnded))
+      }
     }
   }
 

@@ -12,7 +12,7 @@ import ComposableArchitecture
 import LogMacro
 import PickeAnalyticsInterface
 import AppUpdateDomainInterface
-import PickeStorageInterface
+import PickeAuthInterface
 
 @Reducer
 public struct SplashFeature {
@@ -75,7 +75,7 @@ public struct SplashFeature {
   }
 
   @Dependency(\.continuousClock) var clock
-  @Dependency(\.keychainManager) var keychainManager
+  @Dependency(\.authService) var authService
   @Dependency(\.appUpdateUseCase) var appUpdateUseCase
   @Dependency(\.openURL) var openURL
   @Dependency(\.analyticsUseCase) var analyticsUseCase
@@ -195,9 +195,10 @@ extension SplashFeature {
   }
 
   private func navigateToNextScreen(state _: inout State) -> Effect<Action> {
-    hasStoredCredential
-      ? .send(.delegate(.presentMainTab))
-      : .send(.delegate(.presentAuth))
+    let authService = authService
+    return .run { send in
+      await send(.delegate(await authService.isLoggedIn ? .presentMainTab : .presentAuth))
+    }
   }
 
   private static func updateAlert(version: String) -> AlertState<Action.Alert> {
@@ -213,15 +214,5 @@ extension SplashFeature {
     } message: {
       TextState("새로운 버전 \(version)이 출시되었습니다!\n더 나은 경험을 위해 지금 업데이트하세요!")
     }
-  }
-
-  private var hasStoredCredential: Bool {
-    guard
-      let accessToken = keychainManager.accessToken(),
-      let refreshToken = keychainManager.refreshToken()
-    else {
-      return false
-    }
-    return !accessToken.isEmpty && !refreshToken.isEmpty
   }
 }

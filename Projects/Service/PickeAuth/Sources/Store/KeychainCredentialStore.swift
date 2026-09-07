@@ -3,29 +3,28 @@
 //  PickeAuth
 //
 
-import Foundation
-
 import PickeNetworkInterface
 import PickeStorageInterface
 
-/// 범용 Keychain 저장소를 PickeNetwork 의 credential 저장 계약으로 변환한다.
+/// 범용 `SecureStorage` 를 PickeNetwork 의 credential 저장 계약으로 변환한다.
 final class KeychainCredentialStore: CredentialStore {
   /// access token 과 refresh token 을 보관하는 보안 저장소다.
-  private let keychain: any KeychainManaging
+  private let storage: any SecureStorage
 
-  init(keychain: any KeychainManaging) {
-    self.keychain = keychain
+  /// 범용 보안 저장소를 credential 저장소로 감싼다.
+  init(storage: any SecureStorage) {
+    self.storage = storage
   }
 
   /// 저장된 토큰 쌍이 모두 유효할 때만 credential 을 복원한다.
   func load() -> PickeCredential? {
-    guard let accessToken = keychain.accessToken(),
-          !accessToken.isEmpty,
-          let refreshToken = keychain.refreshToken(),
-          !refreshToken.isEmpty
+    guard
+      let accessToken = try? storage.load(.accessToken), !accessToken.isEmpty,
+      let refreshToken = try? storage.load(.refreshToken), !refreshToken.isEmpty
     else {
       return nil
     }
+
     return PickeCredential(
       accessToken: accessToken,
       refreshToken: refreshToken,
@@ -35,14 +34,12 @@ final class KeychainCredentialStore: CredentialStore {
 
   /// access token 과 refresh token 을 각각의 보안 키로 저장한다.
   func save(_ credential: PickeCredential) {
-    keychain.save(
-      accessToken: credential.accessToken,
-      refreshToken: credential.refreshToken
-    )
+    try? storage.save(credential.accessToken, for: .accessToken)
+    try? storage.save(credential.refreshToken, for: .refreshToken)
   }
 
   /// 인증 종료 시 보안 저장소의 모든 인증 값을 제거한다.
   func clear() {
-    keychain.clear()
+    try? storage.removeAll()
   }
 }

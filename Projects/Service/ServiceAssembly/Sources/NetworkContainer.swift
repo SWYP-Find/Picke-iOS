@@ -21,9 +21,10 @@ public enum NetworkContainer {
 
   private static func makeAssembly() -> Assembly {
     let plainClient = NetworkAssembly.plainClient()
+    let storage = StorageAssembly.secureStorage()
     let auth = AuthFactory.make(
       refreshClient: plainClient,
-      keychain: StorageAssembly.keychain
+      storage: storage
     )
 
     return Assembly(

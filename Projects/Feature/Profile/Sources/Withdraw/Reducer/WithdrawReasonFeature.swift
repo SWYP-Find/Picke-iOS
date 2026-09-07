@@ -11,7 +11,7 @@ import LogMacro
 import PickeDesignKit
 import PickeSharedUI
 import DeviceServiceInterface
-import PickeStorageInterface
+import PickeAuthInterface
 
 @Reducer
 public struct WithdrawReasonFeature {
@@ -92,7 +92,7 @@ public struct WithdrawReasonFeature {
   }
 
   @Dependency(\.authUseCase) private var authUseCase
-  @Dependency(\.keychainManager) private var keychainManager
+  @Dependency(\.authService) private var authService
   @Dependency(\.deviceUseCase) private var deviceUseCase
 
   public var body: some Reducer<State, Action> {
@@ -200,8 +200,11 @@ extension WithdrawReasonFeature {
     case .sessionCleared:
       state.isProcessing = false
       // 서버 호출 성공/실패와 무관하게 로컬 세션은 정리하고 로그인으로 전환.
-      keychainManager.clear()
-      return .send(.delegate(.sessionEnded))
+      let authService = authService
+      return .run { send in
+        await authService.signOut()
+        await send(.delegate(.sessionEnded))
+      }
     }
   }
 }

@@ -11,14 +11,14 @@ import PickeNetwork
 import PickeNetworkInterface
 import PickeStorageInterface
 
-/// Keychain, refresh 클라이언트, 인증 클라이언트를 하나의 인증 서비스로 조립한다.
+/// 보안 저장소, refresh 클라이언트, 인증 클라이언트를 하나의 인증 서비스로 조립한다.
 public enum AuthFactory {
-  /// refresh 전용(비인증) 클라이언트와 Keychain 으로 완성된 인증 서비스를 생성한다.
+  /// refresh 전용(비인증) 클라이언트와 보안 저장소로 완성된 인증 서비스를 생성한다.
   public static func make(
     refreshClient: any PickeNetworkClient = NetworkClientFactory.plain(),
-    keychain: any KeychainManaging
+    storage: any SecureStorage
   ) -> any AuthService & AuthenticatedClientProvider {
-    let store = GuardedCredentialStore(base: KeychainCredentialStore(keychain: keychain))
+    let store = GuardedCredentialStore(base: KeychainCredentialStore(storage: storage))
     let relay = AuthFailureRelay()
     let authenticated = NetworkClientFactory.unified(
       store: store,

@@ -44,9 +44,15 @@ struct PickeEventMonitor: EventMonitor {
 
     // ── 응답 ──
     if let error = response.error {
-      lines.append("  · Error\n       \(error.localizedDescription)")
-      if let underlying = error.underlyingError {
-        lines.append("       underlying: \(underlying.localizedDescription)")
+      if case let .responseSerializationFailed(.decodingFailed(underlying)) = error,
+         let decodingError = underlying as? DecodingError
+      {
+        lines.append(describe(decodingError))
+      } else {
+        lines.append("  · Error\n       \(error.localizedDescription)")
+        if let underlying = error.underlyingError {
+          lines.append("       underlying: \(underlying.localizedDescription)")
+        }
       }
     }
     if let data = response.data, !data.isEmpty {
@@ -63,6 +69,49 @@ struct PickeEventMonitor: EventMonitor {
 }
 
 private extension PickeEventMonitor {
+  /// `DecodingError` 를 "종류 · 위치 · 상세" 세 줄로 정리한다.
+  /// 원시 Response Body 와 분리해 무엇이 왜 틀렸는지만 짚는다.
+  func describe(_ error: DecodingError) -> String {
+    func location(_ context: DecodingError.Context, key: String? = nil) -> String {
+      var parts = context.codingPath.map(\.stringValue)
+      if let key { parts.append(key) }
+      return parts.isEmpty ? "(root)" : parts.joined(separator: ".")
+    }
+
+    let kind: String
+    let place: String
+    let detail: String
+    switch error {
+    case let .keyNotFound(key, context):
+      kind = "keyNotFound"
+      place = location(context, key: key.stringValue)
+      detail = "'\(key.stringValue)' 키가 응답에 없음"
+    case let .typeMismatch(type, context):
+      kind = "typeMismatch"
+      place = location(context)
+      detail = "기대 타입 \(type)"
+    case let .valueNotFound(type, context):
+      kind = "valueNotFound"
+      place = location(context)
+      detail = "\(type) 필수인데 null"
+    case let .dataCorrupted(context):
+      kind = "dataCorrupted"
+      place = location(context)
+      detail = context.debugDescription
+    @unknown default:
+      kind = "unknown"
+      place = "-"
+      detail = String(describing: error)
+    }
+
+    return [
+      "  · Decoding Error",
+      "       종류: \(kind)",
+      "       위치: \(place)",
+      "       상세: \(detail)",
+    ].joined(separator: "\n")
+  }
+
   /// 헤더를 정렬해 한 줄씩 들여쓰기.
   func format(_ headers: [String: String]) -> String {
     headers

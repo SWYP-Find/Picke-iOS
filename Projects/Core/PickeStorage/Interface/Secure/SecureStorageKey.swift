@@ -12,7 +12,7 @@ public struct SecureStorageKey: Hashable, Sendable {
 }
 
 public extension SecureStorageKey {
-  // 기존 KeychainManager 가 쓰던 계정명을 그대로 유지해 업데이트 후에도 세션이 살아있게 한다.
+  // 이전 버전이 쓰던 Keychain 계정명을 그대로 유지해 업데이트 후에도 세션이 살아있게 한다.
   static let accessToken = SecureStorageKey("ACCESS_TOKEN")
   static let refreshToken = SecureStorageKey("REFRESH_TOKEN")
 
