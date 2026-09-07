@@ -5,22 +5,14 @@
 //  Created by 서원지 on 6/7/24.
 //
 
-import Foundation
 import ProjectDescription
 import ProjectTemplatePlugin
 
-let workspaceName: String = {
-    if let projectName = ProcessInfo.processInfo.environment["PROJECT_NAME"] {
-        print("🔍 PROJECT_NAME 환경변수 발견: \(projectName)")
-        return projectName
-    } else {
-        print("🎵 ProjectConfig에서 프로젝트 이름 사용: \(ProjectConfig.projectName)")
-        return ProjectConfig.projectName
-    }
-}()
-
+// 이름은 Project.Environment.appName 하나로만 정한다.
+// PROJECT_NAME 환경변수 폴백은 이미 그 안에 있어서 여기서 또 분기하면 로직만 두 벌이 된다.
 let workspace = Workspace(
-name: workspaceName,
-projects: [
+  name: Project.Environment.appName,
+  projects: [
     "Projects/**"
-])
+  ]
+)
