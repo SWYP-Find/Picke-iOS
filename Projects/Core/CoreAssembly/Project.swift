@@ -16,6 +16,7 @@ let project = Project.configure(
     .core(.network),
     .core(.coreUtility),
     .core(.storage, .implementation),
+    .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
   hasTests: false

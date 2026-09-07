@@ -1,21 +1,22 @@
-import AnalyticsService
-import AnalyticsServiceInterface
+import PickeAnalytics
+import PickeAnalyticsInterface
 import AudioPlayerService
 import ComposableArchitecture
+import CoreAssembly
 import DeviceService
 import DeviceServiceInterface
 import DomainAssembly
-import PickeNetwork
-import PickeStorage
 import PickeStorageInterface
+import ServiceAssembly
 import WeaveDI
 
 enum AppDependencyFactory {
-  static let keychainManager: KeychainManaging = KeychainManager()
+  /// 네트워크·인증·저장소 live 구현은 ServiceAssembly 가 단일 출처로 조립한다.
+  static var keychainManager: any KeychainManaging { StorageAssembly.keychain }
 
   @MainActor
   static func configure(_ values: inout DependencyValues) {
-    values.keychainManager = keychainManager
+    ServiceDependencyAssembly.register(into: &values)
     ChatFeatureFactory.configure(&values)
     ProfileFeatureFactory.configure(&values)
     AppServiceFactory.configure(&values)
@@ -29,14 +30,11 @@ enum AppDependencyFactory {
       .register { AuthRepositoryImpl() as AuthInterface }
       .configure()
 
-    OptimizedSessionManager.shared.configureNetworkSessions()
     KingfisherConfigurator.configureAuthorizedDownloader(
       keychainManager: keychainManager
     )
   }
 }
-
-
 
 private enum ChatFeatureFactory {
   static func configure(_ values: inout DependencyValues) {
@@ -50,7 +48,6 @@ private enum ProfileFeatureFactory {
     values.deviceUseCase = DeviceUseCaseImpl()
   }
 }
-
 
 private enum AppServiceFactory {
   static func configure(_ values: inout DependencyValues) {
