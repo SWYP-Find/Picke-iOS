@@ -6,14 +6,13 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .module(name: "API"),
+let project = Project.makeModule(
+  name: "API",
   bundleId: .appBundleID(name: ".API"),
   product: .framework,
   settings: .settings(),
   dependencies: [
     .core(.network, .interface),
   ],
-  sources: ["Sources/**"],
   hasTests: true
 )

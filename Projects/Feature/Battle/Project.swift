@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Battle"),
+let project = Project.makeModule(
+  name: "Battle",
   bundleId: .appBundleID(name: ".Battle"),
   product: .staticFramework,
   settings: .settings(),
@@ -18,5 +18,8 @@ let project = Project.configure(
     .core(.coreUtility),
     .service(.analytics, .interface),
     .domain(.battle, .interface),
-  ]
+  ],
+  hasTests: true,
+  hasInterface: true,
+  hasTesting: false
 )

@@ -6,13 +6,16 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "AttendanceDomain"),
+let project = Project.makeModule(
+  name: "AttendanceDomain",
   bundleId: .appBundleID(name: ".AttendanceDomain"),
   product: .framework,
   settings: .settings(),
   dependencies: [
     .serviceAssembly,
   ],
-  interfaceDependencies: [.SPM.composableArchitecture]
+  hasTests: true,
+  hasInterface: true,
+  interfaceDependencies: [.SPM.composableArchitecture],
+  hasTesting: false
 )

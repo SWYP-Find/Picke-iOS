@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .module(name: "PickeThirdParty"),
+let project = Project.makeModule(
+  name: "PickeThirdParty",
   bundleId: .appBundleID(name: ".PickeThirdParty"),
   product: .framework,
   settings: .settings(),
@@ -17,6 +17,5 @@ let project = Project.configure(
     .SPM.tcaFlow,
     .SPM.sdwebImage,
   ],
-  sources: ["Sources/**"],
   hasTests: false
 )

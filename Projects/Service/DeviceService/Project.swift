@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "DeviceService"),
+let project = Project.makeModule(
+  name: "DeviceService",
   bundleId: .appBundleID(name: ".DeviceService"),
   product: .framework,
   settings: .settings(),
@@ -17,7 +17,10 @@ let project = Project.configure(
     .SPM.composableArchitecture,
     .core(.logger),
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTesting: false
 )

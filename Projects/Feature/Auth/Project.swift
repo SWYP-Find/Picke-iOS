@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Auth"),
+let project = Project.makeModule(
+  name: "Auth",
   bundleId: .appBundleID(name: ".Auth"),
   product: .staticFramework,
   settings: .settings(),
@@ -17,5 +17,8 @@ let project = Project.configure(
     .ui(.sharedUI),
     .service(.analytics, .interface),
     .domain(.auth, .interface),
-  ]
+  ],
+  hasTests: true,
+  hasInterface: true,
+  hasTesting: false
 )

@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .module(name: "APIEndpoint"),
+let project = Project.makeModule(
+  name: "APIEndpoint",
   bundleId: .appBundleID(name: ".APIEndpoint"),
   product: .framework,
   settings: .settings(),
@@ -19,6 +19,5 @@ let project = Project.configure(
     .domain(.auth, .interface),
     .core(.network, .interface),
   ],
-  sources: ["Sources/**"],
   hasTests: true
 )

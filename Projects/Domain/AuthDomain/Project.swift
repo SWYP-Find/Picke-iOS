@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "AuthDomain"),
+let project = Project.makeModule(
+  name: "AuthDomain",
   bundleId: .appBundleID(name: ".AuthDomain"),
   product: .framework,
   settings: .settings(),
@@ -17,10 +17,13 @@ let project = Project.configure(
     .service(.auth, .interface),
     .SPM.googleSignIn,
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     // UserSessionSharedKey 가 PersistentSharedKey(PickeStorageInterface)와 Sharing 을 직접 쓴다.
     .core(.storage, .interface),
     .SPM.sharing,
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTesting: true
 )

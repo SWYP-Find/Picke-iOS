@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "SearchDomain"),
+let project = Project.makeModule(
+  name: "SearchDomain",
   bundleId: .appBundleID(name: ".SearchDomain"),
   product: .framework,
   settings: .settings(),
@@ -16,8 +16,11 @@ let project = Project.configure(
     .domain(.home, .interface),
     .domain(.battle, .interface),
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     .domain(.home, .interface),
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTesting: false
 )

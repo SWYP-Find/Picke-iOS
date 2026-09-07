@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Chat"),
+let project = Project.makeModule(
+  name: "Chat",
   bundleId: .appBundleID(name: ".Chat"),
   product: .staticFramework,
   settings: .settings(),
@@ -26,5 +26,8 @@ let project = Project.configure(
 
     .domain(.comment, .interface),
     .feature(.ad, .implementation),
-  ]
+  ],
+  hasTests: true,
+  hasInterface: true,
+  hasTesting: false
 )

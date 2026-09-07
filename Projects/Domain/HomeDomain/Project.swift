@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "HomeDomain"),
+let project = Project.makeModule(
+  name: "HomeDomain",
   bundleId: .appBundleID(name: ".HomeDomain"),
   product: .framework,
   settings: .settings(),
@@ -15,7 +15,10 @@ let project = Project.configure(
     .serviceAssembly,
     .domain(.auth, .interface),
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTesting: true
 )

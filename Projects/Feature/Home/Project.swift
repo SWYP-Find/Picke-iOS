@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Home"),
+let project = Project.makeModule(
+  name: "Home",
   bundleId: .appBundleID(name: ".Home"),
   product: .staticFramework,
   settings: .settings(),
@@ -25,5 +25,8 @@ let project = Project.configure(
     .domain(.notification, .interface),
     // 홈 피드 중간 배너 광고 — 광고를 노출하는 화면만 명시적으로 의존한다.
     .feature(.ad, .implementation),
-  ]
+  ],
+  hasTests: true,
+  hasInterface: true,
+  hasTesting: false
 )

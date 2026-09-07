@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "BattleDomain"),
+let project = Project.makeModule(
+  name: "BattleDomain",
   bundleId: .appBundleID(name: ".BattleDomain"),
   product: .framework,
   settings: .settings(),
@@ -16,8 +16,11 @@ let project = Project.configure(
     .SPM.composableArchitecture,
     .domain(.home, .interface),
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     .domain(.home, .interface),
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTesting: false
 )

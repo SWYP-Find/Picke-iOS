@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Profile"),
+let project = Project.makeModule(
+  name: "Profile",
   bundleId: .appBundleID(name: ".Profile"),
   product: .staticFramework,
   settings: .settings(),
@@ -27,7 +27,10 @@ let project = Project.configure(
     .SPM.tcaFlow,
     .SPM.kingfisher,
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     .domain(.profile, .interface),
-  ]
+  ],
+  hasTesting: false
 )

@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Hifi"),
+let project = Project.makeModule(
+  name: "Hifi",
   bundleId: .appBundleID(name: ".Hifi"),
   product: .staticFramework,
   settings: .settings(),
@@ -24,5 +24,8 @@ let project = Project.configure(
     .domain(.notification, .interface),
     .SPM.composableArchitecture,
     .SPM.kingfisher,
-  ]
+  ],
+  hasTests: true,
+  hasInterface: true,
+  hasTesting: false
 )

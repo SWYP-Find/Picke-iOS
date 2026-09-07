@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "PickeAuth"),
+let project = Project.makeModule(
+  name: "PickeAuth",
   bundleId: .appBundleID(name: ".PickeAuth"),
   product: .framework,
   settings: .settings(),
@@ -18,8 +18,11 @@ let project = Project.configure(
     .core(.storage, .interface),
     .core(.logger),
   ],
+  hasTests: true,
+  hasInterface: true,
   interfaceDependencies: [
     .core(.network, .interface),
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTesting: true
 )

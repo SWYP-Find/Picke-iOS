@@ -5,8 +5,7 @@ import ProjectTemplatePlugin
 
 private let appName = Project.Environment.appName
 
-let project = Project.configure(
-  moduleType: .app,
+let project = Project.makeAppModule(
   name: appName,
   bundleId: .mainBundleID(),
   product: .app,
@@ -18,7 +17,6 @@ let project = Project.configure(
     .SPM.googleMobileAds,
     .SPM.kingfisher,
   ],
-  sources: ["Sources/**"],
   resources: ["Resources/**"],
   infoPlist: .appInfoPlist,
   entitlements: .file(path: "../../Entitlements/Picke.entitlements"),

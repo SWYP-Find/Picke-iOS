@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .microModule(name: "Splash"),
+let project = Project.makeModule(
+  name: "Splash",
   bundleId: .appBundleID(name: ".Splash"),
   product: .staticFramework,
   settings: .settings(),
@@ -18,5 +18,8 @@ let project = Project.configure(
     .service(.auth, .interface),
     .service(.analytics, .interface),
     .SPM.composableArchitecture,
-  ]
+  ],
+  hasTests: true,
+  hasInterface: true,
+  hasTesting: false
 )

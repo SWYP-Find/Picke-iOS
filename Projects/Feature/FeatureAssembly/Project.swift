@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .module(name: "FeatureAssembly"),
+let project = Project.makeModule(
+  name: "FeatureAssembly",
   bundleId: .appBundleID(name: ".FeatureAssembly"),
   product: .staticFramework,
   settings: .settings(),
@@ -22,6 +22,5 @@ let project = Project.configure(
     .feature(.profile, .implementation),
     .feature(.notification, .implementation),
     .feature(.ad, .implementation),
-  ],
-  sources: ["Sources/**"]
+  ]
 )

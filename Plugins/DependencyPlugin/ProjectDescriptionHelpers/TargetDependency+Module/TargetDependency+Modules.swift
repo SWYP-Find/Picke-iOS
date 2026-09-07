@@ -3,7 +3,7 @@
 //  Plugins
 //
 //  레이어 의존성 DSL. 카탈로그가 경로를 들고 있어 여기서는 타깃만 가리킨다.
-//  모듈이 Interface 타깃(`Project.configure(moduleType: .microModule)`)을 가지면
+//  모듈이 Interface 타깃(`Project.makeModule(hasInterface: true)`)을 가지면
 //  `.domain(.auth, .interface)` 처럼 어느 타깃에 의존할지 명시할 수 있다.
 //  기본값은 레이어별로 다르다. Feature·Domain 은 모든 모듈이 Interface 를 갖춰
 //  `.interface` 가 기본이고, 구현을 링크하는 조립 레이어만 `.implementation` 을 명시한다.

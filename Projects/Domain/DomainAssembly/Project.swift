@@ -6,8 +6,8 @@ import ProjectTemplatePlugin
 
 import ProjectDescription
 
-let project = Project.configure(
-  moduleType: .module(name: "DomainAssembly"),
+let project = Project.makeModule(
+  name: "DomainAssembly",
   bundleId: .appBundleID(name: ".DomainAssembly"),
   product: .framework,
   settings: .settings(),
@@ -23,6 +23,5 @@ let project = Project.configure(
     .domain(.perspective, .implementation),
     .domain(.profile, .implementation),
   ],
-  sources: ["Sources/**"],
   hasTests: true
 )
