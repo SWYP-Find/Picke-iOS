@@ -16,6 +16,7 @@ let project = Project.configure(
     .SPM.logMarco,
     .service(.api),
     .service(.apiEndpoint),
+    .service(.auth, .interface),
     .core(.network),
     .core(.network, .interface),
     .SPM.googleSignIn,
