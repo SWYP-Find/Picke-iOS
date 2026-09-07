@@ -21,7 +21,6 @@ public extension TargetDependency.SPM {
   static let sdwebImageCore = TargetDependency.external(name: "SDWebImage", condition: .none)
   static let sdwebImage = TargetDependency.external(name: "SDWebImageSwiftUI", condition: .none)
   static let kingfisher = TargetDependency.external(name: "Kingfisher", condition: .none)
-  static let weaveDI = TargetDependency.external(name: "WeaveDI", condition: .none)
 
   static let googleSignIn = TargetDependency.external(name: "GoogleSignIn", condition: .none)
   static let appAuth: TargetDependency = .external(name: "AppAuth")

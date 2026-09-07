@@ -5,7 +5,6 @@
 
 import Dependencies
 import Foundation
-import WeaveDI
 
 public protocol AudioPlayerInterface: Sendable {
   /// 음원을 로드하고 재생 가능 여부를 반환한다. (false = 오디오 로딩 실패)
@@ -28,16 +27,9 @@ public struct DefaultAudioPlayerImpl: AudioPlayerInterface {
   public func currentTimes() -> AsyncStream<TimeInterval> { AsyncStream { _ in } }
 }
 
-public struct AudioPlayerDependency: DependencyKey {
-  public static var liveValue: AudioPlayerInterface {
-    UnifiedDI.resolve(AudioPlayerInterface.self) ?? DefaultAudioPlayerImpl()
-  }
-
-  public static var testValue: AudioPlayerInterface {
-    UnifiedDI.resolve(AudioPlayerInterface.self) ?? DefaultAudioPlayerImpl()
-  }
-
-  public static var previewValue: AudioPlayerInterface = liveValue
+/// live 구현(`AudioPlayerRepositoryImpl`)은 AudioPlayerService 가 `DependencyKey` 로 이어 붙인다.
+public struct AudioPlayerDependency: TestDependencyKey {
+  public static var testValue: AudioPlayerInterface { DefaultAudioPlayerImpl() }
 }
 
 public extension DependencyValues {

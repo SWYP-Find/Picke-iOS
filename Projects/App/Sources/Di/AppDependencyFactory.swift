@@ -8,11 +8,10 @@ import DeviceServiceInterface
 import DomainAssembly
 import PickeStorageInterface
 import ServiceAssembly
-import WeaveDI
 
 enum AppDependencyFactory {
   /// 네트워크·인증·저장소 live 구현은 ServiceAssembly 가 단일 출처로 조립한다.
-  static var keychainManager: any KeychainManaging { StorageAssembly.keychain }
+  static var secureStorage: any SecureStorage { StorageAssembly.secureStorage() }
 
   @MainActor
   static func configure(_ values: inout DependencyValues) {
@@ -22,16 +21,11 @@ enum AppDependencyFactory {
     AppServiceFactory.configure(&values)
   }
 
-  /// Alamofire interceptor는 Store 수명 밖에서 실행되므로 제거 전까지 동일 인스턴스를 브리지한다.
+  /// Store 수명 밖에서 도는 인프라(이미지 다운로더)를 앱 시작 시 한 번 설정한다.
   /// 화면 Reducer 의존성은 위 `configure(_:)`에서 명시적으로 주입한다.
   static func configureNetworkInfrastructure() {
-    WeaveDI.builder
-      .register { keychainManager }
-      .register { AuthRepositoryImpl() as AuthInterface }
-      .configure()
-
     KingfisherConfigurator.configureAuthorizedDownloader(
-      keychainManager: keychainManager
+      storage: secureStorage
     )
   }
 }

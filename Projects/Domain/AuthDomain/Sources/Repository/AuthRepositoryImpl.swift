@@ -14,7 +14,6 @@ import PickeNetwork
 
 import Dependencies
 import LogMacro
-import WeaveDI
 
 public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client

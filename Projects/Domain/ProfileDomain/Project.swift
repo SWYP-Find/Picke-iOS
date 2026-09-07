@@ -19,7 +19,6 @@ let project = Project.configure(
     .SPM.logMarco,
   ],
   interfaceDependencies: [
-    .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]
 )

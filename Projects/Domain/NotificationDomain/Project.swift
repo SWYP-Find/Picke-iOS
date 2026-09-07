@@ -10,7 +10,6 @@ let project = Project.configure(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .SPM.weaveDI,
     .SPM.composableArchitecture,
     .service(.api),
     .service(.apiEndpoint),
@@ -19,7 +18,6 @@ let project = Project.configure(
     .SPM.logMarco,
   ],
   interfaceDependencies: [
-    .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]
 )

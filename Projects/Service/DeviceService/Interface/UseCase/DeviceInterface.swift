@@ -3,8 +3,8 @@
 //  DeviceServiceInterface
 //
 
+import Dependencies
 import Foundation
-import WeaveDI
 
 public protocol DeviceInterface: Sendable {
   /// 로그인 직후 / 토큰 갱신 시 FCM 토큰 등록.
@@ -19,16 +19,9 @@ public struct DefaultDeviceRepositoryImpl: DeviceInterface {
   public func unregisterDevice(fcmToken _: String) async throws {}
 }
 
-public struct DeviceRepositoryDependency: DependencyKey {
-  public static var liveValue: DeviceInterface {
-    UnifiedDI.resolve(DeviceInterface.self) ?? DefaultDeviceRepositoryImpl()
-  }
-
-  public static var testValue: DeviceInterface {
-    UnifiedDI.resolve(DeviceInterface.self) ?? DefaultDeviceRepositoryImpl()
-  }
-
-  public static var previewValue: DeviceInterface = liveValue
+/// live 구현(`DeviceRepositoryImpl`)은 DeviceService 가 `DependencyKey` 로 이어 붙인다.
+public struct DeviceRepositoryDependency: TestDependencyKey {
+  public static var testValue: DeviceInterface { DefaultDeviceRepositoryImpl() }
 }
 
 public extension DependencyValues {

@@ -11,7 +11,6 @@ let project = Project.configure(
   settings: .settings(),
   dependencies: [
     .domain(.home, .interface),
-    .SPM.weaveDI,
     .SPM.composableArchitecture,
     .domain(.battle, .interface),
     .service(.api),
@@ -23,7 +22,6 @@ let project = Project.configure(
   interfaceDependencies: [
     .domain(.home, .interface),
     
-    .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]
 )

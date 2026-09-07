@@ -20,6 +20,5 @@ let project = Project.configure(
   interfaceDependencies: [
     .core(.network, .interface),
     .SPM.composableArchitecture,
-    .SPM.weaveDI,
   ]
 )

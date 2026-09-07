@@ -11,7 +11,6 @@ import AuthenticationServices
 @preconcurrency import AuthDomainInterface
 
 import LogMacro
-import WeaveDI
 import ComposableArchitecture
 
 #if canImport(UIKit)

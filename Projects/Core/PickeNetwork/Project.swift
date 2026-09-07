@@ -22,6 +22,5 @@ let project = Project.configure(
   interfaceDependencies: [
     .SPM.alamofire,
     .SPM.dependencies,
-    .SPM.weaveDI,
   ]
 )

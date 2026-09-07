@@ -12,7 +12,6 @@ let project = Project.configure(
   dependencies: [
     .core(.storage, .interface),
     .SPM.composableArchitecture,
-    .SPM.weaveDI,
     .SPM.logMarco,
     .service(.api),
     .service(.apiEndpoint),
@@ -25,7 +24,6 @@ let project = Project.configure(
     // UserSessionSharedKey 가 PersistentSharedKey(PickeStorageInterface)와 Sharing 을 직접 쓴다.
     .core(.storage, .interface),
     .SPM.sharing,
-    .SPM.weaveDI,
     .SPM.composableArchitecture,
   ]
 )
