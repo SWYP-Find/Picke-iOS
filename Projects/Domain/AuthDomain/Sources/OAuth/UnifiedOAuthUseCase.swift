@@ -11,7 +11,6 @@ import Dependencies
 import Foundation
 import LogMacro
 import Sharing
-import PickeStorageInterface
 
 /// 통합 OAuth UseCase — 소셜 인증 → 백엔드 로그인까지 단일 진입점
 public struct UnifiedOAuthUseCase: UnifiedOAuthUseCaseInterface {
@@ -19,9 +18,8 @@ public struct UnifiedOAuthUseCase: UnifiedOAuthUseCaseInterface {
   @Dependency(\.appleOAuthProvider) private var appleProvider: AppleOAuthProviderInterface
   @Dependency(\.googleOAuthProvider) private var googleProvider: GoogleOAuthProviderInterface
   @Dependency(\.kakaoOAuthProvider) private var kakaoProvider: KakaoOAuthProviderInterface
-  @Dependency(\.keychainManager) private var keychainManager: KeychainManaging
   @Shared(.userSession) var userSession: UserSession
-  @Shared(.appStorage("appleUserName")) var savedAppleUserName: String?
+  @Shared(.appleUserName) var savedAppleUserName: String?
 
   public init() {}
 }
@@ -86,8 +84,6 @@ public extension UnifiedOAuthUseCase {
     }
 
     let authCode = payload.authorizationCode ?? ""
-    AuthLocalStorage.authCode = authCode
-    AuthLocalStorage.idToken = payload.idToken
 
     let loginEntity = try await authRepository.login(
       provider: .apple,
@@ -96,10 +92,6 @@ public extension UnifiedOAuthUseCase {
       idToken: payload.idToken
     )
 
-    keychainManager.save(
-      accessToken: loginEntity.token.accessToken,
-      refreshToken: loginEntity.token.refreshToken
-    )
     await authRepository.updateSessionCredential(with: loginEntity.token)
 
     return loginEntity
@@ -125,10 +117,6 @@ public extension UnifiedOAuthUseCase {
       idToken: nil
     )
 
-    keychainManager.save(
-      accessToken: loginEntity.token.accessToken,
-      refreshToken: loginEntity.token.refreshToken
-    )
     await authRepository.updateSessionCredential(with: loginEntity.token)
 
     return loginEntity
@@ -152,10 +140,6 @@ public extension UnifiedOAuthUseCase {
       idToken: nil
     )
 
-    keychainManager.save(
-      accessToken: loginEntity.token.accessToken,
-      refreshToken: loginEntity.token.refreshToken
-    )
     await authRepository.updateSessionCredential(with: loginEntity.token)
 
     return loginEntity

@@ -20,7 +20,7 @@ import UIKit
 public final class AppleOAuthRepositoryImpl: NSObject, AppleOAuthInterface, @unchecked Sendable {
   private let logger = LogMacro.Log.self
   @Dependency(\.appleManger) var appleLoginManger
-  @Shared(.appStorage("appleUserName")) var appleUserName: String?
+  @Shared(.appleUserName) var appleUserName: String?
 
   private var currentNonce: String?
   private var signInContinuation: CheckedContinuation<AppleOAuthPayload, Error>?
