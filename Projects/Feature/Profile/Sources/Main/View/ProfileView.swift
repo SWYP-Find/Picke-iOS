@@ -22,7 +22,7 @@ public struct ProfileView: View {
     VStack(spacing: 0) {
       topBar()
 
-      if store.isLoading {
+      if store.viewState == .loading {
         ProfileSkeletonView()
       } else {
         // xr63n: 카드 그룹 ↔ 메뉴 그룹 gap 20

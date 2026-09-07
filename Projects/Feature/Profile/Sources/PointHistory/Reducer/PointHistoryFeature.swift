@@ -18,7 +18,13 @@ public struct PointHistoryFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var isLoadingMore: Bool = false
     public var items: [CreditHistoryItem] = []
     public var nextOffset: Int = 0
@@ -113,7 +119,7 @@ extension PointHistoryFeature {
       return .send(.delegate(.dismiss))
 
     case .reachedBottom:
-      guard state.hasNext, !state.isLoadingMore, !state.isLoading else { return .none }
+      guard state.hasNext, state.viewState != .loadingMore, state.viewState != .loading else { return .none }
       return .send(.async(.fetch(reset: false)))
 
     case .suggestTopicTapped:
@@ -129,7 +135,7 @@ extension PointHistoryFeature {
     switch action {
     case let .fetch(reset):
       if reset {
-        state.isLoading = true
+        state.viewState = .loading
       } else {
         state.isLoadingMore = true
       }
@@ -151,7 +157,7 @@ extension PointHistoryFeature {
   ) -> Effect<Action> {
     switch action {
     case let .historyResponse(result, reset):
-      state.isLoading = false
+      state.viewState = .loaded
       state.isLoadingMore = false
       switch result {
       case let .success(page):

@@ -16,7 +16,13 @@ public struct BattleFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     /// 오늘의 배틀 목록 — 세로 스크롤로 다음 배틀 노출. 비어있으면 "없음".
     public var battles: [DailyBattle] = []
     /// 배틀별 선택한 옵션 (battleId → optionId). 미선택 시 "배틀 입장하기" 비활성.
@@ -155,7 +161,7 @@ extension BattleFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetchRequested:
-      state.isLoading = true
+      state.viewState = .loading
       return .run { [useCase = battleUseCase] send in
         let result = await Result {
           try await useCase.fetchTodayBattles()
@@ -173,7 +179,7 @@ extension BattleFeature {
   ) -> Effect<Action> {
     switch action {
     case let .todayResponse(result):
-      state.isLoading = false
+      state.viewState = .loaded
       switch result {
       case let .success(page):
         state.battles = page.items.map(DailyBattle.from)

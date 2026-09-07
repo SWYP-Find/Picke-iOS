@@ -33,7 +33,7 @@ public struct BattleView: View {
     ZStack {
       Color.neutral900.ignoresSafeArea()
 
-      if store.isLoading {
+      if store.viewState == .loading {
         BattleSkeletonView()
       } else if store.battles.isEmpty {
         emptyState()

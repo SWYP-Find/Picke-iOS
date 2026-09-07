@@ -31,7 +31,13 @@ public struct PreVoteFeature {
     public var battle: PreVoteBattle?
     public var battleDetail: BattleDetail?
     public var selectedOptionId: Int?
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     /// 기참여(관점 직행) 여부 확인 중 — 완료 전까지 사전투표 UI 대신 스켈레톤을 유지한다.
     public var isCheckingParticipation: Bool = false
     /// 배틀 상세(사전투표) 로드(디코딩/네트워크) 실패 여부. true 면 무한 스켈레톤 대신 오류+재시도 UI 를 노출한다.
@@ -166,7 +172,7 @@ extension PreVoteFeature {
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .prevote, referrer: nil))
       var effects: [Effect<Action>] = []
-      if state.battleDetail == nil, state.battle == nil, !state.isLoading {
+      if state.battleDetail == nil, state.battle == nil, state.viewState != .loading {
         effects.append(.send(.async(.fetchBattleDetail)))
       }
       // 사전(pre) 진입 시에만 내 참여(perspective) 여부를 조회한다.
@@ -243,7 +249,7 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetchBattleDetail:
-      state.isLoading = true
+      state.viewState = .loading
       state.detailLoadFailed = false
       let battleId = state.battleId
       return .run { [repository = battleUseCase] send in
@@ -353,7 +359,7 @@ extension PreVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case let .battleDetailResponse(result):
-      state.isLoading = false
+      state.viewState = .loaded
       switch result {
       case let .success(detail):
         state.battleDetail = detail

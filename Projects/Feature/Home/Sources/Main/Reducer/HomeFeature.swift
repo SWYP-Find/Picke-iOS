@@ -20,7 +20,13 @@ public struct HomeFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var hasLoadedHome: Bool = false
     public var newNotice: Bool = false
     public var heroes: [HeroBattle] = []
@@ -147,13 +153,13 @@ extension HomeFeature {
         ? .none
         : .send(.async(.checkAttendance))
       state.hasTriedAttendance = true
-      guard !state.hasLoadedHome, !state.isLoading else {
+      guard !state.hasLoadedHome, state.viewState != .loading else {
         return .merge(syncBadge, attendance)
       }
       return .merge(syncBadge, attendance, .send(.async(.fetchHome)))
 
     case .pullToRefresh:
-      guard !state.isLoading else { return .none }
+      guard state.viewState != .loading else { return .none }
       return .send(.async(.fetchHome))
 
     case .seeMoreTapped:
@@ -212,7 +218,7 @@ extension HomeFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetchHome:
-      state.isLoading = true
+      state.viewState = .loading
       return .run { [repository = homeUseCase] send in
         let result = await Result {
           try await repository.fetchHome()
@@ -251,7 +257,7 @@ extension HomeFeature {
   ) -> Effect<Action> {
     switch action {
     case let .homeResponse(result):
-      state.isLoading = false
+      state.viewState = .loaded
       state.hasLoadedHome = true
       switch result {
       case let .success(bundle):

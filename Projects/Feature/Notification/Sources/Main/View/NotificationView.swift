@@ -38,7 +38,7 @@ public struct NotificationView: View {
       tabBar()
 
       Group {
-        if store.isLoading {
+        if store.viewState == .loading {
           NotificationSkeletonView()
         } else {
           content()

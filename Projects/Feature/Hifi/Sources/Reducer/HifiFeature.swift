@@ -23,7 +23,13 @@ public struct HifiFeature {
     public var selectedCategory: ExploreCategory = .all
     public var selectedSort: ExploreSort = .popular
     public var items: [ExploreItem] = []
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var nextOffset: Int?
     public var hasNext: Bool = false
 
@@ -128,7 +134,7 @@ extension HifiFeature {
 
     case .reachedBottom:
       // 무한 스크롤: 다음 페이지가 있고 로딩 중이 아니면 추가 로드.
-      guard state.hasNext, !state.isLoading else { return .none }
+      guard state.hasNext, state.viewState != .loading else { return .none }
       return .send(.async(.searchRequested(reset: false)))
 
     case .adBannerClicked:
@@ -152,7 +158,7 @@ extension HifiFeature {
   ) -> Effect<Action> {
     switch action {
     case let .searchRequested(reset):
-      state.isLoading = true
+      state.viewState = .loading
       if reset { state.items = [] }
       let category = state.selectedCategory.queryValue
       let sort = state.selectedSort.queryValue
@@ -181,7 +187,7 @@ extension HifiFeature {
   ) -> Effect<Action> {
     switch action {
     case let .searchResponse(result, reset):
-      state.isLoading = false
+      state.viewState = .loaded
       switch result {
       case let .success(page):
         state.items = reset ? page.items : state.items + page.items

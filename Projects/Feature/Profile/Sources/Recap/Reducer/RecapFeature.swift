@@ -20,7 +20,13 @@ public struct RecapFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var recap: PhilosopherRecap?
     /// 애플 시스템 공유 시트 트리거.
     public var shareItem: ShareItem?
@@ -136,7 +142,7 @@ extension RecapFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetch:
-      state.isLoading = true
+      state.viewState = .loading
       return .run { [useCase = profileUseCase] send in
         let result = await Result {
           try await useCase.fetchRecap()
@@ -154,7 +160,7 @@ extension RecapFeature {
   ) -> Effect<Action> {
     switch action {
     case let .recapResponse(result):
-      state.isLoading = false
+      state.viewState = .loaded
       switch result {
       case let .success(recap):
         state.recap = recap

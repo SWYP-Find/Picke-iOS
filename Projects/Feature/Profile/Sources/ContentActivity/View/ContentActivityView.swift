@@ -30,7 +30,7 @@ public struct ContentActivityView: View {
       tabBar()
 
       Group {
-        if store.isLoading {
+        if store.viewState == .loading {
           ContentActivitySkeletonView()
         } else {
           content()

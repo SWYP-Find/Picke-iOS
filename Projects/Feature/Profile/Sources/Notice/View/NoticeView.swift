@@ -64,7 +64,7 @@ private extension NoticeView {
   @ViewBuilder
   func listContent() -> some View {
     Group {
-      if store.isLoading {
+      if store.viewState == .loading {
         ProgressView()
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if store.currentItems.isEmpty {

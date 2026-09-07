@@ -23,7 +23,7 @@ public struct PointHistoryView: View {
     VStack(spacing: 0) {
       appBar()
 
-      if store.isLoading {
+      if store.viewState == .loading {
         PointHistorySkeletonView()
       } else {
         content()

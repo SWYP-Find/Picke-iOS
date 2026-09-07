@@ -25,7 +25,7 @@ public struct NotificationSettingView: View {
       )
       .foregroundStyle(.gray500)
 
-      if store.isLoading {
+      if store.viewState == .loading {
         NotificationSettingSkeletonView()
       } else {
         ScrollView {

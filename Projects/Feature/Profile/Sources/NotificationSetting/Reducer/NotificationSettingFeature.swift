@@ -14,7 +14,13 @@ public struct NotificationSettingFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var settings: NotificationSettings = .init()
 
     public init() {}
@@ -104,7 +110,7 @@ extension NotificationSettingFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetch:
-      state.isLoading = true
+      state.viewState = .loading
       return .run { [useCase = profileUseCase] send in
         let result = await Result {
           try await useCase.fetchNotificationSettings()
@@ -132,7 +138,7 @@ extension NotificationSettingFeature {
   ) -> Effect<Action> {
     switch action {
     case let .settingsResponse(result):
-      state.isLoading = false
+      state.viewState = .loaded
       switch result {
       case let .success(settings):
         state.settings = settings

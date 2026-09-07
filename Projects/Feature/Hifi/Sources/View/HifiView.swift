@@ -58,7 +58,7 @@ private extension HifiView {
   @ViewBuilder
   func contentArea() -> some View {
     Group {
-      if store.isLoading, store.items.isEmpty {
+      if store.viewState == .loading, store.items.isEmpty {
         skeletonList()
       } else if store.items.isEmpty {
         emptyState()

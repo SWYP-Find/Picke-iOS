@@ -19,7 +19,13 @@ public struct NotificationFeature {
   @ObservableState
   public struct State: Equatable {
     public var selectedTab: NotificationCategory = .all
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var isLoadingMore: Bool = false
     public var items: [NotificationItem] = []
     public var page: Int = 0
@@ -118,7 +124,7 @@ extension NotificationFeature {
       return .send(.async(.fetch(reset: true)))
 
     case .reachedBottom:
-      guard state.hasNext, !state.isLoadingMore, !state.isLoading else { return .none }
+      guard state.hasNext, state.viewState != .loadingMore, state.viewState != .loading else { return .none }
       return .send(.async(.fetch(reset: false)))
 
     case .readAllTapped:
@@ -168,7 +174,7 @@ extension NotificationFeature {
     switch action {
     case let .fetch(reset):
       if reset {
-        state.isLoading = true
+        state.viewState = .loading
       } else {
         state.isLoadingMore = true
       }
@@ -206,7 +212,7 @@ extension NotificationFeature {
   ) -> Effect<Action> {
     switch action {
     case let .notificationsResponse(result, reset):
-      state.isLoading = false
+      state.viewState = .loaded
       state.isLoadingMore = false
       switch result {
       case let .success(pageData):

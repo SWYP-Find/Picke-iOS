@@ -33,7 +33,7 @@ public struct CurationView: View {
             onAdClick: { send(.adNativeClicked) }
           )
 
-          if store.isLoading, store.battles.isEmpty {
+          if store.viewState == .loading, store.battles.isEmpty {
             CurationSkeletonView()
           } else if store.battles.isEmpty {
             emptyState()

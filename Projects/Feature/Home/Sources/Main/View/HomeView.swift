@@ -84,7 +84,7 @@ public struct HomeView: View {
 
 extension HomeView {
   private var shouldShowSkeleton: Bool {
-    store.isLoading &&
+    store.viewState == .loading &&
       store.heroes.isEmpty &&
       store.hotBattles.isEmpty &&
       store.bestBattles.isEmpty &&

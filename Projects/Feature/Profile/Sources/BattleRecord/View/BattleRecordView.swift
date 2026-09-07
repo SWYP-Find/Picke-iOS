@@ -27,7 +27,7 @@ public struct BattleRecordView: View {
       )
       .foregroundStyle(.gray500)
 
-      if store.isLoading {
+      if store.viewState == .loading {
         BattleRecordSkeletonView()
       } else {
         content()

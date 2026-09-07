@@ -21,7 +21,13 @@ public struct NoticeFeature {
 
     public var noticeItems: [NotificationItem] = []
     public var eventItems: [NotificationItem] = []
-    public var isLoading = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     /// 선택된 항목 — nil 이 아니면 상세 콘텐츠 표시.
     public var selectedItem: NotificationItem?
 
@@ -99,7 +105,7 @@ extension NoticeFeature {
     switch action {
     case .onAppear:
       guard state.noticeItems.isEmpty, state.eventItems.isEmpty else { return .none }
-      state.isLoading = true
+      state.viewState = .loading
       return .send(.async(.fetchLists))
 
     case .backTapped:
@@ -161,13 +167,13 @@ extension NoticeFeature {
   ) -> Effect<Action> {
     switch action {
     case let .listsResponse(notices, events):
-      state.isLoading = false
+      state.viewState = .loaded
       state.noticeItems = notices
       state.eventItems = events
       return .none
 
     case .listsFailed:
-      state.isLoading = false
+      state.viewState = .loaded
       return .none
     }
   }

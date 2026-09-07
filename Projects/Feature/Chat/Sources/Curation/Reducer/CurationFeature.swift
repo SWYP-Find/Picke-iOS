@@ -16,7 +16,13 @@ public struct CurationFeature {
   @ObservableState
   public struct State: Equatable {
     public var battleId: Int
-    public var isLoading: Bool = false
+    /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
+    public enum ViewState: Equatable {
+      case loading
+      case loaded
+    }
+
+    public var viewState: ViewState = .loaded
     public var battles: [RecommendedBattle] = []
 
     public init(battleId: Int = 0) {
@@ -113,7 +119,7 @@ extension CurationFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetchRecommendations:
-      state.isLoading = true
+      state.viewState = .loading
       let battleId = state.battleId
       return .run { [useCase = battleUseCase] send in
         let result = await Result {
@@ -132,7 +138,7 @@ extension CurationFeature {
   ) -> Effect<Action> {
     switch action {
     case let .recommendationsResponse(result):
-      state.isLoading = false
+      state.viewState = .loaded
       switch result {
       case let .success(page):
         state.battles = page.items
