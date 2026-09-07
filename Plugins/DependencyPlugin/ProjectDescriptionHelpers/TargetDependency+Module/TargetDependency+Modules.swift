@@ -5,8 +5,9 @@
 //  레이어 의존성 DSL. 카탈로그가 경로를 들고 있어 여기서는 타깃만 가리킨다.
 //  모듈이 Interface 타깃(`Project.configure(moduleType: .microModule)`)을 가지면
 //  `.domain(.auth, .interface)` 처럼 어느 타깃에 의존할지 명시할 수 있다.
-//  기본값은 `.implementation` — Interface 를 아직 뚫지 않은 모듈이 대부분이라
-//  레이어별로 Interface 가 갖춰지는 대로 기본값을 `.interface` 로 옮긴다.
+//  기본값은 레이어별로 다르다. Feature·Domain 은 모든 모듈이 Interface 를 갖춰
+//  `.interface` 가 기본이고, 구현을 링크하는 조립 레이어만 `.implementation` 을 명시한다.
+//  Core·Service·UI 는 아직 Interface 가 없는 모듈이 남아 `.implementation` 이 기본이다.
 //
 
 import Foundation
@@ -42,7 +43,7 @@ extension TargetDependency {
 public extension TargetDependency {
   /// 피처 의존성. 피처끼리는 상대의 Interface 에만 의존하고,
   /// 구현 연결은 조립 레이어(FeatureAssembly/App)에서만 `.implementation` 으로 명시한다.
-  static func feature(_ module: FeatureModule, _ target: ModuleTarget = .implementation) -> Self {
+  static func feature(_ module: FeatureModule, _ target: ModuleTarget = .interface) -> Self {
     return .moduleDependency(name: module.rawValue, path: module.path, target: target)
   }
 
@@ -69,13 +70,14 @@ public extension TargetDependency {
     return .service(.assembly)
   }
 
-  static func domain(_ module: DomainModule, _ target: ModuleTarget = .implementation) -> Self {
+  static func domain(_ module: DomainModule, _ target: ModuleTarget = .interface) -> Self {
     return .moduleDependency(name: module.rawValue, path: module.path, target: target)
   }
 
   /// 도메인 구현을 런타임에 조립하는 App 진입 경계.
+  /// 조립 모듈 자체는 Interface 타깃이 없어 구현을 직접 가리킨다.
   static var domainAssembly: Self {
-    return .domain(.assembly)
+    return .domain(.assembly, .implementation)
   }
 
   static func ui(_ module: UIModule, _ target: ModuleTarget = .implementation) -> Self {
