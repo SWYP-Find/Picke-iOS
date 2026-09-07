@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import Dependencies
 
@@ -104,7 +105,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     // 실패로 뒤집지 않고 nil 을 돌려준다 — 호출부는 목록만 갱신하고 진영 전환을 건너뛴다.
     let perspective = try? await fetchMyPerspective(battleId: battleId)
     if perspective == nil {
-      Log.error("[BattleRepositoryImpl] createPerspective 재조회 실패 — 등록은 성공")
+      PickeLogger.error("[BattleRepositoryImpl] createPerspective 재조회 실패 — 등록은 성공", category: .battle)
     }
     return perspective
   }
@@ -117,7 +118,7 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
         as: BattlePerspectiveDTO.self
       )
     } catch {
-      Log.debug("[BattleRepositoryImpl] fetchMyPerspective failed (no participation): \(error.localizedDescription)")
+      PickeLogger.debug("[BattleRepositoryImpl] fetchMyPerspective failed (no participation): \(error.localizedDescription)", category: .battle)
       return nil
     }
 

@@ -6,6 +6,7 @@
 //
 
 import AttendanceDomainInterface
+import PickeCoreLogger
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
@@ -271,7 +272,7 @@ extension HomeFeature {
         state.votes = home.votes
         state.newBattles = home.newBattles
       case let .failure(error):
-        Log.error("[HomeFeature] fetchHome failed: \(error.localizedDescription)")
+        PickeLogger.error("[HomeFeature] fetchHome failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 

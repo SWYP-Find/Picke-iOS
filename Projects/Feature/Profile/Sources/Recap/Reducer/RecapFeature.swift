@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import ProfileDomainInterface
 import UIKit
 
@@ -168,7 +169,7 @@ extension RecapFeature {
           .reportAction(ReportActionData(actionType: .view, topIndicator: recap.myCard.typeName))
         )
       case let .failure(error):
-        Log.error("[RecapFeature] fetchRecap failed: \(error.localizedDescription)")
+        PickeLogger.error("[RecapFeature] fetchRecap failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

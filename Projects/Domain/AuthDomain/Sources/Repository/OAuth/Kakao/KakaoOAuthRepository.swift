@@ -6,6 +6,7 @@
 //
 
 import AuthDomainInterface
+import PickeCoreLogger
 import AuthenticationServices
 import Foundation
 import UIKit
@@ -38,7 +39,7 @@ public final class KakaoOAuthRepository: NSObject, KakaoOAuthInterface {
     }
 
     let authorizeURL = try buildAuthorizeURL(clientID: clientID)
-    Log.debug("kakao authorize", authorizeURL.absoluteString)
+    PickeLogger.debug("kakao authorize", authorizeURL.absoluteString, category: .auth)
 
     let code = try await OAuthWebPresenter.present(
       authorizeURL: authorizeURL,
@@ -46,7 +47,7 @@ public final class KakaoOAuthRepository: NSObject, KakaoOAuthInterface {
       redirectPath: redirectPath,
       usesEphemeralSession: true
     )
-    Log.debug("kakao authorizationCode", code)
+    PickeLogger.debug("kakao authorizationCode", code, category: .auth)
 
     return KakaoOAuthPayload(
       idToken: "",

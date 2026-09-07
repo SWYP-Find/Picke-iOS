@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import ProfileDomainInterface
 
 import ComposableArchitecture
@@ -143,7 +144,7 @@ extension NotificationSettingFeature {
       case let .success(settings):
         state.settings = settings
       case let .failure(error):
-        Log.error("[NotificationSettingFeature] settings request failed: \(error.localizedDescription)")
+        PickeLogger.error("[NotificationSettingFeature] settings request failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

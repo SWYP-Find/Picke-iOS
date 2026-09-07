@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import ProfileDomainInterface
 
 import ComposableArchitecture
@@ -283,7 +284,7 @@ extension ProfileFeature {
         state.philosopherImageURL = myPage.philosopher.imageURL.isEmpty ? nil : myPage.philosopher.imageURL
         state.profileImageURL = myPage.profile.characterImageURL.isEmpty ? nil : myPage.profile.characterImageURL
       case let .failure(error):
-        Log.error("[ProfileFeature] fetchMyPage failed: \(error.localizedDescription)")
+        PickeLogger.error("[ProfileFeature] fetchMyPage failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 

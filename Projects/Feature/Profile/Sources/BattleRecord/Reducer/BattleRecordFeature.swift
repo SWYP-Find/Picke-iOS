@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import ProfileDomainInterface
 
 import ComposableArchitecture
@@ -104,7 +105,7 @@ extension BattleRecordFeature {
       return .send(.delegate(.dismiss))
 
     case .reachedBottom:
-      guard state.hasNext, state.viewState != .loadingMore, state.viewState != .loading else { return .none }
+      guard state.hasNext, !state.isLoadingMore, state.viewState != .loading else { return .none }
       return .send(.async(.fetch(reset: false)))
 
     case let .recordTapped(record):
@@ -153,7 +154,7 @@ extension BattleRecordFeature {
         state.nextOffset = page.nextOffset
         state.hasNext = page.hasNext
       case let .failure(error):
-        Log.error("[BattleRecordFeature] fetchBattleRecords failed: \(error.localizedDescription)")
+        PickeLogger.error("[BattleRecordFeature] fetchBattleRecords failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

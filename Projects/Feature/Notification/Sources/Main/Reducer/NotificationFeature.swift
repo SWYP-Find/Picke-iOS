@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import ComposableArchitecture
 import NotificationDomainInterface
@@ -124,7 +125,7 @@ extension NotificationFeature {
       return .send(.async(.fetch(reset: true)))
 
     case .reachedBottom:
-      guard state.hasNext, state.viewState != .loadingMore, state.viewState != .loading else { return .none }
+      guard state.hasNext, !state.isLoadingMore, state.viewState != .loading else { return .none }
       return .send(.async(.fetch(reset: false)))
 
     case .readAllTapped:
@@ -224,7 +225,7 @@ extension NotificationFeature {
         state.hasNext = pageData.hasNext
         if pageData.hasNext { state.page += 1 }
       case let .failure(error):
-        Log.error("[NotificationFeature] fetchNotifications failed: \(error.localizedDescription)")
+        PickeLogger.error("[NotificationFeature] fetchNotifications failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

@@ -6,6 +6,7 @@
 //
 
 import Dependencies
+import PickeCoreLogger
 @preconcurrency import AuthDomainInterface
 import Foundation
 import Sharing
@@ -16,10 +17,10 @@ public final class GoogleOAuthProvider: GoogleOAuthProviderInterface, @unchecked
   public init() {}
 
   public func signInWithToken(token _: String) async throws -> GoogleOAuthPayload {
-    Log.info("Starting Google OAuth flow")
+    PickeLogger.info("Starting Google OAuth flow", category: .auth)
     let payload = try await googleRepository.signIn()
     $userSession.withLock { $0.accessToken = payload.accessToken ?? "" }
-    Log.debug("google authCode", payload.authorizationCode)
+    PickeLogger.debug("google authCode", payload.authorizationCode, category: .auth)
     return payload
   }
 }

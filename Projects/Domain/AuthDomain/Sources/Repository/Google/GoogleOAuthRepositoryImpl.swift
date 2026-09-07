@@ -6,6 +6,7 @@
 //
 
 import AuthDomainInterface
+import PickeCoreLogger
 import AuthenticationServices
 import Foundation
 import UIKit
@@ -40,7 +41,7 @@ public final class GoogleOAuthRepositoryImpl: NSObject, GoogleOAuthInterface {
     }
 
     let authorizeURL = try buildAuthorizeURL(clientID: clientID)
-    Log.debug("google authorize", authorizeURL.absoluteString)
+    PickeLogger.debug("google authorize", authorizeURL.absoluteString, category: .auth)
 
     let code = try await OAuthWebPresenter.present(
       authorizeURL: authorizeURL,
@@ -48,7 +49,7 @@ public final class GoogleOAuthRepositoryImpl: NSObject, GoogleOAuthInterface {
       redirectPath: redirectPath,
       customUserAgent: OAuthWebUserAgent.mobileSafari
     )
-    Log.debug("google authorizationCode", code)
+    PickeLogger.debug("google authorizationCode", code, category: .auth)
 
     return GoogleOAuthPayload(
       idToken: "",

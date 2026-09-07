@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import ChatInterface
 import CommentDomainInterface
@@ -142,7 +143,7 @@ extension ChatCoordinator {
     case let .routeAction(_, action: .comment(.delegate(.openReply(comment)))):
       // perspectiveId 가 없는 관점은 대댓글 식별이 불가능하므로 진입하지 않는다.
       guard let perspectiveId = comment.perspectiveId else {
-        Log.error("[ChatCoordinator] openReply 무시 — perspectiveId 가 nil 인 CommentItem")
+        PickeLogger.error("[ChatCoordinator] openReply 무시 — perspectiveId 가 nil 인 CommentItem", category: .navigation)
         return .none
       }
       state.routes.push(

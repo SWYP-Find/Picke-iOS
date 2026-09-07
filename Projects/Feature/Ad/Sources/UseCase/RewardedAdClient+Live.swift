@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import UIKit
 
 import AdInterface
@@ -57,7 +58,7 @@ private final class RewardedAdPresenter: NSObject, FullScreenContentDelegate {
       ad.fullScreenContentDelegate = self
 
       guard let rootViewController = Self.topViewController() else {
-        Log.error("[RewardedAd] rootViewController 를 찾지 못했습니다")
+        PickeLogger.error("[RewardedAd] rootViewController 를 찾지 못했습니다", category: .ui)
         return false
       }
 
@@ -66,11 +67,11 @@ private final class RewardedAdPresenter: NSObject, FullScreenContentDelegate {
         self.retainSelf = self
         ad.present(from: rootViewController) { [weak self] in
           self?.earnedReward = true
-          Log.debug("[RewardedAd] 보상 획득")
+          PickeLogger.debug("[RewardedAd] 보상 획득", category: .ui)
         }
       }
     } catch {
-      Log.error("[RewardedAd] 광고 로드 실패: \(error.localizedDescription)")
+      PickeLogger.error("[RewardedAd] 광고 로드 실패: \(error.localizedDescription)", category: .ui)
       return false
     }
   }
@@ -82,12 +83,12 @@ private final class RewardedAdPresenter: NSObject, FullScreenContentDelegate {
   }
 
   func adDidRecordClick(_: FullScreenPresentingAd) {
-    Log.debug("[RewardedAd] 광고 클릭")
+    PickeLogger.debug("[RewardedAd] 광고 클릭", category: .ui)
     onClick()
   }
 
   func ad(_: FullScreenPresentingAd, didFailToPresentFullScreenContentWithError error: Error) {
-    Log.error("[RewardedAd] 광고 표시 실패: \(error.localizedDescription)")
+    PickeLogger.error("[RewardedAd] 광고 표시 실패: \(error.localizedDescription)", category: .ui)
     finish(false)
   }
 

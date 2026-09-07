@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import PickeNetwork
 import UIKit
 
@@ -367,7 +368,7 @@ extension PreVoteFeature {
         state.detailLoadFailed = false
       case let .failure(error):
         state.detailLoadFailed = true
-        Log.error("[PreVoteFeature] fetchBattle failed: \(error) — \(error.localizedDescription)")
+        PickeLogger.error("[PreVoteFeature] fetchBattle failed: \(error) — \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -381,7 +382,7 @@ extension PreVoteFeature {
           return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
         }
       case let .failure(error):
-        Log.error("[PreVoteFeature] fetchMyPerspective failed: \(error.localizedDescription)")
+        PickeLogger.error("[PreVoteFeature] fetchMyPerspective failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -390,7 +391,7 @@ extension PreVoteFeature {
       case .success:
         state.myPerspective = nil
       case let .failure(error):
-        Log.error("[PreVoteFeature] deleteMyPerspective failed: \(error.localizedDescription)")
+        PickeLogger.error("[PreVoteFeature] deleteMyPerspective failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -408,7 +409,7 @@ extension PreVoteFeature {
           isMindChanged: false
         )))
       case let .failure(error):
-        Log.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)")
+        PickeLogger.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)", category: .ui)
         return .none
       }
 
@@ -433,7 +434,7 @@ extension PreVoteFeature {
       case let .failure(error):
         // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.
         // 재투표가 불가하므로 결과(댓글) 화면으로 이동한다.
-        Log.error("[PreVoteFeature] submitPostVote failed: \(error.localizedDescription)")
+        PickeLogger.error("[PreVoteFeature] submitPostVote failed: \(error.localizedDescription)", category: .ui)
         return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
       }
     }
@@ -472,7 +473,7 @@ extension PreVoteFeature {
     guard let leftOption = mapped[safe: 0],
           let rightOption = mapped[safe: 1]
     else {
-      Log.error("[PreVoteFeature] 서버 option 데이터 부족 count=\(mapped.count)")
+      PickeLogger.error("[PreVoteFeature] 서버 option 데이터 부족 count=\(mapped.count)", category: .ui)
       return nil
     }
 

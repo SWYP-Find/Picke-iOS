@@ -6,6 +6,7 @@
 //
 
 import Dependencies
+import PickeCoreLogger
 @preconcurrency import AuthDomainInterface
 import Foundation
 import Sharing
@@ -16,7 +17,7 @@ public final class KakaoOAuthProvider: KakaoOAuthProviderInterface, @unchecked S
   public init() {}
 
   public func signInWithToken(token _: String) async throws -> KakaoOAuthPayload {
-    Log.info("Starting Kakao OAuth flow")
+    PickeLogger.info("Starting Kakao OAuth flow", category: .auth)
     let payload = try await kakaoRepository.signIn()
     $userSession.withLock { $0.accessToken = payload.accessToken }
     return payload

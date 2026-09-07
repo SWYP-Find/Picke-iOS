@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import AuthDomainInterface
 import ComposableArchitecture
@@ -167,7 +168,7 @@ extension SettingsFeature {
         do {
           _ = try await authUseCase.logout()
         } catch {
-          Log.error("[SettingsFeature] logout failed: \(error.localizedDescription)")
+          PickeLogger.error("[SettingsFeature] logout failed: \(error.localizedDescription)", category: .ui)
         }
         await send(.inner(.sessionCleared))
       }

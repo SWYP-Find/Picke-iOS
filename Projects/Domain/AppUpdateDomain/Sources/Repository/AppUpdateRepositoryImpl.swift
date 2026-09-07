@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import AppUpdateDomainInterface
 import PickeNetwork
@@ -69,7 +70,7 @@ public final class AppUpdateRepositoryImpl: AppUpdateInterface {
         startedAt: startedAt,
         isSuccess: false
       )
-      Log.error("[AppUpdate] lookup 실패(\(country)): \(error.localizedDescription)")
+      PickeLogger.error("[AppUpdate] lookup 실패(\(country)): \(error.localizedDescription)", category: .app)
       throw AppUpdateError.from(error)
     }
   }

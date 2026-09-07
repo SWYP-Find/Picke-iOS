@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import SearchDomainInterface
 
 import ComposableArchitecture
@@ -194,7 +195,7 @@ extension HifiFeature {
         state.nextOffset = page.nextOffset
         state.hasNext = page.hasNext
       case let .failure(error):
-        Log.error("[HifiFeature] searchBattles failed: \(error.localizedDescription)")
+        PickeLogger.error("[HifiFeature] searchBattles failed: \(error.localizedDescription)", category: .ui)
         if reset { state.items = [] }
       }
       return .none

@@ -11,6 +11,7 @@ let project = Project.makeModule(
   bundleId: .appBundleID(name: ".Ad"),
   settings: .settings(),
   dependencies: [
+    .core(.logger),
     .SPM.adFit,
     .SPM.googleMobileAds,
     .service(.analytics, .interface),

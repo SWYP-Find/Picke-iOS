@@ -4,6 +4,7 @@
 //
 
 import Alamofire
+import PickeCoreLogger
 import Foundation
 
 struct PickeEventMonitor: EventMonitor {
@@ -15,7 +16,7 @@ struct PickeEventMonitor: EventMonitor {
   // MARK: 요청 생성 실패 (URL/파라미터 인코딩 등 — 전송 전)
 
   func request(_: Request, didFailToCreateURLRequestWithError error: AFError) {
-    Log.error("❌ [요청 생성 실패] \(error.localizedDescription)")
+    PickeLogger.error("❌ [요청 생성 실패] \(error.localizedDescription)", category: .network)
   }
 
   // MARK: 요청+응답 (응답 시점에 한 덩어리로 묶어서 로깅)
@@ -60,9 +61,9 @@ struct PickeEventMonitor: EventMonitor {
 
     let message = lines.joined(separator: "\n")
     if isFailure {
-      Log.error(message)
+      PickeLogger.error(message, category: .network)
     } else {
-      Log.debug(message)
+      PickeLogger.debug(message, category: .network)
     }
   }
 }

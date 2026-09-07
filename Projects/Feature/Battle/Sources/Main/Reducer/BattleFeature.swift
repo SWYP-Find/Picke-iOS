@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import ComposableArchitecture
 import BattleDomainInterface
@@ -185,7 +186,7 @@ extension BattleFeature {
         state.battles = page.items.map(DailyBattle.from)
       case let .failure(error):
         state.battles = []
-        Log.error("[BattleFeature] fetchTodayBattles failed: \(error.localizedDescription)")
+        PickeLogger.error("[BattleFeature] fetchTodayBattles failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

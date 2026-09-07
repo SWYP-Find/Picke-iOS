@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import AuthDomainInterface
 import ComposableArchitecture
@@ -183,7 +184,7 @@ extension WithdrawReasonFeature {
         do {
           _ = try await authUseCase.withDraw(reason: reason)
         } catch {
-          Log.error("[WithdrawReasonFeature] withdraw failed: \(error.localizedDescription)")
+          PickeLogger.error("[WithdrawReasonFeature] withdraw failed: \(error.localizedDescription)", category: .ui)
         }
         await send(.inner(.sessionCleared))
       }

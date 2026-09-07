@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import ComposableArchitecture
 import PickeDesignKit
@@ -173,7 +174,7 @@ extension BattleProposalFeature {
         )
         return .none
       case let .failure(error):
-        Log.error("[BattleProposalFeature] proposeBattle failed: \(error.localizedDescription)")
+        PickeLogger.error("[BattleProposalFeature] proposeBattle failed: \(error.localizedDescription)", category: .ui)
         return .none
       }
     }

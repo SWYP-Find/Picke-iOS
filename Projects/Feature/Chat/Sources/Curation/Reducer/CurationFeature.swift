@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import BattleDomainInterface
 import ComposableArchitecture
@@ -143,7 +144,7 @@ extension CurationFeature {
       case let .success(page):
         state.battles = page.items
       case let .failure(error):
-        Log.error("[CurationFeature] recommendations failed: \(error.localizedDescription)")
+        PickeLogger.error("[CurationFeature] recommendations failed: \(error.localizedDescription)", category: .ui)
         state.battles = []
       }
       return .none

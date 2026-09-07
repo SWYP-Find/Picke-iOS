@@ -12,6 +12,7 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .core(.logger),
     .SPM.composableArchitecture,
     .ui(.designKit),
     .ui(.sharedUI),

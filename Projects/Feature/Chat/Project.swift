@@ -12,6 +12,7 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .core(.logger),
     .SPM.tcaFlow,
     .SPM.composableArchitecture,
     .service(.audioPlayer, .interface),

@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import os
 
 import PickeNetworkInterface
@@ -39,7 +40,7 @@ final class GuardedCredentialStore: CredentialStore {
     }
 
     guard didSave else {
-      Log.debug("signOut 이후 도착한 credential save 무시")
+      PickeLogger.debug("signOut 이후 도착한 credential save 무시", category: .auth)
       return
     }
   }

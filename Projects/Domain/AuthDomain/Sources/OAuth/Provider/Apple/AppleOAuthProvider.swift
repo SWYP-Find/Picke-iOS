@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import Dependencies
 import AuthenticationServices
 @preconcurrency import AuthDomainInterface
@@ -21,13 +22,13 @@ public final class AppleOAuthProvider: AppleOAuthProviderInterface, @unchecked S
     nonce: String
   ) async throws -> AppleOAuthPayload {
     let payload = try await appleRepository.signInWithCredential(credential, nonce: nonce)
-    Log.info("Apple sign-in completed through repository with credential")
+    PickeLogger.info("Apple sign-in completed through repository with credential", category: .auth)
     return payload
   }
 
   public func signIn() async throws -> AppleOAuthPayload {
     let payload = try await appleRepository.signIn()
-    Log.info("Apple sign-in completed through repository (direct)")
+    PickeLogger.info("Apple sign-in completed through repository (direct)", category: .auth)
     return payload
   }
 

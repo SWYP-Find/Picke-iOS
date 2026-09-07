@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 import ProfileDomainInterface
 
 import ComposableArchitecture
@@ -111,7 +112,7 @@ extension ContentActivityFeature {
       return .send(.async(.fetch(reset: true)))
 
     case .reachedBottom:
-      guard state.hasNext, state.viewState != .loadingMore, state.viewState != .loading else { return .none }
+      guard state.hasNext, !state.isLoadingMore, state.viewState != .loading else { return .none }
       return .send(.async(.fetch(reset: false)))
     }
   }
@@ -162,7 +163,7 @@ extension ContentActivityFeature {
         state.nextOffset = page.nextOffset
         state.hasNext = page.hasNext
       case let .failure(error):
-        Log.error("[ContentActivityFeature] fetchContentActivities failed: \(error.localizedDescription)")
+        PickeLogger.error("[ContentActivityFeature] fetchContentActivities failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

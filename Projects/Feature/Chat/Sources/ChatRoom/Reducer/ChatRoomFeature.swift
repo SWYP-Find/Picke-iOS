@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import BattleDomainInterface
 import ChatInterface
@@ -517,7 +518,7 @@ extension ChatRoomFeature {
         return .none
       case let .failure(error):
         state.scenarioLoadFailed = true
-        Log.error("[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)")
+        PickeLogger.error("[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)", category: .ui)
         return .none
       }
 

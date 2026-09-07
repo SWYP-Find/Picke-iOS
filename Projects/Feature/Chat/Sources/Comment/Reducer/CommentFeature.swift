@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import BattleDomainInterface
 import CommentDomainInterface
@@ -509,7 +510,7 @@ extension CommentFeature {
           }
         }
       case let .failure(error):
-        Log.error("[CommentFeature] fetchBattle failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentFeature] fetchBattle failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -525,7 +526,7 @@ extension CommentFeature {
           }
         }
       case let .failure(error):
-        Log.error("[CommentFeature] fetchMyPerspective failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentFeature] fetchMyPerspective failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -535,7 +536,7 @@ extension CommentFeature {
       case let .success(stats):
         state.voteSummary = makeSummary(from: stats, fallback: state.voteSummary)
       case let .failure(error):
-        Log.error("[CommentFeature] fetchVoteStats failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentFeature] fetchVoteStats failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -564,7 +565,7 @@ extension CommentFeature {
         // (이전엔 댓글마다 GET /perspectives/{id}/likes 로 덮어써 수치가 로드 후 바뀌는 문제가 있었음)
         return .none
       case let .failure(error):
-        Log.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -576,7 +577,7 @@ extension CommentFeature {
           state.comments[index].isLiked = payload.isLiked
         }
       case let .failure(error):
-        Log.error("[CommentFeature] toggleLike failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentFeature] toggleLike failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -596,7 +597,7 @@ extension CommentFeature {
         }
         return .send(.async(.fetchPerspectives(reset: true)))
       case let .failure(error):
-        Log.error("[CommentFeature] createComment failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentFeature] createComment failed: \(error.localizedDescription)", category: .ui)
         return .none
       }
 

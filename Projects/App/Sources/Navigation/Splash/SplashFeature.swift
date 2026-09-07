@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 
 import ComposableArchitecture
@@ -155,7 +156,7 @@ extension SplashFeature {
         return .none
 
       case let .failure(error):
-        Log.error("[Splash] 앱 업데이트 체크 실패: \(error.localizedDescription)")
+        PickeLogger.error("[Splash] 앱 업데이트 체크 실패: \(error.localizedDescription)", category: .app)
         return navigateToNextScreen(state: &state)
       }
     }

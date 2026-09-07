@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import CommentDomainInterface
 import BattleDomainInterface
@@ -507,7 +508,7 @@ extension CommentReplyFeature {
       case let .success(perspective):
         state.parentComment = CommentItem(item: perspective, order: 0)
       case let .failure(error):
-        Log.error("[CommentReplyFeature] fetchParent failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] fetchParent failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -522,7 +523,7 @@ extension CommentReplyFeature {
         state.nextCursor = page.nextCursor
         state.hasNext = page.hasNext
       case let .failure(error):
-        Log.error("[CommentReplyFeature] fetchReplies failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] fetchReplies failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -531,7 +532,7 @@ extension CommentReplyFeature {
       case .success:
         return .send(.async(.fetchReplies(reset: true)))
       case let .failure(error):
-        Log.error("[CommentReplyFeature] createReply failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] createReply failed: \(error.localizedDescription)", category: .ui)
         return .none
       }
 
@@ -541,7 +542,7 @@ extension CommentReplyFeature {
         // 수정 후 리스트 reset 갱신 → 스켈레톤 노출
         return .send(.async(.fetchReplies(reset: true)))
       case let .failure(error):
-        Log.error("[CommentReplyFeature] updateReply failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] updateReply failed: \(error.localizedDescription)", category: .ui)
         return .none
       }
 
@@ -551,7 +552,7 @@ extension CommentReplyFeature {
         state.replies.removeAll { $0.commentId == commentId }
         if state.parentComment.replyCount > 0 { state.parentComment.replyCount -= 1 }
       case let .failure(error):
-        Log.error("[CommentReplyFeature] deleteReply failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] deleteReply failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -561,7 +562,7 @@ extension CommentReplyFeature {
         state.parentComment.likeCount = payload.likeCount
         state.parentComment.isLiked = payload.isLiked
       case let .failure(error):
-        Log.error("[CommentReplyFeature] toggleParentLike failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] toggleParentLike failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -573,7 +574,7 @@ extension CommentReplyFeature {
           state.replies[index].isLiked = payload.isLiked
         }
       case let .failure(error):
-        Log.error("[CommentReplyFeature] toggleReplyLike failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] toggleReplyLike failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
@@ -582,7 +583,7 @@ extension CommentReplyFeature {
       case let .success(payload):
         state.parentComment.likeCount = payload.likeCount
       case let .failure(error):
-        Log.error("[CommentReplyFeature] fetchParentLikes failed: \(error.localizedDescription)")
+        PickeLogger.error("[CommentReplyFeature] fetchParentLikes failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
     }

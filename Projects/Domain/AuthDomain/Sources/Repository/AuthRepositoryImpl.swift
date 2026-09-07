@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import APIEndpoint
 import AuthDomainInterface
@@ -36,7 +37,7 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
     if let data = try? JSONEncoder().encode(body),
        let json = String(data: data, encoding: .utf8)
     {
-      Log.debug("[AuthRepository] POST /api/v1/auth/login/\(socialProvider.rawValue) body=\(json)")
+      PickeLogger.debug("[AuthRepository] POST /api/v1/auth/login/\(socialProvider.rawValue) body=\(json)", category: .auth)
     }
 
     let data = try await client.send(
@@ -59,7 +60,7 @@ public final class AuthRepositoryImpl: AuthInterface, @unchecked Sendable {
       )
       return data.toDomain()
     } catch {
-      Log.error("🔍 [AuthRepositoryImpl] Refresh failed: \(error)")
+      PickeLogger.error("🔍 [AuthRepositoryImpl] Refresh failed: \(error)", category: .auth)
 
       // 서버가 refresh token 을 거부한 경우만 재로그인으로 보낸다(5xx 는 일시 장애).
       if case let .response(response) = error, response.isUnauthorized {

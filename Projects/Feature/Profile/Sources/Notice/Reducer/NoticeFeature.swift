@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import PickeCoreLogger
 
 import ComposableArchitecture
 import NotificationDomainInterface
@@ -149,7 +150,7 @@ extension NoticeFeature {
           let (noticePage, eventPage) = try await (notices, events)
           await send(.inner(.listsResponse(notices: noticePage.items, events: eventPage.items)))
         } catch {
-          Log.error("[NoticeFeature] fetchLists failed: \(error.localizedDescription)")
+          PickeLogger.error("[NoticeFeature] fetchLists failed: \(error.localizedDescription)", category: .ui)
           await send(.inner(.listsFailed))
         }
       }
