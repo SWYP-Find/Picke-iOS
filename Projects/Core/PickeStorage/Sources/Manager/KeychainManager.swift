@@ -6,22 +6,20 @@
 //
 
 import Foundation
+import OSLog
 
-import ComposableArchitecture
 @_exported import PickeStorageInterface
-import Security
-import WeaveDI
 
-public final class KeychainManager: KeychainManaging, @unchecked Sendable {
-  private let service: String
+/// `SecureStorage` 위에 얹은 토큰 전용 어댑터.
+///
+/// Security 프레임워크 호출은 `KeychainStorage` 가 전담하고,
+/// 여기서는 access/refresh token 이라는 앱의 어휘만 다룬다.
+public struct KeychainManager: KeychainManaging {
+  private let storage: any SecureStorage
+  private let logger = Logger(subsystem: "io.Picke.co", category: "keychain")
 
-  private enum Key {
-    static let accessToken = "ACCESS_TOKEN"
-    static let refreshToken = "REFRESH_TOKEN"
-  }
-
-  public init(service: String = "io.Picke.co") {
-    self.service = service
+  public init(storage: any SecureStorage = StorageFactory.secureStorage) {
+    self.storage = storage
   }
 
   public func save(
@@ -33,79 +31,55 @@ public final class KeychainManager: KeychainManaging, @unchecked Sendable {
   }
 
   public func saveAccessToken(_ token: String) {
-    save(token, for: Key.accessToken)
+    write(token, for: .accessToken)
   }
 
   public func clearAccessToken() {
-    delete(for: Key.accessToken)
+    remove(.accessToken)
   }
 
   public func saveRefreshToken(_ token: String) {
-    save(token, for: Key.refreshToken)
+    write(token, for: .refreshToken)
   }
 
   public func accessToken() -> String? {
-    read(for: Key.accessToken)
+    read(.accessToken)
   }
 
   public func refreshToken() -> String? {
-    read(for: Key.refreshToken)
+    read(.refreshToken)
   }
 
   public func clear() {
-    delete(for: Key.accessToken)
-    delete(for: Key.refreshToken)
-  }
-
-  private func save(
-    _ value: String,
-    for key: String
-  ) {
-    let data = Data(value.utf8)
-    let query: [CFString: Any] = [
-      kSecClass: kSecClassGenericPassword,
-      kSecAttrService: service,
-      kSecAttrAccount: key,
-    ]
-
-    let attributes: [CFString: Any] = [
-      kSecValueData: data,
-    ]
-
-    let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
-    if status == errSecItemNotFound {
-      var addQuery = query
-      addQuery[kSecValueData] = data
-      _ = SecItemAdd(addQuery as CFDictionary, nil)
+    do {
+      try storage.removeAll()
+    } catch {
+      logger.error("토큰 전체 삭제 실패: \(String(describing: error), privacy: .public)")
     }
   }
 
-  private func read(for key: String) -> String? {
-    let query: [CFString: Any] = [
-      kSecClass: kSecClassGenericPassword,
-      kSecAttrService: service,
-      kSecAttrAccount: key,
-      kSecReturnData: true,
-      kSecMatchLimit: kSecMatchLimitOne,
-    ]
+  private func write(_ value: String, for key: SecureStorageKey) {
+    do {
+      try storage.save(value, for: key)
+    } catch {
+      logger.error("\(key.rawValue, privacy: .public) 저장 실패: \(String(describing: error), privacy: .public)")
+    }
+  }
 
-    var result: AnyObject?
-    let status = SecItemCopyMatching(query as CFDictionary, &result)
-    guard status == errSecSuccess, let data = result as? Data else {
+  private func read(_ key: SecureStorageKey) -> String? {
+    do {
+      return try storage.load(key)
+    } catch {
+      logger.error("\(key.rawValue, privacy: .public) 조회 실패: \(String(describing: error), privacy: .public)")
       return nil
     }
-    return String(data: data, encoding: .utf8)
   }
 
-  private func delete(for key: String) {
-    let query: [CFString: Any] = [
-      kSecClass: kSecClassGenericPassword,
-      kSecAttrService: service,
-      kSecAttrAccount: key,
-    ]
-    SecItemDelete(query as CFDictionary)
+  private func remove(_ key: SecureStorageKey) {
+    do {
+      try storage.remove(key)
+    } catch {
+      logger.error("\(key.rawValue, privacy: .public) 삭제 실패: \(String(describing: error), privacy: .public)")
+    }
   }
 }
-
-// keychainManager 의존성(프로토콜/DependencyKey/accessor)은 PickeStorageInterface 에 중앙집중.
-// 여기서는 구현체 KeychainManager 만 제공하고 DI(DiRegister)로 주입한다.

@@ -6,7 +6,8 @@
 //
 
 import Foundation
-import WeaveDI
+
+import Dependencies
 
 public protocol KeychainManaging: Sendable {
   func save(
@@ -21,11 +22,8 @@ public protocol KeychainManaging: Sendable {
   func clear()
 }
 
-public struct KeychainManagerDependency: DependencyKey {
-  public static var liveValue: KeychainManaging {
-    return UnifiedDI.resolve(KeychainManaging.self) ?? InMemoryKeychainManager()
-  }
-
+/// 라이브 구현(`KeychainManager`)은 PickeStorage 에서 `DependencyKey` 로 이어 붙인다.
+public enum KeychainManagerDependency: TestDependencyKey {
   public static var testValue: KeychainManaging {
     return InMemoryKeychainManager()
   }
