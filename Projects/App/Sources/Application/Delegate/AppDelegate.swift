@@ -6,7 +6,6 @@
 import UIKit
 
 class AppDelegate: UIResponder, UIApplicationDelegate {
-  let mixPanelKey = Bundle.main.object(forInfoDictionaryKey: "MIXPANEL_TOKEN") as? String
 
   /// ATT 팝업을 앱 active 이후로 미루기 위한 1회성 옵저버.
   /// 저장 프로퍼티는 확장에 둘 수 없어 여기 남으며, AppDelegate+Tracking 에서 쓰므로 internal 이다.

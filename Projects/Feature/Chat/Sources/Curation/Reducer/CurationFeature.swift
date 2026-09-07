@@ -8,7 +8,7 @@ import Foundation
 import BattleDomainInterface
 import ComposableArchitecture
 import LogMacro
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 
 @Reducer
 public struct CurationFeature {

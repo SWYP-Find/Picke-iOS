@@ -12,7 +12,7 @@ import NotificationDomainInterface
 import PickeDesignKit
 import PickeSharedUI
 import AdInterface
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 
 @Reducer
 public struct ProfileFeature {

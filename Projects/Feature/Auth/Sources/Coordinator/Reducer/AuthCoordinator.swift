@@ -22,7 +22,7 @@ public struct AuthCoordinator {
     var routes: [Route<AuthScreen.State>]
 
     public init() {
-      @Shared(.inMemory("UserSession")) var userSession: UserSession = .empty
+      @Shared(.userSession) var userSession: UserSession
       routes = [.root(.login(.init(userSession: userSession)), embedInNavigationView: true)]
     }
 

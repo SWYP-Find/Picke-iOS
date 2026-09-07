@@ -8,7 +8,7 @@ import Foundation
 import ComposableArchitecture
 import BattleDomainInterface
 import LogMacro
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import PickeCoreUtility
 
 @Reducer

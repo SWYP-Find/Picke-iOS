@@ -9,7 +9,7 @@ import Foundation
 import PickeNetwork
 import UIKit
 
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import BattleDomainInterface
 import ComposableArchitecture
 import LogMacro

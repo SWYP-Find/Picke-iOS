@@ -7,7 +7,7 @@
 
 import Foundation
 
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import ComposableArchitecture
 import PickeDesignKit
 import FeatureAssembly

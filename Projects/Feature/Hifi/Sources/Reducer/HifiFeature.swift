@@ -11,7 +11,7 @@ import HifiInterface
 import HomeDomainInterface
 import LogMacro
 import NotificationDomainInterface
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import BattleDomainInterface
 
 @Reducer

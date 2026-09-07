@@ -14,7 +14,7 @@ import LogMacro
 
 import AuthDomainInterface
 import PickeDesignKit
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 
 @Reducer
 public struct LoginFeature {
@@ -35,7 +35,7 @@ public struct LoginFeature {
     public init(
       userSession: UserSession = .empty
     ) {
-      _userSession = Shared(wrappedValue: userSession, .inMemory("UserSession"))
+      _userSession = Shared(wrappedValue: userSession, .userSession)
     }
   }
 

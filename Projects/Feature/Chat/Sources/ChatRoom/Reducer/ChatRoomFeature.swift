@@ -15,7 +15,7 @@ import LogMacro
 import PickeDesignKit
 import PickeSharedUI
 import PickeCoreUtility
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import AudioPlayerServiceInterface
 
 @Reducer

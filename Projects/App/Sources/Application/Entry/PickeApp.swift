@@ -1,5 +1,5 @@
 import ComposableArchitecture
-import SentrySwiftUI
+import ServiceAssembly
 import SwiftUI
 
 @main
@@ -22,7 +22,7 @@ struct PickeApp: App {
         AppDependencyFactory.configure(&$0)
       }
 
-      SentryTracedView("AppRoot") {
+      PickeTracedView("AppRoot") {
         AppView(store: store)
       }
       .onOpenURL { url in

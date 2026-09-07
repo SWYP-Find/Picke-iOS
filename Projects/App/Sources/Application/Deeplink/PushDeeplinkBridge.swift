@@ -7,6 +7,7 @@ import Foundation
 
 import DomainAssembly
 import LogMacro
+import PickeCoreUtility
 
 enum PushDeeplinkBridge {
   static let pendingKey = "PickePendingDeeplink"

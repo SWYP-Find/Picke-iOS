@@ -7,7 +7,7 @@ import Foundation
 import UIKit
 
 import AdInterface
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import ComposableArchitecture
 import GoogleMobileAds
 import LogMacro

@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 import ComposableArchitecture
+import PickeCoreUI
 import PickeDesignKit
 import FeatureAssembly
 import TCAFlow
@@ -127,28 +128,38 @@ private extension AppMainTabView {
       .frame(width: 24, height: 24)
   }
 
+  // TabView 는 네 탭의 콘텐츠를 한꺼번에 만들기 때문에, LazyView 로 감싸
+  // 각 탭이 처음 화면에 올라올 때까지 스토어 스코프와 뷰 생성을 미룬다.
   @ViewBuilder
   func tabContent(for tab: Int) -> some View {
     switch AppMainTabCoordinator.Tab(rawValue: tab) {
     case .home:
-      AppHomeCoordinatorView(
-        store: store.scope(state: \.homeState, action: \.home)
-      )
+      LazyView {
+        AppHomeCoordinatorView(
+          store: store.scope(state: \.homeState, action: \.home)
+        )
+      }
 
     case .explore:
-      AppHifiCoordinatorView(
-        store: store.scope(state: \.exploreState, action: \.explore)
-      )
+      LazyView {
+        AppHifiCoordinatorView(
+          store: store.scope(state: \.exploreState, action: \.explore)
+        )
+      }
 
     case .quickBattle:
-      AppBattleCoordinatorView(
-        store: store.scope(state: \.quickBattleState, action: \.quickBattle)
-      )
+      LazyView {
+        AppBattleCoordinatorView(
+          store: store.scope(state: \.quickBattleState, action: \.quickBattle)
+        )
+      }
 
     case .myPage:
-      AppProfileCoordinatorView(
-        store: store.scope(state: \.myPageState, action: \.myPage)
-      )
+      LazyView {
+        AppProfileCoordinatorView(
+          store: store.scope(state: \.myPageState, action: \.myPage)
+        )
+      }
 
     case .none:
       EmptyView()

@@ -5,11 +5,12 @@
 //  Created by Wonji Suh  on 5/6/26.
 //
 
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import ComposableArchitecture
 import DomainAssembly
 import LogMacro
 import FeatureAssembly
+import PickeCoreUtility
 
 @Reducer
 public struct AppReducer: Sendable {

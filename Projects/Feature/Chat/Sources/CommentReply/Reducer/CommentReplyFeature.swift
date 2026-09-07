@@ -14,7 +14,7 @@ import LogMacro
 import PerspectiveDomainInterface
 import PickeDesignKit
 import PickeSharedUI
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 
 @Reducer
 public struct CommentReplyFeature {

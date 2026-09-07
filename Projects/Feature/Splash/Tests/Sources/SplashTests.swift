@@ -8,7 +8,7 @@
 import ComposableArchitecture
 import Testing
 
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import AppUpdateDomainInterface
 import PickeStorageInterface
 

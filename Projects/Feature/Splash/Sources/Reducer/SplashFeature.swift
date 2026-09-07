@@ -10,7 +10,7 @@ import Foundation
 
 import ComposableArchitecture
 import LogMacro
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import AppUpdateDomainInterface
 import PickeStorageInterface
 

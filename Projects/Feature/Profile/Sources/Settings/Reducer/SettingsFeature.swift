@@ -10,7 +10,7 @@ import ComposableArchitecture
 import LogMacro
 import PickeDesignKit
 import PickeSharedUI
-import AnalyticsServiceInterface
+import PickeAnalyticsInterface
 import DeviceServiceInterface
 import PickeStorageInterface
 
