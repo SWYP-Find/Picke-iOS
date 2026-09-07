@@ -19,5 +19,5 @@ let project = Project.configure(
     .SPM.composableArchitecture,
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

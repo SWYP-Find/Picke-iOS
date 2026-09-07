@@ -16,5 +16,5 @@ let project = Project.configure(
   dependencies: [
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

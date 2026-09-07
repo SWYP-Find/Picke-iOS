@@ -17,5 +17,5 @@ let project = Project.configure(
     .SPM.kingfisher,
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

@@ -17,5 +17,5 @@ let project = Project.configure(
   ],
   sources: ["Sources/**"],
   resources: ["Resources/**"],
-  hasTests: false
+  hasTests: true
 )

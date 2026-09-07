@@ -13,5 +13,5 @@ let project = Project.configure(
     .core(.network, .interface),
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

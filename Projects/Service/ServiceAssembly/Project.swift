@@ -17,7 +17,8 @@ let project = Project.configure(
     .service(.audioPlayer),
     .service(.device),
     .service(.auth),
+    .service(.auth, .interface),
   ],
   sources: ["Sources/**"],
-  hasTests: false
+  hasTests: true
 )

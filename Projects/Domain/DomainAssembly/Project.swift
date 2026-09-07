@@ -21,5 +21,6 @@ let project = Project.configure(
     .domain(.perspective),
     .domain(.profile),
   ],
-  sources: ["Sources/**"]
+  sources: ["Sources/**"],
+  hasTests: true
 )
