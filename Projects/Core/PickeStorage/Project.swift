@@ -12,7 +12,9 @@ let project = Project.makeModule(
   product: .framework,
   settings: .settings(),
   dependencies: [
-
+    // Sources 가 ComposableArchitecture(DependencyKey)를 직접 import 한다.
+    .SPM.composableArchitecture,
+    .SPM.sqliteData,
   ],
   hasTests: true,
   hasInterface: true,

@@ -20,7 +20,7 @@ public final class GoogleOAuthProvider: GoogleOAuthProviderInterface, @unchecked
     PickeLogger.info("Starting Google OAuth flow", category: .auth)
     let payload = try await googleRepository.signIn()
     $userSession.withLock { $0.accessToken = payload.accessToken ?? "" }
-    PickeLogger.debug("google authCode", payload.authorizationCode, category: .auth)
+    PickeLogger.debug("google authCode: \(payload.authorizationCode)", category: .auth)
     return payload
   }
 }

@@ -65,7 +65,7 @@ public extension UnifiedOAuthUseCase {
       credential: credential,
       nonce: nonce
     )
-    PickeLogger.debug("apple authcode", payload.authorizationCode, category: .auth)
+    PickeLogger.debug("apple authcode: \(payload.authorizationCode)", category: .auth)
 
     let userName: String = {
       if let displayName = payload.displayName, !displayName.isEmpty {
@@ -102,7 +102,7 @@ public extension UnifiedOAuthUseCase {
     token: String
   ) async throws -> LoginEntity {
     let payload = try await googleProvider.signInWithToken(token: token)
-    PickeLogger.debug("google authorizationCode", payload.authorizationCode, category: .auth)
+    PickeLogger.debug("google authorizationCode: \(payload.authorizationCode)", category: .auth)
 
     $userSession.withLock {
       $0.token = payload.authorizationCode ?? ""
@@ -125,7 +125,7 @@ public extension UnifiedOAuthUseCase {
   /// Kakao 로그인 처리 — picke:// 콜백에서 받은 `code` 를 백엔드에 전달.
   func kakaoLogin(token: String) async throws -> LoginEntity {
     let payload = try await kakaoProvider.signInWithToken(token: token)
-    PickeLogger.debug("kakao authorizationCode", payload.authorizationCode, category: .auth)
+    PickeLogger.debug("kakao authorizationCode: \(payload.authorizationCode)", category: .auth)
 
     $userSession.withLock {
       $0.token = payload.authorizationCode ?? ""

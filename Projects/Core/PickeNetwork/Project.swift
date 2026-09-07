@@ -18,6 +18,7 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .core(.logger),
+    .SPM.alamofire,
   ],
   hasTests: true,
   hasInterface: true,

@@ -12,7 +12,7 @@ let project = Project.makeModule(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    
+    .SPM.composableArchitecture,
   ],
   hasTests: true,
   hasInterface: true,

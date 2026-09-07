@@ -41,7 +41,7 @@ public final class GoogleOAuthRepositoryImpl: NSObject, GoogleOAuthInterface {
     }
 
     let authorizeURL = try buildAuthorizeURL(clientID: clientID)
-    PickeLogger.debug("google authorize", authorizeURL.absoluteString, category: .auth)
+    PickeLogger.debug("google authorize: \(authorizeURL.absoluteString)", category: .auth)
 
     let code = try await OAuthWebPresenter.present(
       authorizeURL: authorizeURL,
@@ -49,7 +49,7 @@ public final class GoogleOAuthRepositoryImpl: NSObject, GoogleOAuthInterface {
       redirectPath: redirectPath,
       customUserAgent: OAuthWebUserAgent.mobileSafari
     )
-    PickeLogger.debug("google authorizationCode", code, category: .auth)
+    PickeLogger.debug("google authorizationCode: \(code)", category: .auth)
 
     return GoogleOAuthPayload(
       idToken: "",
