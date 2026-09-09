@@ -32,7 +32,7 @@ enum KingfisherConfigurator {
         let host = url.host?.lowercased(),
         protectedHostSuffixes.contains(where: { host == $0 || host.hasSuffix(".\($0)") }),
         url.path.hasPrefix("/api/"),
-        let token = try? storage.load(.accessToken), let token, !token.isEmpty
+        let token = try? storage.load(.accessToken), !token.isEmpty
       else {
         return req
       }

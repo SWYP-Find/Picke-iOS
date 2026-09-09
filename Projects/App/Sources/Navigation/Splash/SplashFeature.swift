@@ -8,14 +8,13 @@
 import Foundation
 import PickeCoreLogger
 
-
+import AppUpdateDomainInterface
 import ComposableArchitecture
 import PickeAnalyticsInterface
-import AppUpdateDomainInterface
 import PickeAuthInterface
 
 @Reducer
-public struct SplashFeature {
+public struct SplashFeature: Sendable {
   public init() {}
 
   @ObservableState
@@ -116,7 +115,7 @@ extension SplashFeature {
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .splash, referrer: nil))
       analyticsUseCase.track(.onboardingStep(step: .splash, provider: nil))
-      return .run { send in
+      return .run { [clock] send in
         try await clock.sleep(for: .seconds(1.2))
         await send(.async(.checkAppUpdate))
       }
@@ -169,7 +168,7 @@ extension SplashFeature {
     switch action {
     case .presented(.updateConfirmed):
       // 지금 업데이트 → App Store 이동 (앱 이탈).
-      return .run { [appStoreUrl = state.appStoreUrl] _ in
+      return .run { [appStoreUrl = state.appStoreUrl, openURL] _ in
         if let url = URL(string: appStoreUrl) {
           await openURL(url)
         }
@@ -197,7 +196,7 @@ extension SplashFeature {
   private func navigateToNextScreen(state _: inout State) -> Effect<Action> {
     let authService = authService
     return .run { send in
-      await send(.delegate(await authService.isLoggedIn ? .presentMainTab : .presentAuth))
+      await send(.delegate(authService.isLoggedIn ? .presentMainTab : .presentAuth))
     }
   }
 

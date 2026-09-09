@@ -5,10 +5,12 @@
 //  Created by Wonji Suh  on 5/6/26.
 //
 
-import PickeAnalyticsInterface
+import Foundation
+
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
+import PickeAnalyticsInterface
 import PickeCoreUtility
 
 @Reducer
@@ -41,7 +43,6 @@ public struct AppReducer: Sendable {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
-    case navigation(NavigationAction)
     case scope(ScopeAction)
   }
 
@@ -69,10 +70,6 @@ public struct AppReducer: Sendable {
     case observeDeeplink
     case deeplinkReceived(PickeDeeplink)
   }
-
-  // MARK: - 네비게이션 연결 액션
-
-  public enum NavigationAction: Equatable {}
 
   // MARK: - 스코프 액션
 
@@ -134,12 +131,20 @@ public struct AppReducer: Sendable {
       case let .async(asyncAction):
         return handleAsyncAction(state: &state, action: asyncAction)
 
-      case let .navigation(navigationAction):
-        return handleNavigationAction(state: &state, action: navigationAction)
-
       case let .scope(scopeAction):
         return handleScopeAction(state: &state, action: scopeAction)
       }
+    }
+    // ifCaseLet 은 base 를 감싸는 연산자라 배치 순서와 무관하게 자식이 먼저 실행된다.
+    // 따라서 handleScopeAction 의 상태 일치 검사는 자식이 이미 처리한 뒤에 돈다.
+    .ifCaseLet(\.splash, action: \.scope.splash) {
+      SplashFeature()
+    }
+    .ifCaseLet(\.auth, action: \.scope.auth) {
+      AppAuthCoordinator()
+    }
+    .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
+      AppMainTabCoordinator()
     }
   }
 
@@ -238,62 +243,14 @@ public struct AppReducer: Sendable {
     }
   }
 
-  private func handleNavigationAction(
-    state _: inout State,
-    action _: NavigationAction
-  ) -> Effect<Action> {
-    return .none
-  }
-
-  // 🎯 PFW 철학: 단순하고 조합 가능한 상태 검증
-  private func isValidAction(
-    _ action: ScopeAction,
-    for state: State
-  ) -> Bool {
-    switch (action, state) {
-    case (.auth, .auth), (.splash, .splash), (.mainTab, .mainTab):
-      return true
-    default:
-      return false
-    }
-  }
-
   private func handleScopeAction(
     state: inout State,
     action: ScopeAction
   ) -> Effect<Action> {
-    guard isValidAction(action, for: state) else { return .none }
-
-    let childEffect = reduceChild(state: &state, action: action)
-    let navigationEffect = handleScopeNavigation(action: action)
-    return .merge(childEffect, navigationEffect)
-  }
-
-  private func reduceChild(
-    state: inout State,
-    action: ScopeAction
-  ) -> Effect<Action> {
-    switch (state, action) {
-    case var (.splash(childState), .splash(childAction)):
-      let effect = SplashFeature()
-        .reduce(into: &childState, action: childAction)
-        .map { Action.scope(.splash($0)) }
-      state = .splash(childState)
-      return effect
-
-    case var (.auth(childState), .auth(childAction)):
-      let effect = AppAuthCoordinator()
-        .reduce(into: &childState, action: childAction)
-        .map { Action.scope(.auth($0)) }
-      state = .auth(childState)
-      return effect
-
-    case var (.mainTab(childState), .mainTab(childAction)):
-      let effect = AppMainTabCoordinator()
-        .reduce(into: &childState, action: childAction)
-        .map { Action.scope(.mainTab($0)) }
-      state = .mainTab(childState)
-      return effect
+    // 현재 화면과 다른 Coordinator 의 액션은 조용히 무시한다.
+    switch (action, state) {
+    case (.auth, .auth), (.splash, .splash), (.mainTab, .mainTab):
+      return handleScopeNavigation(action: action)
 
     default:
       return .none
@@ -332,11 +289,6 @@ public struct AppReducer: Sendable {
     default:
       return .none
     }
-  }
-
-  private func isSplashState(_ state: State) -> Bool {
-    guard case .splash = state else { return false }
-    return true
   }
 
   /// 푸시/인앱 알림 탭으로 브로드캐스트된 딥링크를 수신해 라우팅 액션으로 변환.

@@ -11,24 +11,6 @@ import DomainAssembly
 import PickeStorageInterface
 
 extension AppDelegate {
-  func configurePushNotifications() {
-    let center = UNUserNotificationCenter.current()
-    center.delegate = self
-
-    center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-      if let error {
-        PickeLogger.error("[Push] 권한 요청 실패: \(error.localizedDescription)", category: .app)
-        return
-      }
-      guard granted else {
-        PickeLogger.debug("[Push] 알림 권한 거부됨", category: .app)
-        return
-      }
-      Task { @MainActor in
-        UIApplication.shared.registerForRemoteNotifications()
-      }
-    }
-  }
 
   // APNs 디바이스 토큰 수신 → 저장 후 로그인 상태면 서버 등록.
   func application(
