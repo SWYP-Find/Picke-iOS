@@ -8,7 +8,7 @@ import Foundation
 import Dependencies
 import Testing
 
-@testable import NotificationData
+@testable import NotificationDomain
 
 import APIEndpoint
 import NotificationDomainInterface
@@ -84,7 +84,7 @@ struct NotificationRepositoryTests {
   }
 
   @Test
-  func fetchNotifications_withNullData_throwsBackendError() async throws {
+  func fetchNotifications_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 200,
@@ -98,7 +98,11 @@ struct NotificationRepositoryTests {
       NotificationRepositoryImpl()
     }
 
-    await #expect(throws: NotificationError.backendError("알림이 없습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "NOT_FOUND",
+      message: "알림이 없습니다"
+    ) {
       try await repo.fetchNotifications(category: .all, page: 0, size: 20)
     }
   }
@@ -143,7 +147,7 @@ struct NotificationRepositoryTests {
   }
 
   @Test
-  func fetchNotificationDetail_withNullData_throwsBackendError() async throws {
+  func fetchNotificationDetail_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 200,
@@ -157,7 +161,11 @@ struct NotificationRepositoryTests {
       NotificationRepositoryImpl()
     }
 
-    await #expect(throws: NotificationError.backendError("알림 상세가 없습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "NOT_FOUND",
+      message: "알림 상세가 없습니다"
+    ) {
       try await repo.fetchNotificationDetail(notificationId: 5)
     }
   }
@@ -195,7 +203,7 @@ struct NotificationRepositoryTests {
   }
 
   @Test
-  func hasUnreadNotifications_withNullData_defaultsToFalse() async throws {
+  func hasUnreadNotifications_withNullData_throwsNetworkDataMissing() async throws {
     let json = """
     { "statusCode": 200, "data": null, "error": null }
     """
@@ -205,9 +213,9 @@ struct NotificationRepositoryTests {
       NotificationRepositoryImpl()
     }
 
-    let hasUnread = try await repo.hasUnreadNotifications()
-
-    #expect(hasUnread == false)
+    await expectNetworkDataMissing {
+      _ = try await repo.hasUnreadNotifications()
+    }
   }
 
   @Test
@@ -225,9 +233,9 @@ struct NotificationRepositoryTests {
   }
 
   @Test
-  func markAllAsRead_doesNotThrow_onSuccessResponse() async throws {
+  func markAllAsRead_returnsUnreadState_onSuccessResponse() async throws {
     let json = """
-    { "statusCode": 200, "data": "OK", "error": null }
+    { "statusCode": 200, "data": { "hasUnread": false }, "error": null }
     """
     let repo = withDependencies {
       $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
@@ -235,6 +243,8 @@ struct NotificationRepositoryTests {
       NotificationRepositoryImpl()
     }
 
-    try await repo.markAllAsRead()
+    let hasUnread = try await repo.markAllAsRead()
+
+    #expect(hasUnread == false)
   }
 }

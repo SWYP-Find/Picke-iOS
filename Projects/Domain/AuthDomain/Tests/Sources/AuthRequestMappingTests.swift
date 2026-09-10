@@ -6,18 +6,18 @@
 import Foundation
 import Testing
 
-@testable import AuthData
+@testable import AuthDomain
 
 import API
 import APIEndpoint
 import AuthDomainInterface
-import PickeNetwork
+@testable import PickeNetwork
 
 struct AuthRequestMappingTests {
   // MARK: - login
 
   @Test
-  func login_kakao_urlPath_matchesAuthAPIDescriptionPlusProvider() {
+  func login_kakao_path_matchesAuthAPIDescriptionPlusProvider() {
     let body = OAuthLoginRequest(
       authorizationCode: "code-kakao",
       redirectUri: "https://picke.store/oauth/kakao",
@@ -25,8 +25,8 @@ struct AuthRequestMappingTests {
     )
     let service = AuthService.login(provider: .kakao, body: body)
 
-    #expect(service.urlPath == "\(AuthAPI.login.description)/\(SocialType.kakao.rawValue)")
-    #expect(service.urlPath == "login/kakao")
+    #expect(service.path == "\(AuthAPI.login.description)/\(SocialType.kakao.rawValue)")
+    #expect(service.path == "login/kakao")
   }
 
   @Test
@@ -65,24 +65,24 @@ struct AuthRequestMappingTests {
   }
 
   @Test
-  func login_request_usesNotAccessTokenHeader() throws {
+  func login_request_usesNoAuthorizationPolicy() throws {
     let body = OAuthLoginRequest(authorizationCode: "code", redirectUri: nil, idToken: nil)
     let service = AuthService.login(provider: .google, body: body)
     let request = try service.asURLRequest()
 
+    #expect(service.authorization == .none)
     #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-    #expect(request.value(forHTTPHeaderField: "accept") == "application/json")
     #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
   }
 
   // MARK: - refresh
 
   @Test
-  func refresh_urlPath_matchesAuthAPIDescription() {
+  func refresh_path_matchesAuthAPIDescription() {
     let service = AuthService.refresh(refreshToken: "refresh-abc")
 
-    #expect(service.urlPath == AuthAPI.refresh.description)
-    #expect(service.urlPath == "refresh")
+    #expect(service.path == AuthAPI.refresh.description)
+    #expect(service.path == "refresh")
   }
 
   @Test
@@ -93,23 +93,23 @@ struct AuthRequestMappingTests {
     #expect(service.method == .post)
     #expect(request.url?.path == "/api/v1/auth/refresh")
     #expect(request.httpBody == nil)
+    #expect(service.authorization == .none)
     #expect(request.value(forHTTPHeaderField: "X-Refresh-Token") == "refresh-abc")
-    #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
     #expect(request.value(forHTTPHeaderField: "Authorization") == nil)
   }
 
   // MARK: - withdraw
 
   @Test
-  func withdraw_urlPath_matchesAuthAPIDescription() {
+  func withdraw_path_matchesAuthAPIDescription() {
     let service = AuthService.withdraw(reason: "NOT_USED_OFTEN")
 
-    #expect(service.urlPath == AuthAPI.withDraw.description)
-    #expect(service.urlPath == "")
+    #expect(service.path == AuthAPI.withDraw.description)
+    #expect(service.path == "")
   }
 
   @Test
-  func withdraw_request_isDELETEWithJSONBodyAndBaseHeader() throws {
+  func withdraw_request_isDELETEWithJSONBodyAndAutomaticAuthorization() throws {
     let service = AuthService.withdraw(reason: "NOT_USED_OFTEN")
     let request = try service.asURLRequest()
 
@@ -120,29 +120,28 @@ struct AuthRequestMappingTests {
     let json = try #require(JSONSerialization.jsonObject(with: httpBody) as? [String: Any])
     #expect(json["reason"] as? String == "NOT_USED_OFTEN")
 
+    #expect(service.authorization == .automatic)
     #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
   }
 
   // MARK: - logout
 
   @Test
-  func logout_urlPath_matchesAuthAPIDescription() {
+  func logout_path_matchesAuthAPIDescription() {
     let service = AuthService.logout
 
-    #expect(service.urlPath == AuthAPI.logout.description)
-    #expect(service.urlPath == "logout")
+    #expect(service.path == AuthAPI.logout.description)
+    #expect(service.path == "logout")
   }
 
   @Test
-  func logout_request_isPOSTWithNoBodyAndBaseHeader() throws {
+  func logout_request_isPOSTWithNoBodyAndAutomaticAuthorization() throws {
     let service = AuthService.logout
     let request = try service.asURLRequest()
 
     #expect(service.method == .post)
     #expect(request.url?.path == "/api/v1/auth/logout")
     #expect(request.httpBody == nil)
-    #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
+    #expect(service.authorization == .automatic)
   }
 }

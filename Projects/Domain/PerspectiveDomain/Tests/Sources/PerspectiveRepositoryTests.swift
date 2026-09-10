@@ -8,7 +8,7 @@ import Foundation
 import Dependencies
 import Testing
 
-@testable import PerspectiveData
+@testable import PerspectiveDomain
 
 import APIEndpoint
 import CommentDomainInterface
@@ -66,7 +66,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func fetchPerspective_emptyData_throwsBackendErrorWithMessage() async throws {
+  func fetchPerspective_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 404,
@@ -80,7 +80,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: PerspectiveError.backendError("존재하지 않는 관점입니다")) {
+    await expectNetworkResponseError(
+      statusCode: 404,
+      code: "PERSPECTIVE_404",
+      message: "존재하지 않는 관점입니다"
+    ) {
       try await repo.fetchPerspective(perspectiveId: 42)
     }
   }
@@ -172,7 +176,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func fetchLabeledComments_emptyData_throwsBackendErrorWithDefaultMessage() async throws {
+  func fetchLabeledComments_emptyData_throwsNetworkDataMissing() async throws {
     let json = """
     {
       "statusCode": 500,
@@ -186,7 +190,7 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("대댓글 목록 응답이 비어 있습니다")) {
+    await expectNetworkDataMissing {
       try await repo.fetchLabeledComments(perspectiveId: 42, cursor: nil, size: nil)
     }
   }
@@ -231,7 +235,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func createComment_emptyData_throwsBackendErrorWithMessage() async throws {
+  func createComment_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -245,7 +249,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("댓글 작성에 실패했습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "COMMENT_400",
+      message: "댓글 작성에 실패했습니다"
+    ) {
       try await repo.createComment(perspectiveId: 42, content: "새 댓글")
     }
   }
@@ -292,7 +300,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func updateComment_emptyData_throwsBackendErrorWithMessage() async throws {
+  func updateComment_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -306,7 +314,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("댓글 수정에 실패했습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "COMMENT_400",
+      message: "댓글 수정에 실패했습니다"
+    ) {
       try await repo.updateComment(perspectiveId: 42, commentId: 9, content: "수정된 댓글")
     }
   }
@@ -345,7 +357,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func deleteComment_statusCode400_throwsBackendErrorWithMessage() async throws {
+  func deleteComment_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -359,7 +371,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("댓글 삭제에 실패했습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "COMMENT_400",
+      message: "댓글 삭제에 실패했습니다"
+    ) {
       try await repo.deleteComment(perspectiveId: 42, commentId: 9)
     }
   }
@@ -398,7 +414,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func updatePerspective_statusCode400_throwsBackendErrorWithMessage() async throws {
+  func updatePerspective_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -412,7 +428,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: PerspectiveError.backendError("관점 수정에 실패했습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "PERSPECTIVE_400",
+      message: "관점 수정에 실패했습니다"
+    ) {
       try await repo.updatePerspective(perspectiveId: 42, content: "관점 수정 내용")
     }
   }
@@ -451,7 +471,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func deletePerspective_statusCode400_throwsBackendErrorWithMessage() async throws {
+  func deletePerspective_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -465,7 +485,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: PerspectiveError.backendError("관점 삭제에 실패했습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "PERSPECTIVE_400",
+      message: "관점 삭제에 실패했습니다"
+    ) {
       try await repo.deletePerspective(perspectiveId: 42)
     }
   }
@@ -510,7 +534,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func likePerspective_emptyData_throwsBackendErrorWithMessage() async throws {
+  func likePerspective_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -524,7 +548,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("이미 좋아요한 관점입니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "PERSPECTIVE_400",
+      message: "이미 좋아요한 관점입니다"
+    ) {
       try await repo.likePerspective(perspectiveId: 42)
     }
   }
@@ -569,7 +597,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func unlikePerspective_emptyData_throwsBackendErrorWithDefaultMessage() async throws {
+  func unlikePerspective_emptyData_throwsNetworkDataMissing() async throws {
     let json = """
     {
       "statusCode": 500,
@@ -583,7 +611,7 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("관점 좋아요 취소 응답이 비어 있습니다")) {
+    await expectNetworkDataMissing {
       try await repo.unlikePerspective(perspectiveId: 42)
     }
   }
@@ -652,7 +680,7 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func fetchPerspectiveLikes_emptyData_throwsBackendErrorWithMessage() async throws {
+  func fetchPerspectiveLikes_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 404,
@@ -666,7 +694,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("좋아요 정보를 찾을 수 없습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 404,
+      code: "PERSPECTIVE_404",
+      message: "좋아요 정보를 찾을 수 없습니다"
+    ) {
       try await repo.fetchPerspectiveLikes(perspectiveId: 42)
     }
   }
@@ -705,12 +737,12 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func reportPerspective_statusCode400_throwsBackendErrorWithDefaultMessage() async throws {
+  func reportPerspective_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
       "data": null,
-      "error": null
+      "error": { "code": "PERSPECTIVE_400", "message": "관점 신고 실패" }
     }
     """
     let repo = withDependencies {
@@ -719,7 +751,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("관점 신고 실패")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "PERSPECTIVE_400",
+      message: "관점 신고 실패"
+    ) {
       try await repo.reportPerspective(perspectiveId: 42)
     }
   }
@@ -758,12 +794,12 @@ struct PerspectiveRepositoryTests {
   }
 
   @Test
-  func reportComment_statusCode400_throwsBackendErrorWithDefaultMessage() async throws {
+  func reportComment_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
       "data": null,
-      "error": null
+      "error": { "code": "COMMENT_400", "message": "댓글 신고 실패" }
     }
     """
     let repo = withDependencies {
@@ -772,7 +808,11 @@ struct PerspectiveRepositoryTests {
       PerspectiveRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("댓글 신고 실패")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "COMMENT_400",
+      message: "댓글 신고 실패"
+    ) {
       try await repo.reportComment(perspectiveId: 42, commentId: 9)
     }
   }

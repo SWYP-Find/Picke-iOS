@@ -14,9 +14,9 @@ struct DomainAssemblyExportTests {
   @Test
   func 모든_도메인_인터페이스가_엄브렐러로_보인다() {
     let interfaces: [Any.Type] = [
-      (any AppUpdateUseCase).self,
+      (any AppUpdateUseCaseInterface).self,
       (any AttendanceInterface).self,
-      (any AuthUseCase).self,
+      (any AuthUseCaseInterface).self,
       (any BattleInterface).self,
       (any CommentInterface).self,
       (any HomeInterface).self,

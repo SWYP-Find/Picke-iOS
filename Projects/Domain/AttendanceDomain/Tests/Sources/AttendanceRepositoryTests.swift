@@ -11,7 +11,7 @@ import Testing
 import APIEndpoint
 import AttendanceDomainInterface
 
-@testable import AttendanceData
+@testable import AttendanceDomain
 
 @Suite("출석체크 리포지토리")
 struct AttendanceRepositoryTests {
@@ -85,8 +85,8 @@ struct AttendanceRepositoryTests {
     #expect(weekly.isStreakAlive == false)
   }
 
-  @Test("data 가 비어 있으면 backendError 를 던진다")
-  func throwsOnEmptyPayload() async {
+  @Test("서버 error 봉투는 네트워크 response 에러로 전파한다")
+  func throwsNetworkResponseErrorOnEnvelopeFailure() async {
     let json = """
     { "statusCode": 500, "data": null, "error": { "code": "E500", "message": "서버 오류" } }
     """
@@ -96,7 +96,11 @@ struct AttendanceRepositoryTests {
       AttendanceRepositoryImpl()
     }
 
-    await #expect(throws: AttendanceError.backendError("서버 오류")) {
+    await expectNetworkResponseError(
+      statusCode: 500,
+      code: "E500",
+      message: "서버 오류"
+    ) {
       try await sut.checkAttendance()
     }
   }

@@ -8,7 +8,7 @@ import Foundation
 import Dependencies
 import Testing
 
-@testable import ProfileData
+@testable import ProfileDomain
 
 import APIEndpoint
 import ProfileDomainInterface
@@ -65,7 +65,7 @@ struct ProfileRepositoryTests {
     #expect(result.tier.currentPoint == 120)
   }
 
-  @Test func fetchMyPage_은_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func fetchMyPage_은_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "NOT_FOUND", "message": "마이페이지 없음"}}
     """
@@ -75,7 +75,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("마이페이지 없음")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "NOT_FOUND",
+      message: "마이페이지 없음"
+    ) {
       try await repo.fetchMyPage()
     }
   }
@@ -124,7 +128,7 @@ struct ProfileRepositoryTests {
     #expect(result.updatedAt == "2026-07-16T12:00:00Z")
   }
 
-  @Test func updateProfile_은_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func updateProfile_은_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "INVALID", "message": "프로필 수정 실패"}}
     """
@@ -134,7 +138,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("프로필 수정 실패")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "INVALID",
+      message: "프로필 수정 실패"
+    ) {
       try await repo.updateProfile(
         nickname: "새 닉네임",
         characterType: "OWL"
@@ -212,7 +220,7 @@ struct ProfileRepositoryTests {
     #expect(result.preferenceReport.favoriteTopics.first?.tagName == "정치")
   }
 
-  @Test func fetchRecap_은_data_가_없으면_에러_대신_empty_잠금_상태를_반환한다() async throws {
+  @Test func fetchRecap_은_200_data_nil이면_잠금용_empty_recap을_반환한다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": null}
     """
@@ -226,6 +234,26 @@ struct ProfileRepositoryTests {
 
     #expect(result == .empty)
     #expect(result.preferenceReport.totalParticipation == 0)
+    #expect(result.preferenceReport.totalParticipation < 5)
+  }
+
+  @Test func fetchRecap_은_error_봉투이면_네트워크_response_에러를_던진다() async throws {
+    let json = """
+    {"statusCode": 500, "data": null, "error": {"code": "RECAP_FAILED", "message": "리캡 조회 실패"}}
+    """
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8), statusCode: 500)
+    } operation: {
+      ProfileRepositoryImpl()
+    }
+
+    await expectNetworkResponseError(
+      statusCode: 500,
+      code: "RECAP_FAILED",
+      message: "리캡 조회 실패"
+    ) {
+      try await repo.fetchRecap()
+    }
   }
 
   // MARK: - fetchCreditHistory
@@ -277,7 +305,7 @@ struct ProfileRepositoryTests {
     #expect(result.hasNext == true)
   }
 
-  @Test func fetchCreditHistory_는_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func fetchCreditHistory_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "크레딧 내역 없음"}}
     """
@@ -287,7 +315,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("크레딧 내역 없음")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "ERR",
+      message: "크레딧 내역 없음"
+    ) {
       try await repo.fetchCreditHistory(offset: 0, size: 20)
     }
   }
@@ -335,7 +367,7 @@ struct ProfileRepositoryTests {
     #expect(result.hasNext == false)
   }
 
-  @Test func fetchBattleRecords_는_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func fetchBattleRecords_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "배틀 기록 없음"}}
     """
@@ -345,7 +377,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("배틀 기록 없음")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "ERR",
+      message: "배틀 기록 없음"
+    ) {
       try await repo.fetchBattleRecords(offset: 0, size: 20, voteSide: .pro)
     }
   }
@@ -401,7 +437,7 @@ struct ProfileRepositoryTests {
     #expect(result.hasNext == false)
   }
 
-  @Test func fetchContentActivities_는_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func fetchContentActivities_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "콘텐츠 활동 없음"}}
     """
@@ -411,7 +447,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("콘텐츠 활동 없음")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "ERR",
+      message: "콘텐츠 활동 없음"
+    ) {
       try await repo.fetchContentActivities(offset: 0, size: 20, activityType: .comment)
     }
   }
@@ -449,7 +489,7 @@ struct ProfileRepositoryTests {
     #expect(result.marketingEventEnabled == false)
   }
 
-  @Test func fetchNotificationSettings_는_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func fetchNotificationSettings_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "알림 설정 없음"}}
     """
@@ -459,7 +499,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("알림 설정 없음")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "ERR",
+      message: "알림 설정 없음"
+    ) {
       try await repo.fetchNotificationSettings()
     }
   }
@@ -497,7 +541,7 @@ struct ProfileRepositoryTests {
     #expect(result.marketingEventEnabled == true)
   }
 
-  @Test func updateNotificationSettings_는_data_가_없으면_backendError_를_던진다() async throws {
+  @Test func updateNotificationSettings_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {"statusCode": 200, "data": null, "error": {"code": "ERR", "message": "알림 설정 갱신 실패"}}
     """
@@ -507,7 +551,11 @@ struct ProfileRepositoryTests {
       ProfileRepositoryImpl()
     }
 
-    await #expect(throws: ProfileError.backendError("알림 설정 갱신 실패")) {
+    await expectNetworkResponseError(
+      statusCode: 200,
+      code: "ERR",
+      message: "알림 설정 갱신 실패"
+    ) {
       try await repo.updateNotificationSettings(NotificationSettings())
     }
   }

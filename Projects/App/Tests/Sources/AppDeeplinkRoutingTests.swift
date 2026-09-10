@@ -31,8 +31,14 @@ struct AppDeeplinkRoutingTests {
       #expect(pending == PickeDeeplink.quickBattle.encoded)
 
       await store.send(.inner(.completeMainTabTransition))
-      await store.receive(\.async.consumePendingDeeplink)
-      await store.receive(\.scope.mainTab.selectTab)
+      await store.receive {
+        guard case .async(.consumePendingDeeplink) = $0 else { return false }
+        return true
+      }
+      await store.receive {
+        guard case let .scope(.mainTab(.selectTab(tab))) = $0 else { return false }
+        return tab == AppMainTabCoordinator.Tab.quickBattle.rawValue
+      }
       guard case let .mainTab(state) = store.state else {
         Issue.record("메인 화면으로 전환되지 않음")
         return

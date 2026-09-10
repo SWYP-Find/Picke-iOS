@@ -11,7 +11,6 @@ import APIEndpoint
 import PickeNetwork
 import ProfileDomainInterface
 
-
 public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable {
   @Dependency(\.networkClient) private var client
 
@@ -27,15 +26,19 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
   }
 
   public func fetchRecap() async throws -> PhilosopherRecap {
-    let data = try await client.send(
-      ProfileService.recap,
-      as: RecapDataDTO.self
-    )
-
     // 배틀 5개 미만 사용자는 서버가 data: nil (200) 로 응답 → 잠금 상태.
     // 에러로 던지지 않고 빈 recap(totalParticipation 0 → isLocked)으로 반환.
-
-    return data.toDomain()
+    do {
+      let data = try await client.send(
+        ProfileService.recap,
+        as: RecapDataDTO.self
+      )
+      return data.toDomain()
+    } catch PickeNetworkError.decoding(.dataMissing) {
+      return .empty
+    } catch {
+      throw error
+    }
   }
 
   public func fetchCreditHistory(
@@ -43,7 +46,12 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
     size: Int
   ) async throws -> CreditHistoryPage {
     let data = try await client.send(
-      ProfileService.creditsHistory(query: CreditHistoryQueryRequest(offset: offset, size: size)),
+      ProfileService.creditsHistory(
+        query: CreditHistoryQueryRequest(
+          offset: offset,
+          size: size
+        )
+      ),
       as: CreditHistoryDataDTO.self
     )
 
@@ -56,7 +64,13 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
     voteSide: BattleVoteSide?
   ) async throws -> BattleRecordPage {
     let data = try await client.send(
-      ProfileService.battleRecords( query: BattleRecordsQueryRequest( offset: offset, size: size, voteSide: voteSide.flatMap { $0 == .unknown ? nil : $0.rawValue } ) ),
+      ProfileService.battleRecords(
+        query: BattleRecordsQueryRequest(
+          offset: offset,
+          size: size,
+          voteSide: voteSide.flatMap { $0 == .unknown ? nil : $0.rawValue }
+        )
+      ),
       as: BattleRecordDataDTO.self
     )
 
@@ -69,7 +83,13 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
     activityType: ContentActivityType?
   ) async throws -> ContentActivityPage {
     let data = try await client.send(
-      ProfileService.contentActivities( query: ContentActivitiesQueryRequest( offset: offset, size: size, activityType: activityType.flatMap(\.rawValue) ) ),
+      ProfileService.contentActivities(
+        query: ContentActivitiesQueryRequest(
+          offset: offset,
+          size: size,
+          activityType: activityType.flatMap(\.rawValue)
+        )
+      ),
       as: ContentActivityDataDTO.self
     )
 
@@ -87,7 +107,16 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
 
   public func updateNotificationSettings(_ settings: NotificationSettings) async throws -> NotificationSettings {
     let data = try await client.send(
-      ProfileService.updateNotificationSettings( body: NotificationSettingsRequest( newBattleEnabled: settings.newBattleEnabled, battleResultEnabled: settings.battleResultEnabled, commentReplyEnabled: settings.commentReplyEnabled, newCommentEnabled: settings.newCommentEnabled, contentLikeEnabled: settings.contentLikeEnabled, marketingEventEnabled: settings.marketingEventEnabled ) ),
+      ProfileService.updateNotificationSettings(
+        body: NotificationSettingsRequest(
+          newBattleEnabled: settings.newBattleEnabled,
+          battleResultEnabled: settings.battleResultEnabled,
+          commentReplyEnabled: settings.commentReplyEnabled,
+          newCommentEnabled: settings.newCommentEnabled,
+          contentLikeEnabled: settings.contentLikeEnabled,
+          marketingEventEnabled: settings.marketingEventEnabled
+        )
+      ),
       as: NotificationSettingsDataDTO.self
     )
 
@@ -99,7 +128,12 @@ public final class ProfileRepositoryImpl: ProfileInterface, @unchecked Sendable 
     characterType: String
   ) async throws -> UpdatedProfile {
     let data = try await client.send(
-      ProfileService.updateProfile( body: ProfileUpdateRequest( nickname: nickname, characterType: characterType ) ),
+      ProfileService.updateProfile(
+        body: ProfileUpdateRequest(
+          nickname: nickname,
+          characterType: characterType
+        )
+      ),
       as: ProfileUpdateDataDTO.self
     )
 

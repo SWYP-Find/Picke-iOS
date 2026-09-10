@@ -5,10 +5,10 @@
 
 import Testing
 
-@testable import SearchData
+@testable import SearchDomain
 
 import APIEndpoint
-import PickeNetwork
+@testable import PickeNetwork
 
 struct SearchRequestMappingTests {
   @Test func battles_요청은_GET_이며_경로가_api_v1_search_battles_이다() throws {
@@ -64,10 +64,9 @@ struct SearchRequestMappingTests {
     #expect(request.httpBody == nil)
   }
 
-  @Test func battles_요청은_baseHeader_를_포함한다() throws {
-    let request = try SearchService.battles(category: nil, sort: nil, offset: nil, size: nil).asURLRequest()
+  @Test func battles_요청은_자동_인증_정책을_사용한다() {
+    let service = SearchService.battles(category: nil, sort: nil, offset: nil, size: nil)
 
-    #expect(request.value(forHTTPHeaderField: "Content-Type") != nil)
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer") == true)
+    #expect(service.authorization == .automatic)
   }
 }

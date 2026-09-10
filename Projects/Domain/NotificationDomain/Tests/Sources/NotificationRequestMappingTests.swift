@@ -6,11 +6,11 @@
 import Foundation
 import Testing
 
-@testable import NotificationData
+@testable import NotificationDomain
 
 import API
 import APIEndpoint
-import PickeNetwork
+@testable import PickeNetwork
 
 struct NotificationRequestMappingTests {
   @Test
@@ -20,7 +20,7 @@ struct NotificationRequestMappingTests {
     )
     let request = try service.asURLRequest()
 
-    #expect(service.urlPath == NotificationAPI.list.description)
+    #expect(service.path == NotificationAPI.list.description)
     #expect(service.method == .get)
     #expect(request.url?.path == "/api/v1/notifications")
     #expect(request.httpBody == nil)
@@ -36,7 +36,7 @@ struct NotificationRequestMappingTests {
     let service = NotificationService.list(query: NotificationsQueryRequest())
     let request = try service.asURLRequest()
 
-    #expect(service.parameters == nil)
+    #expect(service.parameters != nil)
     #expect(request.url?.query == nil)
   }
 
@@ -45,7 +45,7 @@ struct NotificationRequestMappingTests {
     let service = NotificationService.unread
     let request = try service.asURLRequest()
 
-    #expect(service.urlPath == NotificationAPI.unread.description)
+    #expect(service.path == NotificationAPI.unread.description)
     #expect(service.method == .get)
     #expect(request.url?.path == "/api/v1/notifications/unread")
     #expect(service.parameters == nil)
@@ -57,7 +57,7 @@ struct NotificationRequestMappingTests {
     let service = NotificationService.detail(notificationId: 42)
     let request = try service.asURLRequest()
 
-    #expect(service.urlPath == NotificationAPI.detail(notificationId: 42).description)
+    #expect(service.path == NotificationAPI.detail(notificationId: 42).description)
     #expect(service.method == .get)
     #expect(request.url?.path == "/api/v1/notifications/42")
     #expect(service.parameters == nil)
@@ -69,7 +69,7 @@ struct NotificationRequestMappingTests {
     let service = NotificationService.read(notificationId: 42)
     let request = try service.asURLRequest()
 
-    #expect(service.urlPath == NotificationAPI.read(notificationId: 42).description)
+    #expect(service.path == NotificationAPI.read(notificationId: 42).description)
     #expect(service.method == .patch)
     #expect(request.url?.path == "/api/v1/notifications/42/read")
     #expect(service.parameters == nil)
@@ -81,7 +81,7 @@ struct NotificationRequestMappingTests {
     let service = NotificationService.readAll
     let request = try service.asURLRequest()
 
-    #expect(service.urlPath == NotificationAPI.readAll.description)
+    #expect(service.path == NotificationAPI.readAll.description)
     #expect(service.method == .patch)
     #expect(request.url?.path == "/api/v1/notifications/read-all")
     #expect(service.parameters == nil)
@@ -89,7 +89,7 @@ struct NotificationRequestMappingTests {
   }
 
   @Test
-  func allCases_includeBaseHeaderFields() throws {
+  func allCases_useAutomaticAuthorizationPolicy() {
     let services: [NotificationService] = [
       .list(query: NotificationsQueryRequest()),
       .unread,
@@ -99,9 +99,7 @@ struct NotificationRequestMappingTests {
     ]
 
     for service in services {
-      let request = try service.asURLRequest()
-      #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-      #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
+      #expect(service.authorization == .automatic)
     }
   }
 }

@@ -6,10 +6,10 @@
 import Foundation
 import Testing
 
-@testable import PerspectiveData
+@testable import PerspectiveDomain
 
 import APIEndpoint
-import PickeNetwork
+@testable import PickeNetwork
 
 struct PerspectiveRequestMappingTests {
   // MARK: - detail
@@ -246,11 +246,24 @@ struct PerspectiveRequestMappingTests {
 
   // MARK: - headers
 
-  @Test func 모든_요청은_baseHeader_를_포함한다() throws {
-    let request = try PerspectiveService.detail(perspectiveId: 42).asURLRequest()
+  @Test func 모든_요청은_자동_인증_정책을_사용한다() {
+    let services: [PerspectiveService] = [
+      .detail(perspectiveId: 42),
+      .listLabeledComments(perspectiveId: 42, cursor: nil, size: nil),
+      .createComment(perspectiveId: 42, body: PerspectiveCommentBody(content: "댓글")),
+      .updateComment(perspectiveId: 42, commentId: 7, body: PerspectiveCommentBody(content: "댓글")),
+      .deleteComment(perspectiveId: 42, commentId: 7),
+      .updatePerspective(perspectiveId: 42, body: PerspectiveCommentBody(content: "관점")),
+      .deletePerspective(perspectiveId: 42),
+      .likePerspective(perspectiveId: 42),
+      .unlikePerspective(perspectiveId: 42),
+      .fetchPerspectiveLikes(perspectiveId: 42),
+      .reportPerspective(perspectiveId: 42),
+      .reportComment(perspectiveId: 42, commentId: 7),
+    ]
 
-    #expect(request.value(forHTTPHeaderField: "Content-Type") != nil)
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer") == true)
-    #expect(request.value(forHTTPHeaderField: "accept") != nil)
+    for service in services {
+      #expect(service.authorization == .automatic)
+    }
   }
 }

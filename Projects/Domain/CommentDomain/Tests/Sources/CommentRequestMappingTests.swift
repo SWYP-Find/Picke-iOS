@@ -6,26 +6,27 @@
 import Foundation
 import Testing
 
-@testable import CommentData
+@testable import CommentDomain
 
+import API
 import APIEndpoint
-import PickeNetwork
+@testable import PickeNetwork
 
 struct CommentRequestMappingTests {
   @Test
-  func like_urlPath_matchesCommentAPIDescription() {
+  func like_path_matchesCommentAPIDescription() {
     let service = CommentService.like(commentId: 123)
 
-    #expect(service.urlPath == CommentAPI.like(commentId: 123).description)
-    #expect(service.urlPath == "123/likes")
+    #expect(service.path == CommentAPI.like(commentId: 123).description)
+    #expect(service.path == "123/likes")
   }
 
   @Test
-  func unlike_urlPath_matchesCommentAPIDescription() {
+  func unlike_path_matchesCommentAPIDescription() {
     let service = CommentService.unlike(commentId: 123)
 
-    #expect(service.urlPath == CommentAPI.unlike(commentId: 123).description)
-    #expect(service.urlPath == "123/likes")
+    #expect(service.path == CommentAPI.unlike(commentId: 123).description)
+    #expect(service.path == "123/likes")
   }
 
   @Test
@@ -55,11 +56,8 @@ struct CommentRequestMappingTests {
   }
 
   @Test
-  func headers_includeBaseHeaderFields() throws {
-    let service = CommentService.like(commentId: 123)
-    let request = try service.asURLRequest()
-
-    #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
+  func allCases_useAutomaticAuthorizationPolicy() {
+    #expect(CommentService.like(commentId: 123).authorization == .automatic)
+    #expect(CommentService.unlike(commentId: 123).authorization == .automatic)
   }
 }

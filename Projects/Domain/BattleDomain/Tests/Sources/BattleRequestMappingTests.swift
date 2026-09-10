@@ -5,11 +5,11 @@
 
 import Testing
 
-@testable import BattleData
+@testable import BattleDomain
 
 import APIEndpoint
 import Foundation
-import PickeNetwork
+@testable import PickeNetwork
 
 struct BattleRequestMappingTests {
   // MARK: - today
@@ -189,10 +189,31 @@ struct BattleRequestMappingTests {
 
   // MARK: - headers
 
-  @Test func 모든_요청은_baseHeader_를_포함한다() throws {
-    let request = try BattleService.today.asURLRequest()
+  @Test func 모든_요청은_자동_인증_정책을_사용한다() {
+    let services: [BattleService] = [
+      .today,
+      .detail(battleId: 42),
+      .preVote(battleId: 42, body: PreVoteRequest(optionId: 1)),
+      .postVote(battleId: 42, body: PreVoteRequest(optionId: 1)),
+      .scenario(battleId: 42),
+      .voteStats(battleId: 42),
+      .perspectives(battleId: 42, query: PerspectivesQueryRequest()),
+      .createPerspective(battleId: 42, body: CreatePerspectiveRequest(content: "내용")),
+      .myPerspective(battleId: 42),
+      .recommendations(battleId: 42),
+      .createProposal(
+        body: BattleProposalRequest(
+          category: "철학",
+          topic: "AI",
+          positionA: "있다",
+          positionB: "없다",
+          description: "설명"
+        )
+      ),
+    ]
 
-    #expect(request.value(forHTTPHeaderField: "Content-Type") != nil)
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer") == true)
+    for service in services {
+      #expect(service.authorization == .automatic)
+    }
   }
 }

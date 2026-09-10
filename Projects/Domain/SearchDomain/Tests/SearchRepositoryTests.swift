@@ -5,10 +5,11 @@
 
 import Testing
 
-@testable import SearchData
+@testable import SearchDomain
 
 import APIEndpoint
 import BattleDomainInterface
+import Dependencies
 import HomeDomainInterface
 
 struct SearchRepositoryTests {
@@ -101,7 +102,7 @@ struct SearchRepositoryTests {
     #expect(page.hasNext == false)
   }
 
-  @Test func searchBattles_은_data가_nil이면_backendError를_던진다() async throws {
+  @Test func searchBattles_은_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -116,7 +117,11 @@ struct SearchRepositoryTests {
       SearchRepositoryImpl()
     }
 
-    await #expect(throws: BattleError.backendError("잘못된 검색 조건입니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "SEARCH_400",
+      message: "잘못된 검색 조건입니다"
+    ) {
       try await repo.searchBattles(category: nil, sort: nil, offset: nil, size: nil)
     }
   }

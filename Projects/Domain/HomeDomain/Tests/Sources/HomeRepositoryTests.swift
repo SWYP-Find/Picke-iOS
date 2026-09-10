@@ -8,7 +8,7 @@ import Foundation
 import Dependencies
 import Testing
 
-@testable import HomeData
+@testable import HomeDomain
 
 import APIEndpoint
 import AuthDomainInterface
@@ -208,7 +208,7 @@ struct HomeRepositoryTests {
     #expect(bundle.newBattles.isEmpty)
   }
 
-  @Test func fetchHome_data가_비어있으면_backendError_를_던진다() async throws {
+  @Test func fetchHome_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let data = try #require(Self.emptyDataEnvelope.data(using: .utf8))
     let repository = withDependencies {
       $0.networkClient = StubNetworkClient(stubData: data)
@@ -216,7 +216,11 @@ struct HomeRepositoryTests {
       HomeRepositoryImpl()
     }
 
-    await #expect(throws: AuthError.backendError("홈 데이터를 불러오지 못했습니다")) {
+    await expectNetworkResponseError(
+      statusCode: 500,
+      code: "HOME_500",
+      message: "홈 데이터를 불러오지 못했습니다"
+    ) {
       _ = try await repository.fetchHome()
     }
   }

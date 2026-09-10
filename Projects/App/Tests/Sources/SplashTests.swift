@@ -8,8 +8,8 @@
 import ComposableArchitecture
 import Testing
 
-import PickeAnalyticsInterface
 import AppUpdateDomainInterface
+import PickeAnalyticsInterface
 import PickeAuthInterface
 
 @testable import Picke
@@ -43,6 +43,7 @@ private let noopAnalytics = AnalyticsUseCase(
   reset: {}
 )
 
+@MainActor
 struct SplashTests {
   @Test
   func onAppearRoutesToMainTabWhenTokensExist() async {

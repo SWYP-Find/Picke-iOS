@@ -8,10 +8,11 @@ import Foundation
 import Dependencies
 import Testing
 
-@testable import AuthData
+@testable import AuthDomain
 
 import APIEndpoint
 import AuthDomainInterface
+import PickeAuthInterface
 
 struct AuthRepositoryTests {
   // MARK: - login
@@ -33,6 +34,7 @@ struct AuthRepositoryTests {
     """.utf8)
 
     let repo = withDependencies {
+      $0.authService = RecordingAuthService(refreshToken: "refresh-1")
       $0.networkClient = StubNetworkClient(stubData: fixture)
     } operation: {
       AuthRepositoryImpl()
@@ -54,7 +56,7 @@ struct AuthRepositoryTests {
   }
 
   @Test
-  func login_emptyData_throwsBackendError() async throws {
+  func login_errorEnvelope_throwsNetworkResponseError() async throws {
     let fixture = Data("""
     {
       "statusCode": 400,
@@ -64,23 +66,23 @@ struct AuthRepositoryTests {
     """.utf8)
 
     let repo = withDependencies {
+      $0.authService = RecordingAuthService(refreshToken: "refresh-1")
       $0.networkClient = StubNetworkClient(stubData: fixture)
     } operation: {
       AuthRepositoryImpl()
     }
 
-    do {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "AUTH_400",
+      message: "로그인에 실패했습니다"
+    ) {
       _ = try await repo.login(
         provider: .kakao,
         authorizationCode: "code-kakao",
         redirectUri: nil,
         idToken: nil
       )
-      Issue.record("로그인 실패 응답인데 에러가 던져지지 않았습니다")
-    } catch let error as AuthError {
-      #expect(error == .backendError("로그인에 실패했습니다"))
-    } catch {
-      Issue.record("예상치 못한 에러 타입: \(error)")
     }
   }
 
@@ -100,6 +102,7 @@ struct AuthRepositoryTests {
     """.utf8)
 
     let repo = withDependencies {
+      $0.authService = RecordingAuthService(refreshToken: "refresh-1")
       $0.networkClient = StubNetworkClient(stubData: fixture)
     } operation: {
       AuthRepositoryImpl()
@@ -112,7 +115,7 @@ struct AuthRepositoryTests {
   }
 
   @Test
-  func refresh_emptyData_throwsBackendError() async throws {
+  func refresh_errorEnvelope_throwsNetworkResponseError() async throws {
     let fixture = Data("""
     {
       "statusCode": 400,
@@ -122,36 +125,34 @@ struct AuthRepositoryTests {
     """.utf8)
 
     let repo = withDependencies {
+      $0.authService = RecordingAuthService(refreshToken: "refresh-1")
       $0.networkClient = StubNetworkClient(stubData: fixture)
     } operation: {
       AuthRepositoryImpl()
     }
 
-    do {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "AUTH_401",
+      message: "토큰 재발급에 실패했습니다"
+    ) {
       _ = try await repo.refresh()
-      Issue.record("토큰 재발급 실패 응답인데 에러가 던져지지 않았습니다")
-    } catch let error as AuthError {
-      #expect(error == .backendError("토큰 재발급에 실패했습니다"))
-    } catch {
-      Issue.record("예상치 못한 에러 타입: \(error)")
     }
   }
 
   @Test
   func refresh_providerThrows_rethrowsOriginalError() async throws {
     let repo = withDependencies {
+      $0.authService = RecordingAuthService(refreshToken: "refresh-1")
       $0.networkClient = ThrowingStubNetworkClient()
     } operation: {
       AuthRepositoryImpl()
     }
 
-    do {
+    await expectNetworkTransportError(
+      underlyingError: ThrowingStubNetworkClient.StubError.self
+    ) {
       _ = try await repo.refresh()
-      Issue.record("provider 가 에러를 던졌는데 refresh() 가 에러를 던지지 않았습니다")
-    } catch is ThrowingStubNetworkClient.StubError {
-      // AFError 도, "statusCodeError(401)" 문자열도 아니므로 원본 에러가 그대로 다시 던져져야 한다.
-    } catch {
-      Issue.record("예상치 못한 에러 타입: \(error)")
     }
   }
 
@@ -168,6 +169,7 @@ struct AuthRepositoryTests {
     """.utf8)
 
     let repo = withDependencies {
+      $0.authService = RecordingAuthService()
       $0.networkClient = StubNetworkClient(stubData: fixture, statusCode: 200)
     } operation: {
       AuthRepositoryImpl()
@@ -183,6 +185,7 @@ struct AuthRepositoryTests {
   @Test
   func logout_emptyBody_defaultsToLoggedOutTrue() async throws {
     let repo = withDependencies {
+      $0.authService = RecordingAuthService()
       $0.networkClient = StubNetworkClient(stubData: Data(), statusCode: 200)
     } operation: {
       AuthRepositoryImpl()
@@ -281,13 +284,56 @@ struct AuthRepositoryTests {
   // MARK: - updateSessionCredential
 
   @Test
-  func updateSessionCredential_doesNotCrash() {
+  func updateSessionCredential_passesTokensToAuthService() async {
+    let authService = RecordingAuthService()
     let repo = withDependencies {
+      $0.authService = authService
       $0.networkClient = ThrowingStubNetworkClient()
     } operation: {
       AuthRepositoryImpl()
     }
 
-    repo.updateSessionCredential(with: AuthTokens(accessToken: "a", refreshToken: "r"))
+    await repo.updateSessionCredential(
+      with: AuthTokens(accessToken: "access-token", refreshToken: "refresh-token")
+    )
+
+    let tokens = await authService.recordedTokens()
+    #expect(tokens?.accessToken == "access-token")
+    #expect(tokens?.refreshToken == "refresh-token")
+  }
+}
+
+private actor RecordingAuthService: PickeAuthInterface.AuthService {
+  private var accessToken: String?
+  private var storedRefreshToken: String?
+
+  init(refreshToken: String? = nil) {
+    storedRefreshToken = refreshToken
+  }
+
+  var isLoggedIn: Bool {
+    get async { accessToken != nil && storedRefreshToken != nil }
+  }
+
+  var refreshToken: String? {
+    get async { storedRefreshToken }
+  }
+
+  func signIn(
+    accessToken: String,
+    refreshToken: String
+  ) async {
+    self.accessToken = accessToken
+    storedRefreshToken = refreshToken
+  }
+
+  func signOut() async {
+    accessToken = nil
+    storedRefreshToken = nil
+  }
+
+  func recordedTokens() -> AuthTokens? {
+    guard let accessToken, let storedRefreshToken else { return nil }
+    return AuthTokens(accessToken: accessToken, refreshToken: storedRefreshToken)
   }
 }

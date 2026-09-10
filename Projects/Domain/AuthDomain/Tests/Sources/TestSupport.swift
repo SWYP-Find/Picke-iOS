@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import Testing
 
 import PickeNetwork
 
@@ -24,8 +25,8 @@ struct StubNetworkClient: PickeNetworkClient {
   let stubData: Data
   var statusCode: Int = 200
 
-  func send<R: PickeDataRequest, T: Decodable & Sendable>(
-    _: R,
+  func send<T: Decodable & Sendable>(
+    _: some PickeDataRequest,
     as _: T.Type
   ) async throws(PickeNetworkError) -> T {
     try decode(T.self)
@@ -35,7 +36,7 @@ struct StubNetworkClient: PickeNetworkClient {
     try decode(R.Response.self)
   }
 
-  func sendResponse<R: PickeDataRequest>(_: R) async throws(PickeNetworkError) -> PickeHTTPResponse {
+  func sendResponse(_: some PickeDataRequest) async throws(PickeNetworkError) -> PickeHTTPResponse {
     PickeHTTPResponse(statusCode: statusCode, data: stubData)
   }
 
@@ -75,8 +76,8 @@ struct StubNetworkClient: PickeNetworkClient {
 struct ThrowingStubNetworkClient: PickeNetworkClient {
   struct StubError: Error {}
 
-  func send<R: PickeDataRequest, T: Decodable & Sendable>(
-    _: R,
+  func send<T: Decodable & Sendable>(
+    _: some PickeDataRequest,
     as _: T.Type
   ) async throws(PickeNetworkError) -> T {
     throw .transport(.unknown(StubError()))
@@ -86,7 +87,7 @@ struct ThrowingStubNetworkClient: PickeNetworkClient {
     throw .transport(.unknown(StubError()))
   }
 
-  func sendResponse<R: PickeDataRequest>(_: R) async throws(PickeNetworkError) -> PickeHTTPResponse {
+  func sendResponse(_: some PickeDataRequest) async throws(PickeNetworkError) -> PickeHTTPResponse {
     throw .transport(.unknown(StubError()))
   }
 
@@ -96,5 +97,49 @@ struct ThrowingStubNetworkClient: PickeNetworkClient {
 
   func upload(_: some PickeFileUploadRequest) async throws(PickeNetworkError) {
     throw .transport(.unknown(StubError()))
+  }
+}
+
+func expectNetworkResponseError(
+  statusCode: Int? = nil,
+  code: String? = nil,
+  message: String?,
+  operation: () async throws -> Void
+) async {
+  do {
+    try await operation()
+    Issue.record("네트워크 응답 에러가 던져져야 합니다")
+  } catch let error as PickeNetworkError {
+    guard case let .response(response) = error else {
+      Issue.record("response 에러여야 합니다: \(error)")
+      return
+    }
+    if let statusCode {
+      #expect(response.httpStatus == statusCode)
+    }
+    if let code {
+      #expect(response.code == code)
+    }
+    #expect(response.message == message)
+  } catch {
+    Issue.record("예상치 못한 에러 타입: \(error)")
+  }
+}
+
+func expectNetworkTransportError<UnderlyingError: Error>(
+  underlyingError _: UnderlyingError.Type,
+  operation: () async throws -> Void
+) async {
+  do {
+    try await operation()
+    Issue.record("transport 에러가 던져져야 합니다")
+  } catch let error as PickeNetworkError {
+    guard case let .transport(.unknown(underlying)) = error else {
+      Issue.record("transport 에러여야 합니다: \(error)")
+      return
+    }
+    #expect(underlying is UnderlyingError)
+  } catch {
+    Issue.record("예상치 못한 에러 타입: \(error)")
   }
 }

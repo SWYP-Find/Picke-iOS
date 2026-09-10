@@ -6,10 +6,10 @@
 import Foundation
 import Testing
 
-@testable import ProfileData
+@testable import ProfileDomain
 
 import APIEndpoint
-import PickeNetwork
+@testable import PickeNetwork
 
 struct ProfileRequestMappingTests {
   @Test func mypage_요청은_GET_이며_경로가_api_v1_me_mypage_이다() throws {
@@ -142,10 +142,29 @@ struct ProfileRequestMappingTests {
     #expect(json["characterType"] as? String == "OWL")
   }
 
-  @Test func 모든_요청은_baseHeader_를_포함한다() throws {
-    let request = try ProfileService.mypage.asURLRequest()
+  @Test func 모든_요청은_자동_인증_정책을_사용한다() {
+    let services: [ProfileService] = [
+      .mypage,
+      .recap,
+      .creditsHistory(query: CreditHistoryQueryRequest(offset: nil, size: 20)),
+      .battleRecords(query: BattleRecordsQueryRequest(offset: 0, size: 20, voteSide: nil)),
+      .contentActivities(query: ContentActivitiesQueryRequest(offset: 0, size: 20, activityType: nil)),
+      .notificationSettings,
+      .updateNotificationSettings(
+        body: NotificationSettingsRequest(
+          newBattleEnabled: true,
+          battleResultEnabled: true,
+          commentReplyEnabled: true,
+          newCommentEnabled: true,
+          contentLikeEnabled: true,
+          marketingEventEnabled: true
+        )
+      ),
+      .updateProfile(body: ProfileUpdateRequest(nickname: "피클러", characterType: "OWL")),
+    ]
 
-    #expect(request.value(forHTTPHeaderField: "Content-Type") != nil)
-    #expect(request.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer") == true)
+    for service in services {
+      #expect(service.authorization == .automatic)
+    }
   }
 }

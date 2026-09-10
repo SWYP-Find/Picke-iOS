@@ -8,7 +8,7 @@ import Foundation
 import Dependencies
 import Testing
 
-@testable import CommentData
+@testable import CommentDomain
 
 import APIEndpoint
 import CommentDomainInterface
@@ -65,7 +65,7 @@ struct CommentRepositoryTests {
   }
 
   @Test
-  func likeComment_emptyData_throwsBackendErrorWithMessage() async throws {
+  func likeComment_errorEnvelope_throwsNetworkResponseError() async throws {
     let json = """
     {
       "statusCode": 400,
@@ -79,7 +79,11 @@ struct CommentRepositoryTests {
       CommentRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("이미 좋아요한 댓글입니다")) {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "COMMENT_400",
+      message: "이미 좋아요한 댓글입니다"
+    ) {
       try await repo.likeComment(commentId: 10)
     }
   }
@@ -124,7 +128,7 @@ struct CommentRepositoryTests {
   }
 
   @Test
-  func unlikeComment_emptyData_throwsBackendErrorWithDefaultMessage() async throws {
+  func unlikeComment_emptyData_throwsNetworkDataMissing() async throws {
     let json = """
     {
       "statusCode": 500,
@@ -138,7 +142,7 @@ struct CommentRepositoryTests {
       CommentRepositoryImpl()
     }
 
-    await #expect(throws: CommentError.backendError("댓글 좋아요 취소 응답이 비어 있습니다")) {
+    await expectNetworkDataMissing {
       try await repo.unlikeComment(commentId: 10)
     }
   }

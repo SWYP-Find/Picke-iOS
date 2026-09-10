@@ -5,7 +5,7 @@
 
 import Testing
 
-@testable import BattleData
+@testable import BattleDomain
 
 import APIEndpoint
 import BattleDomainInterface
@@ -73,7 +73,7 @@ struct BattleRepositoryTests {
     #expect(page.totalCount == 0)
   }
 
-  @Test func fetchTodayBattles_는_data_가_nil_이면_backendError_를_던진다() async throws {
+  @Test func fetchTodayBattles_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     { "statusCode": 400, "data": null, "error": {"code": "BAD_REQUEST", "message": "오늘의 배틀 조회 실패"} }
     """
@@ -83,15 +83,12 @@ struct BattleRepositoryTests {
       BattleRepositoryImpl()
     }
 
-    do {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "BAD_REQUEST",
+      message: "오늘의 배틀 조회 실패"
+    ) {
       _ = try await repo.fetchTodayBattles()
-      Issue.record("에러가 발생해야 한다")
-    } catch let error as BattleError {
-      guard case let .backendError(message) = error else {
-        Issue.record("backendError 여야 한다: \(error)")
-        return
-      }
-      #expect(message == "오늘의 배틀 조회 실패")
     }
   }
 
@@ -326,7 +323,7 @@ struct BattleRepositoryTests {
     #expect(perspective == nil)
   }
 
-  @Test func createPerspective_는_data_가_nil_이면_backendError_를_던진다() async throws {
+  @Test func createPerspective_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     { "statusCode": 400, "data": null, "error": {"code": "BAD_REQUEST", "message": "댓글 작성 실패"} }
     """
@@ -336,15 +333,12 @@ struct BattleRepositoryTests {
       BattleRepositoryImpl()
     }
 
-    do {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "BAD_REQUEST",
+      message: "댓글 작성 실패"
+    ) {
       _ = try await repo.createPerspective(battleId: 1, content: "내용", optionId: nil)
-      Issue.record("에러가 발생해야 한다")
-    } catch let error as BattleError {
-      guard case let .backendError(message) = error else {
-        Issue.record("backendError 여야 한다: \(error)")
-        return
-      }
-      #expect(message == "댓글 작성 실패")
     }
   }
 
@@ -585,7 +579,7 @@ struct BattleRepositoryTests {
     #expect(proposal.createdAt != nil)
   }
 
-  @Test func proposeBattle_는_data_가_nil_이면_backendError_를_던진다() async throws {
+  @Test func proposeBattle_는_error_봉투이면_네트워크_response_에러를_던진다() async throws {
     let json = """
     { "statusCode": 400, "data": null, "error": {"code": "BAD_REQUEST", "message": "배틀 제안 실패"} }
     """
@@ -602,15 +596,12 @@ struct BattleRepositoryTests {
       description: "설명"
     )
 
-    do {
+    await expectNetworkResponseError(
+      statusCode: 400,
+      code: "BAD_REQUEST",
+      message: "배틀 제안 실패"
+    ) {
       _ = try await repo.proposeBattle(draft)
-      Issue.record("에러가 발생해야 한다")
-    } catch let error as BattleError {
-      guard case let .backendError(message) = error else {
-        Issue.record("backendError 여야 한다: \(error)")
-        return
-      }
-      #expect(message == "배틀 제안 실패")
     }
   }
 }
