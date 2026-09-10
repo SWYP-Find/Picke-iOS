@@ -81,7 +81,7 @@ let package = Package(
   name: "TimeSpot",
   dependencies: [
     .package(url: "https://github.com/pointfreeco/swift-composable-architecture", exact: "1.26.2"),
-    // Tuist 4.154는 1.13+의 traits 조건부 Clocks/CombineSchedulers 의존성을 누락한다.
+    // 1.13+의 traits 조건부 Clocks/CombineSchedulers 의존성이 Tuist에서 누락되는 문제를 피한다.
     // 소스 빌드와 바이너리 캐시가 같은 그래프를 쓰도록 마지막 비조건부 버전을 고정한다.
     .package(url: "https://github.com/pointfreeco/swift-dependencies", exact: "1.12.0"),
     .package(url: "https://github.com/pointfreeco/sqlite-data", exact: "1.11.0"),
