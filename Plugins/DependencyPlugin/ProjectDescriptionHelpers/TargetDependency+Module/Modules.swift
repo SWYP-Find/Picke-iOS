@@ -2,71 +2,88 @@
 //  Modules.swift
 //  Plugins
 //
-//  Created by 서원지 on 2/21/24.
+//  레이어별 모듈 카탈로그(단일 출처).
+//  모듈 추가 = case 한 줄. rawValue 가 실제 타깃명이자 디렉토리명이라 오타로 깨지지 않는다.
 //
 
 import Foundation
 import ProjectDescription
 
-public enum ModulePath {
-  case Network(Networks)
-  case Domain(Domains)
-  case Data(Datas)
-  case Shared(Shareds)
-}
+public enum FeatureModule: String, CaseIterable {
+  case auth = "Auth"
+  case home = "Home"
+  case chat = "Chat"
+  case hifi = "Hifi"
+  case web = "Web"
+  case battle = "Battle"
+  case profile = "Profile"
+  case notification = "Notification"
+  case ad = "Ad"
+  case featureSharedUI = "FeatureSharedUI"
 
-// MARK: -  CoreDomainModule
-
-public extension ModulePath {
-  enum Networks: String, CaseIterable {
-    case NetworkModule
-    case Networking
-    case NetworkToken
-    case NetworkHeader
-    case ThirdPartys
-
-    public static let name: String = "Network"
+  /// Projects/Feature/<name>
+  var path: Path {
+    return .relativeToFeature(rawValue)
   }
 }
 
-// MARK: -  CoreMoudule
+public enum CoreModule: String, CaseIterable {
+  case assembly = "CoreAssembly"
+  case logger = "PickeCoreLogger"
+  case network = "PickeNetwork"
+  case storage = "PickeStorage"
+  case coreUI = "PickeCoreUI"
+  case coreUtility = "PickeCoreUtility"
+  case thirdParty = "PickeThirdParty"
 
-public extension ModulePath {
-  enum Datas: String, CaseIterable {
-    case Model
-    case Data
-    case Repository
-    case API
-    case Service
-    case DataTesting
-
-    public static let name: String = "Data"
+  /// Projects/Core/<name>
+  var path: Path {
+    return .relativeToCore(rawValue)
   }
 }
 
-// MARK: -  CoreMoudule
+public enum ServiceModule: String, CaseIterable {
+  case assembly = "ServiceAssembly"
+  case api = "API"
+  case apiEndpoint = "APIEndpoint"
+  case analytics = "PickeAnalytics"
+  case config = "PickeConfig"
+  case audioPlayer = "AudioPlayerService"
+  case device = "DeviceService"
+  case auth = "PickeAuth"
 
-public extension ModulePath {
-  enum Domains: String, CaseIterable {
-    case Entity
-    case UseCase
-    case Domain
-    case DomainInterface
-    case DomainTesting
-
-    public static let name: String = "Domain"
+  /// Projects/Service/<name>
+  var path: Path {
+    return .relativeToService(rawValue)
   }
 }
 
-public extension ModulePath {
-  enum Shareds: String, CaseIterable {
-    case Shared
-    case PickeDesignKit
-    case Utill
-    /// 광고 SDK(AdFit) 전용 모듈. 디자인 시스템과 분리해, 광고를 노출하는 화면만 명시적으로 의존한다.
-    case AdKit
+public enum DomainModule: String, CaseIterable {
+  case assembly = "DomainAssembly"
+  case appUpdate = "AppUpdateDomain"
+  case attendance = "AttendanceDomain"
+  case auth = "AuthDomain"
+  case battle = "BattleDomain"
+  case comment = "CommentDomain"
+  case home = "HomeDomain"
+  case notification = "NotificationDomain"
+  case perspective = "PerspectiveDomain"
+  case profile = "ProfileDomain"
+  case search = "SearchDomain"
 
-    public static let name: String = "Shared"
-    case ThirdParty
+  /// Projects/Domain/<name>
+  var path: Path {
+    return .relativeToDomain(rawValue)
+  }
+}
+
+public enum UIModule: String, CaseIterable {
+  case animation = "PickeAnimation"
+  case designKit = "PickeDesignKit"
+  case sharedUI = "PickeSharedUI"
+
+  /// Projects/UI/<name>
+  var path: Path {
+    return .relativeToUI(rawValue)
   }
 }

@@ -1,0 +1,337 @@
+//
+//  AppReducer.swift
+//  Picke
+//
+//  Created by Wonji Suh  on 5/6/26.
+//
+
+import Foundation
+
+import ComposableArchitecture
+import DomainAssembly
+import FeatureAssembly
+import PickeAnalyticsInterface
+import PickeCoreLogger
+import PickeCoreUtility
+
+@Reducer
+public struct AppReducer: Sendable {
+  public init() {}
+
+  @ObservableState
+  public enum State: Equatable {
+    case splash(SplashFeature.State)
+    case auth(AppAuthCoordinator.State)
+    case mainTab(AppMainTabCoordinator.State)
+
+    public init() {
+      self = .splash(SplashFeature.State())
+    }
+
+    // Animation identifier for SwiftUI transitions
+    var animationID: String {
+      switch self {
+      case .splash: return "splash"
+      case .auth: return "auth"
+      case .mainTab: return "mainTab"
+      }
+    }
+  }
+
+  // MARK: - Action
+
+  public enum Action: ViewAction {
+    case view(View)
+    case async(AsyncAction)
+    case inner(InnerAction)
+    case scope(ScopeAction)
+  }
+
+  @CasePathable
+  public enum View {
+    case presentView
+    case presentRoot
+    case presentAuth
+    /// 앱 시작 전면 팝업 광고 클릭.
+    case appStartAdClicked
+  }
+
+  // MARK: - 앱내에서 사용하는 액션
+
+  public enum InnerAction: Equatable {
+    case completeAuthTransition
+    case completeMainTabTransition
+    case pushRegistrationResponse(Result<Bool, AuthError>)
+  }
+
+  // MARK: - 비동기 처리 액션
+
+  public enum AsyncAction: Equatable {
+    case startNotificationListener
+    case refreshTokenExpired
+    case observeDeeplink
+    case deeplinkReceived(PickeDeeplink)
+    case consumePendingDeeplink
+  }
+
+  // MARK: - 스코프 액션
+
+  @CasePathable
+  public enum ScopeAction {
+    case splash(SplashFeature.Action)
+    case auth(AppAuthCoordinator.Action)
+    case mainTab(AppMainTabCoordinator.Action)
+  }
+
+  @Dependency(\.continuousClock) var clock
+  @Dependency(\.analyticsUseCase) private var analyticsUseCase
+
+  // 🎯 PFW 패턴: 강타입 최소 CancelID (3개로 축소)
+  private enum CancelID: Hashable {
+    case coordinator(CoordinatorType)
+    case transition
+    case refreshTokenListener
+    case deeplinkListener
+
+    enum CoordinatorType: Hashable {
+      case auth
+    }
+  }
+
+  // 🎯 PFW 패턴: 최소한의 핵심 취소 (3개만)
+  private func cancelAllCoordinatorEffects() -> Effect<Action> {
+    return .merge([
+      // PFW 권장: 최소한의 핵심 Coordinator Effect 취소
+//      .cancel(id: CancelID.coordinator(.staff)),
+//      .cancel(id: CancelID.coordinator(.member)),
+      .cancel(id: CancelID.coordinator(.auth)),
+
+//
+    ])
+  }
+
+  // 🎯 PFW 패턴: 상태 변경 전에 effect 취소를 먼저 완료
+  private func startTransition(_ action: InnerAction) -> Effect<Action> {
+    .concatenate(
+      cancelAllCoordinatorEffects(),
+      .run { _ in await Task.yield() },
+      .send(.inner(action))
+    )
+    .cancellable(id: CancelID.transition, cancelInFlight: true)
+  }
+
+  // 제거됨: PFW 권장사항에 따라 단순화
+
+  public var body: some ReducerOf<Self> {
+    Reduce { state, action in
+      switch action {
+      case let .view(viewAction):
+        return handleViewAction(state: &state, action: viewAction)
+
+      case let .inner(innerAction):
+        return handleInnerAction(state: &state, action: innerAction)
+
+      case let .async(asyncAction):
+        return handleAsyncAction(state: &state, action: asyncAction)
+
+      case let .scope(scopeAction):
+        return handleScopeAction(state: &state, action: scopeAction)
+      }
+    }
+    // ifCaseLet 은 base 를 감싸는 연산자라 배치 순서와 무관하게 자식이 먼저 실행된다.
+    // 따라서 handleScopeAction 의 상태 일치 검사는 자식이 이미 처리한 뒤에 돈다.
+    .ifCaseLet(\.splash, action: \.scope.splash) {
+      SplashFeature()
+    }
+    .ifCaseLet(\.auth, action: \.scope.auth) {
+      AppAuthCoordinator()
+    }
+    .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
+      AppMainTabCoordinator()
+    }
+  }
+
+  private func handleViewAction(
+    state _: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .presentView:
+      return .merge(
+        .run { send in
+          await send(.scope(.splash(.view(.onAppear))))
+        },
+        observeDeeplink()
+      )
+
+    case .presentRoot:
+      return startTransition(.completeMainTabTransition)
+
+    case .presentAuth:
+      return startTransition(.completeAuthTransition)
+
+    case .appStartAdClicked:
+      analyticsUseCase.track(.adClick(AdClickData(placement: .appStart, format: .popup)))
+      return .none
+    }
+  }
+
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
+    switch action {
+    case .startNotificationListener:
+      // 토큰 만료 리스너 + 인앱/푸시 딥링크 리스너를 함께 구동.
+      return .merge(
+        setupRefreshTokenExpiredListener()
+          .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true),
+        observeDeeplink()
+      )
+
+    case .refreshTokenExpired:
+      return startTransition(.completeAuthTransition)
+
+    case .observeDeeplink:
+      return observeDeeplink()
+
+    case .consumePendingDeeplink:
+      guard case .mainTab = state,
+            let deeplink = AppDeeplinkBridge.consumePending() else { return .none }
+      return handleAsyncAction(state: &state, action: .deeplinkReceived(deeplink))
+
+    case let .deeplinkReceived(deeplink):
+      // 인앱 요청은 메인에서만 처리한다. 외부 요청은 consumePendingDeeplink에서 보류한다.
+      guard case .mainTab = state else { return .none }
+      switch deeplink {
+      case let .battle(battleId):
+        // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 배틀 상세 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.home(.view(.openBattle(battleId: battleId))))))
+        )
+      case let .perspective(perspectiveId, commentId):
+        // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 관점(답글) 화면 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.home(.view(.openPerspective(perspectiveId: perspectiveId, commentId: commentId))))))
+        )
+      case .point:
+        // 마이페이지 탭 전환 후 포인트 내역 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.myPage(.view(.openPointHistory)))))
+        )
+      case .terms:
+        // 마이페이지 탭 전환 후 서비스 약관 웹뷰 push.
+        return .merge(
+          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.myPage(.view(.openTerms)))))
+        )
+      case .quickBattle:
+        // 빠른 배틀은 탭 자체가 목적지라 전환만 한다.
+        return .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.quickBattle.rawValue))))
+      }
+    }
+  }
+
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .pushRegistrationResponse(result):
+      if case let .failure(error) = result {
+        PickeLogger.error("[Push] 디바이스 등록 실패: \(error.localizedDescription)", category: .network)
+      }
+      return .none
+
+    case .completeAuthTransition:
+      state = .auth(.init())
+      return .none
+
+    case .completeMainTabTransition:
+      state = .mainTab(.init())
+      // 콜드 스타트/로그인 직후 대기 중이던 딥링크 소비.
+      return .send(.async(.consumePendingDeeplink))
+    }
+  }
+
+  private func handleScopeAction(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    // 현재 화면과 다른 Coordinator 의 액션은 조용히 무시한다.
+    switch (action, state) {
+    case (.auth, .auth), (.splash, .splash), (.mainTab, .mainTab):
+      return handleScopeNavigation(action: action)
+
+    default:
+      return .none
+    }
+  }
+
+  // 🎯 PFW 패턴: 네비게이션 로직 분리
+  private func handleScopeNavigation(action: ScopeAction) -> Effect<Action> {
+    switch action {
+    case .splash(.view(.onAppear)):
+      return .none
+
+    case .splash(.delegate(.presentAuth)):
+      return .run { send in
+        try await clock.sleep(for: .seconds(3))
+        try await send(.view(.presentAuth))
+      }
+
+    case .splash(.delegate(.presentMainTab)):
+      return .run { send in
+        try await clock.sleep(for: .seconds(3))
+        try await send(.view(.presentRoot))
+      }
+
+    case .auth(.navigation(.presentMainTab)):
+      // 로그인 성공 → 메인 진입 + APNs 디바이스 토큰 서버 등록.
+      return .merge(
+        .send(.view(.presentRoot)),
+        .run { send in
+          let result = await Result {
+            try await PushRegistrationService.register()
+          }
+          .mapError(AuthError.from)
+          await send(.inner(.pushRegistrationResponse(result)))
+        }
+      )
+
+    // 로그아웃/탈퇴 → 로그인 화면으로 복귀
+    case .mainTab(.delegate(.sessionEnded)):
+      return .send(.view(.presentAuth))
+
+    default:
+      return .none
+    }
+  }
+
+  /// 푸시/인앱 알림 탭으로 브로드캐스트된 딥링크를 수신해 라우팅 액션으로 변환.
+  private func observeDeeplink() -> Effect<Action> {
+    .run { send in
+      for await notification in NotificationCenter.default.notifications(named: .pickeDeeplink) {
+        if notification.userInfo == nil {
+          await send(.async(.consumePendingDeeplink))
+        } else if let encoded = notification.userInfo?["deeplink"] as? String,
+                  let deeplink = PickeDeeplinkParser.parse(urlString: encoded) {
+          await send(.async(.deeplinkReceived(deeplink)))
+        }
+      }
+    }
+    .cancellable(id: CancelID.deeplinkListener, cancelInFlight: true)
+  }
+
+  private func setupRefreshTokenExpiredListener() -> Effect<Action> {
+    return .publisher {
+      NotificationCenter.default
+        .publisher(for: NSNotification.Name("RefreshTokenExpired"))
+        .map { _ in Action.async(.refreshTokenExpired) }
+    }
+    .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true)
+  }
+}

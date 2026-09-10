@@ -27,7 +27,7 @@ public enum ProjectConfig {
   // MARK: - 🔧 기타 설정
 
   public static let bundleIdPrefix = "io.Picke.co"
-  public static let teamId = "N94CS4N6VR"
+  public static let teamId = "3UFKCXVTN4"
   public static let deploymentTarget: ProjectDescription.DeploymentTargets = .iOS("17.0")
   public static let deploymentDestination: ProjectDescription.Destinations = [.iPhone]
   public static let appVersion = "1.0.0"

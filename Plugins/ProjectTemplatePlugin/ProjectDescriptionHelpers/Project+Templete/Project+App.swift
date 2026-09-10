@@ -48,7 +48,7 @@ extension Project {
     settings: ProjectDescription.Settings,
     scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
-    sources _: ProjectDescription.SourceFilesList = ["Sources/**"],
+    sources: ProjectDescription.SourceFilesList = ["Sources/**"],
     resources: ProjectDescription.ResourceFileElements? = nil,
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
@@ -62,7 +62,8 @@ extension Project {
       bundleId: bundleId,
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
+      sources: sources,
+      buildableFolders: resources != nil ? ["Resources"] : [],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: dependencies,
@@ -88,13 +89,15 @@ extension Project {
     return Project(
       name: name,
       options: .options(
+        automaticSchemesOptions: .enabled(codeCoverageEnabled: true),
         defaultKnownRegions: ["en", "ko"],
         developmentRegion: "ko"
       ),
       packages: packages,
       settings: settings,
       targets: targets,
-      schemes: schemes
+      schemes: schemes,
+      fileHeaderTemplate: .default
     )
   }
 }

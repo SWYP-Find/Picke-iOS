@@ -44,8 +44,8 @@ for url in [primitiveURL, semanticURL, componentURL] {
 
 // MARK: - Output paths
 
-let sourcesDir = "\(cwd)/Projects/Shared/DesignSystem/Sources"
-let colorOut = "\(sourcesDir)/Color/ShapeStyle+.swift"
+let sourcesDir = "\(cwd)/Projects/UI/PickeDesignKit/Sources"
+let colorOut = "\(sourcesDir)/Token/Color/ShapeStyle+.swift"
 let cgfloatDir = "\(sourcesDir)/Extension/CGFloat"
 let radiusOut = "\(cgfloatDir)/CGFloat+Radius+.swift"
 let spacingOut = "\(cgfloatDir)/CGFloat+Spacing+.swift"

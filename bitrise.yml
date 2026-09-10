@@ -11,7 +11,7 @@ meta:
 app:
   envs:
     - CONFIG_REPO: SWYP-Find/iOS-Config
-    - TUIST_VERSION: 4.154.0
+    - TUIST_VERSION: 4.207.0
     - REPO: SWYP-Find/Picke-iOS
     # Sentry — SENTRY_AUTH_TOKEN 은 Bitrise Secrets 에 등록한다(코드에 두지 않음).
     # 토큰이 없으면 Fastfile 의 upload_build_to_sentry 가 스스로 스킵하므로 배포는 계속된다.

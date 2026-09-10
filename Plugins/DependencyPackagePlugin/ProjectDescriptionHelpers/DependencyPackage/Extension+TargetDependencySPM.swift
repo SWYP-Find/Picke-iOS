@@ -13,13 +13,14 @@ public extension TargetDependency.SPM {
 
   static let composableArchitecture = TargetDependency.external(name: "ComposableArchitecture", condition: .none)
   static let dependencies = TargetDependency.external(name: "Dependencies", condition: .none)
+  static let sharing = TargetDependency.external(name: "Sharing", condition: .none)
+  static let sqliteData = TargetDependency.external(name: "SQLiteData", condition: .none)
   static let identifiedCollections = TargetDependency.external(name: "IdentifiedCollections", condition: .none)
   static let tcaFlow = TargetDependency.external(name: "TCAFlow", condition: .none)
   static let concurrencyExtras = TargetDependency.external(name: "ConcurrencyExtras", condition: .none)
   static let sdwebImageCore = TargetDependency.external(name: "SDWebImage", condition: .none)
   static let sdwebImage = TargetDependency.external(name: "SDWebImageSwiftUI", condition: .none)
   static let kingfisher = TargetDependency.external(name: "Kingfisher", condition: .none)
-  static let weaveDI = TargetDependency.external(name: "WeaveDI", condition: .none)
 
   static let googleSignIn = TargetDependency.external(name: "GoogleSignIn", condition: .none)
   static let appAuth: TargetDependency = .external(name: "AppAuth")

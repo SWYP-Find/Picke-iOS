@@ -1,0 +1,120 @@
+//
+//  NotificationCoordinator.swift
+//  Picke
+//
+
+import Foundation
+
+import ComposableArchitecture
+import FeatureAssembly
+import NotificationInterface
+import TCAFlow
+
+@FlowCoordinator(screen: "NotificationScreen", navigation: true)
+public struct NotificationCoordinator {
+  public init() {}
+
+  @ObservableState
+  public struct State: Equatable {
+    public var routes: [Route<NotificationScreen.State>]
+
+    public init() {
+      routes = [.root(.notification(.init()), embedInNavigationView: true)]
+    }
+
+    public init(route: NotificationRoute) {
+      switch route {
+      case .inbox:
+        routes = [.root(.notification(.init()), embedInNavigationView: true)]
+      }
+    }
+  }
+
+  @CasePathable
+  public enum Action {
+    case router(IndexedRouterActionOf<NotificationScreen>)
+    case view(View)
+    case async(AsyncAction)
+    case inner(InnerAction)
+    case navigation(NavigationAction)
+    case delegate(NotificationDelegate)
+  }
+
+  @CasePathable
+  public enum View {
+    case backAction
+    case backToRootAction
+  }
+
+  public enum AsyncAction: Equatable {}
+  public enum InnerAction: Equatable {}
+  public enum NavigationAction: Equatable {}
+
+  func handleRoute(
+    state: inout State,
+    action: Action
+  ) -> Effect<Action> {
+    switch action {
+    case let .router(routeAction):
+      routerAction(state: &state, action: routeAction)
+    case let .view(viewAction):
+      handleViewAction(state: &state, action: viewAction)
+    case .async, .inner, .navigation:
+      .none
+    case let .delegate(delegateAction):
+      handleDelegateAction(state: &state, action: delegateAction)
+    }
+  }
+}
+
+private extension NotificationCoordinator {
+  func routerAction(
+    state _: inout State,
+    action: IndexedRouterActionOf<NotificationScreen>
+  ) -> Effect<Action> {
+    switch action {
+    // 목록(루트) 백탭 → 알림 모듈 종료(부모로 복귀).
+    case .routeAction(_, action: .notification(.delegate(.dismiss))):
+      return .send(.delegate(.dismiss))
+
+    default:
+      return .none
+    }
+  }
+
+  func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .backAction:
+      state.routes.goBack()
+      return .none
+    case .backToRootAction:
+      state.routes.goBackToRoot()
+      return .none
+    }
+  }
+
+  func handleDelegateAction(
+    state _: inout State,
+    action: NotificationDelegate
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss:
+      return .none
+    }
+  }
+}
+
+// swiftformat:disable extensionAccessControl
+extension NotificationCoordinator {
+  @Reducer
+  public enum NotificationScreen {
+    case notification(NotificationFeature)
+  }
+}
+
+// swiftformat:enable extensionAccessControl
+
+extension NotificationCoordinator.NotificationScreen.State: Equatable {}

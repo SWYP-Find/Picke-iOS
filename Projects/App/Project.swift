@@ -5,33 +5,29 @@ import ProjectTemplatePlugin
 
 private let appName = Project.Environment.appName
 
-let project = Project.configure(
-  moduleType: .app,
+let project = Project.makeAppModule(
   name: appName,
   bundleId: .mainBundleID(),
   product: .app,
   settings: .appMainSetting,
   scripts: [.SentryUploadString],
   dependencies: [
-    .Presentation(implements: .Presentation),
-    .Domain(implements: .Domain),
-    .Data(implements: .Data),
-    .Network(implements: .NetworkModule),
-    .Shared(implements: .Shared),
-    .Shared(implements: .AdKit), // 앱 시작 전면 팝업 광고
+    // 화면·도메인·데이터 구현은 각 레이어의 조립 경계 하나로 들어온다.
+    .featureAssembly,
+    .feature(.notification, .interface),
+    .domainAssembly,
+    .serviceAssembly,
+    .core(.storage, .interface),
+    // 외부 SDK 부팅은 이 모듈만 안다.
+    .service(.config),
+    // Splash 가 App 으로 올라오며 애니메이션 에셋을 직접 쓴다.
+    .ui(.animation),
     .SPM.googleMobileAds,
-    .SPM.firebaseCrashlytics,
-    .SPM.mixpanel,
-    .SPM.mixpanelSessionReplay,
     .SPM.kingfisher,
-    .SPM.sdwebImageCore,
-    .SPM.sentrySwiftUI,
-
   ],
-  sources: ["Sources/**"],
   resources: ["Resources/**"],
   infoPlist: .appInfoPlist,
   entitlements: .file(path: "../../Entitlements/Picke.entitlements"),
   schemes: Scheme.appSchemes(appName: appName),
-  hasTests: false
+  hasTests: true
 )

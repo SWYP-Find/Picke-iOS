@@ -1,0 +1,57 @@
+//
+//  PieckeDomain.swift
+//  API
+//
+//  Created by Wonji Suh  on 12/29/25.
+//
+
+import Foundation
+
+import PickeNetworkInterface
+
+public enum PieckeDomain {
+  case attendance
+  case auth
+  case profile
+  case home
+  case poll
+  case battle
+  case comment
+  case perspective
+  case search
+  case notification
+  case device
+}
+
+extension PieckeDomain: PickeDomainType {
+  public var baseURLString: String {
+    BaseAPI.base.apiDescription
+  }
+
+  public var url: String {
+    switch self {
+    case .attendance:
+      return "api/v1/attendance"
+    case .auth:
+      return "api/v1/auth/"
+    case .profile:
+      return "api/v1/me"
+    case .home:
+      return "api/v1/home"
+    case .poll:
+      return "api/v1/poll"
+    case .battle:
+      return "api/v1/battles/"
+    case .comment:
+      return "api/v1/comments/"
+    case .perspective:
+      return "api/v1/perspectives/"
+    case .search:
+      return "api/v1/search/"
+    case .notification:
+      return "api/v1/notifications"
+    case .device:
+      return "api/v1/devices"
+    }
+  }
+}
