@@ -52,6 +52,8 @@ Projects/
 
 Tuist 버전은 [mise.toml](mise.toml)에 고정되어 있습니다. 새 환경에서는 mise를 통해 동일 버전을 맞추는 것을 권장합니다.
 
+TCA `1.26.2`와 TCAFlow `1.1.8`을 사용합니다. 보조 패키지 `swift-dependencies`는 Tuist 4.154의 조건부 의존성 누락 문제를 피하도록 `1.12.0`에 고정했습니다. 이 제한은 소스 빌드와 외부 모듈 캐시 모두에 적용됩니다.
+
 ```bash
 mise install
 mise exec -- tuist version
@@ -59,25 +61,32 @@ mise exec -- tuist version
 
 ## Tuist Dashboard와 캐시
 
-이 저장소는 로컬 개발에서만 Tuist Dashboard 프로젝트 `picke2026/picke`와 원격 바이너리 캐시를 사용합니다. CI에서는 대시보드 연결과 캐시 업로드를 비활성화하며, 별도 CI 연동 설정은 추가하지 않습니다.
+이 저장소는 로컬 개발에서만 Tuist Dashboard 프로젝트 `picke2026/picke`를 사용합니다. 일반 generate/project 확인은 Dashboard에 연결해 메트릭을 남기고, 바이너리 캐시 warm은 로컬 저장소만 사용합니다. CI에서는 대시보드 연결과 캐시 준비를 비활성화하며, 별도 CI 캐시 연동 설정은 추가하지 않습니다.
 
 [Tuist.swift](Tuist.swift)의 기준 설정:
 
-- 로컬: `fullHandle = "picke2026/picke"`, `enableCaching = true`, 기본 캐시 프로필 `.onlyExternal`
-- CI: `fullHandle = nil`, `enableCaching = false`, 기본 캐시 프로필 `.none`
-- 캐시 업로드: 로컬에서만 활성화, CI에서는 비활성화
+- 로컬 generate/project show: `fullHandle = "picke2026/picke"`, 기본 모듈 캐시 프로필 `.onlyExternal`
+- 로컬 cache warm: `TUIST_LOCAL_CACHE_ONLY=true` 환경에서만 `fullHandle = nil`, 기본 모듈 캐시 프로필 `.onlyExternal`
+- CI: `fullHandle = nil`, 기본 모듈 캐시 프로필 `.none`
+- Xcode 컴파일 캐시: 현재 Explicit Modules를 끈 빌드 설정과 호환되지 않아 `enableCaching = false`, `cache.upload = false`로 비활성화
 - 인증: `optionalAuthentication = true`로 설정해 로그인되지 않은 환경에서도 generate가 실패하지 않도록 유지
 
-로컬에서 Dashboard와 원격 캐시를 쓰려면 한 번 로그인하고 캐시를 준비합니다.
+로컬에서 Dashboard 연결과 로컬 바이너리 캐시를 준비하려면 `./make setup`을 실행합니다. 이 명령은 mise 도구 설치 후 Tuist 로그인을 확인하고, 로그인되어 있지 않으면 `tuist auth login`을 실행한 뒤 `Tuist.swift`의 `picke2026/picke` 연결을 `tuist project show`로 확인합니다. 이후 의존성을 설치하고 외부 모듈 바이너리 캐시를 로컬 저장소에 준비한 다음 프로젝트를 생성합니다.
 
 ```bash
-tuist auth login
-tuist setup cache
-tuist cache warm --external-only
-tuist generate --no-open
+./make setup
 ```
 
-`tuist cache warm --external-only`는 외부 의존성 중심으로 캐시를 데우며, 로컬 개발자는 대시보드 원격 캐시에서 다운로드하고 필요한 캐시를 업로드할 수 있습니다.
+`./make generate`, `./make test`, `./make cache`도 로컬에서는 필요한 Tuist Dashboard 인증과 프로젝트 확인을 먼저 수행합니다. 바이너리 캐시를 쓰지 않을 때는 Tuist 옵션을 그대로 전달합니다.
+
+```bash
+./make generate --no-binary-cache --no-open
+./make test --no-binary-cache
+```
+
+`./make cache`와 `./make cache:setup`은 기본적으로 `TUIST_LOCAL_CACHE_ONLY=true tuist cache warm --external-only`를 실행해 외부 의존성 중심으로 로컬 캐시를 데웁니다. CI에서는 Dashboard 인증, 프로젝트 확인, 캐시 준비를 건너뛰며, 별도 CI 캐시 연동은 하지 않습니다.
+
+Fastlane이나 CI용 래퍼처럼 캐시가 필요 없는 자동화 경로에서는 `tuist generate --no-binary-cache --no-open` 형태로 실행합니다.
 
 ## 빠른 시작
 
@@ -113,7 +122,8 @@ mise 도구 설치, 캐시 설정, 의존성 설치, 프로젝트 생성을 한 
 ./make generate
 ```
 
-Tuist 프로젝트를 생성합니다. 내부적으로 `tuist generate --no-open`을 실행합니다.
+Tuist 프로젝트를 생성합니다. Xcode를 열지 않으려면 `./make generate --no-open`을 사용합니다.
+로컬에서 바이너리 캐시를 사용하지 않으려면 `./make generate --no-binary-cache --no-open`을 사용합니다.
 
 ```bash
 ./make build
@@ -126,6 +136,7 @@ Tuist 프로젝트를 생성합니다. 내부적으로 `tuist generate --no-open
 ```
 
 전체 테스트를 실행합니다.
+로컬 바이너리 캐시를 건너뛰려면 `./make test --no-binary-cache`를 사용합니다.
 
 ```bash
 make test

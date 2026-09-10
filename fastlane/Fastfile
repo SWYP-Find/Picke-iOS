@@ -179,7 +179,7 @@ platform :ios do
     # 갱신된 빌드 번호 반영을 위해 Tuist 강제 재생성
     Dir.chdir("..") do
       puts "🔧 Tuist workspace 재생성 중..."
-      sh("tuist generate --no-open")
+      sh("tuist generate --no-binary-cache --no-open")
       puts "✅ Tuist workspace 재생성 완료"
     end
 
@@ -215,14 +215,14 @@ platform :ios do
 
         begin
           if File.exist?("make")
-            puts "🔧 Trying ./make install..."
-            sh("./make install")
+            puts "🔧 Trying Tuist install..."
+            sh("mise exec -- tuist install")
             puts "🔧 Trying ./make generate..."
-            sh("./make generate")
+            sh("./make generate --no-binary-cache --no-open")
           else
             puts "🔧 Trying tuist directly..."
             sh("tuist install")
-            sh("tuist generate --no-open")
+            sh("tuist generate --no-binary-cache --no-open")
           end
         rescue => e
           puts "❌ Generation failed: #{e.message}"
@@ -330,7 +330,7 @@ platform :ios do
       # Tuist 프로젝트 재생성
       Dir.chdir("..") do
         puts "🔧 Tuist workspace 재생성 중..."
-        sh("tuist generate --no-open")
+        sh("tuist generate --no-binary-cache --no-open")
         puts "✅ Tuist workspace 재생성 완료"
       end
 
@@ -366,14 +366,14 @@ platform :ios do
 
           begin
             if File.exist?("make")
-              puts "🔧 ./make install 실행 중..."
-              sh("./make install")
+              puts "🔧 Tuist install 실행 중..."
+              sh("mise exec -- tuist install")
               puts "🔧 ./make generate 실행 중..."
-              sh("./make generate")
+              sh("./make generate --no-binary-cache --no-open")
             else
               puts "🔧 tuist 직접 실행 중..."
               sh("tuist install")
-              sh("tuist generate --no-open")
+              sh("tuist generate --no-binary-cache --no-open")
             end
           rescue => e
             puts "❌ 생성 실패: #{e.message}"
@@ -504,7 +504,7 @@ platform :ios do
     end
 
     Dir.chdir("..") do
-      sh("tuist generate --no-open")
+      sh("tuist generate --no-binary-cache --no-open")
       build_app(
         workspace: File.expand_path("Picke.xcworkspace"),
         scheme: SCHEME,
