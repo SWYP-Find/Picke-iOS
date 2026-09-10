@@ -97,14 +97,18 @@ public struct PreVoteView: View {
           backgroundImage(battle)
             .frame(width: proxy.size.width)
 
-          // 본문은 스크롤하지 않는다 — 옵션 카드는 항상 CTA 바로 위에 고정.
+          // 큰 화면에서는 옵션 카드를 CTA 바로 위에 유지하고, 긴 제목/작은 화면에서는
+          // 콘텐츠 영역만 스크롤해 제목 전체를 읽을 수 있게 한다.
           let contentHeight = max(0, proxy.size.height - topInset - PreVoteLayout.ctaReservedHeight)
           VStack(spacing: 0) {
             Color.clear
               .frame(height: topInset)
 
-            contentArea(battle, minHeight: contentHeight)
-              .frame(height: contentHeight, alignment: .top)
+            ScrollView {
+              contentArea(battle, minHeight: contentHeight)
+            }
+            .scrollIndicators(.hidden)
+            .frame(height: contentHeight, alignment: .top)
           }
           .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
           .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -262,6 +266,7 @@ extension PreVoteView {
       .lineSpacing(24 * 0.4)
       .multilineTextAlignment(.leading)
       .lineLimit(nil)
+      .fixedSize(horizontal: false, vertical: true)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 
