@@ -3,7 +3,7 @@
 //  Ad
 //
 
-import OSLog
+import PickeCoreLogger
 import SwiftUI
 import UIKit
 
@@ -42,11 +42,6 @@ public enum AdFitNativeAdUnit: Sendable {
 /// SDK 가 계산해 준 높이를 그대로 프레임에 반영하고, 광고가 없으면 SDK 가 높이 0 으로
 /// 접어 주므로 실패 자리도 자연히 사라진다.
 public struct AdFitNativeAdView: View {
-  private static let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "Picke",
-    category: "AdFit.Native"
-  )
-
   private let unit: AdFitNativeAdUnit
   private let insets: EdgeInsets
   private let onAdClick: () -> Void
@@ -86,15 +81,11 @@ public struct AdFitNativeAdView: View {
           loaded: $loaded,
           failed: $failed,
           onReceive: {
-            Self.logger.info(
-              "AdFit 네이티브 광고 수신 성공: \(unit.infoPlistKey, privacy: .public)"
-            )
+            PickeLogger.info("AdFit 네이티브 광고 수신 성공: \(unit.infoPlistKey)", category: .ui)
           },
           onFailure: { error in
             let nsError = error as NSError
-            Self.logger.error(
-              "AdFit 네이티브 광고 수신 실패: \(unit.infoPlistKey, privacy: .public), domain=\(nsError.domain, privacy: .public), code=\(nsError.code), \(error.localizedDescription, privacy: .public)"
-            )
+            PickeLogger.error("AdFit 네이티브 광고 수신 실패: \(unit.infoPlistKey), domain=\(nsError.domain), code=\(nsError.code), \(error.localizedDescription)", category: .ui)
           },
           onClick: onAdClick
         )

@@ -3,7 +3,7 @@
 //  Ad
 //
 
-import OSLog
+import PickeCoreLogger
 import UIKit
 
 import AdFitSDK
@@ -26,11 +26,6 @@ public enum AppStartPopupAd {
 final class AppStartPopupAdPresenter: NSObject, SuperboardPopUpDelegate {
   static let shared = AppStartPopupAdPresenter()
 
-  private static let logger = Logger(
-    subsystem: Bundle.main.bundleIdentifier ?? "Picke",
-    category: "AdFit.AppTransition"
-  )
-
   private var popUp: SuperboardPopUp?
   private var onAdClick: () -> Void = {}
 
@@ -39,24 +34,24 @@ final class AppStartPopupAdPresenter: NSObject, SuperboardPopUpDelegate {
   func presentIfNeeded(onAdClick: @escaping () -> Void = {}) {
     self.onAdClick = onAdClick
     guard popUp == nil else {
-      Self.logger.debug("AdFit 앱 전환 광고 건너뜀: 이미 요청 중")
+      PickeLogger.debug("AdFit 앱 전환 광고 건너뜀: 이미 요청 중", category: .ui)
       return
     }
 
     let adUnitId = Bundle.main.object(forInfoDictionaryKey: "ADFIT_APP_TRANSITION") as? String
     guard let adUnitId, !adUnitId.isEmpty else {
-      Self.logger.error("AdFit 앱 전환 광고 단위가 Info.plist에 설정되지 않음")
+      PickeLogger.error("AdFit 앱 전환 광고 단위가 Info.plist에 설정되지 않음", category: .ui)
       return
     }
     guard let rootViewController = Self.topViewController() else {
-      Self.logger.error("AdFit 앱 전환 광고를 표시할 ViewController를 찾지 못함")
+      PickeLogger.error("AdFit 앱 전환 광고를 표시할 ViewController를 찾지 못함", category: .ui)
       return
     }
 
     let popUp = SuperboardPopUp(adUnitId: adUnitId)
     popUp.delegate = self
     self.popUp = popUp
-    Self.logger.info("AdFit 앱 전환 광고 요청 시작")
+    PickeLogger.info("AdFit 앱 전환 광고 요청 시작", category: .ui)
     // present 는 로드 성공 시에만 모달을 띄운다. 실패하면 adViewDidFailToReceiveAd 만 호출된다.
     popUp.present(rootViewController)
   }
@@ -64,30 +59,28 @@ final class AppStartPopupAdPresenter: NSObject, SuperboardPopUpDelegate {
   // MARK: SuperboardPopUpDelegate
 
   func adViewDidReceiveAd() {
-    Self.logger.info("AdFit 앱 전환 광고 수신 성공")
+    PickeLogger.info("AdFit 앱 전환 광고 수신 성공", category: .ui)
   }
 
   func adViewDidFailToReceiveAd(error: Error) {
-    Self.logger.error(
-      "AdFit 앱 전환 광고 수신 실패: \(error.localizedDescription, privacy: .public)"
-    )
+    PickeLogger.error("AdFit 앱 전환 광고 수신 실패: \(error.localizedDescription)", category: .ui)
     popUp = nil
   }
 
   func adViewDidClickAd() {
-    Self.logger.info("AdFit 앱 전환 광고 클릭")
+    PickeLogger.info("AdFit 앱 전환 광고 클릭", category: .ui)
     onAdClick()
   }
 
   func adViewControllerClickClose() {
-    Self.logger.info("AdFit 앱 전환 광고 닫기")
+    PickeLogger.info("AdFit 앱 전환 광고 닫기", category: .ui)
     popUp = nil
   }
 
   /// 현재 정책에서는 "오늘 그만 보기"도 일반 닫기와 동일하게 처리한다.
   func adViewControllerClickHideForToday() {
     UserDefaults.standard.removeObject(forKey: "adfit.appTransition.hideUntil")
-    Self.logger.info("AdFit 앱 전환 광고 오늘 그만 보기: 숨김 기록을 유지하지 않음")
+    PickeLogger.info("AdFit 앱 전환 광고 오늘 그만 보기: 숨김 기록을 유지하지 않음", category: .ui)
     popUp = nil
   }
 
