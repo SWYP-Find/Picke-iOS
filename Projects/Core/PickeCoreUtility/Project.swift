@@ -12,6 +12,8 @@ let project = Project.makeModule(
   product: .framework,
   settings: .settings(),
   dependencies: [
+    .SPM.dependencies,
+    .core(.network),
   ],
   hasTests: true
 )

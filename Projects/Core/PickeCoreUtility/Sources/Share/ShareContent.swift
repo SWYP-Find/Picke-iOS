@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct ShareContent: Equatable {
+public struct ShareContent: Equatable, Sendable {
   public let title: String
   public let summary: String
   public let hashtags: [String]

@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct ShareItem: Equatable, Identifiable {
+public struct ShareItem: Equatable, Identifiable, @unchecked Sendable {
   public let id: UUID
   public let items: [Any]
 

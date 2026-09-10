@@ -6,8 +6,8 @@
 import Foundation
 import PickeCoreLogger
 
-import ComposableArchitecture
 import BattleDomainInterface
+import ComposableArchitecture
 import PickeAnalyticsInterface
 import PickeCoreUtility
 
@@ -60,10 +60,12 @@ public struct BattleFeature {
 
   public enum AsyncAction: Equatable {
     case fetchRequested
+    case prepareShare(ShareContent)
   }
 
   public enum InnerAction: Equatable {
     case todayResponse(Result<TodayBattlePage, BattleError>)
+    case sharePrepared(ShareItem)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -72,6 +74,7 @@ public struct BattleFeature {
 
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
+  @Dependency(\.shareUseCase) private var shareUseCase
 
   public enum DelegateAction: Equatable {
     /// 배틀 입장 → 채팅방 진입
@@ -125,17 +128,16 @@ extension BattleFeature {
     case let .shareTapped(battleId):
       analyticsUseCase.track(.shareAction(ShareActionData(target: .battle)))
       guard let battle = state.battles.first(where: { $0.battleId == battleId }) else { return .none }
-      let text = [
-        battle.title,
-        battle.question,
-        battle.tags.map { "#\($0)" }.joined(separator: " "),
-      ]
-      .filter { !$0.isEmpty }
-      .joined(separator: "\n\n")
-      var items: [Any] = [text]
-      if let urlString = battle.imageURL, let url = URL(string: urlString) { items.append(url) }
-      state.shareItem = ShareItem(items: items)
-      return .none
+      let content = ShareContent(
+        title: battle.title,
+        summary: battle.question,
+        hashtags: battle.tags.map { "#\($0)" },
+        optionLine: nil,
+        url: PickeShareURL.battle(id: battleId),
+        thumbnailURL: battle.imageURL,
+        snapshotData: nil
+      )
+      return .send(.async(.prepareShare(content)))
 
     case let .optionTapped(battleId, optionId):
       analyticsUseCase.track(.uiAction(action: .quickBattleOption, screen: .quickBattle))
@@ -171,6 +173,11 @@ extension BattleFeature {
         return await send(.inner(.todayResponse(result)))
       }
       .cancellable(id: CancelID.fetchToday, cancelInFlight: true)
+
+    case let .prepareShare(content):
+      return .run { [useCase = shareUseCase] send in
+        await send(.inner(.sharePrepared(useCase.makeShareItem(content))))
+      }
     }
   }
 
@@ -188,6 +195,10 @@ extension BattleFeature {
         state.battles = []
         PickeLogger.error("[BattleFeature] fetchTodayBattles failed: \(error.localizedDescription)", category: .ui)
       }
+      return .none
+
+    case let .sharePrepared(item):
+      state.shareItem = item
       return .none
     }
   }

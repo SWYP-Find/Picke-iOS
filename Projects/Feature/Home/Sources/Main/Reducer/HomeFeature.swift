@@ -6,14 +6,14 @@
 //
 
 import AttendanceDomainInterface
-import PickeCoreLogger
+import AuthDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
 import HomeInterface
 import NotificationDomainInterface
 import PickeAnalyticsInterface
-import AuthDomainInterface
+import PickeCoreLogger
 
 @Reducer
 public struct HomeFeature {
@@ -48,6 +48,16 @@ public struct HomeFeature {
 
     public var currentQuiz: QuizQuestion? { quizzes.first }
     public var currentVote: VoteQuestion? { votes.first }
+
+    public var shouldShowSkeleton: Bool {
+      (viewState == .loading || !hasLoadedHome) &&
+        heroes.isEmpty &&
+        hotBattles.isEmpty &&
+        bestBattles.isEmpty &&
+        quizzes.isEmpty &&
+        votes.isEmpty &&
+        newBattles.isEmpty
+    }
 
     public init() {}
   }
@@ -259,9 +269,9 @@ extension HomeFeature {
     switch action {
     case let .homeResponse(result):
       state.viewState = .loaded
-      state.hasLoadedHome = true
       switch result {
       case let .success(bundle):
+        state.hasLoadedHome = true
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
         state.heroes = home.heroes

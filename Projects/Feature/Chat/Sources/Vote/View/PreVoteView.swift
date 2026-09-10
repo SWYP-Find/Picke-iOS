@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 import BattleDomainInterface
 import ComposableArchitecture
@@ -50,6 +51,10 @@ public struct PreVoteView: View {
       }
     }
     .onAppear { send(.onAppear) }
+    .onChange(of: store.shareSnapshotRequest) { _, request in
+      guard let request else { return }
+      send(.shareSnapshotRendered(captureCardSnapshot(request)))
+    }
     .sheet(item: $store.shareItem) { item in
       ShareSheet(items: item.items)
         .presentationDetents([.fraction(0.5)])
@@ -174,7 +179,7 @@ extension PreVoteView {
       Spacer()
 
       Button {
-        send(.shareTapped(snapshot: captureCardSnapshot()))
+        send(.shareTapped)
       } label: {
         Image(systemName: "square.and.arrow.up")
           .font(.system(size: 24, weight: .regular))
@@ -221,11 +226,14 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private func contentSection(_ battle: PreVoteBattle) -> some View {
+  private func contentSection(
+    _ battle: PreVoteBattle,
+    titleColorOverride: Color? = nil
+  ) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       VStack(alignment: .leading, spacing: 20) {
         tagsRow(battle)
-        titleText(battle)
+        titleText(battle, colorOverride: titleColorOverride)
       }
       summaryText(battle)
     }
@@ -243,10 +251,13 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private func titleText(_ battle: PreVoteBattle) -> some View {
+  private func titleText(
+    _ battle: PreVoteBattle,
+    colorOverride: Color? = nil
+  ) -> some View {
     Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
       .pretendardFont(.bold24)
-      .foregroundStyle(titleColor)
+      .foregroundStyle(colorOverride ?? titleColor)
       .kerning(-0.6)
       .lineSpacing(24 * 0.4)
       .multilineTextAlignment(.leading)
@@ -270,11 +281,14 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private func optionSection(_ battle: PreVoteBattle) -> some View {
+  private func optionSection(
+    _ battle: PreVoteBattle,
+    avatarOverrides: [Int: UIImage] = [:]
+  ) -> some View {
     ZStack {
       HStack(spacing: 8) {
-        optionCard(battle.leftOption)
-        optionCard(battle.rightOption)
+        optionCard(battle.leftOption, avatarOverride: avatarOverrides[battle.leftOption.optionId])
+        optionCard(battle.rightOption, avatarOverride: avatarOverrides[battle.rightOption.optionId])
       }
       .frame(maxWidth: .infinity)
       vsBadge()
@@ -282,14 +296,17 @@ extension PreVoteView {
   }
 
   @ViewBuilder
-  private func optionCard(_ option: PreVoteOption) -> some View {
+  private func optionCard(
+    _ option: PreVoteOption,
+    avatarOverride: UIImage? = nil
+  ) -> some View {
     let isSelected = store.selectedOptionId == option.optionId
 
     return Button {
       send(.optionTapped(optionId: option.optionId))
     } label: {
       VStack(spacing: 12) {
-        avatarView(imageURL: option.imageURL)
+        avatarView(imageURL: option.imageURL, override: avatarOverride)
 
         VStack(spacing: 2) {
           Text(option.stance)
@@ -317,12 +334,21 @@ extension PreVoteView {
     .buttonStyle(.plain)
   }
 
-  private func avatarView(imageURL: String) -> some View {
-    PickeRemoteImage(url: imageURL) {
-      SkeletonView(.round())
-        .frame(width: 28, height: 20)
+  @ViewBuilder
+  private func avatarView(imageURL: String, override: UIImage? = nil) -> some View {
+    Group {
+      if let override {
+        Image(uiImage: override)
+          .resizable()
+          .scaledToFit()
+      } else {
+        PickeRemoteImage(url: imageURL) {
+          SkeletonView(.round())
+            .frame(width: 28, height: 20)
+        }
+        .content(.fit)
+      }
     }
-    .content(.fit)
     .frame(width: 28, height: 20)
     .frame(width: 40, height: 40)
     .background(.beige600, in: Circle())
@@ -354,18 +380,24 @@ extension PreVoteView {
 
 extension PreVoteView {
   @MainActor
-  private func captureCardSnapshot() -> Data? {
+  private func captureCardSnapshot(_ request: ShareSnapshotRequest) -> Data? {
     guard let battle = store.battle else { return nil }
-    let renderer = ImageRenderer(content: shareSnapshotCard(battle))
+    let avatars = request.avatarImageData.compactMapValues(UIImage.init(data:))
+    let renderer = ImageRenderer(content: shareSnapshotCard(battle, avatarOverrides: avatars))
     renderer.scale = UIScreen.main.scale
     return renderer.uiImage?.pngData()
   }
 
   @ViewBuilder
-  private func shareSnapshotCard(_ battle: PreVoteBattle) -> some View {
+  private func shareSnapshotCard(
+    _ battle: PreVoteBattle,
+    avatarOverrides: [Int: UIImage]
+  ) -> some View {
     VStack(spacing: PreVoteLayout.contentToOptionSpacing) {
-      contentSection(battle)
-      optionSection(battle)
+      // 스냅샷 배경은 모드와 무관하게 밝은색이라, 사후(post) 화면의 밝은 제목색을
+      // 그대로 쓰면 베이지 위 베이지로 묻힌다 → 항상 어두운 제목색으로 고정.
+      contentSection(battle, titleColorOverride: .neutral500)
+      optionSection(battle, avatarOverrides: avatarOverrides)
     }
     .padding(16)
     .frame(width: PreVoteLayout.snapshotWidth)
