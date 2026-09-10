@@ -19,3 +19,9 @@ extension SharedValueStorageDependency: DependencyKey {
     StorageFactory.sharedValueStorage
   }
 }
+
+extension KeyValueStorageDependency: DependencyKey {
+  public static var liveValue: any KeyValueStorage {
+    StorageFactory.keyValueStorage
+  }
+}

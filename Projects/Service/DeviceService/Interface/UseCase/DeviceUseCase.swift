@@ -5,17 +5,7 @@
 
 import Foundation
 
-import ComposableArchitecture
-
-/// APNs 디바이스 토큰 보관소 (UserDefaults). App(수신)·Presentation(로그아웃 해제) 공용.
-public enum DeviceTokenStorage {
-  private static let key = "PickeDeviceToken"
-
-  public static var token: String? {
-    get { UserDefaults.standard.string(forKey: key) }
-    set { UserDefaults.standard.set(newValue, forKey: key) }
-  }
-}
+import Dependencies
 
 public struct DeviceUseCaseImpl: DeviceInterface {
   @Dependency(\.deviceRepository) private var deviceRepository
@@ -32,8 +22,8 @@ public struct DeviceUseCaseImpl: DeviceInterface {
 }
 
 extension DeviceUseCaseImpl: TestDependencyKey {
-  public static var testValue = DeviceUseCaseImpl()
-  public static var previewValue = DeviceUseCaseImpl()
+  public static let testValue = DeviceUseCaseImpl()
+  public static let previewValue = DeviceUseCaseImpl()
 }
 
 public extension DependencyValues {

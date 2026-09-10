@@ -47,6 +47,7 @@ public enum ServiceModule: String, CaseIterable {
   case api = "API"
   case apiEndpoint = "APIEndpoint"
   case analytics = "PickeAnalytics"
+  case config = "PickeConfig"
   case audioPlayer = "AudioPlayerService"
   case device = "DeviceService"
   case auth = "PickeAuth"

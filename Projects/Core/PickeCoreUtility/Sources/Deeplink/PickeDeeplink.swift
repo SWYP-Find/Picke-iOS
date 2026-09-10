@@ -14,6 +14,8 @@ public enum PickeDeeplink: Equatable, Sendable {
   case point
   /// POLICY_CHANGE → 서비스 약관 웹뷰.
   case terms
+  /// DAILY_MESSAGE → 빠른 배틀 탭.
+  case quickBattle
 
   /// 콜드 스타트 대기 딥링크 저장용 문자열 인코딩 (PickeDeeplinkParser.parse(urlString:) 로 복원).
   public var encoded: String {
@@ -29,13 +31,26 @@ public enum PickeDeeplink: Equatable, Sendable {
       return "point"
     case .terms:
       return "terms"
+    case .quickBattle:
+      return "quick-battle"
     }
   }
 }
 
 public enum PickeDeeplinkParser {
-  /// 푸시 payload(userInfo) → 딥링크. iOS 는 notification+data 라 top-level 에 data 키가 존재.
+  /// 푸시 userInfo의 최상위 data 필드에서 딥링크를 읽는다.
   public static func parse(pushPayload userInfo: [AnyHashable: Any]) -> PickeDeeplink? {
+    // 구체적인 알림 코드가 우선이고, 해석할 수 없으면 기존 type / URL로 폴백한다.
+    if let detailCode = userInfo["detailCode"] as? String,
+       let deeplink = parse(
+         detailCode: detailCode,
+         referenceId: intValue(userInfo["referenceId"])
+           ?? intValue(userInfo[detailCode == "NEW_BATTLE" ? "battleId" : "commentId"]),
+         perspectiveId: intValue(userInfo["perspectiveId"])
+       )
+    {
+      return deeplink
+    }
     switch userInfo["type"] as? String {
     case "BATTLE":
       if let battleId = intValue(userInfo["battleId"]) {
@@ -78,6 +93,10 @@ public enum PickeDeeplinkParser {
     if let first = path.first, ["terms", "policy"].contains(first) {
       return .terms
     }
+    // 빠른 배틀도 단일 경로(picke://quick-battle).
+    if let first = path.first, ["quick-battle", "quickbattle"].contains(first) {
+      return .quickBattle
+    }
     guard path.count >= 2 else { return nil }
 
     switch path[0] {
@@ -111,6 +130,8 @@ public enum PickeDeeplinkParser {
       return .point
     case "POLICY_CHANGE":
       return .terms
+    case "DAILY_MESSAGE":
+      return .quickBattle
     default:
       // PROMOTION 등은 이동 없음(텍스트만).
       return nil
@@ -126,6 +147,6 @@ public enum PickeDeeplinkParser {
 }
 
 public extension Notification.Name {
-  /// 푸시/인앱 알림 탭으로 발생한 화면 이동 요청. userInfo["deeplink"] = PickeDeeplink.encoded
+  /// 인앱 알림은 userInfo["deeplink"]를 전달하고, 외부 진입은 저장된 대기 요청을 소비하도록 알린다.
   static let pickeDeeplink = Notification.Name("PickeDeeplink")
 }

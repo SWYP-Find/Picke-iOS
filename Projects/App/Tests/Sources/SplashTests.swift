@@ -12,7 +12,7 @@ import PickeAnalyticsInterface
 import AppUpdateDomainInterface
 import PickeAuthInterface
 
-@testable import Splash
+@testable import Picke
 
 /// 앱 업데이트 없음(nil)을 반환하는 테스트 스텁.
 private struct StubAppUpdateUseCase: AppUpdateUseCaseInterface {

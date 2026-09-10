@@ -10,14 +10,16 @@ import UIKit
 import UserNotifications
 
 import DomainAssembly
+import PickeConfig
 import PickeDesignKit
 import ServiceAssembly
 
 extension AppDelegate {
   /// 기동 초기화 진입점. 순서에 의미가 있다.
-  /// 관측 SDK(Sentry·Firebase·Mixpanel) 설정은 PickeAnalytics 가 전담한다.
+  /// 외부 SDK 부팅은 Firebase 를 PickeConfig 가, Sentry·Mixpanel 을 PickeAnalytics 가 맡는다.
   func configure() {
     configureFonts()
+    FirebaseConfiguration.configure()
     PickeAnalyticsConfiguration.configure()
     configureAdMob()
     requestTrackingAuthorizationWhenActive()
@@ -62,7 +64,7 @@ extension AppDelegate {
   /// Store 수명 밖에서 도는 인프라라 기동 시 한 번만 설정한다.
   func configureImageDownloader() {
     KingfisherConfigurator.configureAuthorizedDownloader(
-      storage: AppDependencyFactory.secureStorage
+      storage: StorageAssembly.secureStorage()
     )
   }
 

@@ -3,7 +3,7 @@
 //  PickeStorage
 //
 
-import OSLog
+import PickeCoreLogger
 
 import PickeStorageInterface
 
@@ -12,8 +12,6 @@ import SQLiteData
 
 public enum StorageFactory {
   private static let database = prepareDatabase()
-
-  private static let logger = Logger(subsystem: "io.Picke.co", category: "storage")
 
   static func prepareDatabase(
     primary: () throws -> any DatabaseWriter = { try SQLiteData.defaultDatabase() },
@@ -25,7 +23,7 @@ public enum StorageFactory {
       try migrate(database)
       return database
     } catch {
-      logger.fault("앱 데이터베이스 준비 실패: \(String(describing: error), privacy: .public)")
+      PickeLogger.error("앱 데이터베이스 준비 실패: \(String(describing: error))", category: .storage)
     }
 
     do {
@@ -33,7 +31,7 @@ public enum StorageFactory {
       try migrate(database)
       return database
     } catch {
-      logger.fault("메모리 데이터베이스 준비 실패: \(String(describing: error), privacy: .public)")
+      PickeLogger.error("메모리 데이터베이스 준비 실패: \(String(describing: error))", category: .storage)
       return nil
     }
   }
@@ -49,6 +47,10 @@ public enum StorageFactory {
     return SQLiteSharedValueStorage(database: database)
   }
 
+  public static var keyValueStorage: any KeyValueStorage {
+    UserDefaultStore()
+  }
+
   public static var databaseWriter: (any DatabaseWriter)? {
     database
   }
@@ -59,5 +61,6 @@ public enum StorageFactory {
       values.appDatabase = database
     }
     values.sharedValueStorage = sharedValueStorage
+    values.keyValueStorage = keyValueStorage
   }
 }

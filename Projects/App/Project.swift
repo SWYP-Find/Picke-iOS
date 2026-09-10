@@ -16,6 +16,9 @@ let project = Project.makeAppModule(
     .featureAssembly,
     .domainAssembly,
     .serviceAssembly,
+    .core(.storage, .interface),
+    // 외부 SDK 부팅은 이 모듈만 안다.
+    .service(.config),
     // Splash 가 App 으로 올라오며 애니메이션 에셋을 직접 쓴다.
     .ui(.animation),
     .SPM.googleMobileAds,

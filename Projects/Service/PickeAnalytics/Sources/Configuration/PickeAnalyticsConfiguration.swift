@@ -9,7 +9,6 @@
 public enum PickeAnalyticsConfiguration {
   public static func configure() {
     SentryConfiguration.configure()
-    FirebaseConfiguration.configure()
     MixpanelConfiguration.configure()
   }
 }

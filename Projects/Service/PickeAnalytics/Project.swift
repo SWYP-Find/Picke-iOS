@@ -12,9 +12,8 @@ let project = Project.makeModule(
   product: .framework,
   settings: .settings(),
   dependencies: [
-    .core(.network),
     .core(.logger),
-    .SPM.firebaseCrashlytics,
+    .core(.network),
     .SPM.mixpanel,
     .SPM.mixpanelSessionReplay,
     .SPM.sentry,

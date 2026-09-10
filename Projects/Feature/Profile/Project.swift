@@ -13,6 +13,7 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .core(.logger),
+    .core(.storage, .interface),
     .ui(.designKit),
     .ui(.sharedUI),
     .core(.coreUtility),

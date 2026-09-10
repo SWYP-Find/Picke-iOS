@@ -16,6 +16,7 @@ let project = Project.makeModule(
     .service(.api),
     .service(.apiEndpoint),
     .service(.analytics),
+    .service(.config),
     .service(.audioPlayer),
     .service(.device),
     .service(.auth),

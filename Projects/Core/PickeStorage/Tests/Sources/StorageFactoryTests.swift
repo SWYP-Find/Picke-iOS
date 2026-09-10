@@ -3,11 +3,13 @@
 //  PickeStorageTests
 //
 
+import Foundation
 import Testing
 
 @testable import PickeStorage
 import PickeStorageInterface
 
+import ComposableArchitecture
 import SQLiteData
 
 @Suite("StorageFactory")
@@ -88,5 +90,41 @@ struct SecureStorageKeyTests {
   func 전체_삭제_대상에는_모든_토큰_키가_한번씩_포함된다() {
     #expect(Set(SecureStorageKey.all) == [.accessToken, .refreshToken])
     #expect(SecureStorageKey.all.count == 2)
+  }
+}
+
+@Suite("DeviceTokenStorage", .serialized)
+struct DeviceTokenStorageTests {
+  @Test
+  func 기존_UserDefaults_키_문자열을_유지하고_PickeStorage로_이관한다() throws {
+    let userDefaultStore = UserDefaultStore(suiteName: "DeviceTokenStorageTests.\(UUID().uuidString)")
+    let database = try DatabaseQueue()
+    try AppDatabaseMigrator.migrate(database)
+    let sharedValueStorage = SQLiteSharedValueStorage(database: database)
+
+    userDefaultStore.save("legacy-token", for: PushStorageKey.deviceToken)
+    defer { userDefaultStore.save(nil, for: PushStorageKey.deviceToken) }
+
+    withDependencies {
+      $0.context = .live
+      $0.sharedValueStorage = sharedValueStorage
+      $0.keyValueStorage = userDefaultStore
+    } operation: {
+      #expect(DeviceTokenStorage.token == "legacy-token")
+      #expect((try? sharedValueStorage.load(forKey: PushStorageKey.deviceToken.rawValue)) != nil)
+    }
+  }
+
+  @Test
+  func nil_저장시_토큰을_비운다() {
+    withDependencies {
+      $0.context = .test
+    } operation: {
+      DeviceTokenStorage.token = "token"
+
+      DeviceTokenStorage.token = nil
+
+      #expect(DeviceTokenStorage.token == nil)
+    }
   }
 }

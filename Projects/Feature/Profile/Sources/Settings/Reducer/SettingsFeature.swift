@@ -13,6 +13,7 @@ import PickeSharedUI
 import PickeAnalyticsInterface
 import DeviceServiceInterface
 import PickeAuthInterface
+import PickeStorageInterface
 
 @Reducer
 public struct SettingsFeature {

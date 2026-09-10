@@ -11,6 +11,7 @@ import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
 import PickeAnalyticsInterface
+import PickeCoreLogger
 import PickeCoreUtility
 
 @Reducer
@@ -18,7 +19,7 @@ public struct AppReducer: Sendable {
   public init() {}
 
   @ObservableState
-  public enum State {
+  public enum State: Equatable {
     case splash(SplashFeature.State)
     case auth(AppAuthCoordinator.State)
     case mainTab(AppMainTabCoordinator.State)
@@ -60,6 +61,7 @@ public struct AppReducer: Sendable {
   public enum InnerAction: Equatable {
     case completeAuthTransition
     case completeMainTabTransition
+    case pushRegistrationResponse(Result<Bool, AuthError>)
   }
 
   // MARK: - 비동기 처리 액션
@@ -69,6 +71,7 @@ public struct AppReducer: Sendable {
     case refreshTokenExpired
     case observeDeeplink
     case deeplinkReceived(PickeDeeplink)
+    case consumePendingDeeplink
   }
 
   // MARK: - 스코프 액션
@@ -192,8 +195,13 @@ public struct AppReducer: Sendable {
     case .observeDeeplink:
       return observeDeeplink()
 
+    case .consumePendingDeeplink:
+      guard case .mainTab = state,
+            let deeplink = AppDeeplinkBridge.consumePending() else { return .none }
+      return handleAsyncAction(state: &state, action: .deeplinkReceived(deeplink))
+
     case let .deeplinkReceived(deeplink):
-      // 메인 진입 상태에서만 즉시 라우팅. 그 외에는 pending(UserDefaults)으로 보류.
+      // 인앱 요청은 메인에서만 처리한다. 외부 요청은 consumePendingDeeplink에서 보류한다.
       guard case .mainTab = state else { return .none }
       switch deeplink {
       case let .battle(battleId):
@@ -220,6 +228,9 @@ public struct AppReducer: Sendable {
           .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
           .send(.scope(.mainTab(.myPage(.view(.openTerms)))))
         )
+      case .quickBattle:
+        // 빠른 배틀은 탭 자체가 목적지라 전환만 한다.
+        return .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.quickBattle.rawValue))))
       }
     }
   }
@@ -229,6 +240,12 @@ public struct AppReducer: Sendable {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .pushRegistrationResponse(result):
+      if case let .failure(error) = result {
+        PickeLogger.error("[Push] 디바이스 등록 실패: \(error.localizedDescription)", category: .network)
+      }
+      return .none
+
     case .completeAuthTransition:
       state = .auth(.init())
       return .none
@@ -236,10 +253,7 @@ public struct AppReducer: Sendable {
     case .completeMainTabTransition:
       state = .mainTab(.init())
       // 콜드 스타트/로그인 직후 대기 중이던 딥링크 소비.
-      if let pending = PushDeeplinkBridge.consumePending() {
-        return .send(.async(.deeplinkReceived(pending)))
-      }
-      return .none
+      return .send(.async(.consumePendingDeeplink))
     }
   }
 
@@ -279,7 +293,13 @@ public struct AppReducer: Sendable {
       // 로그인 성공 → 메인 진입 + APNs 디바이스 토큰 서버 등록.
       return .merge(
         .send(.view(.presentRoot)),
-        .run { _ in await PushTokenStore.register() }
+        .run { send in
+          let result = await Result {
+            try await PushRegistrationService.register()
+          }
+          .mapError(AuthError.from)
+          await send(.inner(.pushRegistrationResponse(result)))
+        }
       )
 
     // 로그아웃/탈퇴 → 로그인 화면으로 복귀
@@ -295,9 +315,12 @@ public struct AppReducer: Sendable {
   private func observeDeeplink() -> Effect<Action> {
     .run { send in
       for await notification in NotificationCenter.default.notifications(named: .pickeDeeplink) {
-        guard let encoded = notification.userInfo?["deeplink"] as? String,
-              let deeplink = PickeDeeplinkParser.parse(urlString: encoded) else { continue }
-        await send(.async(.deeplinkReceived(deeplink)))
+        if notification.userInfo == nil {
+          await send(.async(.consumePendingDeeplink))
+        } else if let encoded = notification.userInfo?["deeplink"] as? String,
+                  let deeplink = PickeDeeplinkParser.parse(urlString: encoded) {
+          await send(.async(.deeplinkReceived(deeplink)))
+        }
       }
     }
     .cancellable(id: CancelID.deeplinkListener, cancelInFlight: true)

@@ -9,6 +9,7 @@ import UserNotifications
 
 import DomainAssembly
 import PickeStorageInterface
+import ServiceAssembly
 
 extension AppDelegate {
 
@@ -18,12 +19,18 @@ extension AppDelegate {
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
     let tokenString = deviceToken.map { String(format: "%02x", $0) }.joined()
-    PushTokenStore.current = tokenString
+    PushRegistrationService.current = tokenString
     PickeLogger.debug("[Push] APNs 토큰 수신: \(tokenString.prefix(12))…", category: .app)
 
     Task {
-      guard await AppDependencyFactory.authService.isLoggedIn else { return }
-      await PushTokenStore.register()
+      guard await NetworkContainer.authService.isLoggedIn else { return }
+      let result = await Result {
+        try await PushRegistrationService.register()
+      }
+
+      if case let .failure(error) = result {
+        PickeLogger.error("[Push] 디바이스 등록 실패: \(error.localizedDescription)", category: .network)
+      }
     }
   }
 
@@ -54,7 +61,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
     withCompletionHandler completionHandler: @escaping () -> Void
   ) {
     let userInfo = response.notification.request.content.userInfo
-    PushDeeplinkBridge.handlePushPayload(userInfo)
+    AppDeeplinkBridge.handlePushPayload(userInfo)
     completionHandler()
   }
 }

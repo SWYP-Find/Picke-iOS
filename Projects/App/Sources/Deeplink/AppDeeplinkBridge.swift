@@ -1,18 +1,17 @@
 //
-//  PushDeeplinkBridge.swift
+//  AppDeeplinkBridge.swift
 //  Picke
 //
 
 import Foundation
 
-import DomainAssembly
 import PickeCoreLogger
 import PickeCoreUtility
 
-enum PushDeeplinkBridge {
-  static let pendingKey = "PickePendingDeeplink"
+enum AppDeeplinkBridge {
+  private static var pendingStore: PendingDeeplinkStore { PendingDeeplinkStore() }
 
-  /// 푸시 payload(userInfo) 를 딥링크로 변환 → 대기열 저장 + 브로드캐스트.
+  /// 푸시 payload(userInfo) 를 딥링크로 변환 → 최신 대기 요청 저장 + 브로드캐스트.
   static func handlePushPayload(_ userInfo: [AnyHashable: Any]) {
     guard let deeplink = PickeDeeplinkParser.parse(pushPayload: userInfo) else {
       PickeLogger.debug("[Deeplink] 처리 가능한 푸시 페이로드 없음", category: .navigation)
@@ -30,21 +29,17 @@ enum PushDeeplinkBridge {
     broadcast(deeplink)
   }
 
-  /// 딥링크를 대기열에 저장하고 즉시 알림.
+  /// 딥링크를 최신 대기 요청에 저장하고 즉시 알림.
   static func broadcast(_ deeplink: PickeDeeplink) {
-    UserDefaults.standard.set(deeplink.encoded, forKey: pendingKey)
+    pendingStore.save(deeplink)
     NotificationCenter.default.post(
       name: .pickeDeeplink,
-      object: nil,
-      userInfo: ["deeplink": deeplink.encoded]
+      object: nil
     )
     PickeLogger.debug("[Deeplink] 브로드캐스트: \(deeplink.encoded)", category: .navigation)
   }
 
-  /// AppReducer 가 라우팅을 끝낸 뒤 대기열 비움.
   static func consumePending() -> PickeDeeplink? {
-    guard let encoded = UserDefaults.standard.string(forKey: pendingKey) else { return nil }
-    UserDefaults.standard.removeObject(forKey: pendingKey)
-    return PickeDeeplinkParser.parse(urlString: encoded)
+    return pendingStore.consume()
   }
 }
