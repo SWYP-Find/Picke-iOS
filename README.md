@@ -1,354 +1,153 @@
 # Picke iOS
 
-<div align="center">
-
-**가치관 충돌에서 시작하는 1:1 철학 배틀 플랫폼, Picke**
+Picke는 일상의 가치관 차이를 1:1 토론, 투표, 리캡으로 이어 주는 iOS 앱입니다.
 
 ![Platform](https://img.shields.io/badge/Platform-iOS-orange.svg)
-![Language](https://img.shields.io/badge/Language-Swift-FA7343.svg?logo=swift&logoColor=white)
+![Swift](https://img.shields.io/badge/Swift-6-FA7343.svg?logo=swift&logoColor=white)
 ![iOS](https://img.shields.io/badge/iOS-17.0+-34C759.svg)
-![Xcode](https://img.shields.io/badge/Xcode-16.0+-007ACC.svg)
+![Tuist](https://img.shields.io/badge/Tuist-4.x-blue.svg)
 ![TCA](https://img.shields.io/badge/Architecture-TCA-purple.svg)
-![Tuist](https://img.shields.io/badge/Modularization-Tuist-blue.svg)
-![Fastlane](https://img.shields.io/badge/fastlane-00F200.svg?logo=fastlane&logoColor=white)
 
-[🎯 Features](#-주요-기능) | [🏗 Architecture](#-프로젝트-아키텍처) | [🚀 Quick Start](#-빠른-시작) | [🔐 OAuth Flow](#-oauth-인증-플로우)
+## 주요 기능
 
----
+- Google, Kakao, Apple 기반 소셜 로그인
+- 오늘의 배틀, 사전 투표, 1:1 토론, 사후 투표, 리캡 공유
+- 홈 피드, 탐색, 검색, 큐레이팅 추천
+- 관점 등록, 대댓글, 좋아요, 신고
+- 마이페이지, 포인트, 무료 충전, 배틀 기록, 알림 설정
+- APNs 푸시 알림과 딥링크 라우팅
+- Mixpanel 분석, Google Mobile Ads, Sentry 오류 수집
 
-</div>
+## 기술 스택
 
-## 📖 프로젝트 소개
+- Swift 6, SwiftUI, iOS 17+
+- Tuist 4 기반 멀티 모듈
+- The Composable Architecture, TCAFlow
+- Dependencies, SQLiteData, Alamofire
+- Firebase, Mixpanel, Google Mobile Ads, Sentry
 
-**Picke** 는 일상의 가치관 차이를 1:1 토론으로 풀어내는 모바일 토론·투표 플랫폼입니다.
-"오늘의 배틀" 주제에 대한 사전·사후 투표, 실시간 1:1 채팅 토론, 그리고 리캡 카드까지 한 흐름으로 이어집니다.
+의존성 버전은 고정 표로 관리하지 않습니다. 실제 기준은 [Tuist/Package.swift](Tuist/Package.swift)와 [Tuist/Package.resolved](Tuist/Package.resolved)입니다.
 
-> 💡 **왜 만들었나?**
-> SNS 의 단방향 의견 표출 대신, 짧고 명확한 1:1 토론을 통해
-> "내가 왜 그렇게 생각하는지" 를 정리하고 다른 가치관을 마주하는 경험을 제공합니다.
+## 프로젝트 구조
 
-## 🛠 Setup
+```text
+Projects/
+├── App/             # 앱 진입점, AppReducer, DI 조립, 리소스
+├── Feature/         # SwiftUI 화면, TCA Feature, Coordinator
+├── Domain/          # Entity, Interface, UseCase, Testing
+├── Service/         # API, endpoint, auth, analytics, device/audio service
+├── Core/            # network, storage, logger, utility, third party bridge
+└── UI/              # design kit, shared UI, animation
+```
 
-### AI 도구 연동
+의존성 방향은 Feature가 Domain Interface를 바라보고, 구현체 조립은 App과 Assembly 계층에서 수행하는 방식입니다. 세부 규칙은 [AGENTS.md](AGENTS.md)와 [docs/agent](docs/agent)를 기준으로 확인합니다.
 
-프로젝트 규칙은 `AGENTS.md` / `CLAUDE.md` 에 정의되어 있습니다.
+## 개발 환경
+
+로컬 확인 기준:
+
+- Xcode 26.5
+- Apple Swift 6.3.2
+- Tuist 4.154.0
+
+Tuist 버전은 [mise.toml](mise.toml)에 고정되어 있습니다. 새 환경에서는 mise를 통해 동일 버전을 맞추는 것을 권장합니다.
+
+```bash
+mise install
+mise exec -- tuist version
+```
+
+## Tuist Dashboard와 캐시
+
+이 저장소는 로컬 개발에서만 Tuist Dashboard 프로젝트 `picke2026/picke`와 원격 바이너리 캐시를 사용합니다. CI에서는 대시보드 연결과 캐시 업로드를 비활성화하며, 별도 CI 연동 설정은 추가하지 않습니다.
+
+[Tuist.swift](Tuist.swift)의 기준 설정:
+
+- 로컬: `fullHandle = "picke2026/picke"`, `enableCaching = true`, 기본 캐시 프로필 `.onlyExternal`
+- CI: `fullHandle = nil`, `enableCaching = false`, 기본 캐시 프로필 `.none`
+- 캐시 업로드: 로컬에서만 활성화, CI에서는 비활성화
+- 인증: `optionalAuthentication = true`로 설정해 로그인되지 않은 환경에서도 generate가 실패하지 않도록 유지
+
+로컬에서 Dashboard와 원격 캐시를 쓰려면 한 번 로그인하고 캐시를 준비합니다.
+
+```bash
+tuist auth login
+tuist setup cache
+tuist cache warm --external-only
+tuist generate --no-open
+```
+
+`tuist cache warm --external-only`는 외부 의존성 중심으로 캐시를 데우며, 로컬 개발자는 대시보드 원격 캐시에서 다운로드하고 필요한 캐시를 업로드할 수 있습니다.
+
+## 빠른 시작
+
+```bash
+git clone git@github.com:SWYP-Find/Picke-iOS.git
+cd Picke-iOS
+mise install
+./make setup
+open Picke.xcworkspace
+```
+
+`CLAUDE.md`가 필요한 도구는 `AGENTS.md`와 같은 내용을 보도록 심볼릭 링크를 만들 수 있습니다.
 
 ```bash
 ln -s AGENTS.md CLAUDE.md
 ```
 
-## ✨ 주요 기능
+## 주요 명령어
 
-### 🔐 소셜 로그인 (server-mediated OAuth)
-- **Google / Kakao**: WKWebView 기반 `authorize → code 가로채기` → 백엔드 토큰 교환
-- **Apple Sign-In**: `ASAuthorizationAppleIDProvider` 네이티브 통합
-- **자동 토큰 갱신**: `AccessTokenCredential` JWT exp 디코딩 + 만료 5분 전 자동 refresh
-- **401 자동 처리**: `AuthInterceptor` 가 401 감지 → refresh 시도 → 실패 시 자동 로그아웃 알림 발송
-- **USER_404 강제 로그아웃**: `SessionInvalidationPlugin` 이 응답 바디 에러코드(`USER_404`) 감지 → Keychain/세션 정리 후 로그인 전환
-
-### 🥊 오늘의 배틀
-- **사전 투표 → 1:1 채팅 토론 → 사후 투표** 의 한 흐름
-- **재투표** 로 가치관이 바뀌었는지 추적
-- **리캡 카드** 자동 생성 + 공유
-- **채팅방 오디오 재생** + 로딩 실패 시 상단 floating 오류 배너(`FloatingErrorView`)
-
-### 💬 토론 / 관점(댓글)
-- 채팅방형 1:1 음성 토론
-- 관점(=댓글) 등록·수정·삭제 + 대댓글, 좋아요, 신고
-- 투표 진영(optionId)별 관점 등록 / 진영 탭 필터
-- 본인 글 "나" 표시 + 수정·삭제 메뉴, 등록·갱신 시 스켈레톤
-
-### 🧭 탐색 / 큐레이팅 / 홈
-- 큐레이팅된 홈 피드
-- **흥미 기반 배틀 추천**(큐레이팅 화면) — `GET /battles/{id}/recommendations/interesting`
-- 카테고리·태그 탐색
-- 토픽 검색
-
-### 👤 마이페이지
-- 프로필 카드 / 보유 포인트 + **무료 충전**(리워드 광고)
-- 포인트 내역, 내 배틀 기록, 내 콘텐츠 활동(댓글/좋아요), 공지사항·이벤트
-- **나의 철학자 유형(recap)** — 배틀 5개 미만 시 잠금 화면 분기, 애니메이션 레이더 차트 + 공유
-- 배틀 주제 제안, 알림 설정
-- **회원 탈퇴** — 탈퇴 사유(복수 선택) 입력 화면 분리, 제출 시 디바이스 토큰 해제 + 세션 종료
-
-### 🔔 알림 (Notification)
-- **알림받기** 목록 — 카테고리 탭(전체·콘텐츠·공지사항·이벤트) + 무한 스크롤
-- 탭 시 읽음 처리 / **모두 읽음** — `GET /api/v1/notifications`, 읽음은 `PATCH .../read·/read-all`
-- **미읽음 빨간점** — 저장소 없이 서버 `GET /api/v1/notifications/unread` 값으로만 구동
-  - 홈·마이·탐색이 각 화면 진입 시 `/unread` 호출 → 자체 Bool 뱃지 갱신, 읽음 처리 시 즉시 제거
-
-### 📲 푸시 알림 / 딥링크 (APNs)
-- **APNs 다이렉트 발송** (Firebase SDK 미사용) — 권한 요청·토큰 수신 후 `POST /api/v1/devices` 등록(`platform: "IOS"`), 로그아웃/탈퇴 시 해제
-- 알림 탭 → 페이로드(`type`/`url`)를 `PickeDeeplink` 로 변환해 배틀 상세 등으로 라우팅, 콜드 스타트 대기 딥링크 처리
-- **커스텀 URL scheme** `picke://battle/55` · `picke://perspective/45?commentId=678` (`onOpenURL`)
-
-### ⬆️ 앱 업데이트 안내
-- 스플래시에서 **App Store(iTunes lookup) 최신 버전 비교** → 업데이트 필요 시 안내 alert
-- "지금 업데이트" → App Store, "나중에" → 정상 진입
-
-### 💰 무료 충전 (리워드 광고)
-- **GoogleMobileAds 리워드 동영상** 시청 → 포인트 충전 (광고 유닛 ID 는 `REWARD_AD_UNIT` config 주입)
-- `RewardedAdClient`(UseCase) — 로드·표시·보상 콜백을 async 로 추상화
-
-### 📊 행동 분석 (Mixpanel)
-- `AnalyticsUseCase` — 타입 안전 이벤트 + PICKé 핵심 이벤트 명세서 준수(이벤트 통합 전략)
-- `sign_up` / `battle_step`(pre_vote·audio_end·post_vote) / `report_action` / `community_action` / `ad_revenue` + 로그인 시 `identify`
-
-## 🏗 프로젝트 아키텍처
-
-### 🎯 Clean Architecture × Tuist 멀티 모듈
-
-```
-Picke-iOS/
-├── 📱 Projects/
-│   ├── App/                       # 메인 애플리케이션 타겟
-│   │   ├── Sources/
-│   │   │   ├── Application/       # AppDelegate(APNs) / PushTokenStore / Deeplink 브리지
-│   │   │   ├── Di/                # WeaveDI 등록 (DiRegister, AppPresentationContextProvider)
-│   │   │   ├── Reducer/           # TCA Root AppReducer
-│   │   │   └── View/              # Root Views
-│   │   └── Derived/               # Tuist 생성 plist
-│   │
-│   ├── Presentation/              # 🎨 UI Layer
-│   │   ├── Auth/                  # 로그인 / 온보딩 / 인증 코디네이터
-│   │   ├── Battle/                # 오늘의 배틀 / 빠른 배틀 화면 모델과 메인 플로우
-│   │   ├── Chat/                  # 투표 / 채팅방 / 관점·대댓글 / 큐레이팅
-│   │   ├── Hifi/                  # 탐색·검색 기반 Hi-Fi 화면
-│   │   ├── Home/                  # 홈 피드 / 추천 / 스켈레톤 (탭 라우팅·GNB 는 App 레이어로 이관)
-│   │   ├── Notification/          # 알림받기 목록 / 카테고리 탭 / 미읽음 뱃지
-│   │   ├── Profile/               # 마이페이지 / 포인트 / 설정 / 탈퇴 / 배틀제안 / 배틀기록 / 콘텐츠활동 / 공지 / 리캡 / 무료충전
-│   │   ├── Splash/                # 스플래시 / 앱 업데이트 체크
-│   │   ├── Web/                   # 약관 / 외부 링크 WebView
-│   │   └── Presentation/          # 공통 프레젠테이션 유틸
-│   │
-│   ├── Domain/                    # 🔥 Business Logic Layer — Presentation 처럼 feature별 마이크로 모듈
-│   │   ├── <Feature>/             # Auth · Battle · Comment · Home · Notification · Perspective · Profile · Search
-│   │   │   ├── Interface/         #   <F>DomainInterface: Entity + Repository/UseCase 프로토콜 + DI 키
-│   │   │   ├── Sources/           #   <F>Domain: UseCase 구현 (pass-through 는 인터페이스로 소비)
-│   │   │   └── Testing/           #   <F>DomainTesting: 목
-│   │   ├── Common/                # 공유 도메인 계약(BattlePerspective·CommentLikeResult·BattleTag 등) + 횡단 관심사
-│   │   └── Domain/                # 엄브렐라(@_exported) — App(DI 조립) 전용
-│   │
-│   ├── Data/                      # 📡 Data Layer — feature별 마이크로 모듈
-│   │   ├── <Feature>/             # Auth · Battle · Comment · Home · Notification · Perspective · Profile · Search
-│   │   │   └── Sources/           #   <F>Data(단일 타깃): API / Model / Service / Repository 폴더 내장
-│   │   └── Data/                  # 엄브렐라(@_exported) — App(DI 조립) 전용
-│   │       # 공유 베이스(BaseResponseDTO·MoyaProvider.authorized·세션매니저)는 monolith Model/Repository 에 유지
-│   │
-│   ├── Network/                   # 🌐 Network Layer
-│   │   ├── Networking/            # 네트워크 클라이언트 export
-│   │   ├── NetworkToken/          # TokenProviding / InMemoryTokenProvider (토큰 추상화)
-│   │   ├── NetworkHeader/         # APIHeader / APIHeaderManger (HTTP 헤더 조립, NetworkToken 의존)
-│   │   └── ThirdPartys/           # AsyncMoya / WeaveDI 등 SPM 재노출
-│   │
-│   └── Shared/                    # 🔧 Shared Layer
-│       ├── DesignSystem/          # 공통 UI / 컬러 토큰 / 이미지 / Toast / Floating 배너 / 팝업
-│       ├── Shared/                # 공유 모델·확장
-│       ├── ThirdParty/            # 써드파티 래퍼
-│       └── Utill/                 # 날짜 / 숫자 / 문자열 표시 유틸리티
-│
-├── 🔧 Tuist/
-│   ├── Package.swift              # SPM 의존성 정의
-│   └── ProjectDescriptionHelpers/ # 모듈 템플릿 / Plist 헬퍼
-└── 🧩 Plugins/
-    ├── DependencyPlugin/          # 모듈 의존성 헬퍼 (.Data / .Domain / .Network ...)
-    ├── DependencyPackagePlugin/   # SPM 의존성 헬퍼 (.SPM.asyncMoya ...)
-    └── ProjectTemplatePlugin/     # ProjectConfig / Project.makeModule
-```
-
-### 🏛️ Clean Architecture Pattern
-
-```mermaid
-graph TD
-    A["Presentation/&lt;Feature&gt;"] --> B["&lt;Feature&gt;DomainInterface (Entity + 프로토콜 + DI 키)"]
-    A2["&lt;Feature&gt;Domain (UseCase 구현)"] --> B
-    C["&lt;Feature&gt;Data (API/Model/Service/Repository)"] --> B
-    C --> CM["Common (공유 계약)"]
-    B --> CM
-    C --> E["Network: NetworkHeader / NetworkToken / AsyncMoya"]
-    G[Shared: PickeDesignKit / Utill] --> A
-    App["App (DI 조립)"] --> UMB["Domain·Data 엄브렐라 @_exported"]
-
-    A -.->|.interface 만 의존| B
-```
-
-> **핵심**: Presentation·Data 는 `<Feature>DomainInterface`(프로토콜·DI 키)에만 의존 → 구현 변경이 소비자를 리빌드시키지 않는다. Auth 의 OAuth 오케스트레이션도 `AuthUseCaseInterface`/`UnifiedOAuthUseCaseInterface` 로 추출해 Presentation 이 구현이 아닌 인터페이스에 의존하도록 통일했다.
-
-### 🕸️ TuistSpider 확장 뷰
-
-레이어별로 묶어 보거나(Grouped) 모든 모듈을 펼쳐 본(Expanded) 시각화입니다. (TuistSpider 결과)
-
-<div align="center">
-
-| Grouped | Expanded |
-|:---:|:---:|
-| <img src="docs/graphs/Picke-grouped-Picke.png" width="420"> | <img src="docs/graphs/Picke-expanded-Picke.png" width="420"> |
-
-</div>
-
-### 🔄 의존성 방향 원칙
-
-```
-Presentation/<F>  → <F>DomainInterface (프로토콜 + DI 키)        [.interface 만 의존]
-       ↓
-<F>Domain (UseCase 구현) → <F>DomainInterface + Common
-       ↓
-<F>Data (Repository/Service/Model/API) → <F>DomainInterface + Common + Network
-       ↓
-공유 계약(BattlePerspective·CommentLikeResult·BattleTag 등) → Common
-       ↓
-Network 인프라(NetworkHeader → NetworkToken, MoyaProvider.authorized) → 브리지 경유
-```
-
-> Presentation 피처 간 화면 전환 계약은 각 `<Feature>Interface`(예: `HomeDelegate`·`HifiDelegate`·`ChatInterface`)에 두어, 소비자가 구현 타깃을 import 하지 않고도 라우팅한다.
-
-**핵심 설계 원칙**
-- ✅ **Presentation** 은 Domain 의 UseCase 인터페이스에 의존합니다.
-- ✅ **Domain/UseCase** 는 Repository Protocol 을 통해 외부 IO 를 호출합니다.
-- ✅ **Data/Repository** 는 Domain 의 Repository Protocol 을 구현하고 Entity 를 반환합니다.
-- ✅ **Data/Model** 은 DTO 와 Entity 변환을 담당합니다.
-- ✅ **Data/Service** 는 endpoint / method / parameter 정의만 담당합니다.
-- ✅ 모든 데이터 흐름은 **Domain 을 중심**으로 진행합니다.
-
-## 🔐 OAuth 인증 플로우
-
-### Google / Kakao — WKWebView server-mediated OAuth
-
-```
-앱
-  │  authorize URL (response_type=code, redirect_uri=https://picke.store/oauth/<p>)
-  ▼
-WKWebView (OAuthWebViewController)
-  │  사용자 동의 → 구글/카카오가 redirect_uri 로 302
-  │  WKNavigationDelegate.decidePolicyFor 가 picke.store/oauth/<p>?code=... 가로채기
-  │  decisionHandler(.cancel)   ← 401 응답 송신 차단
-  ▼
-authorizationCode 추출 → dismiss
-  ▼
-UnifiedOAuthUseCase
-  │  POST /api/v1/auth/login/<provider>
-  │  body: { authorizationCode, redirectUri }
-  ▼
-AuthRepositoryImpl
-  │  BaseResponseDTO<LoginDataDTO> 디코딩 → LoginEntity
-  ▼
-KeychainManager 저장 + AuthSessionManager.credential 갱신
-```
-
-### Apple — 네이티브 Sign-In
-
-`ASAuthorizationAppleIDProvider` 로 받은 credential / nonce / authorizationCode 를 그대로 백엔드에 전달.
-
-### 토큰 자동 갱신
-
-- `AccessTokenCredential` 가 access token JWT 의 `exp` 를 디코딩해 만료 시점 보관
-- `AuthInterceptor.adapt` 에서 만료 5분 전이면 `TokenRefreshManager` 가 단일화된 refresh 수행
-- 401 응답 시 `retry` 로 토큰 갱신 후 재시도, 실패 시 `NSNotification.refreshTokenExpired` 발송 + 자동 로그아웃
-
-## 🛠 기술 스택
-
-### Core Technologies
-- **🎯 Architecture**: The Composable Architecture (TCA)
-- **📦 Modularization**: Tuist 4.x (Micro Feature Architecture)
-- **💉 Dependency Injection**: WeaveDI 3.4.1
-- **🔀 Navigation**: TCAFlow (커스텀)
-- **⚡ Concurrency**: Swift Concurrency (async/await)
-
-### 📚 주요 라이브러리
-
-#### 🎯 아키텍처 & 상태 관리
-- **[ComposableArchitecture](https://github.com/pointfreeco/swift-composable-architecture)** — 단방향 상태 관리
-- **[TCAFlow](https://github.com/Roy-wonji/TCAFlow.git)** ⭐️ — TCA 기반 화면 전환 / 네비게이션 (커스텀)
-- **[WeaveDI](https://github.com/Roy-wonji/WeaveDI.git)** ⭐️ — 의존성 주입 컨테이너 (커스텀)
-
-#### 🔐 인증 & 보안
-- **AuthenticationServices** — Apple Sign-In, ASWebAuthenticationSession
-- **WebKit** — WKWebView 기반 server-mediated OAuth (Google / Kakao)
-- **[AppAuth-iOS](https://github.com/openid/AppAuth-iOS.git)** — OAuth 2.0 / OpenID Connect 클라이언트 (옵션)
-
-#### 🌐 네트워킹
-- **[AsyncMoya](https://github.com/Roy-wonji/AsyncMoya)** ⭐️ — async/await 기반 HTTP 클라이언트 (커스텀)
-- **Alamofire / Moya** — AsyncMoya 의 기반 스택
-
-#### 🎨 UI & UX
-- **SwiftUI** — 선언형 UI
-- **[SDWebImageSwiftUI](https://github.com/SDWebImage/SDWebImageSwiftUI.git)** — 비동기 이미지 로딩 / 캐싱
-
-#### 🔥 백엔드 / 분석
-- **[Firebase iOS SDK](https://github.com/firebase/firebase-ios-sdk)** — Crashlytics / Messaging
-- **[Mixpanel](https://github.com/mixpanel/mixpanel-swift.git)** — 행동 분석 / Session Replay
-- **[Google Mobile Ads](https://github.com/googleads/swift-package-manager-google-mobile-ads)** — 광고
-
-### 🛠 개발 도구 & 유틸리티
-
-#### 📊 로깅 & 디버깅
-- **LogMacro** — 커스텀 로깅 매크로
-- **IssueReporting** — 개발 단계 이슈 추적
-- **XCTestDynamicOverlay** — 테스트 환경 오버레이
-
-#### ⚡ 성능 & 동시성
-- **Clocks** — 시간 관련 유틸리티
-- **ConcurrencyExtras** — Swift Concurrency 확장
-- **Swift 6.0** — 최신 Swift 언어 기능
-
-#### 🔧 빌드 & 배포
-- **Tuist** — 프로젝트 생성 / 모듈 의존성 관리
-- **Swift Package Manager** — 패키지 의존성 관리
-- **fastlane + Bundler** — TestFlight / App Store 빌드·업로드 자동화
-
-### 📱 지원 환경
-- **💻 Xcode**: 16.0 이상
-- **📱 iOS**: 17.0 이상
-- **⚡ Swift**: 6.0 이상
-- **🔧 Tuist**: 4.x 이상
-
-## 🚀 빠른 시작
-
-### ✅ 필수 요구사항
-- **💻 Xcode**: 16.0 이상
-- **📱 iOS**: 17.0 이상
-- **⚡ Swift**: 6.0 이상
-- **🔧 Tuist**: 4.x 이상
-
-### 🛠 설치 및 실행
-
-#### 1️⃣ 저장소 클론
 ```bash
-git clone https://github.com/Roy-wonji/Picke-iOS.git
-cd Picke-iOS
+./make setup
 ```
 
-#### 2️⃣ Tuist 설치
+mise 도구 설치, 캐시 설정, 의존성 설치, 프로젝트 생성을 한 번에 실행합니다.
+
 ```bash
-curl -Ls https://install.tuist.io | bash
+./make install
 ```
 
-#### 3️⃣ Ruby / fastlane 의존성 설치
+의존성 설치 후 프로젝트를 생성합니다.
+
 ```bash
-rbenv install 3.3.9
-rbenv global 3.3.9
-bundle install
+./make generate
 ```
 
-#### 4️⃣ 프로젝트 빌드 / 생성
+Tuist 프로젝트를 생성합니다. 내부적으로 `tuist generate --no-open`을 실행합니다.
+
 ```bash
-# 전체 워크플로우 (권장)
-./make build      # clean → install → generate
-
-# 단계별 실행
-./make clean      # 빌드 산출물 정리
-./make install    # SPM 의존성 설치
-./make generate   # Xcode 프로젝트 생성
+./make build
 ```
 
-#### 5️⃣ Xcode 열기
+`clean`, `install`, `generate`를 순서대로 실행하는 전체 워크플로우입니다.
+
 ```bash
-open Picke.xcworkspace
+./make test
 ```
 
-### ⚙️ 환경 설정
+전체 테스트를 실행합니다.
 
-다음 키들을 `Picke-Dev.xcconfig` / `Picke-Stage.xcconfig` / `Picke-Prod.xcconfig` 에 채워주세요.
+```bash
+make test
+```
+
+훅 호환용 명령입니다. 실제 테스트를 실행하지 않고 스킵 메시지만 출력합니다.
+
+```bash
+mise exec -- tuist test
+```
+
+전체 테스트를 실행합니다. 시간이 오래 걸릴 수 있어 CI 또는 수동 검증에서 사용합니다.
+
+```bash
+tuist clean
+```
+
+Tuist 캐시와 빌드 산출물 문제를 정리할 때 사용합니다.
+
+## 설정
+
+빌드 환경별 xcconfig에 필요한 값을 채웁니다.
 
 ```xcconfig
 BASE_URL              = picke.store
@@ -356,106 +155,42 @@ GOOGLE_CLIENT_ID      = YOUR_GOOGLE_WEB_CLIENT_ID
 GOOGLE_IOS_CLIENT_ID  = YOUR_GOOGLE_IOS_CLIENT_ID
 REVERSED_CLIENT_ID    = YOUR_REVERSED_CLIENT_ID
 KAKAO_REST_API_KEY    = YOUR_KAKAO_REST_API_KEY
+REWARD_AD_UNIT        = YOUR_REWARD_AD_UNIT
 ```
 
-### 🌐 OAuth 사전 등록
+OAuth redirect URI는 서버 중계 흐름을 기준으로 등록합니다.
 
-| Provider | redirect_uri | 비고 |
-|---|---|---|
-| Google | `https://picke.store/oauth/google` | Web client ID + Google Cloud Console 등록 필요 |
-| Kakao | `https://picke.store/oauth/kakao` | Kakao Developers 콘솔 등록 필요 |
-| Apple | (네이티브) | App Store Connect → Sign in with Apple |
+| Provider | Redirect URI |
+| --- | --- |
+| Google | `https://picke.store/oauth/google` |
+| Kakao | `https://picke.store/oauth/kakao` |
+| Apple | Native Sign in with Apple |
 
-## 🛠️ 주요 명령어
+## 문서
 
-### 🔄 기본 워크플로우
-```bash
-./make build      # 전체 빌드 프로세스 (권장)
-./make generate   # 프로젝트 생성만
-./make clean      # 빌드 산출물 정리
-./make install    # 의존성 설치
-```
+- [TCA 패턴](docs/agent/tca-patterns.md)
+- [SwiftUI 패턴](docs/agent/swiftui-patterns.md)
+- [TCAFlow 네비게이션](docs/agent/tcaflow-navigation.md)
+- [DI 가이드](docs/agent/dependency-injection.md)
+- [Micro Feature 진행 현황](docs/agent/micro-feature-migration-progress.md)
+- [도메인/데이터/피처 아키텍처](docs/domain-data-feature-architecture.md)
 
-### 🚨 문제 해결
-```bash
-tuist clean       # Tuist 캐시 정리
-./make clean      # 모든 빌드 파일 정리
-```
+## 그래프
 
-### 🔍 코드 품질 / 그래프
-```bash
-tuist graph       # 의존성 그래프 생성
-tuist test        # 전체 테스트 실행
-```
+| Grouped | Expanded |
+| --- | --- |
+| ![Grouped](docs/graphs/Picke-grouped-Picke.png) | ![Expanded](docs/graphs/Picke-expanded-Picke.png) |
 
-### 🚀 배포
-```bash
-export MATCH_KEYCHAIN_PASSWORD="<match keychain password>"
-bundle exec fastlane ios QA       # TestFlight 업로드
-bundle exec fastlane ios release  # App Store 배포
-```
+## 브랜치 전략
 
-`MATCH_KEYCHAIN_PASSWORD`가 설정되어 있으면 fastlane이 `match_keychain`을 먼저 unlock해서 macOS 키체인 비밀번호 팝업을 줄입니다.
+- `main`: 프로덕션 배포
+- `develop`: 개발 통합
+- `feature/*`: 기능 작업
+- `fix/*`: 버그 수정
 
-## 📄 라이선스
+작업 브랜치에서 검증 후 `develop`으로 Pull Request를 올립니다.
 
-이 프로젝트는 **MIT 라이선스** 하에 배포됩니다.
-자세한 내용은 [LICENSE](LICENSE) 파일을 참고하세요.
+## 문의
 
-## 👥 팀 & 크레딧
-
-### 💻 개발팀
-- **iOS Lead Developer**: 서원지 ([@Roy-wonji](https://github.com/Roy-wonji))
-
-### 🛠 기술 스택
-- **iOS**:
-  ![Swift](https://img.shields.io/badge/swift-F05138?style=for-the-badge&logo=swift&logoColor=white)
-  ![Xcode](https://img.shields.io/badge/xcode-147EFB?style=for-the-badge&logo=xcode&logoColor=white)
-  ![Fastlane](https://img.shields.io/badge/fastlane-00F200?style=for-the-badge&logo=fastlane&logoColor=white)
-
-- **Server**:
-  ![AWS EC2](https://img.shields.io/badge/amazonec2-FF9900?style=for-the-badge&logo=amazonec2&logoColor=white)
-  ![AWS](https://img.shields.io/badge/amazonaws-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white)
-  ![Swagger](https://img.shields.io/badge/swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=white)
-
-- **Design**:
-  ![Figma](https://img.shields.io/badge/figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white)
-
-- **VCS**:
-  ![Git](https://img.shields.io/badge/git-F05032?style=for-the-badge&logo=git&logoColor=white)
-  ![GitHub](https://img.shields.io/badge/github-181717?style=for-the-badge&logo=github&logoColor=white)
-
-## 🐈‍⬛ Git 브랜칭 전략
-
-### 1️⃣ Git Branching Strategy
-- **main**: 프로덕션 배포용
-- **develop**: 개발 통합 브랜치
-- **feature/***: 기능별 개발 브랜치
-- **fix/***: 버그 픽스 브랜치
-
-### 📋 워크플로우
-1. **develop** 에서 **feature/<topic>** 브랜치 생성
-2. 기능 개발 → 자체 커밋 단위 SRP 분리
-3. **feature/** → **develop** Pull Request, 코드 리뷰
-4. **develop** → **main** 배포 Pull Request
-
-### ✍️ 커밋 메시지
-- 한국어 사용
-- 관련 GitHub 이슈 번호 매칭 (예: `#20 #2`)
-- 형식: `<type>: <요약> #<issue>`
-- `feat / fix / refactor / chore / docs / test`
-
-## 📞 문의 및 지원
-- 📧 **이메일**: suhwj81@gmail.com
-- 🐛 **버그 신고**: [Issues](https://github.com/Roy-wonji/Picke-iOS/issues)
-- 💡 **기능 제안**: [Discussions](https://github.com/Roy-wonji/Picke-iOS/discussions)
-
----
-
-<div align="center">
-
-**Made with ❤️ by Picke Team**
-
-[![Star this repo](https://img.shields.io/github/stars/Roy-wonji/Picke-iOS?style=social)](https://github.com/Roy-wonji/Picke-iOS)
-
-</div>
+- Issues: [github.com/SWYP-Find/Picke-iOS/issues](https://github.com/SWYP-Find/Picke-iOS/issues)
+- Discussions: [github.com/SWYP-Find/Picke-iOS/discussions](https://github.com/SWYP-Find/Picke-iOS/discussions)

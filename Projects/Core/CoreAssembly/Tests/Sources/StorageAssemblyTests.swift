@@ -7,7 +7,7 @@ import Foundation
 import Testing
 
 @testable import CoreAssembly
-import PickeStorage
+@testable import PickeStorage
 import PickeStorageInterface
 
 import Dependencies
