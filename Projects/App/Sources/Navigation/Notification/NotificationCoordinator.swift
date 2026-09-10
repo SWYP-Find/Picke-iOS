@@ -1,11 +1,12 @@
 //
 //  NotificationCoordinator.swift
-//  Notification
+//  Picke
 //
 
 import Foundation
 
 import ComposableArchitecture
+import FeatureAssembly
 import NotificationInterface
 import TCAFlow
 
@@ -66,8 +67,8 @@ public struct NotificationCoordinator {
   }
 }
 
-extension NotificationCoordinator {
-  private func routerAction(
+private extension NotificationCoordinator {
+  func routerAction(
     state _: inout State,
     action: IndexedRouterActionOf<NotificationScreen>
   ) -> Effect<Action> {
@@ -81,7 +82,7 @@ extension NotificationCoordinator {
     }
   }
 
-  private func handleViewAction(
+  func handleViewAction(
     state: inout State,
     action: View
   ) -> Effect<Action> {
@@ -95,7 +96,7 @@ extension NotificationCoordinator {
     }
   }
 
-  private func handleDelegateAction(
+  func handleDelegateAction(
     state _: inout State,
     action: NotificationDelegate
   ) -> Effect<Action> {

@@ -14,6 +14,7 @@ let project = Project.makeAppModule(
   dependencies: [
     // 화면·도메인·데이터 구현은 각 레이어의 조립 경계 하나로 들어온다.
     .featureAssembly,
+    .feature(.notification, .interface),
     .domainAssembly,
     .serviceAssembly,
     .core(.storage, .interface),

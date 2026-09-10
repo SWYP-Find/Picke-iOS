@@ -1,13 +1,12 @@
 //
 //  NotificationCoordinatorView.swift
-//  Notification
+//  Picke
 //
-
-import Foundation
 
 import SwiftUI
 
 import ComposableArchitecture
+import FeatureAssembly
 import TCAFlow
 
 public struct NotificationCoordinatorView: View {

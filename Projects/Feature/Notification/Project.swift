@@ -19,7 +19,6 @@ let project = Project.makeModule(
     .service(.analytics, .interface),
     .domain(.notification, .interface),
     .SPM.composableArchitecture,
-    .SPM.tcaFlow,
   ],
   hasTests: true,
   hasInterface: true,
