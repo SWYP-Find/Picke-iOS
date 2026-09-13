@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Picke 전체 도메인 지도",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1100,
+      745
+    ]
+  },
+  "components": [
+    {
+      "id": "domain-appupdate",
+      "type": "backend",
+      "label": "AppUpdateDomain",
+      "sublabel": "앱 업데이트",
+      "pos": [
+        40,
+        250
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "App"
+    },
+    {
+      "id": "domain-attendance",
+      "type": "backend",
+      "label": "AttendanceDomain",
+      "sublabel": "출석",
+      "pos": [
+        40,
+        415
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Home"
+    },
+    {
+      "id": "domain-auth",
+      "type": "backend",
+      "label": "AuthDomain",
+      "sublabel": "인증 · OAuth",
+      "pos": [
+        760,
+        415
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Auth · Home · Profile"
+    },
+    {
+      "id": "domain-battle",
+      "type": "backend",
+      "label": "BattleDomain",
+      "sublabel": "배틀",
+      "pos": [
+        760,
+        85
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Battle · Chat · Hifi · Home · Profile"
+    },
+    {
+      "id": "domain-comment",
+      "type": "backend",
+      "label": "CommentDomain",
+      "sublabel": "댓글",
+      "pos": [
+        400,
+        85
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Chat"
+    },
+    {
+      "id": "domain-ad",
+      "type": "backend",
+      "label": "AdDomain",
+      "sublabel": "광고",
+      "pos": [
+        400,
+        415
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Ad · Hifi"
+    },
+    {
+      "id": "domain-home",
+      "type": "backend",
+      "label": "HomeDomain",
+      "sublabel": "홈",
+      "pos": [
+        760,
+        250
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Chat · Hifi · Home"
+    },
+    {
+      "id": "domain-notification",
+      "type": "backend",
+      "label": "NotificationDomain",
+      "sublabel": "알림",
+      "pos": [
+        400,
+        580
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Notification · Hifi · Home · Profile"
+    },
+    {
+      "id": "domain-perspective",
+      "type": "backend",
+      "label": "PerspectiveDomain",
+      "sublabel": "관점",
+      "pos": [
+        40,
+        85
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Chat"
+    },
+    {
+      "id": "domain-profile",
+      "type": "backend",
+      "label": "ProfileDomain",
+      "sublabel": "프로필",
+      "pos": [
+        40,
+        580
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Profile"
+    },
+    {
+      "id": "domain-search",
+      "type": "backend",
+      "label": "SearchDomain",
+      "sublabel": "탐색 · 검색",
+      "pos": [
+        400,
+        250
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "Hifi"
+    },
+    {
+      "id": "domain-domainassembly",
+      "type": "backend",
+      "label": "DomainAssembly",
+      "sublabel": "도메인 조립",
+      "pos": [
+        760,
+        580
+      ],
+      "size": [
+        300,
+        100
+      ],
+      "tag": "App → 11개 도메인 구현체"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "읽는 방법",
+      "items": [
+        "화살표: 도메인이 참조하는 Interface",
+        "노드 태그: 직접 사용하는 Feature / App"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "앱 조립",
+      "items": [
+        "App → DomainAssembly → 11개 구현체",
+        "각 LiveDependencies에서 UseCase · Repository 연결"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "범위",
+      "items": [
+        "Project.swift 직접 의존 기준 · 전이 의존 제외",
+        "런타임 호출 순서가 아닌 모듈 의존 지도"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "domain-perspective",
+      "to": "domain-comment",
+      "label": "Interface",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "domain-perspective",
+      "to": "domain-battle",
+      "label": "Interface",
+      "fromSide": "top",
+      "toSide": "top"
+    },
+    {
+      "from": "domain-comment",
+      "to": "domain-battle",
+      "label": "Interface",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "domain-battle",
+      "to": "domain-home",
+      "label": "Interface",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 60
+    },
+    {
+      "from": "domain-search",
+      "to": "domain-battle",
+      "label": "Interface",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "domain-search",
+      "to": "domain-home",
+      "label": "Interface",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "domain-home",
+      "to": "domain-auth",
+      "label": "Interface",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 40
+    }
+  ]
+}

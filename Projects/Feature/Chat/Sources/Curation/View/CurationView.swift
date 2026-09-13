@@ -10,7 +10,7 @@ import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
 import PickeCoreUtility
-import FeatureSharedUI
+import Ad
 
 @ViewAction(for: CurationFeature.self)
 public struct CurationView: View {
@@ -23,29 +23,33 @@ public struct CurationView: View {
   public var body: some View {
     VStack(spacing: 0) {
       header()
-      ScrollView(showsIndicators: false) {
-        VStack(spacing: 16) {
-          // 큐레이션 리스트 최상단 네이티브 광고 — 로딩/빈 상태와 무관하게 항상 노출한다.
-          // 광고가 없으면 AdFitNativeAdView 가 스스로 자리를 접어 높이 0 이 된다.
-          AdFitNativeAdView(
-            unit: .wide,
-            insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0),
-            onAdClick: { send(.adNativeClicked) }
-          )
+      GeometryReader { viewport in
+        ScrollView(showsIndicators: false) {
+          VStack(spacing: 16) {
+            // 큐레이션 리스트 최상단 광고 — 서버 광고와 Kakao 광고를 번갈아 노출한다.
+            MixedNativeAdView(
+              unit: .wide,
+              insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0),
+              placementKey: "mixedNativeAd.curation",
+              viewport: viewport.frame(in: .global),
+              onAdClick: { send(.adNativeClicked) },
+              onServerAdClick: { send(.serverAdClicked(network: $0)) }
+            )
 
-          if store.viewState == .loading, store.battles.isEmpty {
-            CurationSkeletonView()
-          } else if store.battles.isEmpty {
-            emptyState()
-          } else {
-            ForEach(store.battles) { battle in
-              battleCard(battle)
+            if store.viewState == .loading, store.battles.isEmpty {
+              CurationSkeletonView()
+            } else if store.battles.isEmpty {
+              emptyState()
+            } else {
+              ForEach(store.battles) { battle in
+                battleCard(battle)
+              }
             }
           }
+          .padding(.horizontal, 16)
+          .padding(.top, 16)
+          .padding(.bottom, 16)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 16)
-        .padding(.bottom, 16)
       }
     }
     .screenBackground()

@@ -65,6 +65,7 @@ public enum DomainModule: String, CaseIterable {
   case auth = "AuthDomain"
   case battle = "BattleDomain"
   case comment = "CommentDomain"
+  case ad = "AdDomain"
   case home = "HomeDomain"
   case notification = "NotificationDomain"
   case perspective = "PerspectiveDomain"

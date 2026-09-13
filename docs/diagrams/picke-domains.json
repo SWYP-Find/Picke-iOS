@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Picke 전체 도메인 지도",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1100,
+      665
+    ]
+  },
+  "components": [
+    {
+      "id": "domain-appupdate",
+      "type": "backend",
+      "label": "AppUpdateDomain",
+      "sublabel": "앱 업데이트",
+      "pos": [
+        40,
+        45
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-attendance",
+      "type": "backend",
+      "label": "AttendanceDomain",
+      "sublabel": "출석",
+      "pos": [
+        400,
+        45
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-auth",
+      "type": "backend",
+      "label": "AuthDomain",
+      "sublabel": "인증 · OAuth",
+      "pos": [
+        760,
+        45
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-battle",
+      "type": "backend",
+      "label": "BattleDomain",
+      "sublabel": "배틀",
+      "pos": [
+        40,
+        195
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-comment",
+      "type": "backend",
+      "label": "CommentDomain",
+      "sublabel": "댓글",
+      "pos": [
+        400,
+        195
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-ad",
+      "type": "backend",
+      "label": "AdDomain",
+      "sublabel": "광고",
+      "pos": [
+        760,
+        195
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-home",
+      "type": "backend",
+      "label": "HomeDomain",
+      "sublabel": "홈",
+      "pos": [
+        40,
+        345
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-notification",
+      "type": "backend",
+      "label": "NotificationDomain",
+      "sublabel": "알림",
+      "pos": [
+        400,
+        345
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-perspective",
+      "type": "backend",
+      "label": "PerspectiveDomain",
+      "sublabel": "관점",
+      "pos": [
+        760,
+        345
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-profile",
+      "type": "backend",
+      "label": "ProfileDomain",
+      "sublabel": "프로필",
+      "pos": [
+        40,
+        495
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-search",
+      "type": "backend",
+      "label": "SearchDomain",
+      "sublabel": "탐색 · 검색",
+      "pos": [
+        400,
+        495
+      ],
+      "size": [
+        300,
+        100
+      ]
+    },
+    {
+      "id": "domain-domainassembly",
+      "type": "backend",
+      "label": "DomainAssembly",
+      "sublabel": "도메인 조립",
+      "pos": [
+        760,
+        495
+      ],
+      "size": [
+        300,
+        100
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "구성",
+      "items": [
+        "11개 기능 도메인 + DomainAssembly",
+        "현재 작업 트리 기준"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "의존 관계",
+      "items": [
+        "Feature → Domain Interface",
+        "App → DomainAssembly → 구현체"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "통신 흐름",
+      "items": [
+        "UseCase → Repository → networkClient",
+        "실행 검증이 아닌 코드 구조 지도"
+      ]
+    }
+  ]
+}

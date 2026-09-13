@@ -1,6 +1,6 @@
 //
 //  ChatCoordinatorView.swift
-//  Chat
+//  App
 //
 
 import Foundation
@@ -8,6 +8,7 @@ import Foundation
 import SwiftUI
 
 import ComposableArchitecture
+import FeatureAssembly
 import TCAFlow
 
 public struct ChatCoordinatorView: View {

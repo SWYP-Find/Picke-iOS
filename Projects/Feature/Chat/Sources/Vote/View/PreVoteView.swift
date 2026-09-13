@@ -97,19 +97,22 @@ public struct PreVoteView: View {
           backgroundImage(battle)
             .frame(width: proxy.size.width)
 
-          // 큰 화면에서는 옵션 카드를 CTA 바로 위에 유지하고, 긴 제목/작은 화면에서는
-          // 콘텐츠 영역만 스크롤해 제목 전체를 읽을 수 있게 한다.
-          let contentHeight = max(0, proxy.size.height - topInset - PreVoteLayout.ctaReservedHeight)
-          VStack(spacing: 0) {
-            Color.clear
-              .frame(height: topInset)
+          // 히어로 오버랩 여백을 스크롤 콘텐츠 안에 둔다. 공간이 남는 화면(16 Pro 등)에서는
+          // minHeight 로 뷰포트를 채워 옵션 카드가 CTA 바로 위에 붙고, 부족한 화면에서는
+          // 여백까지 함께 스크롤돼 카드가 잘린 채 고정되지 않는다.
+          ScrollView {
+            VStack(spacing: 0) {
+              Color.clear
+                .frame(height: topInset)
 
-            ScrollView {
-              contentArea(battle, minHeight: contentHeight)
+              contentArea(battle)
             }
-            .scrollIndicators(.hidden)
-            .frame(height: contentHeight, alignment: .top)
+            .frame(
+              minHeight: max(0, proxy.size.height - PreVoteLayout.ctaReservedHeight),
+              alignment: .top
+            )
           }
+          .scrollIndicators(.hidden)
           .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
           .safeAreaInset(edge: .bottom, spacing: 0) {
             primaryButton()
@@ -201,7 +204,7 @@ extension PreVoteView {
 
 extension PreVoteView {
   @ViewBuilder
-  private func contentArea(_ battle: PreVoteBattle, minHeight: CGFloat) -> some View {
+  private func contentArea(_ battle: PreVoteBattle) -> some View {
     VStack(spacing: 0) {
       contentSection(battle)
       // 유연 간격: 콘텐츠는 위(상단 spacer)에 고정, 옵션은 아래로 당겨 CTA 위 40 유지.
@@ -212,9 +215,6 @@ extension PreVoteView {
     .padding(.top, PreVoteLayout.contentTopPadding)
     .padding(.bottom, PreVoteLayout.contentBottomSpacing)
     .frame(maxWidth: .infinity)
-    // 큰 화면: 뷰포트를 채워 옵션을 하단 고정(기존 디자인). 작은 화면: 콘텐츠가 넘치면
-    // 이 프레임이 그대로 늘어나 스크롤 영역이 되고, 옵션이 CTA 밑으로 잘리지 않는다.
-    .frame(minHeight: minHeight, alignment: .top)
     .background(
       LinearGradient(
         stops: [

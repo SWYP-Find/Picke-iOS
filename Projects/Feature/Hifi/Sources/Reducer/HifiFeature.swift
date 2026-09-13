@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import AdDomainInterface
 import PickeCoreLogger
 import SearchDomainInterface
 
@@ -23,7 +24,16 @@ public struct HifiFeature {
     public var categories: [ExploreCategory] = ExploreCategory.allCases
     public var selectedCategory: ExploreCategory = .all
     public var selectedSort: ExploreSort = .popular
-    public var items: [ExploreItem] = []
+    public var exploreItems: [ExploreItem] = []
+    public var ads: [FeedAd] = []
+    public var reportedAdCodesByItemID: [Int: Set<String>] = [:]
+
+    public func ad(after index: Int) -> FeedAd? {
+      guard index >= 0, (index + 1).isMultiple(of: 3) else { return nil }
+      let adIndex = (index + 1) / 3 - 2
+      guard adIndex >= 0, !ads.isEmpty else { return nil }
+      return ads[adIndex % ads.count]
+    }
     /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
     public enum ViewState: Equatable {
       case loading
@@ -58,24 +68,31 @@ public struct HifiFeature {
     case notificationTapped
     /// 탐색 화면 배너 광고 클릭
     case adBannerClicked
+    case serverAdClicked(network: String)
+    case adVisible(code: String, itemID: Int)
   }
 
   public enum AsyncAction: Equatable {
     case searchRequested(reset: Bool)
     /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
     case syncUnreadBadge
+    case fetchAds
   }
 
   public enum InnerAction: Equatable {
     case searchResponse(Result<ExploreItemPage, BattleError>, reset: Bool)
     case unreadBadgeResponse(Bool)
+    case adsResponse(Result<[FeedAd], BattleError>)
+    case impressionResponse(code: String, itemID: Int, result: Result<Bool, BattleError>)
   }
 
   nonisolated enum CancelID: Hashable {
     case search
+    case fetchAds
     case syncUnreadBadge
   }
 
+  @Dependency(\.feedAdUseCase) private var feedAdUseCase
   @Dependency(\.searchUseCase) private var searchUseCase
   @Dependency(\.notificationUseCase) private var notificationUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
@@ -110,7 +127,8 @@ extension HifiFeature {
       // 벨 배지는 진입/재진입마다 서버(/unread)로 갱신 — 저장값 없이 서버 진실값만 사용.
       return .merge(
         .send(.async(.searchRequested(reset: true))),
-        .send(.async(.syncUnreadBadge))
+        .send(.async(.syncUnreadBadge)),
+        .send(.async(.fetchAds))
       )
 
     case let .categoryTapped(category):
@@ -138,9 +156,29 @@ extension HifiFeature {
       guard state.hasNext, state.viewState != .loading else { return .none }
       return .send(.async(.searchRequested(reset: false)))
 
+    case let .serverAdClicked(network):
+      analyticsUseCase.track(.adClick(AdClickData(
+        placement: .explore,
+        format: .native,
+        unit: network
+      )))
+      return .none
+
     case .adBannerClicked:
       analyticsUseCase.track(.adClick(AdClickData(placement: .explore, format: .banner, unit: "ADFIT_BANNER_320X100")))
       return .none
+
+    case let .adVisible(code, itemID):
+      guard state.ads.contains(where: { $0.code == code }),
+            state.reportedAdCodesByItemID[itemID, default: []].insert(code).inserted else { return .none }
+      return .run { [useCase = feedAdUseCase] send in
+        let result = await Result {
+          try await useCase.recordImpressions(codes: [code])
+          return true
+        }
+        .mapError(BattleError.from)
+        await send(.inner(.impressionResponse(code: code, itemID: itemID, result: result)))
+      }
     }
   }
 
@@ -160,7 +198,10 @@ extension HifiFeature {
     switch action {
     case let .searchRequested(reset):
       state.viewState = .loading
-      if reset { state.items = [] }
+      if reset {
+        state.exploreItems = []
+        state.reportedAdCodesByItemID = [:]
+      }
       let category = state.selectedCategory.queryValue
       let sort = state.selectedSort.queryValue
       let offset = reset ? 0 : (state.nextOffset ?? 0)
@@ -172,6 +213,14 @@ extension HifiFeature {
         return await send(.inner(.searchResponse(result, reset: reset)))
       }
       .cancellable(id: CancelID.search, cancelInFlight: true)
+
+    case .fetchAds:
+      return .run { [useCase = feedAdUseCase] send in
+        let result = await Result { try await useCase.fetchAds() }
+          .mapError(BattleError.from)
+        await send(.inner(.adsResponse(result)))
+      }
+      .cancellable(id: CancelID.fetchAds, cancelInFlight: true)
 
     case .syncUnreadBadge:
       return .run { [useCase = notificationUseCase] send in
@@ -191,12 +240,25 @@ extension HifiFeature {
       state.viewState = .loaded
       switch result {
       case let .success(page):
-        state.items = reset ? page.items : state.items + page.items
+        state.exploreItems = reset ? page.items : state.exploreItems + page.items
         state.nextOffset = page.nextOffset
         state.hasNext = page.hasNext
       case let .failure(error):
         PickeLogger.error("[HifiFeature] searchBattles failed: \(error.localizedDescription)", category: .ui)
-        if reset { state.items = [] }
+        if reset { state.exploreItems = [] }
+      }
+      return .none
+
+    case let .adsResponse(result):
+      switch result {
+      case let .success(ads): state.ads = ads
+      case .failure: state.ads = []
+      }
+      return .none
+
+    case let .impressionResponse(code, itemID, result):
+      if case .failure = result {
+        state.reportedAdCodesByItemID[itemID]?.remove(code)
       }
       return .none
 

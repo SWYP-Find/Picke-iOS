@@ -12,11 +12,16 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .core(.logger),
+    .domain(.ad, .interface),
+    .ui(.designKit),
+    .ui(.sharedUI),
+    .feature(.featureSharedUI, .implementation),
+    .SPM.composableArchitecture,
     .SPM.adFit,
     .SPM.googleMobileAds,
     .service(.analytics, .interface),
   ],
-  hasTests: true,
+  hasTests: false,
   hasInterface: true,
   interfaceDependencies: [
     .SPM.composableArchitecture,

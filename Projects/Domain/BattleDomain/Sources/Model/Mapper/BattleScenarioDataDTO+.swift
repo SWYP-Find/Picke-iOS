@@ -15,7 +15,7 @@ public extension BattleScenarioDataDTO {
         dto.toDomain(fallbackLabel: Self.fallbackLabel(for: idx))
       },
       isInteractive: isInteractive,
-      startNodeId: startNodeId,
+      startNodeId: startNodeId ?? nodes.first?.nodeId ?? 0,
       recommendedPathKey: RecommendedPathKey(rawValue: recommendedPathKey),
       audios: audios,
       nodes: nodes.map { $0.toDomain() }

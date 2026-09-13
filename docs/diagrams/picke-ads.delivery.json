@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/suhwonji/Desktop/SideProject/Picke-iOS/docs/diagrams/picke-ads.json",
+  "output": "/Users/suhwonji/Desktop/SideProject/Picke-iOS/docs/diagrams/picke-ads.html",
+  "specification": {
+    "sha256": "cf441ac464f45ed1c805b6ced887a7c2c27285f039f6722e4f2fd2f50703cbc8",
+    "bytes": 3317
+  },
+  "artifact": {
+    "sha256": "49142d10900915a649efe0f57254d0efff112419ae526afbbe9c7ff80e3e202e",
+    "bytes": 803436
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

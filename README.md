@@ -34,10 +34,11 @@ SwiftUI와 The Composable Architecture를 기반으로 한 Clean Architecture �
 
 ~~~text
 Projects/
-├── App/                         # 앱 진입점, AppReducer, DI 조립, 리소스
+├── App/                         # 앱 진입점, 스플래시, AppReducer, DI 조립, 리소스
 ├── Feature/
 │   ├── FeatureAssembly/         # 전체 Feature 조립 결과를 앱에 제공
 │   ├── FeatureSharedUI/         # Feature 공통 UI
+│   ├── Ad/                      # Kakao·서버 광고 표시
 │   ├── Auth/                    # 로그인
 │   ├── Home/                    # 홈·출석 모달
 │   ├── Battle/                  # 배틀 메인
@@ -45,10 +46,10 @@ Projects/
 │   ├── Hifi/                    # 탐색·검색
 │   ├── Notification/            # 알림
 │   ├── Profile/                 # 마이페이지·설정·리캡
-│   ├── Splash/                  # 스플래시·앱 업데이트
 │   └── Web/                     # WebView
 ├── Domain/
 │   ├── DomainAssembly/          # 도메인별 라이브 의존성 조립
+│   ├── AdDomain/                # 광고 모델·조회·노출 집계 (Repository/UseCase)
 │   ├── AuthDomain/              # 인증 도메인
 │   ├── BattleDomain/            # 배틀 도메인
 │   ├── CommentDomain/           # 댓글·대댓글 도메인
@@ -125,58 +126,497 @@ flowchart TD
 - Feature는 Repository 구현체를 직접 알지 않고 UseCase 또는 Interface만 사용합니다.
 - 테스트·프리뷰 기본값은 Interface 또는 Testing 타깃에서 관리합니다.
 
+<!-- MODULE-DIAGRAMS:START -->
 ## 모듈 그래프
 
-~~~bash
-./make graph       # 외부 패키지·Demo를 제외하고 Tests·Testing·Interface를 포함한 모듈 그래프
-./make graph:prod  # 외부 패키지·Demo·Tests를 제외한 제품 그래프
-~~~
+현재 42개 모듈의 구현·Interface 타깃 의존성을 표시합니다. 각 항목을 펼치면 GitHub에서 SVG 그림을 바로 볼 수 있습니다.
 
-TuistSpider에서 Picke와 주요 조립 모듈을 기준으로 내부 의존성을 확장한 그래프입니다. 외부 의존성은 숨기고, 의존하는 방향을 전체 깊이로 표시했습니다.
+화살표는 **참조하는 타깃 → 참조되는 타깃**, 점선 테두리는 **Interface**입니다. `Project.swift`의 `dependencies`·`interfaceDependencies`와 템플릿이 연결하는 자기 Interface를 반영합니다. 외부 SPM 패키지는 이름으로 별도 표기하고, Tests·Testing·Demo와 전이 의존성은 생략합니다.
+
+`APIEndpoint → AuthDomainInterface`처럼 현재 코드에 존재하는 계층 간 참조도 그대로 표시합니다. 실행 순서나 이상적인 아키텍처를 나타내는 그림은 아닙니다.
+
+[광고 HTML](docs/diagrams/picke-ads.html) · [전체 도메인 HTML](docs/diagrams/picke-domains.html) — 파일을 내려받아 브라우저에서 열면 확대·검색할 수 있습니다.
+
+### App · 1개
 
 <details>
-<summary>Picke 전체 모듈</summary>
+<summary>Picke</summary>
 
-![Picke 전체 모듈 단계별 그래프](docs/grpah/Picke-grouped-Picke.png)
+[모듈 선언](Projects/App/Project.swift)
 
-![Picke 전체 모듈 그래프](docs/grpah/Picke-expanded-Picke.png)
+![Picke 직접 의존 관계](docs/diagrams/modules/Picke.svg)
+
+외부 패키지 선언: `googleMobileAds`, `kingfisher`.
+
+</details>
+
+### Feature · 11개
+
+<details>
+<summary>Ad</summary>
+
+[모듈 선언](Projects/Feature/Ad/Project.swift)
+
+![Ad 직접 의존 관계](docs/diagrams/modules/Ad.svg)
+
+외부 패키지 선언: `adFit`, `composableArchitecture`, `googleMobileAds`.
+
+</details>
+
+<details>
+<summary>Auth</summary>
+
+[모듈 선언](Projects/Feature/Auth/Project.swift)
+
+![Auth 직접 의존 관계](docs/diagrams/modules/Auth.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>Battle</summary>
+
+[모듈 선언](Projects/Feature/Battle/Project.swift)
+
+![Battle 직접 의존 관계](docs/diagrams/modules/Battle.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>Chat</summary>
+
+[모듈 선언](Projects/Feature/Chat/Project.swift)
+
+![Chat 직접 의존 관계](docs/diagrams/modules/Chat.svg)
+
+외부 패키지 선언: `composableArchitecture`, `tcaFlow`.
 
 </details>
 
 <details>
 <summary>FeatureAssembly</summary>
 
-![FeatureAssembly 모듈 그래프](docs/grpah/Picke-expanded-FeatureAssembly.png)
+[모듈 선언](Projects/Feature/FeatureAssembly/Project.swift)
+
+![FeatureAssembly 직접 의존 관계](docs/diagrams/modules/FeatureAssembly.svg)
+
+</details>
+
+<details>
+<summary>FeatureSharedUI</summary>
+
+[모듈 선언](Projects/Feature/FeatureSharedUI/Project.swift)
+
+![FeatureSharedUI 직접 의존 관계](docs/diagrams/modules/FeatureSharedUI.svg)
+
+외부 패키지 선언: `adFit`.
+
+</details>
+
+<details>
+<summary>Hifi</summary>
+
+[모듈 선언](Projects/Feature/Hifi/Project.swift)
+
+![Hifi 직접 의존 관계](docs/diagrams/modules/Hifi.svg)
+
+외부 패키지 선언: `composableArchitecture`, `kingfisher`.
+
+</details>
+
+<details>
+<summary>Home</summary>
+
+[모듈 선언](Projects/Feature/Home/Project.swift)
+
+![Home 직접 의존 관계](docs/diagrams/modules/Home.svg)
+
+외부 패키지 선언: `composableArchitecture`, `kingfisher`, `tcaFlow`.
+
+</details>
+
+<details>
+<summary>Notification</summary>
+
+[모듈 선언](Projects/Feature/Notification/Project.swift)
+
+![Notification 직접 의존 관계](docs/diagrams/modules/Notification.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>Profile</summary>
+
+[모듈 선언](Projects/Feature/Profile/Project.swift)
+
+![Profile 직접 의존 관계](docs/diagrams/modules/Profile.svg)
+
+외부 패키지 선언: `composableArchitecture`, `kingfisher`, `tcaFlow`.
+
+</details>
+
+<details>
+<summary>Web</summary>
+
+[모듈 선언](Projects/Feature/Web/Project.swift)
+
+![Web 직접 의존 관계](docs/diagrams/modules/Web.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+### Domain · 12개
+
+<details>
+<summary>AdDomain</summary>
+
+[모듈 선언](Projects/Domain/AdDomain/Project.swift)
+
+![AdDomain 직접 의존 관계](docs/diagrams/modules/AdDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>AppUpdateDomain</summary>
+
+[모듈 선언](Projects/Domain/AppUpdateDomain/Project.swift)
+
+![AppUpdateDomain 직접 의존 관계](docs/diagrams/modules/AppUpdateDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>AttendanceDomain</summary>
+
+[모듈 선언](Projects/Domain/AttendanceDomain/Project.swift)
+
+![AttendanceDomain 직접 의존 관계](docs/diagrams/modules/AttendanceDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>AuthDomain</summary>
+
+[모듈 선언](Projects/Domain/AuthDomain/Project.swift)
+
+![AuthDomain 직접 의존 관계](docs/diagrams/modules/AuthDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`, `googleSignIn`, `sharing`.
+
+</details>
+
+<details>
+<summary>BattleDomain</summary>
+
+[모듈 선언](Projects/Domain/BattleDomain/Project.swift)
+
+![BattleDomain 직접 의존 관계](docs/diagrams/modules/BattleDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>CommentDomain</summary>
+
+[모듈 선언](Projects/Domain/CommentDomain/Project.swift)
+
+![CommentDomain 직접 의존 관계](docs/diagrams/modules/CommentDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
 
 </details>
 
 <details>
 <summary>DomainAssembly</summary>
 
-![DomainAssembly 모듈 그래프](docs/grpah/Picke-expanded-DomainAssembly.png)
+[모듈 선언](Projects/Domain/DomainAssembly/Project.swift)
+
+![DomainAssembly 직접 의존 관계](docs/diagrams/modules/DomainAssembly.svg)
+
+</details>
+
+<details>
+<summary>HomeDomain</summary>
+
+[모듈 선언](Projects/Domain/HomeDomain/Project.swift)
+
+![HomeDomain 직접 의존 관계](docs/diagrams/modules/HomeDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>NotificationDomain</summary>
+
+[모듈 선언](Projects/Domain/NotificationDomain/Project.swift)
+
+![NotificationDomain 직접 의존 관계](docs/diagrams/modules/NotificationDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>PerspectiveDomain</summary>
+
+[모듈 선언](Projects/Domain/PerspectiveDomain/Project.swift)
+
+![PerspectiveDomain 직접 의존 관계](docs/diagrams/modules/PerspectiveDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>ProfileDomain</summary>
+
+[모듈 선언](Projects/Domain/ProfileDomain/Project.swift)
+
+![ProfileDomain 직접 의존 관계](docs/diagrams/modules/ProfileDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>SearchDomain</summary>
+
+[모듈 선언](Projects/Domain/SearchDomain/Project.swift)
+
+![SearchDomain 직접 의존 관계](docs/diagrams/modules/SearchDomain.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+### Service · 8개
+
+<details>
+<summary>API</summary>
+
+[모듈 선언](Projects/Service/API/Project.swift)
+
+![API 직접 의존 관계](docs/diagrams/modules/API.svg)
+
+</details>
+
+<details>
+<summary>APIEndpoint</summary>
+
+[모듈 선언](Projects/Service/APIEndpoint/Project.swift)
+
+![APIEndpoint 직접 의존 관계](docs/diagrams/modules/APIEndpoint.svg)
+
+외부 패키지 선언: `alamofire`.
+
+</details>
+
+<details>
+<summary>AudioPlayerService</summary>
+
+[모듈 선언](Projects/Service/AudioPlayerService/Project.swift)
+
+![AudioPlayerService 직접 의존 관계](docs/diagrams/modules/AudioPlayerService.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>DeviceService</summary>
+
+[모듈 선언](Projects/Service/DeviceService/Project.swift)
+
+![DeviceService 직접 의존 관계](docs/diagrams/modules/DeviceService.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>PickeAnalytics</summary>
+
+[모듈 선언](Projects/Service/PickeAnalytics/Project.swift)
+
+![PickeAnalytics 직접 의존 관계](docs/diagrams/modules/PickeAnalytics.svg)
+
+외부 패키지 선언: `composableArchitecture`, `mixpanel`, `mixpanelSessionReplay`, `sentry`, `sentrySwiftUI`.
+
+</details>
+
+<details>
+<summary>PickeAuth</summary>
+
+[모듈 선언](Projects/Service/PickeAuth/Project.swift)
+
+![PickeAuth 직접 의존 관계](docs/diagrams/modules/PickeAuth.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>PickeConfig</summary>
+
+[모듈 선언](Projects/Service/PickeConfig/Project.swift)
+
+![PickeConfig 직접 의존 관계](docs/diagrams/modules/PickeConfig.svg)
+
+외부 패키지 선언: `firebaseCrashlytics`.
+
+다른 내부 모듈에 대한 직접 의존성이 없습니다.
 
 </details>
 
 <details>
 <summary>ServiceAssembly</summary>
 
-![ServiceAssembly 모듈 그래프](docs/grpah/Picke-expanded-ServiceAssembly.png)
+[모듈 선언](Projects/Service/ServiceAssembly/Project.swift)
+
+![ServiceAssembly 직접 의존 관계](docs/diagrams/modules/ServiceAssembly.svg)
 
 </details>
+
+### Core · 7개
 
 <details>
 <summary>CoreAssembly</summary>
 
-![CoreAssembly 모듈 그래프](docs/grpah/Picke-expanded-CoreAssembly.png)
+[모듈 선언](Projects/Core/CoreAssembly/Project.swift)
+
+![CoreAssembly 직접 의존 관계](docs/diagrams/modules/CoreAssembly.svg)
+
+외부 패키지 선언: `composableArchitecture`.
+
+</details>
+
+<details>
+<summary>PickeCoreLogger</summary>
+
+[모듈 선언](Projects/Core/PickeCoreLogger/Project.swift)
+
+![PickeCoreLogger 직접 의존 관계](docs/diagrams/modules/PickeCoreLogger.svg)
+
+다른 내부 모듈에 대한 직접 의존성이 없습니다.
+
+</details>
+
+<details>
+<summary>PickeCoreUI</summary>
+
+[모듈 선언](Projects/Core/PickeCoreUI/Project.swift)
+
+![PickeCoreUI 직접 의존 관계](docs/diagrams/modules/PickeCoreUI.svg)
+
+다른 내부 모듈에 대한 직접 의존성이 없습니다.
+
+</details>
+
+<details>
+<summary>PickeCoreUtility</summary>
+
+[모듈 선언](Projects/Core/PickeCoreUtility/Project.swift)
+
+![PickeCoreUtility 직접 의존 관계](docs/diagrams/modules/PickeCoreUtility.svg)
+
+외부 패키지 선언: `dependencies`.
+
+</details>
+
+<details>
+<summary>PickeNetwork</summary>
+
+[모듈 선언](Projects/Core/PickeNetwork/Project.swift)
+
+![PickeNetwork 직접 의존 관계](docs/diagrams/modules/PickeNetwork.svg)
+
+외부 패키지 선언: `alamofire`, `dependencies`.
+
+</details>
+
+<details>
+<summary>PickeStorage</summary>
+
+[모듈 선언](Projects/Core/PickeStorage/Project.swift)
+
+![PickeStorage 직접 의존 관계](docs/diagrams/modules/PickeStorage.svg)
+
+외부 패키지 선언: `composableArchitecture`, `sharing`, `sqliteData`.
+
+</details>
+
+<details>
+<summary>PickeThirdParty</summary>
+
+[모듈 선언](Projects/Core/PickeThirdParty/Project.swift)
+
+![PickeThirdParty 직접 의존 관계](docs/diagrams/modules/PickeThirdParty.svg)
+
+외부 패키지 선언: `composableArchitecture`, `sdwebImage`, `tcaFlow`.
+
+</details>
+
+### UI · 3개
+
+<details>
+<summary>PickeAnimation</summary>
+
+[모듈 선언](Projects/UI/PickeAnimation/Project.swift)
+
+![PickeAnimation 직접 의존 관계](docs/diagrams/modules/PickeAnimation.svg)
+
+외부 패키지 선언: `sdwebImageCore`.
+
+다른 내부 모듈에 대한 직접 의존성이 없습니다.
+
+</details>
+
+<details>
+<summary>PickeDesignKit</summary>
+
+[모듈 선언](Projects/UI/PickeDesignKit/Project.swift)
+
+![PickeDesignKit 직접 의존 관계](docs/diagrams/modules/PickeDesignKit.svg)
+
+외부 패키지 선언: `composableArchitecture`.
 
 </details>
 
 <details>
 <summary>PickeSharedUI</summary>
 
-![PickeSharedUI 모듈 그래프](docs/grpah/Picke-expanded-PickeSharedUI.png)
+[모듈 선언](Projects/UI/PickeSharedUI/Project.swift)
+
+![PickeSharedUI 직접 의존 관계](docs/diagrams/modules/PickeSharedUI.svg)
+
+외부 패키지 선언: `composableArchitecture`, `kingfisher`.
 
 </details>
+
+갱신·검증:
+
+```bash
+python3 scripts/generate_module_diagrams.py
+python3 scripts/generate_module_diagrams.py --check
+```
+
+SVG 생성에는 Graphviz의 `dot`이 필요합니다. 앱 빌드나 Tuist 캐시 생성은 실행하지 않습니다.
+
+<!-- MODULE-DIAGRAMS:END -->
 
 ## 기술 스택
 
@@ -242,32 +682,31 @@ OAuth redirect URI는 서버 중계 흐름을 기준으로 등록합니다.
 
 ## Tuist Dashboard와 캐시
 
-이 저장소는 로컬 개발에서만 Tuist Dashboard 프로젝트 `picke2026/picke`를 사용합니다. 일반 generate/project 확인은 Dashboard에 연결해 메트릭을 남기고, 바이너리 캐시 warm은 로컬 저장소만 사용합니다. CI에서는 대시보드 연결과 캐시 준비를 비활성화하며, 별도 CI 캐시 연동 설정은 추가하지 않습니다.
+Tuist Dashboard 프로젝트는 `picke2026/picke`입니다. 모듈 캐시 프로필, 저장소, Xcode 컴파일 캐시와 업로드 정책의 기준은 [Tuist.swift](Tuist.swift)입니다.
 
-[Tuist.swift](Tuist.swift)의 기준 설정:
+`TuistTool.swift`는 install 이후 외부 모듈 캐시를 준비하고, CI 또는 `--no-binary-cache` 옵션에서는 이 준비 단계를 생략합니다. `generate`는 별도 인증 명령이나 캐시 비활성화 옵션을 추가하지 않고 전달받은 인자로 실행합니다.
 
-- 로컬 generate/project show: `fullHandle = "picke2026/picke"`, 기본 모듈 캐시 프로필 `.onlyExternal`
-- 로컬 cache warm: `TUIST_LOCAL_CACHE_ONLY=true` 환경에서만 `fullHandle = nil`, 기본 모듈 캐시 프로필 `.onlyExternal`
-- CI: `fullHandle = nil`, 기본 모듈 캐시 프로필 `.none`
-- Xcode 컴파일 캐시: 현재 Explicit Modules를 끈 빌드 설정과 호환되지 않아 `enableCaching = false`, `cache.upload = false`로 비활성화
-- 인증: `optionalAuthentication = true`로 설정해 로그인되지 않은 환경에서도 generate가 실패하지 않도록 유지
+`./make`가 프로젝트 명령의 단일 진입점이며 `TuistTool.swift`를 실행합니다. 캐시 준비·사용·CI 제외·캐시 비활성화 옵션을 이 실행 경로에서 처리합니다. 소스를 수정하면 실행 파일을 다시 컴파일하지 않아도 다음 실행에 반영됩니다.
 
-로컬에서 Dashboard 연결과 로컬 바이너리 캐시를 준비하려면 `./make setup`을 실행합니다. 이 명령은 mise 도구 설치 후 Tuist 로그인을 확인하고, 로그인되어 있지 않으면 `tuist auth login`을 실행한 뒤 `Tuist.swift`의 `picke2026/picke` 연결을 `tuist project show`로 확인합니다. 이후 의존성을 설치하고 외부 모듈 바이너리 캐시를 로컬 저장소에 준비한 다음 프로젝트를 생성합니다.
+```bash
+./make install --no-open   # 의존성 설치 → 로컬 외부 캐시 준비 → 프로젝트 생성
+./make generate --no-open  # 준비된 캐시를 사용해 프로젝트 생성
+./make cache               # 로컬 외부 바이너리 캐시 준비
+./make cache:setup         # Xcode Compilation Cache 설정
+./make setup               # mise 설치 → install → cache warm → generate
+```
 
-~~~bash
-./make setup
-~~~
+`generate`는 캐시를 새로 빌드하지 않습니다. 첫 실행이나 의존성 변경 후에는 `install` 또는 `cache`로 준비합니다. 캐시 적중은 Xcode 버전, 구성과 의존성 해시가 일치해야 합니다.
 
-`./make generate`, `./make test`, `./make cache`도 로컬에서는 필요한 Tuist Dashboard 인증과 프로젝트 확인을 먼저 수행합니다. 바이너리 캐시를 쓰지 않을 때는 Tuist 옵션을 그대로 전달합니다.
-
-~~~bash
+```bash
+./make install --no-binary-cache --no-open  # 캐시 준비와 사용 모두 생략
 ./make generate --no-binary-cache --no-open
 ./make test --no-binary-cache
-~~~
+```
 
-`./make cache`와 `./make cache:setup`은 기본적으로 `TUIST_LOCAL_CACHE_ONLY=true tuist cache warm --external-only`를 실행해 외부 의존성 중심으로 로컬 캐시를 데웁니다. CI에서는 Dashboard 인증, 프로젝트 확인, 캐시 준비를 건너뛰며, 별도 CI 캐시 연동은 하지 않습니다.
+`./make cache`는 `tuist cache warm --external-only`를 실행합니다. `TUIST_LOCAL_CACHE_ONLY=true` 환경변수를 함께 전달하며, 실제 저장소·연결 정책은 `Tuist.swift`가 결정합니다. 캐시 준비가 실패하면 오류를 반환하고 generate로 넘어가지 않습니다. `./make cache:setup`은 Attendance와 동일하게 `tuist setup cache`를 실행하는 별도 명령이며, `Tuist.swift`의 컴파일 캐시 설정과 함께 사용합니다.
 
-Fastlane이나 CI용 래퍼처럼 캐시가 필요 없는 자동화 경로에서는 `tuist generate --no-binary-cache --no-open` 형태로 실행합니다.
+명령 순서와 CI/opt-out 동작은 `python3 scripts/tests/test_tuist_cache_commands.py`로 검사합니다. 이 검사는 실제 패키지 설치나 캐시 빌드를 실행하지 않습니다.
 
 ## 빠른 시작
 
@@ -290,23 +729,23 @@ ln -s AGENTS.md CLAUDE.md
 ## 개발 명령어
 
 ~~~bash
-./make setup                     # mise 설치, Dashboard 확인, install, 외부 캐시 준비, generate
+./make setup                     # mise 설치, install, 로컬 외부 캐시 준비, generate
 ./make generate                  # Demo 앱을 포함해 Xcode 프로젝트 생성
 ./make generate --no-open        # Xcode를 열지 않고 프로젝트 생성
 ./make generate --no-binary-cache --no-open
 ./make build                     # clean, install, generate
-./make install                   # 의존성 설치 후 generate
+./make install                   # 의존성 설치, 로컬 외부 캐시 준비 후 generate
 ./make test                      # 전체 테스트
 ./make test --no-binary-cache    # 로컬 바이너리 캐시 없이 전체 테스트
 ./make cache                     # 외부 바이너리 캐시 준비
-./make cache:setup               # 외부 바이너리 캐시 준비(cache 별칭)
+./make cache:setup               # Xcode Compilation Cache 설정
 ./make format                    # SwiftFormat 적용
 ./make lint                      # SwiftFormat 검사
 ./make clean                     # 생성 프로젝트 정리
 ./make reset                     # DerivedData 정리 후 프로젝트 재생성
 ~~~
 
-훅 호환용 `make test`는 실제 테스트를 실행하지 않고 스킵 메시지만 출력합니다. 실제 테스트는 `./make test` 또는 `mise exec -- tuist test`를 사용합니다.
+`Makefile`은 사용하지 않습니다. 테스트는 `./make test` 또는 `mise exec -- tuist test`로 실행합니다.
 
 새 모듈 생성:
 

@@ -12,7 +12,8 @@ public struct BattleScenarioDataDTO: Decodable {
   public let title: String
   public let philosophers: [ScenarioPhilosopherDTO]
   public let isInteractive: Bool
-  public let startNodeId: Int
+  /// 서버가 비대화형 시나리오에서 null 을 내려주므로 옵셔널. 매핑 시 첫 노드로 폴백한다.
+  public let startNodeId: Int?
   public let recommendedPathKey: String
   public let audios: [String: String]
   public let nodes: [ScenarioNodeDTO]
