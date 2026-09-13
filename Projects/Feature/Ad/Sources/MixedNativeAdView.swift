@@ -2,6 +2,7 @@ import ComposableArchitecture
 import FeatureSharedUI
 import AdDomainInterface
 import SwiftUI
+import PickeCoreLogger
 
 /// A single ad placement that alternates between a server ad and Kakao AdFit.
 /// The selected source remains stable for the lifetime of the visible placement.
@@ -89,9 +90,14 @@ private extension MixedNativeAdView {
   func loadServerAdIfNeeded() async {
     guard hasAppeared, useServer else { return }
     isLoading = true
-    let result = try? await feedAdUseCase.fetchAds()
-    guard !Task.isCancelled else { return }
-    serverAd = result?.first
+    do {
+      let ads = try await feedAdUseCase.fetchAds()
+      guard !Task.isCancelled else { return }
+      serverAd = ads.first
+    } catch {
+      guard !Task.isCancelled else { return }
+      PickeLogger.error("[FeedAd] 광고 조회 실패: \(error.localizedDescription)", category: .ui)
+    }
     isLoading = false
   }
 
@@ -99,7 +105,11 @@ private extension MixedNativeAdView {
     guard scenePhase == .active, !didRecordImpression else { return }
     didRecordImpression = true
     Task {
-      try? await feedAdUseCase.recordImpressions(codes: [ad.code])
+      do {
+        try await feedAdUseCase.recordImpressions(codes: [ad.code])
+      } catch {
+        PickeLogger.error("[FeedAd] 광고 노출 전송 실패: \(error.localizedDescription)", category: .ui)
+      }
     }
   }
 }

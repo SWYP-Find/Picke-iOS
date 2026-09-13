@@ -198,7 +198,10 @@ extension HifiFeature {
     switch action {
     case let .searchRequested(reset):
       state.viewState = .loading
-      if reset { state.exploreItems = [] }
+      if reset {
+        state.exploreItems = []
+        state.reportedAdCodesByItemID = [:]
+      }
       let category = state.selectedCategory.queryValue
       let sort = state.selectedSort.queryValue
       let offset = reset ? 0 : (state.nextOffset ?? 0)
