@@ -19,10 +19,6 @@ private enum Command: String {
   case lint
   case clean
   case reset
-  case edit
-  case inspect
-  case inspectImports = "inspect-imports"
-  case inspectCoverage = "inspect-coverage"
   case module
   case moduleInit = "moduleinit"
   case feature
@@ -76,9 +72,6 @@ private func runTuist(
   )
 }
 
-private var didPrepareLocalTuistAccess = false
-private var isLocalTuistAccessUnavailable = false
-
 private var isCIEnvironment: Bool {
   let environment = ProcessInfo.processInfo.environment
   let ciValues = ["1", "true", "TRUE"]
@@ -90,56 +83,6 @@ private var isCIEnvironment: Bool {
 
 private func usesBinaryCache(forwardedArguments: [String]) -> Bool {
   return !forwardedArguments.contains("--no-binary-cache")
-}
-
-private func warnAndContinue(_ message: String) {
-  FileHandle.standardError.write(Data("⚠️ \(message)\n".utf8))
-}
-
-private func prepareLocalTuistAccess(allowFailure: Bool) -> Int32 {
-  guard !isCIEnvironment else {
-    print("CI 환경이라 Tuist Dashboard 인증과 프로젝트 확인을 건너뜁니다.")
-    return 0
-  }
-  guard !didPrepareLocalTuistAccess else { return 0 }
-
-  let whoamiStatus = runTuist(arguments: ["auth", "whoami"])
-  if whoamiStatus != 0 {
-    let loginStatus = runTuist(arguments: ["auth", "login"])
-    guard loginStatus == 0 else {
-      if allowFailure {
-        isLocalTuistAccessUnavailable = true
-        warnAndContinue("Tuist 인증에 실패했습니다. 바이너리 캐시 없이 계속 진행합니다.")
-        return 0
-      }
-      return loginStatus
-    }
-  }
-
-  let projectStatus = runTuist(arguments: ["project", "show"])
-  guard projectStatus == 0 else {
-    if allowFailure {
-      isLocalTuistAccessUnavailable = true
-      warnAndContinue("Tuist Dashboard 프로젝트 확인에 실패했습니다. 바이너리 캐시 없이 계속 진행합니다.")
-      return 0
-    }
-    return projectStatus
-  }
-
-  didPrepareLocalTuistAccess = true
-  isLocalTuistAccessUnavailable = false
-  return 0
-}
-
-private func prepareBinaryCacheIfNeeded(
-  forwardedArguments: [String],
-  allowFailure: Bool
-) -> Int32 {
-  guard usesBinaryCache(forwardedArguments: forwardedArguments) else {
-    print("--no-binary-cache 옵션이 있어 Tuist Dashboard 인증과 캐시 준비를 건너뜁니다.")
-    return 0
-  }
-  return prepareLocalTuistAccess(allowFailure: allowFailure)
 }
 
 private func cacheWarmArguments(forwardedArguments: [String]) -> [String] {
@@ -171,14 +114,6 @@ private func filteredGenerateArguments(forwardedArguments: [String]) -> [String]
   }
 }
 
-private func generateArguments(forwardedArguments: [String]) -> [String] {
-  guard isLocalTuistAccessUnavailable, usesBinaryCache(forwardedArguments: forwardedArguments)
-  else {
-    return forwardedArguments
-  }
-  return forwardedArguments + ["--no-binary-cache"]
-}
-
 private func warmBinaryCache(forwardedArguments: [String] = []) -> Int32 {
   guard !isCIEnvironment else {
     print("CI 환경이라 Tuist 바이너리 캐시 준비를 건너뜁니다.")
@@ -188,8 +123,6 @@ private func warmBinaryCache(forwardedArguments: [String] = []) -> Int32 {
     print("--no-binary-cache 옵션이 있어 Tuist 바이너리 캐시 준비를 건너뜁니다.")
     return 0
   }
-  let authStatus = prepareLocalTuistAccess(allowFailure: false)
-  guard authStatus == 0 else { return authStatus }
   return runTuist(
     arguments: cacheWarmArguments(forwardedArguments: forwardedArguments),
     environmentOverrides: ["TUIST_LOCAL_CACHE_ONLY": "true"]
@@ -197,15 +130,14 @@ private func warmBinaryCache(forwardedArguments: [String] = []) -> Int32 {
 }
 
 private func installAndGenerate(forwardedArguments: [String] = []) -> Int32 {
-  let authStatus = prepareBinaryCacheIfNeeded(
-    forwardedArguments: forwardedArguments,
-    allowFailure: true
-  )
-  guard authStatus == 0 else { return authStatus }
   let installStatus = runTuist(arguments: ["install"] + installArguments(forwardedArguments: forwardedArguments))
   guard installStatus == 0 else { return installStatus }
+  let cacheStatus = warmBinaryCache(
+    forwardedArguments: forwardedArguments.filter { $0 == "--no-binary-cache" }
+  )
+  guard cacheStatus == 0 else { return cacheStatus }
   let generateForwardedArguments = filteredGenerateArguments(forwardedArguments: forwardedArguments)
-  return runTuist(arguments: ["generate"] + generateArguments(forwardedArguments: generateForwardedArguments))
+  return runTuist(arguments: ["generate"] + generateForwardedArguments)
 }
 
 private enum StepResult {
@@ -375,17 +307,18 @@ private func renderGraph(
     return 1
   }
 
-  let graph: String = if excludesDemo {
+  let graph: String
+  if excludesDemo {
     // 노드 선언(`AuthDemo [..]`)과 엣지(`AuthDemo -> Auth`) 양쪽에서
     // 이름이 Demo 로 끝나는 줄을 지운다. dot 출력은 식별자에 따옴표를 붙이지 않는다.
-    rawGraph
+    graph = rawGraph
       .split(separator: "\n", omittingEmptySubsequences: false)
       .filter { line in
         line.range(of: #"\b[A-Za-z0-9_]+Demo\b"#, options: .regularExpression) == nil
       }
       .joined(separator: "\n")
   } else {
-    rawGraph
+    graph = rawGraph
   }
 
   let renderedGraphURL = workDirectory.appendingPathComponent("rendered-graph.dot")
@@ -522,23 +455,17 @@ private func printHelp() {
     🚀 Picke Tuist 도구
 
     기본 명령어:
-      ./make setup          # mise 설치 + Dashboard 확인 + install + 외부 캐시 준비 + generate
-      ./make generate       # Demo 앱을 포함해 프로젝트 생성
-      ./make build          # 클린 + 의존성 설치 + 프로젝트 생성
-      ./make install        # 의존성 설치 + 프로젝트 생성
+      ./make setup          # mise 설치 + install + 로컬 외부 캐시 준비 + generate
+      ./make generate       # 준비된 로컬 캐시를 사용해 프로젝트 생성
+      ./make build          # 클린 + 의존성 설치 + 로컬 외부 캐시 준비 + 프로젝트 생성
+      ./make install        # 의존성 설치 + 로컬 외부 캐시 준비 + 프로젝트 생성
       ./make cache          # 외부 바이너리 캐시 준비
-      ./make cache:setup    # 외부 바이너리 캐시 준비(cache 별칭)
+      ./make cache:setup    # Xcode Compilation Cache 설정
       ./make test           # 전체 테스트 실행
       ./make format         # SwiftFormat 적용
       ./make lint           # SwiftFormat 검사
       ./make clean          # 프로젝트 정리
       ./make reset          # 앱 DerivedData 정리 + clean + install + generate
-      ./make edit           # 매니페스트를 Xcode 로 열기
-
-    점검:
-      ./make inspect            # 프로젝트 구조 분석
-      ./make inspect-imports    # 암시적 의존성 검사
-      ./make inspect-coverage   # 코드 커버리지 분석
 
     모듈 생성 (scaffold + 카탈로그 case + 엄브렐러 의존성 자동 등록):
       ./make feature <이름> [--case <케이스명>]
@@ -571,18 +498,6 @@ private func execute(_ command: Command, forwardedArguments: [String]) -> Int32 
       return miseStatus
     }
 
-    if usesBinaryCache(forwardedArguments: forwardedArguments), !isCIEnvironment {
-      let authStatus = prepareLocalTuistAccess(allowFailure: false)
-      results.append(("Tuist Dashboard 인증/프로젝트 확인", authStatus == 0 ? .passed : .failed(authStatus)))
-      guard authStatus == 0 else {
-        printSetupSummary(results)
-        return authStatus
-      }
-    } else {
-      let reason = isCIEnvironment ? "CI 환경" : "--no-binary-cache"
-      results.append(("Tuist Dashboard 인증/프로젝트 확인", .skipped(reason)))
-    }
-
     let installStatus = runTuist(arguments: ["install"] + installArguments(forwardedArguments: forwardedArguments))
     results.append(("의존성 설치", installStatus == 0 ? .passed : .failed(installStatus)))
     guard installStatus == 0 else {
@@ -604,19 +519,14 @@ private func execute(_ command: Command, forwardedArguments: [String]) -> Int32 
 
     let generateForwardedArguments = filteredGenerateArguments(forwardedArguments: forwardedArguments)
     let generateStatus = runTuist(
-      arguments: ["generate"] + generateArguments(forwardedArguments: generateForwardedArguments)
+      arguments: ["generate"] + generateForwardedArguments
     )
     results.append(("프로젝트 생성", generateStatus == 0 ? .passed : .failed(generateStatus)))
     printSetupSummary(results)
     return generateStatus
 
   case .generate:
-    let authStatus = prepareBinaryCacheIfNeeded(
-      forwardedArguments: forwardedArguments,
-      allowFailure: true
-    )
-    guard authStatus == 0 else { return authStatus }
-    return runTuist(arguments: ["generate"] + generateArguments(forwardedArguments: forwardedArguments))
+    return runTuist(arguments: ["generate"] + forwardedArguments)
 
   case .build:
     let cleanStatus = runTuist(arguments: ["clean"])
@@ -630,15 +540,10 @@ private func execute(_ command: Command, forwardedArguments: [String]) -> Int32 
     return warmBinaryCache(forwardedArguments: forwardedArguments)
 
   case .cacheSetup:
-    return warmBinaryCache(forwardedArguments: forwardedArguments)
+    return runTuist(arguments: ["setup", "cache"] + forwardedArguments)
 
   case .test:
-    let authStatus = prepareBinaryCacheIfNeeded(
-      forwardedArguments: forwardedArguments,
-      allowFailure: true
-    )
-    guard authStatus == 0 else { return authStatus }
-    return runTuist(arguments: ["test"] + generateArguments(forwardedArguments: forwardedArguments))
+    return runTuist(arguments: ["test"] + forwardedArguments)
 
   case .format:
     return run("mise", arguments: ["exec", "--", "swiftformat", "."] + forwardedArguments)
@@ -651,18 +556,6 @@ private func execute(_ command: Command, forwardedArguments: [String]) -> Int32 
 
   case .reset:
     return resetProject()
-
-  case .edit:
-    return runTuist(arguments: ["edit"] + forwardedArguments)
-
-  case .inspect:
-    return runTuist(arguments: ["inspect"] + forwardedArguments)
-
-  case .inspectImports:
-    return runTuist(arguments: ["inspect", "implicit-imports"] + forwardedArguments)
-
-  case .inspectCoverage:
-    return runTuist(arguments: ["inspect", "code-coverage"] + forwardedArguments)
 
   case .module, .moduleInit:
     return scaffoldModule(layer: nil, arguments: forwardedArguments)
