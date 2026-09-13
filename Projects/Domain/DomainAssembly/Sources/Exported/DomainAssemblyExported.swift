@@ -13,6 +13,8 @@
 @_exported import AuthDomainInterface
 @_exported import BattleDomain
 @_exported import BattleDomainInterface
+@_exported import AdDomain
+@_exported import AdDomainInterface
 @_exported import CommentDomain
 @_exported import CommentDomainInterface
 @_exported import HomeDomain

@@ -45,6 +45,7 @@ public struct CurationFeature {
     case closeButtonTapped
     case battleTapped(battleId: Int)
     case adNativeClicked
+    case serverAdClicked(network: String)
   }
 
   public enum AsyncAction: Equatable {
@@ -107,6 +108,14 @@ extension CurationFeature {
     case let .battleTapped(battleId):
       analyticsUseCase.track(.uiAction(action: .curationBattle, screen: .curation))
       return .send(.delegate(.openBattle(battleId: battleId)))
+
+    case let .serverAdClicked(network):
+      analyticsUseCase.track(.adClick(AdClickData(
+        placement: .curation,
+        format: .native,
+        unit: network
+      )))
+      return .none
 
     case .adNativeClicked:
       analyticsUseCase.track(.adClick(AdClickData(placement: .curation, format: .native, unit: "ADFIT_NATIVE_2_1")))

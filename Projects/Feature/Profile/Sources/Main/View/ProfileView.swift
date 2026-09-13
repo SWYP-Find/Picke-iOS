@@ -5,7 +5,7 @@
 
 import SwiftUI
 
-import FeatureSharedUI
+import Ad
 import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
@@ -19,34 +19,39 @@ public struct ProfileView: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      topBar()
+    GeometryReader { viewport in
+      VStack(spacing: 0) {
+        topBar()
 
-      if store.viewState == .loading {
-        ProfileSkeletonView()
-      } else {
-        // xr63n: 카드 그룹 ↔ 메뉴 그룹 gap 20
-        VStack(spacing: 20) {
-          // T3oil: 카드 3개 gap 16, 좌우 16
-          VStack(spacing: 16) {
-            profileCard()
-            chargeButton()
-            philosopherCard()
-          }
-          .padding(.horizontal, 16)
-
-          // HFFUM: 메뉴 리스트 좌우 16
-          menuList()
+        if store.viewState == .loading {
+          ProfileSkeletonView()
+        } else {
+          // xr63n: 카드 그룹 ↔ 메뉴 그룹 gap 20
+          VStack(spacing: 20) {
+            // T3oil: 카드 3개 gap 16, 좌우 16
+            VStack(spacing: 16) {
+              profileCard()
+              chargeButton()
+              philosopherCard()
+            }
             .padding(.horizontal, 16)
 
-          Spacer(minLength: 0)
+            // HFFUM: 메뉴 리스트 좌우 16
+            menuList()
+              .padding(.horizontal, 16)
 
-          // 마이페이지 하단 네이티브 광고 — 2:1(.wide) 규격, 좌우 여백 16.
-          AdFitNativeAdView(
-            unit: .wide,
-            insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
-            onAdClick: { send(.adNativeClicked) }
-          )
+            Spacer(minLength: 0)
+
+            // 마이페이지 하단 광고 — 서버 광고와 Kakao 광고를 번갈아 노출한다.
+            MixedNativeAdView(
+              unit: .wide,
+              insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
+              placementKey: "mixedNativeAd.profile",
+              viewport: viewport.frame(in: .global),
+              onAdClick: { send(.adNativeClicked) },
+              onServerAdClick: { send(.serverAdClicked(network: $0)) }
+            )
+          }
         }
       }
     }

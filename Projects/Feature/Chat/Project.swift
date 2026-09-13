@@ -26,7 +26,7 @@ let project = Project.makeModule(
     .core(.network),
 
     .domain(.comment, .interface),
-    .feature(.featureSharedUI, .implementation),
+    .feature(.ad, .implementation),
   ],
   hasTests: true,
   hasInterface: true,

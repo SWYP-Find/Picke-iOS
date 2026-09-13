@@ -4,8 +4,9 @@
 //
 
 import SwiftUI
-
+import Ad
 import FeatureSharedUI
+
 import ComposableArchitecture
 import HomeDomainInterface
 import PickeSharedUI
@@ -21,10 +22,6 @@ public struct HifiView: View {
   }
 
   public var body: some View {
-    // 상단 바는 스크롤 영향 없는 sticky 헤더 — Home 과 동일하게 VStack 최상단에 둔다.
-    // (기존 `.safeAreaInset(edge: .top)` + 바 배경 `.ignoresSafeArea(edges: .top)` 조합은
-    //  iPhone 13 mini / iOS 18.6 에서 상단 안전영역 인셋이 이중 계산돼 헤더가 아래로
-    //  밀리는 기종-한정 오류를 유발했다.)
     VStack(spacing: 0) {
       fixedTopBar()
       contentArea()
@@ -58,9 +55,9 @@ private extension HifiView {
   @ViewBuilder
   func contentArea() -> some View {
     Group {
-      if store.viewState == .loading, store.items.isEmpty {
+      if store.viewState == .loading, store.exploreItems.isEmpty {
         skeletonList()
-      } else if store.items.isEmpty {
+      } else if store.exploreItems.isEmpty {
         emptyState()
       } else {
         exploreList()
@@ -107,43 +104,45 @@ private extension HifiView {
 
   @ViewBuilder
   func exploreList() -> some View {
-    ScrollView {
-      LazyVStack(spacing: 0) {
-        ForEach(Array(store.items.enumerated()), id: \.element.id) { index, item in
-          // 마지막 카드 아래엔 구분선을 그리지 않는다.
-          exploreRow(item, showsDivider: index != store.items.count - 1)
-            .onAppear {
-              // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
-              if item.id == store.items.last?.id {
-                send(.reachedBottom)
+    GeometryReader { viewport in
+      ScrollView {
+        LazyVStack(spacing: 0) {
+          ForEach(store.exploreItems) { item in
+            // 마지막 카드 아래엔 구분선을 그리지 않는다.
+            exploreRow(item, showsDivider: item.id != store.exploreItems.last?.id)
+              .onAppear {
+                // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
+                if item.id == store.exploreItems.last?.id {
+                  send(.reachedBottom)
+                }
               }
-            }
 
-          // AdFit 광고 단위 코드는 한 화면에 한 번만 노출 가능해 3번째 카드 뒤에만 넣는다.
-          if index == 2, index != store.items.count - 1 {
-            adBannerRow()
+            if item.id == store.exploreItems.dropFirst(2).first?.id {
+              AdFitBannerView(
+                unit: .size320x100,
+                insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
+                onAdClick: { send(.adBannerClicked) }
+              )
+            } else if let ad = store.withState({ state in
+              state.exploreItems.firstIndex(where: { $0.id == item.id })
+                .flatMap { state.ad(after: $0) }
+            }) {
+              FeedAdRow(
+                ad: ad,
+                viewport: viewport.frame(in: .global),
+                onVisible: { send(.adVisible(code: ad.code, itemID: item.id)) },
+                onAdClick: { send(.serverAdClicked(network: ad.network)) }
+              )
+              .id(ad.code)
+            }
           }
         }
+        // 마지막 카드가 하단에 딱 붙지 않도록 10pt 여백.
+        .padding(.bottom, 10)
       }
-      // 마지막 카드가 하단에 딱 붙지 않도록 10pt 여백.
-      .padding(.bottom, 10)
+      .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize, axes: .vertical)
     }
-    .scrollIndicators(.hidden)
-    .scrollBounceBehavior(.basedOnSize, axes: .vertical)
-  }
-
-  /// 카드 사이에 끼우는 배너 광고 한 줄.
-  ///
-  /// 여백은 AdFitBannerView 내부에서 **광고가 실제로 노출될 때만** 적용된다(insets).
-  /// 광고가 없으면 여백까지 통째로 접혀 카드가 연속으로 이어진다.
-  /// 상하 12 는 위아래 카드의 vertical 패딩과 대칭을 이루고, 좌측 정렬로 카드 좌측 라인과 맞춘다.
-  @ViewBuilder
-  func adBannerRow() -> some View {
-    AdFitBannerView(
-      unit: .size320x100,
-      insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
-      onAdClick: { send(.adBannerClicked) }
-    )
   }
 
   /// 좌우 스와이프로 카테고리 전환 (빈 상태/스켈레톤 포함 콘텐츠 영역 전체에 적용).

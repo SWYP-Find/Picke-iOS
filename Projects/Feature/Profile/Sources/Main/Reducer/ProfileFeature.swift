@@ -102,6 +102,7 @@ public struct ProfileFeature {
     case philosopherTapped
     case menuTapped(MenuItem)
     case adNativeClicked
+    case serverAdClicked(network: String)
   }
 
   public enum AsyncAction: Equatable {
@@ -235,6 +236,14 @@ extension ProfileFeature {
 
     case let .menuTapped(item):
       return .send(.delegate(.menuSelected(item)))
+
+    case let .serverAdClicked(network):
+      analyticsUseCase.track(.adClick(AdClickData(
+        placement: .mypage,
+        format: .native,
+        unit: network
+      )))
+      return .none
 
     case .adNativeClicked:
       analyticsUseCase.track(.adClick(AdClickData(placement: .mypage, format: .native, unit: "ADFIT_NATIVE_2_1")))
