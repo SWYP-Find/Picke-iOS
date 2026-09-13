@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/suhwonji/Desktop/SideProject/Picke-iOS/docs/diagrams/picke-domains-architecture.json",
+  "output": "/Users/suhwonji/Desktop/SideProject/Picke-iOS/docs/diagrams/picke-domains.html",
+  "specification": {
+    "sha256": "e51e6bab05e08e325e1ab2377a130e122abc46882851a77c93cd6a44d764b4c1",
+    "bytes": 5154
+  },
+  "artifact": {
+    "sha256": "975881935c4c90540c6860ed6ada2b5ee2ba3c1db4217f7eb8955baf8bb212a3",
+    "bytes": 810844
+  },
+  "validation": {
+    "checksPassed": 9,
+    "checkCount": 9,
+    "compositionProfile": "showcase",
+    "compositionStatus": "pass",
+    "errors": 0,
+    "warnings": 0
+  }
+}

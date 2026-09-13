@@ -1,6 +1,6 @@
 //
 //  ChatCoordinator.swift
-//  Chat
+//  App
 //
 
 import Foundation
@@ -9,6 +9,7 @@ import PickeCoreLogger
 import ChatInterface
 import CommentDomainInterface
 import ComposableArchitecture
+import FeatureAssembly
 import PickeDesignKit
 import PickeCoreUtility
 import TCAFlow
@@ -99,7 +100,13 @@ extension ChatCoordinator {
     action: IndexedRouterActionOf<ChatScreen>
   ) -> Effect<Action> {
     switch action {
-    case .routeAction(_, action: .preVote(.delegate(.dismiss))):
+    case let .routeAction(id, action: .preVote(.delegate(.dismiss))):
+      // 루트(사전투표)의 뒤로가기는 Chat 플로우 전체를 닫고,
+      // 스택 위에 올라온 최종투표 화면이면 한 단계만 닫아 대화방으로 돌아간다.
+      guard id == 0 else {
+        state.routes.goBack()
+        return .none
+      }
       return .send(.delegate(.dismiss))
 
     case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _, isMindChanged)))):
@@ -115,7 +122,9 @@ extension ChatCoordinator {
       // 사전투표 루트에서 감지된 재진입이면 사전투표 화면을 남기지 않고 관점 화면으로 교체.
       // (스택 중간 — 최종투표 중복 500 — 이면 기존처럼 push)
       if state.routes.count <= 1 {
-        state.routes = [.root(.comment(.init(battleId: battleId)), embedInNavigationView: true)]
+        // 배열을 통째로 갈아끼우면 TCAFlow 의 인덱스 기반 스크린 상태 캐시가 이전 화면 상태를
+        // 그대로 붙들어 화면이 바뀌지 않는다. 같은 인덱스의 screen 만 교체한다.
+        state.routes[screenAt: 0] = .comment(.init(battleId: battleId))
       } else {
         state.routes.push(.comment(.init(battleId: battleId)))
       }

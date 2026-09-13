@@ -85,7 +85,9 @@ let package = Package(
     // 소스 빌드와 바이너리 캐시가 같은 그래프를 쓰도록 마지막 비조건부 버전을 고정한다.
     .package(url: "https://github.com/pointfreeco/swift-dependencies", exact: "1.12.0"),
     .package(url: "https://github.com/pointfreeco/sqlite-data", exact: "1.11.0"),
-    .package(url: "https://github.com/Roy-wonji/TCAFlow.git", exact: "1.1.8"),
+    // SQLiteData 1.11.0의 section API가 요구하는 Select.From: Table 제약을 유지한다.
+    .package(url: "https://github.com/pointfreeco/swift-structured-queries", exact: "0.36.0"),
+    .package(url: "https://github.com/Roy-wonji/TCAFlow.git", branch: "main"),
     .package(url: "https://github.com/google/GoogleSignIn-iOS", from: "9.1.0"),
     .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.10.2"),
     .package(url: "https://github.com/openid/AppAuth-iOS.git", from: "2.0.0"),

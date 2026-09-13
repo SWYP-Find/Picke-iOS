@@ -388,6 +388,21 @@ struct BattleRepositoryTests {
     #expect(perspective == nil)
   }
 
+  @Test func fetchMyPerspective_는_data_가_빈_배열이면_nil_을_반환한다() async throws {
+    let json = """
+    { "statusCode": 200, "data": [] }
+    """
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
+
+    let perspective = try await repo.fetchMyPerspective(battleId: 1)
+
+    #expect(perspective == nil)
+  }
+
   @Test func fetchMyPerspective_는_provider_가_에러를_던지면_nil_을_반환한다() async throws {
     let repo = withDependencies {
       $0.networkClient = ThrowingStubNetworkClient()
@@ -472,6 +487,51 @@ struct BattleRepositoryTests {
 
     #expect(scenario.philosophers[0].label == "A")
     #expect(scenario.philosophers[1].label == "B")
+  }
+
+  @Test func fetchScenario_는_startNodeId_가_null_이면_첫_노드를_시작_노드로_쓴다() async throws {
+    let json = """
+    {
+      "statusCode": 200,
+      "data": {
+        "battleId": 5,
+        "title": "시나리오 제목",
+        "philosophers": [{"label": "A", "name": "소크라테스", "stance": "PRO", "imageUrl": "https://img.picke.app/s.png"}],
+        "isInteractive": false,
+        "startNodeId": null,
+        "recommendedPathKey": "COMMON",
+        "audios": {},
+        "nodes": [
+          {
+            "nodeId": 11,
+            "nodeName": "START",
+            "audioDuration": 85,
+            "autoNextNodeId": null,
+            "scripts": [],
+            "interactiveOptions": []
+          },
+          {
+            "nodeId": 12,
+            "nodeName": "CLOSING",
+            "audioDuration": 11,
+            "autoNextNodeId": null,
+            "scripts": [],
+            "interactiveOptions": []
+          }
+        ]
+      },
+      "error": null
+    }
+    """
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
+
+    let scenario = try await repo.fetchScenario(battleId: 5)
+
+    #expect(scenario.startNodeId == 11)
   }
 
   // MARK: - fetchRecommendedBattles
