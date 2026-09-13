@@ -19,7 +19,7 @@ public struct FeedAdRepositoryImpl: FeedAdInterface {
   public func recordImpressions(codes: [String]) async throws {
     _ = try await client.send(
       AdsService.impressions(body: AdsImpressionsRequest(codes: codes)),
-      as: String.self
+      as: PickeEmptyResponse.self
     )
   }
 }
