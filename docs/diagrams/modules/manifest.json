@@ -1,0 +1,1229 @@
+[
+  {
+    "name": "Picke",
+    "layer": "App",
+    "path": "Projects/App/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "Picke",
+        "DomainAssembly"
+      ],
+      [
+        "Picke",
+        "FeatureAssembly"
+      ],
+      [
+        "Picke",
+        "NotificationInterface"
+      ],
+      [
+        "Picke",
+        "PickeAnimation"
+      ],
+      [
+        "Picke",
+        "PickeConfig"
+      ],
+      [
+        "Picke",
+        "PickeStorageInterface"
+      ],
+      [
+        "Picke",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "googleMobileAds",
+      "kingfisher"
+    ]
+  },
+  {
+    "name": "CoreAssembly",
+    "layer": "Core",
+    "path": "Projects/Core/CoreAssembly/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "CoreAssembly",
+        "PickeCoreLogger"
+      ],
+      [
+        "CoreAssembly",
+        "PickeCoreUI"
+      ],
+      [
+        "CoreAssembly",
+        "PickeCoreUtility"
+      ],
+      [
+        "CoreAssembly",
+        "PickeNetwork"
+      ],
+      [
+        "CoreAssembly",
+        "PickeStorage"
+      ],
+      [
+        "CoreAssembly",
+        "PickeThirdParty"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "PickeCoreLogger",
+    "layer": "Core",
+    "path": "Projects/Core/PickeCoreLogger/Project.swift",
+    "hasInterface": false,
+    "edges": [],
+    "external": []
+  },
+  {
+    "name": "PickeCoreUI",
+    "layer": "Core",
+    "path": "Projects/Core/PickeCoreUI/Project.swift",
+    "hasInterface": false,
+    "edges": [],
+    "external": []
+  },
+  {
+    "name": "PickeCoreUtility",
+    "layer": "Core",
+    "path": "Projects/Core/PickeCoreUtility/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "PickeCoreUtility",
+        "PickeNetwork"
+      ]
+    ],
+    "external": [
+      "dependencies"
+    ]
+  },
+  {
+    "name": "PickeNetwork",
+    "layer": "Core",
+    "path": "Projects/Core/PickeNetwork/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "PickeNetwork",
+        "PickeCoreLogger"
+      ],
+      [
+        "PickeNetwork",
+        "PickeNetworkInterface"
+      ]
+    ],
+    "external": [
+      "alamofire",
+      "dependencies"
+    ]
+  },
+  {
+    "name": "PickeStorage",
+    "layer": "Core",
+    "path": "Projects/Core/PickeStorage/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "PickeStorage",
+        "PickeCoreLogger"
+      ],
+      [
+        "PickeStorage",
+        "PickeStorageInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "sharing",
+      "sqliteData"
+    ]
+  },
+  {
+    "name": "PickeThirdParty",
+    "layer": "Core",
+    "path": "Projects/Core/PickeThirdParty/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "PickeThirdParty",
+        "PickeCoreUtility"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "sdwebImage",
+      "tcaFlow"
+    ]
+  },
+  {
+    "name": "AdDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/AdDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "AdDomain",
+        "AdDomainInterface"
+      ],
+      [
+        "AdDomain",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "AppUpdateDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/AppUpdateDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "AppUpdateDomain",
+        "AppUpdateDomainInterface"
+      ],
+      [
+        "AppUpdateDomain",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "AttendanceDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/AttendanceDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "AttendanceDomain",
+        "AttendanceDomainInterface"
+      ],
+      [
+        "AttendanceDomain",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "AuthDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/AuthDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "AuthDomain",
+        "AuthDomainInterface"
+      ],
+      [
+        "AuthDomain",
+        "PickeAuthInterface"
+      ],
+      [
+        "AuthDomain",
+        "PickeStorageInterface"
+      ],
+      [
+        "AuthDomain",
+        "ServiceAssembly"
+      ],
+      [
+        "AuthDomainInterface",
+        "PickeStorageInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "googleSignIn",
+      "sharing"
+    ]
+  },
+  {
+    "name": "BattleDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/BattleDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "BattleDomain",
+        "BattleDomainInterface"
+      ],
+      [
+        "BattleDomain",
+        "HomeDomainInterface"
+      ],
+      [
+        "BattleDomain",
+        "ServiceAssembly"
+      ],
+      [
+        "BattleDomainInterface",
+        "HomeDomainInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "CommentDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/CommentDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "CommentDomain",
+        "BattleDomainInterface"
+      ],
+      [
+        "CommentDomain",
+        "CommentDomainInterface"
+      ],
+      [
+        "CommentDomain",
+        "ServiceAssembly"
+      ],
+      [
+        "CommentDomainInterface",
+        "BattleDomainInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "DomainAssembly",
+    "layer": "Domain",
+    "path": "Projects/Domain/DomainAssembly/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "DomainAssembly",
+        "AdDomain"
+      ],
+      [
+        "DomainAssembly",
+        "AppUpdateDomain"
+      ],
+      [
+        "DomainAssembly",
+        "AttendanceDomain"
+      ],
+      [
+        "DomainAssembly",
+        "AuthDomain"
+      ],
+      [
+        "DomainAssembly",
+        "BattleDomain"
+      ],
+      [
+        "DomainAssembly",
+        "CommentDomain"
+      ],
+      [
+        "DomainAssembly",
+        "HomeDomain"
+      ],
+      [
+        "DomainAssembly",
+        "NotificationDomain"
+      ],
+      [
+        "DomainAssembly",
+        "PerspectiveDomain"
+      ],
+      [
+        "DomainAssembly",
+        "ProfileDomain"
+      ],
+      [
+        "DomainAssembly",
+        "SearchDomain"
+      ]
+    ],
+    "external": []
+  },
+  {
+    "name": "HomeDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/HomeDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "HomeDomain",
+        "AuthDomainInterface"
+      ],
+      [
+        "HomeDomain",
+        "HomeDomainInterface"
+      ],
+      [
+        "HomeDomain",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "NotificationDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/NotificationDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "NotificationDomain",
+        "NotificationDomainInterface"
+      ],
+      [
+        "NotificationDomain",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "PerspectiveDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/PerspectiveDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "PerspectiveDomain",
+        "BattleDomainInterface"
+      ],
+      [
+        "PerspectiveDomain",
+        "CommentDomainInterface"
+      ],
+      [
+        "PerspectiveDomain",
+        "PerspectiveDomainInterface"
+      ],
+      [
+        "PerspectiveDomain",
+        "ServiceAssembly"
+      ],
+      [
+        "PerspectiveDomainInterface",
+        "BattleDomainInterface"
+      ],
+      [
+        "PerspectiveDomainInterface",
+        "CommentDomainInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "ProfileDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/ProfileDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "ProfileDomain",
+        "ProfileDomainInterface"
+      ],
+      [
+        "ProfileDomain",
+        "ServiceAssembly"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "SearchDomain",
+    "layer": "Domain",
+    "path": "Projects/Domain/SearchDomain/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "SearchDomain",
+        "BattleDomainInterface"
+      ],
+      [
+        "SearchDomain",
+        "HomeDomainInterface"
+      ],
+      [
+        "SearchDomain",
+        "SearchDomainInterface"
+      ],
+      [
+        "SearchDomain",
+        "ServiceAssembly"
+      ],
+      [
+        "SearchDomainInterface",
+        "HomeDomainInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "Ad",
+    "layer": "Feature",
+    "path": "Projects/Feature/Ad/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Ad",
+        "AdDomainInterface"
+      ],
+      [
+        "Ad",
+        "AdInterface"
+      ],
+      [
+        "Ad",
+        "FeatureSharedUI"
+      ],
+      [
+        "Ad",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Ad",
+        "PickeCoreLogger"
+      ],
+      [
+        "Ad",
+        "PickeDesignKit"
+      ],
+      [
+        "Ad",
+        "PickeSharedUI"
+      ]
+    ],
+    "external": [
+      "adFit",
+      "composableArchitecture",
+      "googleMobileAds"
+    ]
+  },
+  {
+    "name": "Auth",
+    "layer": "Feature",
+    "path": "Projects/Feature/Auth/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Auth",
+        "AuthDomainInterface"
+      ],
+      [
+        "Auth",
+        "AuthInterface"
+      ],
+      [
+        "Auth",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Auth",
+        "PickeCoreLogger"
+      ],
+      [
+        "Auth",
+        "PickeDesignKit"
+      ],
+      [
+        "Auth",
+        "PickeSharedUI"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "Battle",
+    "layer": "Feature",
+    "path": "Projects/Feature/Battle/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Battle",
+        "BattleDomainInterface"
+      ],
+      [
+        "Battle",
+        "BattleInterface"
+      ],
+      [
+        "Battle",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Battle",
+        "PickeCoreLogger"
+      ],
+      [
+        "Battle",
+        "PickeCoreUtility"
+      ],
+      [
+        "Battle",
+        "PickeDesignKit"
+      ],
+      [
+        "Battle",
+        "PickeSharedUI"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "Chat",
+    "layer": "Feature",
+    "path": "Projects/Feature/Chat/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Chat",
+        "Ad"
+      ],
+      [
+        "Chat",
+        "AudioPlayerServiceInterface"
+      ],
+      [
+        "Chat",
+        "BattleDomainInterface"
+      ],
+      [
+        "Chat",
+        "ChatInterface"
+      ],
+      [
+        "Chat",
+        "CommentDomainInterface"
+      ],
+      [
+        "Chat",
+        "HomeDomainInterface"
+      ],
+      [
+        "Chat",
+        "PerspectiveDomainInterface"
+      ],
+      [
+        "Chat",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Chat",
+        "PickeCoreLogger"
+      ],
+      [
+        "Chat",
+        "PickeCoreUtility"
+      ],
+      [
+        "Chat",
+        "PickeDesignKit"
+      ],
+      [
+        "Chat",
+        "PickeNetwork"
+      ],
+      [
+        "Chat",
+        "PickeSharedUI"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "tcaFlow"
+    ]
+  },
+  {
+    "name": "FeatureAssembly",
+    "layer": "Feature",
+    "path": "Projects/Feature/FeatureAssembly/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "FeatureAssembly",
+        "Ad"
+      ],
+      [
+        "FeatureAssembly",
+        "Auth"
+      ],
+      [
+        "FeatureAssembly",
+        "Battle"
+      ],
+      [
+        "FeatureAssembly",
+        "Chat"
+      ],
+      [
+        "FeatureAssembly",
+        "FeatureSharedUI"
+      ],
+      [
+        "FeatureAssembly",
+        "Hifi"
+      ],
+      [
+        "FeatureAssembly",
+        "Home"
+      ],
+      [
+        "FeatureAssembly",
+        "Notification"
+      ],
+      [
+        "FeatureAssembly",
+        "Profile"
+      ],
+      [
+        "FeatureAssembly",
+        "Web"
+      ]
+    ],
+    "external": []
+  },
+  {
+    "name": "FeatureSharedUI",
+    "layer": "Feature",
+    "path": "Projects/Feature/FeatureSharedUI/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "FeatureSharedUI",
+        "PickeCoreLogger"
+      ]
+    ],
+    "external": [
+      "adFit"
+    ]
+  },
+  {
+    "name": "Hifi",
+    "layer": "Feature",
+    "path": "Projects/Feature/Hifi/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Hifi",
+        "Ad"
+      ],
+      [
+        "Hifi",
+        "AdDomainInterface"
+      ],
+      [
+        "Hifi",
+        "BattleDomainInterface"
+      ],
+      [
+        "Hifi",
+        "FeatureSharedUI"
+      ],
+      [
+        "Hifi",
+        "HifiInterface"
+      ],
+      [
+        "Hifi",
+        "HomeDomainInterface"
+      ],
+      [
+        "Hifi",
+        "NotificationDomainInterface"
+      ],
+      [
+        "Hifi",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Hifi",
+        "PickeCoreLogger"
+      ],
+      [
+        "Hifi",
+        "PickeCoreUtility"
+      ],
+      [
+        "Hifi",
+        "PickeDesignKit"
+      ],
+      [
+        "Hifi",
+        "PickeSharedUI"
+      ],
+      [
+        "Hifi",
+        "SearchDomainInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "kingfisher"
+    ]
+  },
+  {
+    "name": "Home",
+    "layer": "Feature",
+    "path": "Projects/Feature/Home/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Home",
+        "AttendanceDomainInterface"
+      ],
+      [
+        "Home",
+        "AuthDomainInterface"
+      ],
+      [
+        "Home",
+        "BattleDomainInterface"
+      ],
+      [
+        "Home",
+        "FeatureSharedUI"
+      ],
+      [
+        "Home",
+        "HomeDomainInterface"
+      ],
+      [
+        "Home",
+        "HomeInterface"
+      ],
+      [
+        "Home",
+        "NotificationDomainInterface"
+      ],
+      [
+        "Home",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Home",
+        "PickeCoreLogger"
+      ],
+      [
+        "Home",
+        "PickeDesignKit"
+      ],
+      [
+        "Home",
+        "PickeSharedUI"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "kingfisher",
+      "tcaFlow"
+    ]
+  },
+  {
+    "name": "Notification",
+    "layer": "Feature",
+    "path": "Projects/Feature/Notification/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Notification",
+        "NotificationDomainInterface"
+      ],
+      [
+        "Notification",
+        "NotificationInterface"
+      ],
+      [
+        "Notification",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Notification",
+        "PickeCoreLogger"
+      ],
+      [
+        "Notification",
+        "PickeCoreUtility"
+      ],
+      [
+        "Notification",
+        "PickeDesignKit"
+      ],
+      [
+        "Notification",
+        "PickeSharedUI"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "Profile",
+    "layer": "Feature",
+    "path": "Projects/Feature/Profile/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Profile",
+        "Ad"
+      ],
+      [
+        "Profile",
+        "AdInterface"
+      ],
+      [
+        "Profile",
+        "AuthDomainInterface"
+      ],
+      [
+        "Profile",
+        "BattleDomainInterface"
+      ],
+      [
+        "Profile",
+        "DeviceServiceInterface"
+      ],
+      [
+        "Profile",
+        "NotificationDomainInterface"
+      ],
+      [
+        "Profile",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "Profile",
+        "PickeAuthInterface"
+      ],
+      [
+        "Profile",
+        "PickeCoreLogger"
+      ],
+      [
+        "Profile",
+        "PickeCoreUtility"
+      ],
+      [
+        "Profile",
+        "PickeDesignKit"
+      ],
+      [
+        "Profile",
+        "PickeSharedUI"
+      ],
+      [
+        "Profile",
+        "PickeStorageInterface"
+      ],
+      [
+        "Profile",
+        "ProfileDomainInterface"
+      ],
+      [
+        "Profile",
+        "ProfileInterface"
+      ],
+      [
+        "ProfileInterface",
+        "ProfileDomainInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "kingfisher",
+      "tcaFlow"
+    ]
+  },
+  {
+    "name": "Web",
+    "layer": "Feature",
+    "path": "Projects/Feature/Web/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "Web",
+        "PickeDesignKit"
+      ],
+      [
+        "Web",
+        "WebInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "API",
+    "layer": "Service",
+    "path": "Projects/Service/API/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "API",
+        "PickeNetworkInterface"
+      ]
+    ],
+    "external": []
+  },
+  {
+    "name": "APIEndpoint",
+    "layer": "Service",
+    "path": "Projects/Service/APIEndpoint/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "APIEndpoint",
+        "API"
+      ],
+      [
+        "APIEndpoint",
+        "AuthDomainInterface"
+      ],
+      [
+        "APIEndpoint",
+        "PickeNetworkInterface"
+      ]
+    ],
+    "external": [
+      "alamofire"
+    ]
+  },
+  {
+    "name": "AudioPlayerService",
+    "layer": "Service",
+    "path": "Projects/Service/AudioPlayerService/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "AudioPlayerService",
+        "AudioPlayerServiceInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "DeviceService",
+    "layer": "Service",
+    "path": "Projects/Service/DeviceService/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "DeviceService",
+        "APIEndpoint"
+      ],
+      [
+        "DeviceService",
+        "DeviceServiceInterface"
+      ],
+      [
+        "DeviceService",
+        "PickeCoreLogger"
+      ],
+      [
+        "DeviceService",
+        "PickeNetwork"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "PickeAnalytics",
+    "layer": "Service",
+    "path": "Projects/Service/PickeAnalytics/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "PickeAnalytics",
+        "PickeAnalyticsInterface"
+      ],
+      [
+        "PickeAnalytics",
+        "PickeCoreLogger"
+      ],
+      [
+        "PickeAnalytics",
+        "PickeNetwork"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "mixpanel",
+      "mixpanelSessionReplay",
+      "sentry",
+      "sentrySwiftUI"
+    ]
+  },
+  {
+    "name": "PickeAuth",
+    "layer": "Service",
+    "path": "Projects/Service/PickeAuth/Project.swift",
+    "hasInterface": true,
+    "edges": [
+      [
+        "PickeAuth",
+        "APIEndpoint"
+      ],
+      [
+        "PickeAuth",
+        "PickeAuthInterface"
+      ],
+      [
+        "PickeAuth",
+        "PickeCoreLogger"
+      ],
+      [
+        "PickeAuth",
+        "PickeNetwork"
+      ],
+      [
+        "PickeAuth",
+        "PickeStorage"
+      ],
+      [
+        "PickeAuth",
+        "PickeStorageInterface"
+      ],
+      [
+        "PickeAuthInterface",
+        "PickeNetworkInterface"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "PickeConfig",
+    "layer": "Service",
+    "path": "Projects/Service/PickeConfig/Project.swift",
+    "hasInterface": false,
+    "edges": [],
+    "external": [
+      "firebaseCrashlytics"
+    ]
+  },
+  {
+    "name": "ServiceAssembly",
+    "layer": "Service",
+    "path": "Projects/Service/ServiceAssembly/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "ServiceAssembly",
+        "API"
+      ],
+      [
+        "ServiceAssembly",
+        "APIEndpoint"
+      ],
+      [
+        "ServiceAssembly",
+        "AudioPlayerService"
+      ],
+      [
+        "ServiceAssembly",
+        "CoreAssembly"
+      ],
+      [
+        "ServiceAssembly",
+        "DeviceService"
+      ],
+      [
+        "ServiceAssembly",
+        "PickeAnalytics"
+      ],
+      [
+        "ServiceAssembly",
+        "PickeAuth"
+      ],
+      [
+        "ServiceAssembly",
+        "PickeAuthInterface"
+      ],
+      [
+        "ServiceAssembly",
+        "PickeConfig"
+      ]
+    ],
+    "external": []
+  },
+  {
+    "name": "PickeAnimation",
+    "layer": "UI",
+    "path": "Projects/UI/PickeAnimation/Project.swift",
+    "hasInterface": false,
+    "edges": [],
+    "external": [
+      "sdwebImageCore"
+    ]
+  },
+  {
+    "name": "PickeDesignKit",
+    "layer": "UI",
+    "path": "Projects/UI/PickeDesignKit/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "PickeDesignKit",
+        "PickeCoreUI"
+      ]
+    ],
+    "external": [
+      "composableArchitecture"
+    ]
+  },
+  {
+    "name": "PickeSharedUI",
+    "layer": "UI",
+    "path": "Projects/UI/PickeSharedUI/Project.swift",
+    "hasInterface": false,
+    "edges": [
+      [
+        "PickeSharedUI",
+        "PickeDesignKit"
+      ]
+    ],
+    "external": [
+      "composableArchitecture",
+      "kingfisher"
+    ]
+  }
+]

@@ -1,0 +1,182 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Picke 광고 배치와 통신 구조",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      560
+    ]
+  },
+  "components": [
+    {
+      "id": "explore",
+      "type": "frontend",
+      "label": "탐색 · Hifi",
+      "sublabel": "첫 Kakao 이후 3개마다 서버 광고",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        270,
+        90
+      ]
+    },
+    {
+      "id": "mixed",
+      "type": "frontend",
+      "label": "큐레이션 · 마이페이지",
+      "sublabel": "MixedNativeAdView · 교대 표시",
+      "pos": [
+        40,
+        240
+      ],
+      "size": [
+        270,
+        90
+      ]
+    },
+    {
+      "id": "home",
+      "type": "frontend",
+      "label": "홈",
+      "sublabel": "기존 Kakao 광고 유지",
+      "pos": [
+        40,
+        420
+      ],
+      "size": [
+        270,
+        90
+      ]
+    },
+    {
+      "id": "adui",
+      "type": "frontend",
+      "label": "Feature/Ad",
+      "sublabel": "FeedAdRow · 실제 가시성 판단",
+      "pos": [
+        400,
+        60
+      ],
+      "size": [
+        270,
+        90
+      ]
+    },
+    {
+      "id": "kakao",
+      "type": "external",
+      "label": "Kakao AdFit",
+      "sublabel": "배너 · 네이티브 광고",
+      "pos": [
+        400,
+        420
+      ],
+      "size": [
+        270,
+        90
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "AdDomain",
+      "sublabel": "UseCase → Repository",
+      "pos": [
+        760,
+        60
+      ],
+      "size": [
+        270,
+        90
+      ]
+    },
+    {
+      "id": "server",
+      "type": "external",
+      "label": "Picke 광고 API",
+      "sublabel": "GET 광고 · POST 노출 집계",
+      "pos": [
+        760,
+        300
+      ],
+      "size": [
+        270,
+        90
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "explore",
+      "to": "adui",
+      "label": "서버 광고 표시"
+    },
+    {
+      "from": "mixed",
+      "to": "adui",
+      "label": "서버 차례"
+    },
+    {
+      "from": "mixed",
+      "to": "kakao",
+      "label": "Kakao 차례 / 조회 실패"
+    },
+    {
+      "from": "home",
+      "to": "kakao",
+      "label": "기존 표시",
+      "labelAt": [
+        355,
+        510
+      ]
+    },
+    {
+      "from": "adui",
+      "to": "domain",
+      "label": "조회 · 가시성 통지",
+      "labelAt": [
+        715,
+        170
+      ]
+    },
+    {
+      "from": "domain",
+      "to": "server",
+      "label": "networkClient · HTTPS",
+      "labelAt": [
+        895,
+        220
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "탐색 배치",
+      "items": [
+        "콘텐츠 3개 → Kakao → 콘텐츠 3개 → 서버 광고",
+        "서버 광고 목록 소진 시 순환"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "노출 집계",
+      "items": [
+        "조회만으로 집계하지 않음",
+        "화면과 교차하고 앱이 활성일 때 codes 전송"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "검증 범위",
+      "items": [
+        "현재 작업 트리의 구현 구조",
+        "실기기 표시 · 전체 빌드는 미검증"
+      ]
+    }
+  ]
+}
