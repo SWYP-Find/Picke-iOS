@@ -654,11 +654,13 @@ SVG 생성에는 Graphviz의 `dot`이 필요합니다. 앱 빌드나 Tuist 캐�
 - Apple Swift 6.3.2
 - Tuist 4.207.0
 
-Tuist 버전은 [mise.toml](mise.toml)에 고정되어 있습니다.
+Ruby, Tuist, xcbeautify 버전은 [mise.toml](mise.toml)에 고정되어 있습니다.
 
 ~~~bash
 mise install
 mise exec -- tuist version
+mise which ruby
+mise exec -- xcbeautify --version
 ~~~
 
 빌드 환경별 xcconfig에 필요한 값을 채웁니다.
@@ -767,8 +769,9 @@ ln -s AGENTS.md CLAUDE.md
 
 - Fastlane QA와 release 레인은 빌드 번호를 갱신한 뒤 `tuist generate --no-binary-cache --no-open`로 워크스페이스를 재생성합니다.
 - workspace가 없을 때 fallback 경로는 `mise exec -- tuist install` 후 `./make generate --no-binary-cache --no-open`을 실행합니다.
-- Bitrise 배포 워크플로는 Fastlane을 통해 TestFlight 또는 App Store 제출을 수행합니다.
-- CI에는 Tuist Dashboard 원격 캐시 연동을 추가하지 않습니다.
+- Fastlane QA/release 배포가 성공하면 같은 IPA를 Tuist Preview의 `qa`/`release` 트랙에 공유합니다. Preview 업로드에는 Tuist 로그인이 필요합니다.
+- 이 IPA는 App Store Connect용으로 서명되어 Preview 링크에서 기기에 직접 설치할 수 없습니다. 기기 테스트는 TestFlight를 사용합니다.
+- Tuist Preview 업로드가 실패해도 이미 완료된 TestFlight/App Store 배포는 유지되며, Fastlane 로그에 경고가 남습니다.
 
 ## 개발 가이드
 

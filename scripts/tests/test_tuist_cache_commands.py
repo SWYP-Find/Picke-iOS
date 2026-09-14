@@ -27,7 +27,7 @@ class CacheCommandsTests(unittest.TestCase):
             )
             mise.chmod(0o755)
             environment = os.environ.copy()
-            for key in ("CI", "GITHUB_ACTIONS", "BITRISE_IO", "TUIST_CI"):
+            for key in ("CI", "GITHUB_ACTIONS", "TUIST_CI"):
                 environment.pop(key, None)
             environment.update(PATH=f"{folder}:{environment['PATH']}",
                                COMMAND_LOG=str(log), FAIL_COMMAND=failure or "")

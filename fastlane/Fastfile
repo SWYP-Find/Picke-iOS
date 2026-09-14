@@ -12,7 +12,7 @@ STAGE_SCHEME = "Picke-Stage"
 BUNDLE_ID = "io.Picke.co"
 OUTPUT_DIR = "./fastlane/output"
 IPA_FILENAME = "#{APP_NAME}.ipa"
-TEAM_ID = ENV["TEAM_ID"] || "N94CS4N6VR"
+TEAM_ID = ENV["TEAM_ID"] || "3UFKCXVTN4"
 MATCH_KEYCHAIN_NAME = ENV["MATCH_KEYCHAIN_NAME"] || "match_keychain"
 
 # 릴리스용 변수 (누락되어 있던 부분 보완)
@@ -145,6 +145,93 @@ def upload_to_testflight_with_retry(options)
   end
 end
 
+def share_tuist_preview(ipa_path, track:)
+  ipa = File.expand_path(ipa_path.to_s)
+  if ipa_path.to_s.empty? || !File.file?(ipa)
+    UI.important("⚠️ Tuist Preview 업로드 스킵: IPA 파일을 찾을 수 없음 (#{ipa_path})")
+    return
+  end
+
+  begin
+    Dir.chdir(File.expand_path("..", __dir__)) do
+      sh("mise exec -- tuist share #{Shellwords.escape(ipa)} --track #{Shellwords.escape(track)}")
+    end
+    UI.success("✅ Tuist Preview 업로드 완료 (#{track})")
+  rescue => e
+    UI.important("⚠️ 앱 배포는 완료됐지만 Tuist Preview 업로드 실패: #{e.message}")
+  end
+end
+
+# 릴리즈 노트를 커밋에서 자동으로 만든다.
+#
+# 규칙(기존에 손으로 쓰던 노트 형식을 그대로 따른다):
+#   - feat/fix 커밋만 불릿으로 옮긴다. type(scope): 접두사와 끝의 (#123) 은 떼고,
+#     "…한다" 종결어미는 지워 "- 댓글을 글자 수 제한 없이 작성" 같은 명사형으로 맞춘다.
+#   - refactor/perf/style/chore/build 가 하나라도 있으면 마지막에
+#     "- 전반적인 UI 정리 및 안정성 개선" 한 줄을 붙인다.
+#   - 직전 v태그 이후 커밋만 본다. 태그가 없으면 최근 30개.
+def generate_release_notes_body
+  previous_tag = `git tag --sort=-v:refname --list "v*" | head -1`.strip
+  range = previous_tag.empty? ? "-30" : "#{previous_tag}..HEAD"
+  subjects = `git log #{range} --no-merges --pretty=%s`.split("\n").map(&:strip).reject(&:empty?)
+
+  bullets = []
+  has_chore = false
+
+  subjects.each do |subject|
+    type = subject[/\A(\w+)(\([^)]*\))?:/, 1]
+    case type
+    when "feat", "fix"
+      text = subject.sub(/\A\w+(\([^)]*\))?:\s*/, "")
+      text = text.sub(/\s*\(#\d+\)\s*\z/, "")
+      text = text.sub(/한다\z/, "").sub(/\s*\z/, "")
+      bullets << "- #{text}" unless text.empty?
+    when "refactor", "perf", "style", "chore", "build"
+      has_chore = true
+    end
+  end
+
+  bullets.uniq!
+  bullets << "- 전반적인 UI 정리 및 안정성 개선" if has_chore || bullets.empty?
+  bullets.join("\n")
+end
+
+# 릴리즈 노트를 확정해서 돌려준다. 수동 작성분이 항상 이긴다.
+#   1) ENV["RELEASE_NOTES"] 가 있으면 그대로 쓴다.
+#   2) metadata/ko/release_notes.txt 가 이미 이번 버전 헤더([V x.y.z])면 손으로 쓴 것으로 보고 그대로 쓴다.
+#   3) 둘 다 아니면 커밋에서 만들어 두 파일에 쓴다.
+def ensure_release_notes(version)
+  manual = ENV["RELEASE_NOTES"].to_s.strip
+  metadata_path = File.expand_path("metadata/ko/release_notes.txt", __dir__)
+  plain_path = File.expand_path("release_notes.txt", __dir__)
+  header = "[V #{version}]"
+
+  unless manual.empty?
+    UI.message("📝 RELEASE_NOTES 환경변수를 그대로 사용한다")
+    return manual
+  end
+
+  existing = File.exist?(metadata_path) ? File.read(metadata_path).strip : ""
+  if existing.start_with?(header)
+    UI.message("📝 metadata/ko/release_notes.txt 에 #{header} 노트가 이미 있어 그대로 사용한다")
+    body = existing.lines.drop(1).join.strip
+    ENV["RELEASE_NOTES"] = body
+    return body
+  end
+
+  body = generate_release_notes_body
+  File.write(plain_path, body + "\n")
+  File.write(metadata_path, "#{header}\n#{body}\n")
+  ENV["RELEASE_NOTES"] = body
+  UI.success("📝 릴리즈 노트 자동 생성 (#{header})\n#{body}")
+  body
+end
+
+def current_marketing_version
+  path = File.expand_path("../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift", __dir__)
+  File.read(path)[/appVersion\(version: String = "([^"]+)"\)/, 1] || "0.0.0"
+end
+
 platform :ios do
   before_all do
     unlock_match_keychain
@@ -186,8 +273,9 @@ platform :ios do
     match(
       type: "appstore",
       readonly: true,
-      git_url: ENV.fetch("MATCH_GIT_URL", "git@github.com:Roy-wonji/FastlaneMatch.git"),
       storage_mode: "git",
+      team_id: TEAM_ID,
+      api_key: lane_context[SharedValues::APP_STORE_CONNECT_API_KEY],
       app_identifier: ["io.Picke.co"],
       keychain_name: MATCH_KEYCHAIN_NAME,
       keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
@@ -281,7 +369,7 @@ platform :ios do
       # Picke/picke 그룹에 배포 (External 그룹이어야 실제 지정됨. Internal이면 자동 배포되고 아래 rescue로 넘어감)
       upload_to_testflight_with_retry(
         ipa: ipa_path,
-        changelog: ENV.fetch("RELEASE_NOTES", "변경사항"),
+        changelog: ensure_release_notes(current_marketing_version),
         groups: ["Picke", "picke"],
         beta_app_description: "Picke 앱입니다.",
         notify_external_testers: true,
@@ -298,6 +386,8 @@ platform :ios do
         raise e
       end
     end
+
+    share_tuist_preview(ipa_path, track: "qa")
   end
 
   # 🚀 App Store 배포
@@ -337,8 +427,9 @@ platform :ios do
       match(
         type: "appstore",
         readonly: true,
-        git_url: ENV.fetch("MATCH_GIT_URL", "git@github.com:Roy-wonji/FastlaneMatch.git"),
         storage_mode: "git",
+        team_id: TEAM_ID,
+        api_key: lane_context[SharedValues::APP_STORE_CONNECT_API_KEY],
         app_identifier: ["io.Picke.co"],
         keychain_name: MATCH_KEYCHAIN_NAME,
         keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
@@ -408,7 +499,7 @@ platform :ios do
           disable_package_automatic_updates: true,
           skip_package_dependencies_resolution: true,
           use_system_scm: true,
-          xcargs: "CODE_SIGN_IDENTITY='Apple Distribution: Wonji Suh (N94CS4N6VR)' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
+          xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                   "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
                   "SWIFT_COMPILATION_MODE=incremental -parallelizeTargets " +
                   "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
@@ -442,6 +533,9 @@ platform :ios do
         uses_non_exempt_encryption: false
       )
 
+      # 심사에 올라갈 "이번 버전의 새로운 기능"을 커밋에서 채운다(수동 작성분이 있으면 그대로 둔다).
+      ensure_release_notes(options[:version])
+
       # 심사 요청. 바이너리는 위에서 이미 올렸으므로 재업로드하지 않는다
       # (같은 빌드 번호 재업로드는 -19232 로 거부됨).
       upload_to_app_store(
@@ -472,6 +566,8 @@ platform :ios do
           add_id_info_limits_tracking: true
         }
       )
+
+      share_tuist_preview(ipa_path, track: "release")
 
       UI.success("🎉 앱 업로드 및 심사 요청 완료!")
       UI.important("")

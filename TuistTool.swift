@@ -77,7 +77,6 @@ private var isCIEnvironment: Bool {
   let ciValues = ["1", "true", "TRUE"]
   return ciValues.contains(environment["CI"] ?? "")
     || ciValues.contains(environment["GITHUB_ACTIONS"] ?? "")
-    || ciValues.contains(environment["BITRISE_IO"] ?? "")
     || ciValues.contains(environment["TUIST_CI"] ?? "")
 }
 

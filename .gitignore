@@ -170,6 +170,7 @@ Projects/Shared/DesignSystem/Resources/Mode 1.tokens.json
 # secrets
 fastlane/.env
 fastlane/.env.*
+fastlane/AuthKey_*.json
 Config/*.xcconfig
 
 # Sentry

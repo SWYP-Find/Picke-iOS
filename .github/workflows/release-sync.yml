@@ -1,8 +1,7 @@
 name: Sync Release Branch on Tag
 
 # develop 에 푸시하고 v태그(예: v1.0.3)를 붙이면, 그 태그 커밋을 release 브랜치로 자동 병합한다.
-# (배포 자체는 bitrise-trigger.yml 의 tag v* → deploy-live 가 담당 = App Store 심사 제출)
-# 즉 "develop + 태그 → release 가 해당 코드를 풀받아 동기화" 를 자동화한다.
+# 배포는 별도로 Fastlane release 레인을 실행한다. 이 워크플로는 브랜치 동기화만 담당한다.
 
 on:
   push:
