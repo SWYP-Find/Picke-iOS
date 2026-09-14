@@ -90,6 +90,11 @@ extension AnalyticsUseCase: DependencyKey {
     }
     SentrySDK.metrics.count(key: "user.action.count", value: 1, attributes: metricAttributes)
 
+    captureEventInSentry(
+      name: name,
+      properties: properties
+    )
+
     // 광고 클릭은 매출과 직결돼 별도 카운터 + 로그로 남긴다(로그는 검색/필터 대상).
     guard case let .adClick(data) = event else { return }
     SentrySDK.metrics.count(
@@ -101,6 +106,17 @@ extension AnalyticsUseCase: DependencyKey {
       ]
     )
     SentrySDK.logger.info("ad_click", attributes: metricAttributes)
+  }
+
+  private static func captureEventInSentry(
+    name: String,
+    properties: Properties
+  ) {
+    SentrySDK.capture(message: name) { scope in
+      scope.setLevel(.info)
+      scope.setTag(value: name, key: "analytics_event")
+      scope.setContext(value: properties.mapValues { $0 as Any }, key: "analytics")
+    }
   }
 
   /// Mixpanel 유저 프로필 누적. 이벤트만으론 "이 유저가 광고를 얼마나 누르는 사람인지" 를

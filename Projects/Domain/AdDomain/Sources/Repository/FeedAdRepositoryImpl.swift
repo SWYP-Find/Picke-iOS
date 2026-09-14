@@ -13,7 +13,7 @@ public struct FeedAdRepositoryImpl: FeedAdInterface {
       AdsService.list(query: AdsQueryRequest()),
       as: [FeedAdDTO].self
     )
-    return data.map { $0.toDomain() }
+    return data.compactMap { $0.toDomain() }
   }
 
   public func recordImpressions(codes: [String]) async throws {

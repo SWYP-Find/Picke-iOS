@@ -1,11 +1,13 @@
+import Foundation
+
 public struct FeedAd: Equatable, Sendable, Identifiable {
   public let code: String
   public let network: String
   public let title: String
   public let subtitle: String
-  public let imageURL: String
+  public let imageURL: URL
   public let ctaText: String
-  public let clickURL: String
+  public let clickURL: URL
   public let label: String
 
   public var id: String { code }
@@ -15,9 +17,9 @@ public struct FeedAd: Equatable, Sendable, Identifiable {
     network: String,
     title: String,
     subtitle: String,
-    imageURL: String,
+    imageURL: URL,
     ctaText: String,
-    clickURL: String,
+    clickURL: URL,
     label: String
   ) {
     self.code = code

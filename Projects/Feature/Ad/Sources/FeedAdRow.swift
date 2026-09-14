@@ -26,10 +26,9 @@ public struct FeedAdRow: View {
 
   public var body: some View {
     Button {
-      if let url = URL(string: ad.clickURL),
-         ["https", "http"].contains(url.scheme?.lowercased() ?? "") {
+      if ["https", "http"].contains(ad.clickURL.scheme?.lowercased() ?? "") {
         onAdClick()
-        openURL(url)
+        openURL(ad.clickURL)
       }
     } label: {
       content()
@@ -70,11 +69,7 @@ extension FeedAdRow {
   @ViewBuilder
   private func thumbnail() -> some View {
     Group {
-      if let url = URL(string: ad.imageURL) {
-        PickeRemoteImage(url: url) { Color.beige600 }
-      } else {
-        Color.beige600
-      }
+      PickeRemoteImage(url: ad.imageURL) { Color.beige600 }
     }
     .frame(width: 80, height: 100)
     .clipped()

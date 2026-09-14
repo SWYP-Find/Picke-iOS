@@ -71,9 +71,9 @@ struct HifiTests {
       network: "ADPICK",
       title: "광고 제목",
       subtitle: "광고 설명",
-      imageURL: "https://example.com/image.jpg",
+      imageURL: URL(string: "https://example.com/image.jpg")!,
       ctaText: "구매하러 가기",
-      clickURL: "https://ad.picke.store/c/\(code)",
+      clickURL: URL(string: "https://ad.picke.store/c/\(code)")!,
       label: "광고"
     )
   }
