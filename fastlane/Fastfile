@@ -240,7 +240,6 @@ platform :ios do
   # 🚀 TestFlight 업로드 (Debug)
   desc "Upload to TestFlight (Debug)"
   lane :QA do
-
     app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
@@ -275,7 +274,6 @@ platform :ios do
       readonly: true,
       storage_mode: "git",
       team_id: TEAM_ID,
-      api_key: lane_context[SharedValues::APP_STORE_CONNECT_API_KEY],
       app_identifier: ["io.Picke.co"],
       keychain_name: MATCH_KEYCHAIN_NAME,
       keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
@@ -368,6 +366,7 @@ platform :ios do
     begin
       # Picke/picke 그룹에 배포 (External 그룹이어야 실제 지정됨. Internal이면 자동 배포되고 아래 rescue로 넘어감)
       upload_to_testflight_with_retry(
+        api_key_path: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
         ipa: ipa_path,
         changelog: ensure_release_notes(current_marketing_version),
         groups: ["Picke", "picke"],
@@ -394,6 +393,11 @@ platform :ios do
   desc "Submit to App Store"
   lane :release do |options|
     if options[:version]
+      release_version = options[:version].to_s.strip
+      unless release_version.match?(/\A\d+\.\d+\.\d+\z/)
+        UI.user_error!("version must use the semantic version format, for example: 1.0.9")
+      end
+
       app_store_connect_api_key(
         key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
         issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
@@ -406,16 +410,27 @@ platform :ios do
       new_build_number = Time.now.strftime("%y%m%d%H%M")
       puts "🔢 새로운 빌드 번호(날짜형): #{new_build_number}"
 
-      # Extension+String.swift 파일에서 빌드 번호 업데이트
+      # Extension+String.swift 파일에서 마케팅 버전과 빌드 번호 업데이트
       extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
       content = File.read(extension_file_path)
 
-      # 빌드 번호 라인 수정
-      updated_content = content.gsub(/static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
-                                   "static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {")
+      unless content.match?(/static func appVersion\(version: String = "[^"]+"\) -> String \{/) &&
+             content.match?(/static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/)
+        UI.user_error!("Could not find appVersion or appBuildVersion in #{extension_file_path}")
+      end
+
+      updated_content = content
+        .gsub(
+          /static func appVersion\(version: String = "[^"]+"\) -> String \{/,
+          "static func appVersion(version: String = \"#{release_version}\") -> String {"
+        )
+        .gsub(
+          /static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
+          "static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {"
+        )
 
       File.write(extension_file_path, updated_content)
-      puts "✅ 빌드 번호를 #{new_build_number}로 업데이트 완료"
+      puts "✅ 앱 버전을 #{release_version}, 빌드 번호를 #{new_build_number}로 업데이트 완료"
 
       # Tuist 프로젝트 재생성
       Dir.chdir("..") do
@@ -429,7 +444,6 @@ platform :ios do
         readonly: true,
         storage_mode: "git",
         team_id: TEAM_ID,
-        api_key: lane_context[SharedValues::APP_STORE_CONNECT_API_KEY],
         app_identifier: ["io.Picke.co"],
         keychain_name: MATCH_KEYCHAIN_NAME,
         keychain_password: ENV["MATCH_KEYCHAIN_PASSWORD"]
@@ -526,6 +540,7 @@ platform :ios do
       # skip_waiting_for_build_processing: false 로 App Store Connect 처리 완료까지 기다려야
       # 심사 제출 단계에서 해당 빌드를 선택할 수 있다.
       upload_to_testflight_with_retry(
+        api_key_path: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
         ipa: ipa_path,
         app_identifier: BUNDLE_ID,
         skip_submission: true,

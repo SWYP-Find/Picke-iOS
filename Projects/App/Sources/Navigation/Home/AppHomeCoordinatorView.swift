@@ -24,9 +24,11 @@ public struct AppHomeCoordinatorView: View {
       case let .chat(chatStore):
         ChatCoordinatorView(store: chatStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       case let .notification(notificationStore):
         NotificationCoordinatorView(store: notificationStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       }
     }
   }

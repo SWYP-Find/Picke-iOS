@@ -23,8 +23,10 @@ public struct AppBattleCoordinatorView: View {
         BattleView(store: battleStore)
       case let .chatRoom(chatRoomStore):
         ChatRoomView(store: chatRoomStore)
+          .swipeBackButtonHidden()
       case let .chat(chatStore):
         ChatCoordinatorView(store: chatStore)
+          .swipeBackButtonHidden()
       }
     }
   }

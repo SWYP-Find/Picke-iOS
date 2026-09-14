@@ -9,3 +9,30 @@ skip_certificate_matching(true)
 skip_confirmation(true)
 keychain_name(ENV["MATCH_KEYCHAIN_NAME"] || "match_keychain")
 keychain_password(ENV["MATCH_KEYCHAIN_PASSWORD"])
+
+require "base64"
+require "json"
+require "tempfile"
+
+if ENV["APP_STORE_CONNECT_API_KEY_ID"] &&
+   ENV["APP_STORE_CONNECT_ISSUER_ID"] &&
+   ENV["APP_STORE_CONNECT_API_KEY_CONTENT"]
+  decoded_key = Base64.strict_decode64(ENV.fetch("APP_STORE_CONNECT_API_KEY_CONTENT"))
+  api_key_file = Tempfile.new(["picke-app-store-connect-", ".json"])
+  api_key_file.chmod(0o600)
+  api_key_file.write(
+    JSON.generate(
+      key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key: decoded_key,
+      duration: 1200,
+      in_house: false
+    )
+  )
+  api_key_file.flush
+
+  api_key_path(api_key_file.path)
+  ENV["APP_STORE_CONNECT_API_KEY_PATH"] = api_key_file.path
+
+  at_exit { api_key_file.close! }
+end

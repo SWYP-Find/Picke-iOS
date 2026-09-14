@@ -24,18 +24,23 @@ public struct ChatCoordinatorView: View {
       case let .preVote(preVoteStore):
         PreVoteView(store: preVoteStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       case let .chatRoom(chatRoomStore):
         ChatRoomView(store: chatRoomStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       case let .comment(commentStore):
         CommentView(store: commentStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       case let .commentReply(commentReplyStore):
         CommentReplyView(store: commentReplyStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       case let .curation(curationStore):
         CurationView(store: curationStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       }
     }
   }

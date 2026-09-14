@@ -42,11 +42,13 @@ public struct AppProfileCoordinatorView: View {
       case let .notification(notificationStore):
         NotificationCoordinatorView(store: notificationStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       case let .web(webStore):
         WebView(store: webStore)
       case let .chat(chatStore):
         ChatCoordinatorView(store: chatStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       }
     }
   }

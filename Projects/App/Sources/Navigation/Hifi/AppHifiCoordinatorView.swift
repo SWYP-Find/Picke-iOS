@@ -23,9 +23,11 @@ public struct AppHifiCoordinatorView: View {
         HifiView(store: hifiStore)
       case let .chat(chatStore):
         ChatCoordinatorView(store: chatStore)
+          .swipeBackButtonHidden()
       case let .notification(notificationStore):
         NotificationCoordinatorView(store: notificationStore)
           .toolbar(.hidden, for: .tabBar)
+          .swipeBackButtonHidden()
       }
     }
   }
