@@ -1,0 +1,11 @@
+# Keep the analysis snapshot; exclude local caches, renders and agent intermediates.
+*
+!.gitignore
+!GRAPH_REPORT.md
+!graph.json
+!graph.html
+!health.json
+!coverage.json
+!cost.json
+!.graphify_labels.json
+!.graphify_extract.json

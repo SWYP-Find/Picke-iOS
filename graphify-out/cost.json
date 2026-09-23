@@ -1,0 +1,13 @@
+{
+  "runs": [
+    {
+      "date": "2026-09-18T12:19:13.232226+00:00",
+      "input_tokens": null,
+      "output_tokens": null,
+      "files": 1019,
+      "note": "Host-agent token usage unavailable; no separate model API calls"
+    }
+  ],
+  "total_input_tokens": null,
+  "total_output_tokens": null
+}

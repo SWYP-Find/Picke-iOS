@@ -1,0 +1,10 @@
+{
+  "expected_files": 1019,
+  "code_files": 859,
+  "semantic_files": 160,
+  "missing_files": [],
+  "unavailable_files": [],
+  "ast_failed_sources": [],
+  "semantic_code_bridges": 2,
+  "semantic_cache_files": 160
+}
