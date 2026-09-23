@@ -128,9 +128,19 @@ private func warmBinaryCache(forwardedArguments: [String] = []) -> Int32 {
   )
 }
 
+private func setupXcodeCompilationCache() -> Int32 {
+  guard !isCIEnvironment else {
+    print("CI 환경이라 Xcode Compilation Cache 설정을 건너뜁니다.")
+    return 0
+  }
+  return runTuist(arguments: ["setup", "cache"])
+}
+
 private func installAndGenerate(forwardedArguments: [String] = []) -> Int32 {
   let installStatus = runTuist(arguments: ["install"] + installArguments(forwardedArguments: forwardedArguments))
   guard installStatus == 0 else { return installStatus }
+  let cacheSetupStatus = setupXcodeCompilationCache()
+  guard cacheSetupStatus == 0 else { return cacheSetupStatus }
   let cacheStatus = warmBinaryCache(
     forwardedArguments: forwardedArguments.filter { $0 == "--no-binary-cache" }
   )
@@ -454,10 +464,10 @@ private func printHelp() {
     🚀 Picke Tuist 도구
 
     기본 명령어:
-      ./make setup          # mise 설치 + install + 로컬 외부 캐시 준비 + generate
+      ./make setup          # mise 설치 + install + Xcode 캐시 설정 + 로컬 외부 캐시 준비 + generate
       ./make generate       # 준비된 로컬 캐시를 사용해 프로젝트 생성
-      ./make build          # 클린 + 의존성 설치 + 로컬 외부 캐시 준비 + 프로젝트 생성
-      ./make install        # 의존성 설치 + 로컬 외부 캐시 준비 + 프로젝트 생성
+      ./make build          # 클린 + 의존성 설치 + Xcode 캐시 설정 + 로컬 외부 캐시 준비 + 프로젝트 생성
+      ./make install        # 의존성 설치 + Xcode 캐시 설정 + 로컬 외부 캐시 준비 + 프로젝트 생성
       ./make cache          # 외부 바이너리 캐시 준비
       ./make cache:setup    # Xcode Compilation Cache 설정
       ./make test           # 전체 테스트 실행
@@ -502,6 +512,17 @@ private func execute(_ command: Command, forwardedArguments: [String]) -> Int32 
     guard installStatus == 0 else {
       printSetupSummary(results)
       return installStatus
+    }
+
+    if isCIEnvironment {
+      results.append(("Xcode Compilation Cache 설정", .skipped("CI 환경")))
+    } else {
+      let cacheSetupStatus = setupXcodeCompilationCache()
+      results.append(("Xcode Compilation Cache 설정", cacheSetupStatus == 0 ? .passed : .failed(cacheSetupStatus)))
+      guard cacheSetupStatus == 0 else {
+        printSetupSummary(results)
+        return cacheSetupStatus
+      }
     }
 
     if usesBinaryCache(forwardedArguments: forwardedArguments), !isCIEnvironment {

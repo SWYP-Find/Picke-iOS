@@ -686,7 +686,7 @@ OAuth redirect URI는 서버 중계 흐름을 기준으로 등록합니다.
 
 Tuist Dashboard 프로젝트는 `picke2026/picke`입니다. 모듈 캐시 프로필, 저장소, Xcode 컴파일 캐시와 업로드 정책의 기준은 [Tuist.swift](Tuist.swift)입니다.
 
-`TuistTool.swift`는 install 이후 외부 모듈 캐시를 준비하고, CI 또는 `--no-binary-cache` 옵션에서는 이 준비 단계를 생략합니다. `generate`는 별도 인증 명령이나 캐시 비활성화 옵션을 추가하지 않고 전달받은 인자로 실행합니다.
+`TuistTool.swift`는 install 이후 Xcode Compilation Cache를 설정하고 외부 모듈 캐시를 준비합니다. CI에서는 두 캐시 준비 단계를 생략하고, `--no-binary-cache` 옵션은 외부 바이너리 캐시 준비만 생략합니다. `generate`는 별도 인증 명령이나 캐시 비활성화 옵션을 추가하지 않고 전달받은 인자로 실행합니다.
 
 `./make`가 프로젝트 명령의 단일 진입점이며 `TuistTool.swift`를 실행합니다. 캐시 준비·사용·CI 제외·캐시 비활성화 옵션을 이 실행 경로에서 처리합니다. 소스를 수정하면 실행 파일을 다시 컴파일하지 않아도 다음 실행에 반영됩니다.
 

@@ -47,12 +47,21 @@ class CacheCommandsTests(unittest.TestCase):
     def test_install_warms_before_generate(self):
         result, calls = self.run_command(["install", "--no-open"])
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(calls, [["install"], ["cache", "warm", "--external-only"], ["generate", "--no-open"]])
+        self.assertEqual(calls, [
+            ["install"],
+            ["setup", "cache"],
+            ["cache", "warm", "--external-only"],
+            ["generate", "--no-open"],
+        ])
 
     def test_opt_out_does_not_warm(self):
         result, calls = self.run_command(["install", "--no-binary-cache", "--no-open"])
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(calls, [["install"], ["generate", "--no-binary-cache", "--no-open"]])
+        self.assertEqual(calls, [
+            ["install"],
+            ["setup", "cache"],
+            ["generate", "--no-binary-cache", "--no-open"],
+        ])
 
     def test_ci_does_not_warm(self):
         result, calls = self.run_command(["install"], ci=True)
@@ -64,10 +73,19 @@ class CacheCommandsTests(unittest.TestCase):
         self.assertEqual(result.returncode, 7)
         self.assertEqual(calls, [["install"]])
 
-    def test_failed_warm_stops_before_generate(self):
-        result, calls = self.run_command(["install"], failure="cache")
+    def test_failed_cache_setup_stops_before_warm(self):
+        result, calls = self.run_command(["install"], failure="setup")
         self.assertEqual(result.returncode, 7)
-        self.assertEqual(calls, [["install"], ["cache", "warm", "--external-only"]])
+        self.assertEqual(calls, [["install"], ["setup", "cache"]])
+
+    def test_failed_warm_stops_before_generate(self):
+        result, calls = self.run_command(["install"], failure="warm")
+        self.assertEqual(result.returncode, 7)
+        self.assertEqual(calls, [
+            ["install"],
+            ["setup", "cache"],
+            ["cache", "warm", "--external-only"],
+        ])
 
     def test_cache_warms_external_dependencies(self):
         result, calls = self.run_command(["cache"])
@@ -82,7 +100,12 @@ class CacheCommandsTests(unittest.TestCase):
     def test_setup_prepares_cache_before_generate(self):
         result, calls = self.run_command(["setup", "--no-open"])
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(calls, [["install"], ["cache", "warm", "--external-only"], ["generate", "--no-open"]])
+        self.assertEqual(calls, [
+            ["install"],
+            ["setup", "cache"],
+            ["cache", "warm", "--external-only"],
+            ["generate", "--no-open"],
+        ])
 
 
 if __name__ == "__main__":
