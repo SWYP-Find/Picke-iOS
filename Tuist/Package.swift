@@ -22,7 +22,6 @@
       "GTMAppAuth": .framework,
       "GTMSessionFetcherCore": .framework,
       "IssueReporting": .framework,
-      "IssueReportingPackageSupport": .framework,
       "XCTestDynamicOverlay": .framework,
       "Clocks": .framework,
       "ConcurrencyExtras": .framework,
@@ -37,6 +36,10 @@
 
       // Sharing·SQLiteData 는 여러 동적 모듈이 함께 쓰므로 단일 런타임으로 공유한다.
       // 버전 마커(Sharing1/2)는 정적으로 링크해 앱이 Sharing1.framework 를 찾지 않게 한다.
+      // _IssueReporting 은 xctest-dynamic-overlay의 재노출 shim이다. 동적으로 만들면
+      // 실제 IssueReporting.framework 와 같은 bundle identifier로 앱에 함께 임베드된다.
+      "_IssueReporting": .staticLibrary,
+      "_IssueReportingTestSupport": .staticLibrary,
       "Sharing1": .staticFramework,
       "Sharing2": .staticFramework,
       "SQLiteData": .framework,
@@ -48,13 +51,13 @@
       "StructuredQueriesSQLite": .framework,
       "StructuredQueriesSQLiteCore": .framework,
     ],
-    // 외부 SPM 패키지 타깃(Sentry/WebKit 등)에도 Explicitly Built Modules 비활성화.
-    // (Xcode 26 에서 Sentry→WebKit 빌드 시 system Network 모듈의 os_object 미제공 +
-    //  "implicit use of module files is disabled" 에러가 나므로 패키지 레벨에서 끈다)
+    // 외부 SPM 패키지 타깃에도 explicit modules를 적용해 Swift 6.4의 정확한
+    // 모듈 경로 기반 디버깅과 compilation cache를 사용한다.
+    // -debug-module-path는 Xcode의 Swift driver가 자동으로 전달한다.
     baseSettings: .settings(
       base: [
-        "SWIFT_ENABLE_EXPLICIT_MODULES": "NO",
-        "CLANG_ENABLE_EXPLICIT_MODULES": "NO",
+        "SWIFT_ENABLE_EXPLICIT_MODULES": "YES",
+        "CLANG_ENABLE_EXPLICIT_MODULES": "YES",
         // Xcode 26 의 XCTest 가 먼저 로드하는 애플 private `Sharing` 모듈과 충돌해
         // xctest 부팅이 깨진다. Point-Free 구현은 다른 모듈명으로 빌드하고
         // 소스의 `import Sharing` 은 별칭으로 이어 붙인다.
@@ -73,6 +76,12 @@
     targetSettings: [
       // 위 module-alias 와 짝. 산출물 이름 자체를 바꿔 시스템 Sharing.framework 를 가리지 않는다.
       "Sharing": .settings(base: ["PRODUCT_NAME": "PickePointFreeSharing"]),
+      // SwiftPM의 .swiftLanguageMode(.v6)를 Tuist가 SWIFT_VERSION과 -swift-version으로
+      // 중복 변환하면 Xcode 27이 언어 모드 override 경고를 낸다. 언어 모드는
+      // SWIFT_VERSION=6에 맡기고 TCAFlow가 요구하는 feature flag만 유지한다.
+      "TCAFlow": .settings(base: [
+        "OTHER_SWIFT_FLAGS": "$(inherited) -enable-experimental-feature StrictConcurrency -enable-upcoming-feature ExistentialAny",
+      ]),
     ]
   )
 #endif
