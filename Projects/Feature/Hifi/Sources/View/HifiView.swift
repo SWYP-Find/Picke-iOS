@@ -117,13 +117,7 @@ private extension HifiView {
                 }
               }
 
-            if item.id == store.exploreItems.dropFirst(2).first?.id {
-              AdFitBannerView(
-                unit: .size320x100,
-                insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
-                onAdClick: { send(.adBannerClicked) }
-              )
-            } else if let ad = store.withState({ state in
+            if let ad = store.withState({ state in
               state.exploreItems.firstIndex(where: { $0.id == item.id })
                 .flatMap { state.ad(after: $0) }
             }) {

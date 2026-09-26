@@ -26,13 +26,10 @@ public struct CurationView: View {
       GeometryReader { viewport in
         ScrollView(showsIndicators: false) {
           VStack(spacing: 16) {
-            // 큐레이션 리스트 최상단 광고 — 서버 광고와 Kakao 광고를 번갈아 노출한다.
-            MixedNativeAdView(
-              unit: .wide,
+            // 큐레이션 리스트 최상단 — 탐색과 동일한 서버 피드 광고.
+            FeedNativeAdView(
               insets: EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0),
-              placementKey: "mixedNativeAd.curation",
               viewport: viewport.frame(in: .global),
-              onAdClick: { send(.adNativeClicked) },
               onServerAdClick: { send(.serverAdClicked(network: $0)) }
             )
 

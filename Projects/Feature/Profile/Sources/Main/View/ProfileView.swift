@@ -42,13 +42,10 @@ public struct ProfileView: View {
 
             Spacer(minLength: 0)
 
-            // 마이페이지 하단 광고 — 서버 광고와 Kakao 광고를 번갈아 노출한다.
-            MixedNativeAdView(
-              unit: .wide,
+            // 마이페이지 하단 — 탐색과 동일한 서버 피드 광고.
+            FeedNativeAdView(
               insets: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16),
-              placementKey: "mixedNativeAd.profile",
               viewport: viewport.frame(in: .global),
-              onAdClick: { send(.adNativeClicked) },
               onServerAdClick: { send(.serverAdClicked(network: $0)) }
             )
           }

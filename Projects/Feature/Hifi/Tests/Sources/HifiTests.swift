@@ -5,19 +5,20 @@ import AdDomainInterface
 
 struct HifiTests {
   @Test
-  func serverAdsFollowEveryThreeItemsAfterKakaoSlot() {
+  func serverAdsFollowEveryThreeItemsIncludingFirstSlot() {
     var state = HifiFeature.State()
     state.ads = [ad("first"), ad("second")]
     #expect(state.ad(after: -1) == nil)
     #expect(state.ad(after: 0) == nil)
-    #expect(state.ad(after: 2) == nil)
+    #expect(state.ad(after: 2)?.code == "first")
     #expect(state.ad(after: 4) == nil)
-    #expect(state.ad(after: 5)?.code == "first")
-    #expect(state.ad(after: 8)?.code == "second")
-    #expect(state.ad(after: 11)?.code == "first")
-    #expect(state.ad(after: 14)?.code == "second")
+    #expect(state.ad(after: 5)?.code == "second")
+    #expect(state.ad(after: 8)?.code == "first")
+    #expect(state.ad(after: 11)?.code == "second")
+    #expect(state.ad(after: 14)?.code == "first")
     #expect(state.ad(after: 12) == nil)
     state.ads = []
+    #expect(state.ad(after: 2) == nil)
     #expect(state.ad(after: 5) == nil)
   }
 

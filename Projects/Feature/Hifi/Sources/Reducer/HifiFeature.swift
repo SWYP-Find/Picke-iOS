@@ -30,7 +30,7 @@ public struct HifiFeature {
 
     public func ad(after index: Int) -> FeedAd? {
       guard index >= 0, (index + 1).isMultiple(of: 3) else { return nil }
-      let adIndex = (index + 1) / 3 - 2
+      let adIndex = (index + 1) / 3 - 1
       guard adIndex >= 0, !ads.isEmpty else { return nil }
       return ads[adIndex % ads.count]
     }
