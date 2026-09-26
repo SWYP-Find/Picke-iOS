@@ -409,6 +409,8 @@ extension ChatRoomView {
         onBackward: { send(.seekBackwardTapped) },
         onTogglePlay: { send(.togglePlayTapped) },
         onForward: { send(.seekForwardTapped) },
+        onReplay: { send(.replayTapped) },
+        isReplayEnabled: store.canScrub,
         // 안드로이드 시안: 재생 컨트롤 아이콘은 브라운(primary500).
         tint: .primary500
       )

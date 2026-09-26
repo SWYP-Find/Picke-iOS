@@ -213,6 +213,7 @@ public struct ChatRoomFeature {
     case togglePlayTapped
     case seekBackwardTapped
     case seekForwardTapped
+    case replayTapped
     case scrub(TimeInterval)
     case optionTapped(String)
     case confirmOptionTapped
@@ -403,6 +404,22 @@ extension ChatRoomFeature {
       state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
         await player.seek(to: target)
+      }
+
+    case .replayTapped:
+      // 다시듣기는 끝까지 들은 적이 있는 경우(canScrub)에만 동작한다.
+      guard state.canScrub else { return .none }
+      state.currentTime = 0
+      state.isPlaying = true
+      state.currentNodeId = state.scenario?.startNodeId
+      state.visibleNodeIds = state.scenario.map { [$0.startNodeId] } ?? []
+      state.isWaitingForNodeSelection = false
+      state.selectedOptionLabel = nil
+      state.confirmedSelection = nil
+      state.hasPresentedFinalVoteAlert = false
+      return .run { [player = audioPlayer] _ in
+        await player.seek(to: 0)
+        await player.play()
       }
 
     case let .scrub(time):

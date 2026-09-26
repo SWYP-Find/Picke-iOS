@@ -12,6 +12,9 @@ public struct AudioPlayerControlView: View {
   private let onBackward: () -> Void
   private let onTogglePlay: () -> Void
   private let onForward: () -> Void
+  private let onReplay: () -> Void
+  /// 다시듣기 활성 여부. 끝까지 들은 적이 있을 때만 true.
+  private let isReplayEnabled: Bool
   /// 아이콘 색상. 기본은 기존 동작(회색). 채팅방은 브라운(primary500)을 주입한다.
   private let tint: Color
 
@@ -20,12 +23,16 @@ public struct AudioPlayerControlView: View {
     onBackward: @escaping () -> Void,
     onTogglePlay: @escaping () -> Void,
     onForward: @escaping () -> Void,
+    onReplay: @escaping () -> Void,
+    isReplayEnabled: Bool,
     tint: Color
   ) {
     _isPlaying = isPlaying
     self.onBackward = onBackward
     self.onTogglePlay = onTogglePlay
     self.onForward = onForward
+    self.onReplay = onReplay
+    self.isReplayEnabled = isReplayEnabled
     self.tint = tint
   }
 
@@ -36,6 +43,25 @@ public struct AudioPlayerControlView: View {
       forwardButton()
     }
     .padding(.horizontal, 4)
+    .frame(maxWidth: .infinity)
+    .overlay(alignment: .topTrailing) {
+      replayButton()
+    }
+  }
+
+  @ViewBuilder
+  private func replayButton() -> some View {
+    Button(action: onReplay) {
+      controlColumn(
+        systemImage: "arrow.counterclockwise",
+        iconColor: tint,
+        iconSize: CGSize(width: 24, height: 55),
+        caption: "다시듣기"
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(!isReplayEnabled)
+    .opacity(isReplayEnabled ? 1 : 0.4)
   }
 
   @ViewBuilder

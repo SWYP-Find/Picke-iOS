@@ -237,7 +237,7 @@ private extension HifiView {
               .pretendardFont(.regular13)
               .foregroundStyle(.neutral400)
               .lineSpacing(13 * 0.4)
-              .lineLimit(1)
+              .lineLimit(2)
               .truncationMode(.tail)
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(.horizontal, 2)
