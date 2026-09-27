@@ -49,6 +49,15 @@ public struct ChatCoordinator {
       switch route {
       case let .preVote(battleId):
         self.init(battleId: battleId)
+      case let .finalVote(battleId):
+        self.init(battleId: battleId)
+        routes = [.root(
+          .preVote(.init(
+            battleId: battleId,
+            voteMode: .post
+          )),
+          embedInNavigationView: true
+        )]
       case let .perspective(perspectiveId, commentId):
         self.init(perspectiveId: perspectiveId, commentId: commentId)
       case let .comment(battleId):

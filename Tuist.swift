@@ -25,7 +25,17 @@ let tuist = Tuist(
     ),
     installOptions: .options(),
     cacheOptions: .options(
-      profiles: .profiles(default: .onlyExternal)
+      profiles: .profiles(
+        [
+          // 두 패키지의 동일 이름 타깃은 Tuist의 XCFramework 출력 경로가 충돌한다.
+          // 의존성은 유지하고 해당 타깃만 소스로 빌드한다.
+          "picke-external": .profile(
+            .onlyExternal,
+            except: [.named("IssueReporting"), .named("IssueReportingTestSupport")]
+          ),
+        ],
+        default: .custom("picke-external")
+      )
     )
   )
 )

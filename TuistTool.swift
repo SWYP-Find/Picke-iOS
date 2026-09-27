@@ -95,8 +95,10 @@ private func cacheWarmArguments(forwardedArguments: [String]) -> [String] {
   }
 
   var arguments = ["cache", "warm"]
-  if !warmArguments.contains("--external-only"), !warmArguments.contains("--no-external-only") {
-    arguments.append("--external-only")
+  if !warmArguments.contains("--external-only"),
+     !warmArguments.contains("--no-external-only"),
+     !warmArguments.contains(where: { $0 == "--cache-profile" || $0.hasPrefix("--cache-profile=") }) {
+    arguments += ["--cache-profile", "picke-external"]
   }
   return arguments + warmArguments
 }

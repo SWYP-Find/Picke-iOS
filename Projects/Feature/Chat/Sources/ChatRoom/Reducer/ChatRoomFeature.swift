@@ -611,7 +611,7 @@ extension ChatRoomFeature {
       }
     }
 
-    guard let nextNodeId = currentNode.autoNextNodeId,
+    guard let nextNodeId = scenario.nextNodeId(for: currentNode),
           scenario.nodes.contains(where: { $0.nodeId == nextNodeId }),
           state.currentNodeId != nextNodeId
     else { return nil }

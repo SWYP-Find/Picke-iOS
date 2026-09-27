@@ -9,6 +9,8 @@ import Foundation
 public enum ChatRoute: Equatable, Sendable {
   /// 배틀 상세 투표 플로우 진입.
   case preVote(battleId: Int)
+  /// 콘텐츠 시청 완료 후 최종투표 진입.
+  case finalVote(battleId: Int)
   /// 딥링크 알림에서 관점/답글 화면으로 바로 진입.
   case perspective(perspectiveId: Int, commentId: Int?)
   /// 이미 참여 완료한 배틀 — 관점(댓글) 화면으로 바로 진입.

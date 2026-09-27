@@ -57,8 +57,12 @@ final class AudioPlayerService {
   private var timeObserverToken: Any?
 
   private init() {
-    try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-    try? AVAudioSession.sharedInstance().setActive(true)
+    // setActive 는 메인 스레드에서 호출하면 UI 가 멈출 수 있어(Hang Risk) 백그라운드에서 처리한다.
+    Task.detached(priority: .userInitiated) {
+      let session = AVAudioSession.sharedInstance()
+      try? session.setCategory(.playback, mode: .default)
+      try? session.setActive(true)
+    }
     installPeriodicObserver()
   }
 

@@ -82,7 +82,7 @@ private extension AppBattleCoordinator {
           }
         }
       }
-      state.routes.push(.chat(.init(route: .preVote(battleId: battleId))))
+      state.routes.push(.chat(.init(route: .finalVote(battleId: battleId))))
       return .none
 
     case .routeAction(_, action: .chat(.delegate(.dismiss))):
