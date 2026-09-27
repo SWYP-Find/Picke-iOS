@@ -378,12 +378,12 @@ platform :ios do
     upload_build_to_sentry
 
     begin
-      # Picke/picke 그룹에 배포 (External 그룹이어야 실제 지정됨. Internal이면 자동 배포되고 아래 rescue로 넘어감)
+      # picke/PICKE 그룹에 배포한다.
       upload_to_testflight_with_retry(
         api_key_path: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
         ipa: ipa_path,
         changelog: ensure_release_notes(current_marketing_version),
-        groups: ["Picke", "picke"],
+        groups: ["picke", "PICKE"],
         beta_app_description: "Picke 앱입니다.",
         notify_external_testers: true,
         skip_waiting_for_build_processing: false,
@@ -393,7 +393,7 @@ platform :ios do
       # 바이너리 업로드는 끝났는데 그룹/심사 배포 단계만 실패하면 빌드 실패시키지 않고 경고만
       if e.message.include?("Another build is in review") || e.message.downcase.include?("beta review") ||
          e.message.include?("internal group") || e.message.downcase.include?("cannot be assigned")
-        UI.important("⚠️ 그룹/심사 배포 단계 보류 — 바이너리 업로드는 완료됨. (Picke/picke가 Internal 그룹이면 자동 배포됨)")
+        UI.important("⚠️ 그룹/심사 배포 단계 보류 — 바이너리 업로드는 완료됨. (picke/PICKE가 Internal 그룹이면 자동 배포됨)")
       else
         raise e
       end
