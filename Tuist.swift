@@ -8,7 +8,8 @@ let tuist = Tuist(
   // cache warm 프로세스만 로컬 저장소를 쓰도록 handle 을 비운다.
   fullHandle: "picke2026/picke",
   xcodeCache: .xcodeCache(
-    upload: true
+    // Attendance와 동일하게 로컬 워커는 캐시를 업로드하지 않는다.
+    upload: Environment.isCI
   ),
   project: .tuist(
     compatibleXcodeVersions: .all,

@@ -342,6 +342,7 @@ platform :ios do
       puts "✅ Using workspace: #{workspace_name}"
       puts "✅ Full workspace path: #{workspace_path}"
 
+      # Tuist CAS 조회가 아카이브 실행 큐를 막지 않도록 배포에서는 컴파일 캐시를 끈다.
       ipa_path = build_app(
         workspace: workspace_path,
         scheme: "Picke-Stage",
@@ -357,6 +358,7 @@ platform :ios do
         use_system_scm: true,
         xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                 "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
+                "SWIFT_ENABLE_COMPILE_CACHE=NO CLANG_ENABLE_COMPILE_CACHE=NO " +
                 "SWIFT_COMPILATION_MODE=incremental -parallelizeTargets " +
                 "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
                 "FRAMEWORK_SEARCH_PATHS='$(inherited)' LIBRARY_SEARCH_PATHS='$(inherited)' " +
@@ -527,6 +529,7 @@ platform :ios do
           use_system_scm: true,
           xcargs: "CODE_SIGN_IDENTITY='Apple Distribution' CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{TEAM_ID} " +
                   "COMPILER_INDEX_STORE_ENABLE=NO ENABLE_BITCODE=NO " +
+                  "SWIFT_ENABLE_COMPILE_CACHE=NO CLANG_ENABLE_COMPILE_CACHE=NO " +
                   "SWIFT_COMPILATION_MODE=incremental -parallelizeTargets " +
                   "ENABLE_PARALLEL_SIGNING=YES DISABLE_MANUAL_TARGET_ORDER_BUILD_WARNING=YES " +
                   "FRAMEWORK_SEARCH_PATHS='$(inherited)' LIBRARY_SEARCH_PATHS='$(inherited)' " +
