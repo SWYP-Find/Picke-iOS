@@ -1,4 +1,5 @@
 require "shellwords"
+require "yaml"
 
 # Fastlane 기본 설정
 default_platform(:ios)
@@ -232,6 +233,64 @@ def current_marketing_version
   File.read(path)[/appVersion\(version: String = "([^"]+)"\)/, 1] || "0.0.0"
 end
 
+TESTFLIGHT_NOTES_FILE = File.expand_path("release_notes.yml", __dir__)
+
+def matching_category(categories, subject)
+  haystack = subject.to_s.downcase
+
+  matched = categories.find do |category|
+    Array(category["keywords"]).any? { |keyword| haystack.include?(keyword.to_s.downcase) }
+  end
+
+  matched || categories.find { |category| category["id"] == "default" } || categories.last
+end
+
+# 빌드번호는 YYMMDDHHMM 이라 항상 증가한다. 개수로 나눈 나머지를 쓰면
+# 별도 상태 없이 배포마다 같은 카테고리 안에서도 다른 문장이 배정된다.
+def rotating_test_note(build_number, subject)
+  categories = YAML.load_file(TESTFLIGHT_NOTES_FILE)["categories"]
+  return nil if categories.nil? || categories.empty?
+
+  notes = Array(matching_category(categories, subject)&.fetch("notes", nil))
+  return nil if notes.empty?
+
+  notes[build_number.to_i % notes.size]
+rescue StandardError => e
+  UI.important("release_notes.yml 을 읽지 못해 안내 문구를 생략한다: #{e.message}")
+  nil
+end
+
+# "fix: 배포 오류 수정 (#96)" -> "배포 오류 수정"
+def humanized_commit_subject
+  subject = ENV.fetch("RELEASE_NOTES", "").strip
+  return nil if subject.empty?
+
+  cleaned = subject
+    .sub(/\A(feat|fix|chore|refactor|docs|test|ci|build|perf|style)(\([^)]*\))?!?:\s*/i, "")
+    .sub(/\s*\(#\d+\)\z/, "")
+    .strip
+
+  cleaned.empty? ? nil : cleaned
+end
+
+def testflight_changelog(build_number)
+  lines = []
+  subject = humanized_commit_subject
+
+  # 카테고리 판별은 접두사를 벗기기 전 원문으로 해야 "fix:" 같은 힌트를 살릴 수 있다.
+  note = rotating_test_note(build_number, ENV.fetch("RELEASE_NOTES", ""))
+  lines << note if note
+
+  if subject
+    lines << "" unless lines.empty?
+    lines << "이번 변경: #{subject}"
+  end
+
+  lines << "빌드 #{build_number}"
+  lines.join("\n")
+end
+
+
 platform :ios do
   before_all do
     unlock_match_keychain
@@ -382,7 +441,7 @@ platform :ios do
       upload_to_testflight_with_retry(
         api_key_path: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
         ipa: ipa_path,
-        changelog: ensure_release_notes(current_marketing_version),
+        changelog: testflight_changelog(new_build_number),
         groups: ["picke", "PICKE"],
         beta_app_description: "Picke 앱입니다.",
         notify_external_testers: true,
