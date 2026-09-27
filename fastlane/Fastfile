@@ -239,7 +239,12 @@ platform :ios do
 
   # 🚀 TestFlight 업로드 (Debug)
   desc "Upload to TestFlight (Debug)"
-  lane :QA do
+  lane :QA do |options|
+    release_version = (options[:version] || ENV["BOT_VERSION"] || current_marketing_version).to_s.strip
+    unless release_version.match?(/\A\d+\.\d+\.\d+\z/)
+      UI.user_error!("version must use the semantic version format, for example: 1.1.0")
+    end
+
     app_store_connect_api_key(
       key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
       issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
@@ -252,15 +257,22 @@ platform :ios do
     new_build_number = Time.now.strftime("%y%m%d%H%M")
     puts "🔢 새로운 빌드 번호(날짜형): #{new_build_number}"
 
-    # Extension+String.swift 의 빌드 번호 갱신 (tuist generate 시 CFBundleVersion 으로 반영)
+    # 요청한 마케팅 버전과 빌드 번호를 Tuist 생성 전에 함께 반영한다.
     extension_file_path = "../Plugins/ProjectTemplatePlugin/ProjectDescriptionHelpers/Project+Templete/Extension+String.swift"
     extension_content = File.read(extension_file_path)
+    unless extension_content.match?(/static func appVersion\(version: String = "[^"]+"\) -> String \{/)
+      UI.user_error!("Could not find appVersion in #{extension_file_path}")
+    end
+    extension_content = extension_content.gsub(
+      /static func appVersion\(version: String = "[^"]+"\) -> String \{/,
+      "static func appVersion(version: String = \"#{release_version}\") -> String {"
+    )
     extension_content = extension_content.gsub(
       /static func appBuildVersion\(buildVersion: String = "\d+"\) -> String \{/,
       "static func appBuildVersion(buildVersion: String = \"#{new_build_number}\") -> String {"
     )
     File.write(extension_file_path, extension_content)
-    puts "✅ 빌드 번호를 #{new_build_number}로 업데이트 완료"
+    puts "✅ 앱 버전을 #{release_version}, 빌드 번호를 #{new_build_number}로 업데이트 완료"
 
     # 갱신된 빌드 번호 반영을 위해 Tuist 강제 재생성
     Dir.chdir("..") do
