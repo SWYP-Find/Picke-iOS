@@ -2,7 +2,9 @@
 
 <div align="center">
 
-**가치관 충돌에서 시작하는 1:1 철학 배틀 플랫폼**
+<img width="120" alt="Picke 앱 아이콘" src="Projects/App/Resources/Assets.xcassets/AppIcon.appiconset/1024.png">
+
+**가치관 충돌에서 시작하는 참여형 철학 배틀 플랫폼**
 
 ![Platform](https://img.shields.io/badge/Platform-iOS-orange.svg)
 ![Swift](https://img.shields.io/badge/Swift-6-FA7343.svg?logo=swift&logoColor=white)
@@ -10,23 +12,36 @@
 ![Architecture](https://img.shields.io/badge/Architecture-TCA-purple.svg)
 ![Tuist](https://img.shields.io/badge/Tuist-4.207.0-blue.svg)
 
-[아키텍처](#아키텍처) · [모듈 그래프](#모듈-그래프) · [빠른 시작](#빠른-시작) · [개발 명령어](#개발-명령어)
+[앱 스토어](https://apps.apple.com/kr/app/id6776677382) · [아키텍처](#아키텍처) · [빠른 시작](#빠른-시작) · [개발 명령어](#개발-명령어)
 
 </div>
 
 ## 프로젝트
 
-Picke는 일상의 가치관 차이를 오늘의 배틀, 1:1 토론, 사전·사후 투표, 리캡 공유로 이어 주는 iOS 앱입니다.
+Picke는 일상의 질문을 철학 배틀로 풀어내는 iOS 앱입니다. 서로 다른 관점의 토론을 듣고, 투표와 의견으로 자신의 생각을 표현하며, 배틀 전후의 변화와 나의 철학자 유형을 확인할 수 있습니다.
 
 주요 기능:
 
-- Google, Kakao, Apple 기반 소셜 로그인
-- 오늘의 배틀, 사전 투표, 1:1 토론, 사후 투표, 리캡 공유
+- Apple·Google·Kakao 소셜 로그인
+- 오늘의 배틀, 토론 콘텐츠와 오디오 재생, 사전·사후 투표
 - 홈 피드, 탐색, 검색, 큐레이팅 추천
 - 관점 등록, 대댓글, 좋아요, 신고
-- 마이페이지, 포인트, 무료 충전, 배틀 기록, 알림 설정
-- APNs 푸시 알림과 딥링크 라우팅
-- Mixpanel 분석, Google Mobile Ads, Sentry 오류 수집
+- 철학자 유형, 리캡 공유, 포인트와 배틀 기록
+- 푸시 알림, 딥링크, 알림 설정
+
+## 스크린샷
+
+<div align="center">
+
+| 홈 | 철학 배틀 | 관점과 댓글 |
+|:---:|:---:|:---:|
+| <img width="200" alt="Picke 홈" src="fastlane/screenshots/ko/0_APP_IPHONE_65_0.png"> | <img width="200" alt="철학 배틀과 오디오 재생" src="fastlane/screenshots/ko/1_APP_IPHONE_65_1.png"> | <img width="200" alt="관점과 댓글" src="fastlane/screenshots/ko/2_APP_IPHONE_65_2.png"> |
+
+| 오늘의 투표 | 나의 철학자 유형 |
+|:---:|:---:|
+| <img width="200" alt="오늘의 투표" src="fastlane/screenshots/ko/3_APP_IPHONE_65_3.png"> | <img width="200" alt="나의 철학자 유형" src="fastlane/screenshots/ko/4_APP_IPHONE_65_4.png"> |
+
+</div>
 
 ## 아키텍처
 
@@ -125,6 +140,18 @@ flowchart TD
 - Assembly 모듈은 live 구현을 `DependencyValues`에 등록합니다.
 - Feature는 Repository 구현체를 직접 알지 않고 UseCase 또는 Interface만 사용합니다.
 - 테스트·프리뷰 기본값은 Interface 또는 Testing 타깃에서 관리합니다.
+
+### 모듈 그래프 생성
+
+~~~bash
+./make graph       # 외부 패키지·Demo 제외, Tests·Testing·Interface 포함
+./make graph:prod  # 외부 패키지·Demo·테스트 타깃 제외
+~~~
+
+Graphviz가 필요하며, 실행 결과는 저장소 루트의 `graph.png`로 생성됩니다.
+
+<details>
+<summary>전체 42개 모듈의 상세 의존성 그래프</summary>
 
 <!-- MODULE-DIAGRAMS:START -->
 ## 모듈 그래프
@@ -618,6 +645,8 @@ SVG 생성에는 Graphviz의 `dot`이 필요합니다. 앱 빌드나 Tuist 캐�
 
 <!-- MODULE-DIAGRAMS:END -->
 
+</details>
+
 ## 기술 스택
 
 | 영역 | 기술 |
@@ -625,129 +654,69 @@ SVG 생성에는 Graphviz의 `dot`이 필요합니다. 앱 빌드나 Tuist 캐�
 | 언어 | Swift 6, Swift Concurrency |
 | UI | SwiftUI |
 | 상태 관리 | The Composable Architecture 1.26.2 |
-| 내비게이션 | TCAFlow 1.1.8 |
+| 내비게이션 | TCAFlow main |
 | 프로젝트 | Tuist 4.207.0, Mise |
 | 의존성 주입 | Point-Free Dependencies |
 | 네트워크 | PickeNetwork, Alamofire |
-| 로컬 데이터 | SQLiteData |
-| 인증 | Sign in with Apple, GoogleSignIn, AppAuth |
-| 저장소 | PickeStorage, Keychain |
+| 인증 | Sign in with Apple, GoogleSignIn, AppAuth, Kakao OAuth |
+| 저장소 | PickeStorage, Keychain, SQLiteData |
 | 이미지 | SDWebImageSwiftUI, Kingfisher |
 | 모니터링 | Firebase Crashlytics, Sentry |
-| 분석·광고 | Mixpanel, Google Mobile Ads |
+| 분석·광고 | Mixpanel, Google Mobile Ads, Kakao AdFit |
 | 테스트 | Swift Testing, XCTest, Tuist |
 
-의존성 버전의 실제 기준은 [Tuist/Package.swift](Tuist/Package.swift)와 [Tuist/Package.resolved](Tuist/Package.resolved)입니다. 보조 패키지 `swift-dependencies`는 Tuist에서 확인된 traits 조건부 의존성 누락 문제를 피하도록 `1.12.0`에 고정했습니다. 이 제한은 소스 빌드와 외부 모듈 캐시 모두에 적용됩니다.
-
-지원 환경:
-
-- iOS 17.0 이상
-- Swift 6
-- Xcode 26 이상
-- iPhone
+패키지 선언과 실제 해석된 버전은 [Tuist/Package.swift](Tuist/Package.swift)와 [Tuist/Package.resolved](Tuist/Package.resolved)를 기준으로 합니다.
 
 ## 빌드 환경
 
-로컬 확인 기준:
+| 구성 | 용도 | 스킴 |
+|---|---|---|
+| Stage | 로컬 개발·디버깅 | Picke-Stage |
+| Prod | 배포·아카이브 | Picke-Prod |
+| Release | 기본 최적화 빌드 | Picke |
 
-- Xcode 26.5
-- Apple Swift 6.3.2
-- Tuist 4.207.0
+iOS 17.0 이상과 iPhone을 지원합니다. Swift 도구 버전 6.2 이상을 지원하는 Xcode가 필요하며, Ruby·Tuist·xcbeautify 버전은 [mise.toml](mise.toml)에 고정되어 있습니다.
 
-Ruby, Tuist, xcbeautify 버전은 [mise.toml](mise.toml)에 고정되어 있습니다.
-
-~~~bash
-mise install
-mise exec -- tuist version
-mise which ruby
-mise exec -- xcbeautify --version
-~~~
-
-빌드 환경별 xcconfig에 필요한 값을 채웁니다.
-
-~~~xcconfig
-BASE_URL              = picke.store
-GOOGLE_CLIENT_ID      = YOUR_GOOGLE_WEB_CLIENT_ID
-GOOGLE_IOS_CLIENT_ID  = YOUR_GOOGLE_IOS_CLIENT_ID
-REVERSED_CLIENT_ID    = YOUR_REVERSED_CLIENT_ID
-KAKAO_REST_API_KEY    = YOUR_KAKAO_REST_API_KEY
-REWARD_AD_UNIT        = YOUR_REWARD_AD_UNIT
-~~~
-
-OAuth redirect URI는 서버 중계 흐름을 기준으로 등록합니다.
-
-| Provider | Redirect URI |
-|---|---|
-| Google | `https://picke.store/oauth/google` |
-| Kakao | `https://picke.store/oauth/kakao` |
-| Apple | Native Sign in with Apple |
-
-## Tuist Dashboard와 캐시
-
-Tuist Dashboard 프로젝트는 `picke2026/picke`입니다. 모듈 캐시 프로필, 저장소, Xcode 컴파일 캐시와 업로드 정책의 기준은 [Tuist.swift](Tuist.swift)입니다.
-
-`TuistTool.swift`는 install 이후 Xcode Compilation Cache를 설정하고 외부 모듈 캐시를 준비합니다. CI에서는 두 캐시 준비 단계를 생략하고, `--no-binary-cache` 옵션은 외부 바이너리 캐시 준비만 생략합니다. `generate`는 별도 인증 명령이나 캐시 비활성화 옵션을 추가하지 않고 전달받은 인자로 실행합니다.
-
-`./make`가 프로젝트 명령의 단일 진입점이며 `TuistTool.swift`를 실행합니다. 캐시 준비·사용·CI 제외·캐시 비활성화 옵션을 이 실행 경로에서 처리합니다. 소스를 수정하면 실행 파일을 다시 컴파일하지 않아도 다음 실행에 반영됩니다.
-
-```bash
-./make install --no-open   # 의존성 설치 → 로컬 외부 캐시 준비 → 프로젝트 생성
-./make generate --no-open  # 준비된 캐시를 사용해 프로젝트 생성
-./make cache               # 로컬 외부 바이너리 캐시 준비
-./make cache:setup         # Xcode Compilation Cache 설정
-./make setup               # mise 설치 → install → cache warm → generate
-```
-
-`generate`는 캐시를 새로 빌드하지 않습니다. 첫 실행이나 의존성 변경 후에는 `install` 또는 `cache`로 준비합니다. 캐시 적중은 Xcode 버전, 구성과 의존성 해시가 일치해야 합니다.
-
-```bash
-./make install --no-binary-cache --no-open  # 캐시 준비와 사용 모두 생략
-./make generate --no-binary-cache --no-open
-./make test --no-binary-cache
-```
-
-`./make cache`는 `tuist cache warm --external-only`를 실행합니다. `TUIST_LOCAL_CACHE_ONLY=true` 환경변수를 함께 전달하며, 실제 저장소·연결 정책은 `Tuist.swift`가 결정합니다. 캐시 준비가 실패하면 오류를 반환하고 generate로 넘어가지 않습니다. `./make cache:setup`은 Attendance와 동일하게 `tuist setup cache`를 실행하는 별도 명령이며, `Tuist.swift`의 컴파일 캐시 설정과 함께 사용합니다.
-
-명령 순서와 CI/opt-out 동작은 `python3 scripts/tests/test_tuist_cache_commands.py`로 검사합니다. 이 검사는 실제 패키지 설치나 캐시 빌드를 실행하지 않습니다.
+환경 설정은 `Config/Stage.xcconfig`와 `Config/Prod.xcconfig`에서 관리합니다. API 주소, OAuth 클라이언트 ID, 광고 설정과 `GoogleService-Info.plist` 등 저장소에 포함되지 않은 파일은 팀의 안전한 공유 경로에서 준비합니다.
 
 ## 빠른 시작
 
+### 요구사항
+
+- Swift 6.2 이상을 지원하는 Xcode
+- Homebrew와 Mise
+- 프로젝트 환경 설정 파일과 GoogleService-Info.plist
+
+### 설치
+
 ~~~bash
-git clone git@github.com:SWYP-Find/Picke-iOS.git
+git clone https://github.com/SWYP-Find/Picke-iOS.git
 cd Picke-iOS
 
+# Mise 도구 설치 → 의존성·캐시 준비 → 워크스페이스 생성
 ./make setup
+
 open Picke.xcworkspace
 ~~~
 
-Xcode에서 `Picke-Stage` 또는 필요한 스킴과 사용할 iPhone 시뮬레이터를 선택해 실행합니다.
-
-`CLAUDE.md`가 필요한 도구는 `AGENTS.md`와 같은 내용을 보도록 심볼릭 링크를 만들 수 있습니다.
-
-~~~bash
-ln -s AGENTS.md CLAUDE.md
-~~~
+Xcode에서 **Picke-Stage** 스킴과 사용할 iPhone 시뮬레이터를 선택해 실행합니다.
 
 ## 개발 명령어
 
 ~~~bash
-./make setup                     # mise 설치, install, 로컬 외부 캐시 준비, generate
+./make setup                     # 도구 설치, 의존성·캐시 준비, 프로젝트 생성
 ./make generate                  # Demo 앱을 포함해 Xcode 프로젝트 생성
 ./make generate --no-open        # Xcode를 열지 않고 프로젝트 생성
-./make generate --no-binary-cache --no-open
-./make build                     # clean, install, generate
-./make install                   # 의존성 설치, 로컬 외부 캐시 준비 후 generate
+./make build                     # clean → install → 캐시 준비 → generate
+./make install                   # 의존성 설치, 캐시 준비 후 generate
 ./make test                      # 전체 테스트
-./make test --no-binary-cache    # 로컬 바이너리 캐시 없이 전체 테스트
 ./make cache                     # 외부 바이너리 캐시 준비
 ./make cache:setup               # Xcode Compilation Cache 설정
 ./make format                    # SwiftFormat 적용
 ./make lint                      # SwiftFormat 검사
 ./make clean                     # 생성 프로젝트 정리
-./make reset                     # DerivedData 정리 후 프로젝트 재생성
+./make reset                     # 앱 DerivedData 정리 후 프로젝트 재생성
 ~~~
-
-`Makefile`은 사용하지 않습니다. 테스트는 `./make test` 또는 `mise exec -- tuist test`로 실행합니다.
 
 새 모듈 생성:
 
@@ -757,41 +726,87 @@ ln -s AGENTS.md CLAUDE.md
 ./make service <이름>
 ./make domain <이름>
 ./make ui <이름>
-./make module <레이어> <이름>
 
-# 자동으로 만든 카탈로그 case가 원하는 이름과 다를 때
+# 카탈로그 케이스 이름을 직접 지정할 때
 ./make feature <이름> --case <케이스명>
 ~~~
 
-모듈 생성 명령은 scaffold뿐 아니라 모듈 카탈로그와 해당 레이어 Assembly 의존성도 함께 갱신합니다.
+모듈 생성 명령은 scaffold와 모듈 카탈로그, 해당 레이어 Assembly 의존성을 함께 갱신합니다.
 
-## 배포와 자동화
+### 캐시
 
-- Fastlane QA와 release 레인은 빌드 번호를 갱신한 뒤 `tuist generate --no-binary-cache --no-open`로 워크스페이스를 재생성합니다.
-- workspace가 없을 때 fallback 경로는 `mise exec -- tuist install` 후 `./make generate --no-binary-cache --no-open`을 실행합니다.
-- Fastlane QA/release 배포가 성공하면 같은 IPA를 Tuist Preview의 `qa`/`release` 트랙에 공유합니다. Preview 업로드에는 Tuist 로그인이 필요합니다.
-- 이 IPA는 App Store Connect용으로 서명되어 Preview 링크에서 기기에 직접 설치할 수 없습니다. 기기 테스트는 TestFlight를 사용합니다.
-- Tuist Preview 업로드가 실패해도 이미 완료된 TestFlight/App Store 배포는 유지되며, Fastlane 로그에 경고가 남습니다.
+[Tuist Dashboard](https://tuist.dev/picke2026/picke) 연결과 캐시 정책은 [Tuist.swift](Tuist.swift), 명령 실행 흐름은 [TuistTool.swift](TuistTool.swift)에서 관리합니다.
+
+- `setup`과 `install`은 Xcode Compilation Cache와 로컬 외부 바이너리 캐시를 준비합니다.
+- `generate`는 준비된 캐시를 사용하며 새로 빌드하지 않습니다.
+- CI에서는 `./make`의 캐시 준비 단계를 생략합니다.
+- `picke-external` 프로필은 IssueReporting과 IssueReportingTestSupport를 캐시에서 제외하고 소스로 빌드합니다.
+
+캐시 없이 확인하려면:
+
+~~~bash
+./make install --no-binary-cache --no-open
+./make generate --no-binary-cache --no-open
+./make test --no-binary-cache
+~~~
+
+## 테스트와 CI
+
+- `./make test`로 Tuist 테스트를 실행합니다.
+- Workspace의 자동 생성 스킴은 관련 타깃을 기준으로 코드 커버리지를 수집합니다.
+- Pull Request에는 Codex·Gemini 코드 리뷰 워크플로가 구성되어 있습니다.
+- `v*` 태그를 푸시하면 해당 커밋을 `release` 브랜치에 병합하고 GitHub Release를 생성하거나 최신 릴리스로 표시합니다.
+
+관련 워크플로:
+
+- [Codex PR 리뷰](.github/workflows/codex-pr-review.yml)
+- [Gemini 코드 리뷰](.github/workflows/gemini-code-review.yml)
+- [릴리스 브랜치·GitHub Release 동기화](.github/workflows/release-sync.yml)
+
+## 배포
+
+[Fastlane](fastlane/README.md)으로 TestFlight 업로드와 App Store 심사 제출을 진행합니다.
+
+| 레인 | 용도 |
+|---|---|
+| QA | TestFlight 빌드·업로드 |
+| release | App Store 배포 |
+| submit_for_review | 이미 업로드한 버전의 심사 제출 |
+
+QA·release 레인은 빌드 번호를 갱신하고 바이너리 캐시 없이 워크스페이스를 재생성합니다. 배포 성공 후 같은 IPA를 Tuist Preview에도 공유하며, 기기 테스트는 TestFlight를 사용합니다.
+
+배포 이력은 [GitHub Releases](https://github.com/SWYP-Find/Picke-iOS/releases)에서 확인할 수 있습니다.
 
 ## 개발 가이드
 
 - [TCA 패턴](docs/agent/tca-patterns.md)
 - [SwiftUI 패턴](docs/agent/swiftui-patterns.md)
-- [TCAFlow 네비게이션](docs/agent/tcaflow-navigation.md)
-- [DI 가이드](docs/agent/dependency-injection.md)
-- [Micro Feature 진행 현황](docs/agent/micro-feature-migration-progress.md)
-- [도메인/데이터/피처 아키텍처](docs/domain-data-feature-architecture.md)
+- [Swift 코딩 규칙](docs/agent/swift-coding-rules.md)
+- [팝업과 모달](docs/agent/popup-modal-system.md)
+- [TCAFlow 내비게이션](docs/agent/tcaflow-navigation.md)
+- [의존성 주입](docs/agent/dependency-injection.md)
+- [개발 환경](docs/agent/development-environment.md)
+- [Git 워크플로](docs/agent/git-workflow.md)
+- [도메인·데이터·피처 아키텍처](docs/domain-data-feature-architecture.md)
+
+프로젝트 운영 규칙과 AI 에이전트 지침은 [AGENTS.md](AGENTS.md)를 기준으로 합니다.
 
 ## 브랜치 전략
 
-- `main`: 프로덕션 배포
-- `develop`: 개발 통합
+- **develop**: 개발 통합, 기능·수정 Pull Request의 대상
+- **main**: 프로덕션 기준 브랜치
+- **release**: 버전 태그 커밋을 동기화하는 브랜치
 - `feature/*`: 기능 작업
 - `fix/*`: 버그 수정
 
-작업 브랜치에서 검증 후 `develop`으로 Pull Request를 올립니다.
-
 ## 문의
 
-- Issues: [github.com/SWYP-Find/Picke-iOS/issues](https://github.com/SWYP-Find/Picke-iOS/issues)
-- Discussions: [github.com/SWYP-Find/Picke-iOS/discussions](https://github.com/SWYP-Find/Picke-iOS/discussions)
+- [GitHub Issues](https://github.com/SWYP-Find/Picke-iOS/issues)
+- [GitHub Discussions](https://github.com/SWYP-Find/Picke-iOS/discussions)
+- [App Store](https://apps.apple.com/kr/app/id6776677382)
+
+<div align="center">
+
+Made with ❤️ by Picke
+
+</div>
