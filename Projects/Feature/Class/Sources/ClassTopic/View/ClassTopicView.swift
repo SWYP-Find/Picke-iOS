@@ -3,11 +3,10 @@
 //  Class
 //
 
-import SwiftUI
-
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
+import SwiftUI
 
 @ViewAction(for: ClassTopicFeature.self)
 public struct ClassTopicView: View {
@@ -45,7 +44,6 @@ public struct ClassTopicView: View {
 }
 
 private extension ClassTopicView {
-  @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text("어떤 주제로\n이야기 나눌까요?")
@@ -59,22 +57,20 @@ private extension ClassTopicView {
     }
   }
 
-  @ViewBuilder
   func formSection() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       field("찾고 싶은 주제") {
-        PickeTextField(
-          "예) 촉법소년 · AI가 인간의 일을 대신해도 될까?",
-          text: $store.keyword
+        TextField(
+          "",
+          text: $store.keyword,
+          prompt: Text("예) 촉법소년 · AI가 인간의 일을 대신해도 될까?")
+            .foregroundStyle(.gray300)
         )
+        .pickeTextField()
       }
 
       field("대상 수준") {
-        PickeBoxSegment(
-          ClassAudienceLevel.allCases,
-          selection: $store.level,
-          title: \.title
-        )
+        levelSegment()
       }
 
       field("카테고리") {
@@ -83,7 +79,6 @@ private extension ClassTopicView {
     }
   }
 
-  @ViewBuilder
   func field(
     _ label: String,
     @ViewBuilder content: () -> some View
@@ -96,7 +91,21 @@ private extension ClassTopicView {
     }
   }
 
-  @ViewBuilder
+  func levelSegment() -> some View {
+    HStack(spacing: 0) {
+      ForEach(ClassAudienceLevel.allCases, id: \.self) { level in
+        Button {
+          store.level = level
+        } label: {
+          Text(level.title)
+            .pickeBoxSegment(isSelected: store.level == level)
+        }
+        .buttonStyle(.plain)
+      }
+    }
+    .pickeBoxSegmentTrack()
+  }
+
   func categoryGrid() -> some View {
     LazyVGrid(
       columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
@@ -114,7 +123,6 @@ private extension ClassTopicView {
     }
   }
 
-  @ViewBuilder
   func searchButton() -> some View {
     Button {
       send(.searchTapped)
