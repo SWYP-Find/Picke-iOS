@@ -21,6 +21,7 @@ public struct MainTabCoordinator {
     case home
     case explore
     case quickBattle
+    case classroom
     case myPage
 
     public var title: String {
@@ -28,6 +29,7 @@ public struct MainTabCoordinator {
       case .home: return "홈"
       case .explore: return "탐색"
       case .quickBattle: return "빠른 배틀"
+      case .classroom: return "클래스"
       case .myPage: return "마이"
       }
     }
@@ -37,6 +39,7 @@ public struct MainTabCoordinator {
       case .home: return isSelected ? .tabHomeActive : .tabHome
       case .explore: return isSelected ? .tabExploreActive : .tabExplore
       case .quickBattle: return isSelected ? .tabQuickBattleActive : .tabQuickBattle
+      case .classroom: return isSelected ? .tabClassActive : .tabClass
       case .myPage: return isSelected ? .tabMyPageActive : .tabMyPage
       }
     }
@@ -49,6 +52,7 @@ public struct MainTabCoordinator {
     public var homeState: HomeCoordinator.State
     public var exploreState: HifiCoordinator.State
     public var quickBattleState: BattleCoordinator.State
+    public var classState: ClassCoordinator.State
     public var myPageState: ProfileCoordinator.State
 
     public var shouldHideTabBar: Bool {
@@ -59,6 +63,8 @@ public struct MainTabCoordinator {
         return exploreState.routes.count > 1
       case .quickBattle:
         return quickBattleState.routes.count > 1
+      case .classroom:
+        return classState.routes.count > 1
       case .myPage:
         return myPageState.routes.count > 1
       case .none:
@@ -71,6 +77,7 @@ public struct MainTabCoordinator {
       homeState = .init()
       exploreState = .init()
       quickBattleState = .init()
+      classState = .init()
       myPageState = .init()
     }
   }
@@ -82,6 +89,7 @@ public struct MainTabCoordinator {
     case home(HomeCoordinator.Action)
     case explore(HifiCoordinator.Action)
     case quickBattle(BattleCoordinator.Action)
+    case classroom(ClassCoordinator.Action)
     case myPage(ProfileCoordinator.Action)
     case delegate(DelegateAction)
   }
@@ -101,6 +109,9 @@ public struct MainTabCoordinator {
     }
     Scope(state: \.quickBattleState, action: \.quickBattle) {
       BattleCoordinator()
+    }
+    Scope(state: \.classState, action: \.classroom) {
+      ClassCoordinator()
     }
     Scope(state: \.myPageState, action: \.myPage) {
       ProfileCoordinator()
@@ -144,7 +155,7 @@ public struct MainTabCoordinator {
       case .delegate:
         return .none
 
-      case .home, .explore, .quickBattle, .myPage:
+      case .home, .explore, .quickBattle, .classroom, .myPage:
         return .none
       }
     }
@@ -160,6 +171,8 @@ private extension MainTabCoordinator {
       analyticsUseCase.track(.uiAction(action: .tabExplore, screen: .mainTab))
     case .quickBattle:
       analyticsUseCase.track(.uiAction(action: .tabQuickBattle, screen: .mainTab))
+    case .classroom:
+      analyticsUseCase.track(.uiAction(action: .tabClass, screen: .mainTab))
     case .myPage:
       analyticsUseCase.track(.uiAction(action: .tabMypage, screen: .mainTab))
     case .none:
@@ -178,6 +191,8 @@ private extension MainTabCoordinator {
       state.exploreState.routes.goBackToRoot()
     case .quickBattle:
       state.quickBattleState.routes.goBackToRoot()
+    case .classroom:
+      state.classState.routes.goBackToRoot()
     case .myPage:
       state.myPageState.routes.goBackToRoot()
     case .none:
