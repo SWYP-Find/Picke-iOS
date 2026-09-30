@@ -11,7 +11,7 @@ struct ClassDomainTests {
         name: "공유 상태 확인",
         deadline: Date(timeIntervalSince1970: 1_800_000_000),
         battleId: 101,
-        isVoteEnabled: true,
+        allowsAnonymousOpinion: true,
         requiresComment: false
       )
     )
@@ -28,13 +28,13 @@ struct ClassDomainTests {
         name: "토론 수업",
         deadline: Date(timeIntervalSince1970: 1_800_000_000),
         battleId: 101,
-        isVoteEnabled: true,
+        allowsAnonymousOpinion: true,
         requiresComment: false
       )
     )
 
     #expect(created.role == .owner)
-    #expect(created.battleId == 101)
+    #expect(created.battle.id == 101)
     #expect(try await repository.fetchMyClasses() == [created])
     #expect(try await repository.fetchClass(joinCode: created.joinCode) == created)
   }
@@ -64,5 +64,19 @@ struct ClassDomainTests {
     } catch {
       #expect(ClassError.from(error) == .invalidCode)
     }
+  }
+
+  @Test
+  func 추천_배틀은_수준과_카테고리와_검색어로_걸러진다() async throws {
+    let repository = MockClassRepository()
+    let middle = try await repository.fetchRecommendedBattles(
+      filter: .init(keyword: "소년", level: .middle, category: .society)
+    )
+    let high = try await repository.fetchRecommendedBattles(
+      filter: .init(level: .high, category: .society)
+    )
+
+    #expect(middle.map(\.id) == [101])
+    #expect(high.isEmpty)
   }
 }
