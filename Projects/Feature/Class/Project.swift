@@ -12,6 +12,7 @@ let project = Project.makeModule(
   product: .staticFramework,
   settings: .settings(),
   dependencies: [
+    .core(.coreUtility),
     .ui(.designKit),
     .ui(.sharedUI),
     .domain(.classroom, .interface),

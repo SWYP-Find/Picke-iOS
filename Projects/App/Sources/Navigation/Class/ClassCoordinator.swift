@@ -77,6 +77,16 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .recommend(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .recommend(.delegate(.select(battle)))):
+      state.routes.push(.setting(.init(battle: battle)))
+      return .none
+
+    case .routeAction(_, action: .setting(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .setting(.delegate(.created))):
+      return .send(.view(.backToRootAction))
+
     default:
       return .none
     }
@@ -105,6 +115,7 @@ extension ClassCoordinator {
     case intro(ClassIntroFeature)
     case topic(ClassTopicFeature)
     case recommend(ClassRecommendFeature)
+    case setting(ClassSettingFeature)
   }
 }
 

@@ -26,6 +26,9 @@ public struct ClassCoordinatorView: View {
 
       case let .recommend(recommendStore):
         ClassRecommendView(store: recommendStore)
+
+      case let .setting(settingStore):
+        ClassSettingView(store: settingStore)
       }
     }
   }
