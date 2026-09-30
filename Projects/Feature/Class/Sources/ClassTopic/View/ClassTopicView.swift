@@ -34,7 +34,7 @@ public struct ClassTopicView: View {
       .scrollIndicators(.hidden)
       .scrollBounceBehavior(.basedOnSize)
 
-      searchButton()
+      searchButton
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
@@ -44,6 +44,7 @@ public struct ClassTopicView: View {
 }
 
 private extension ClassTopicView {
+  @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text("어떤 주제로\n이야기 나눌까요?")
@@ -57,6 +58,7 @@ private extension ClassTopicView {
     }
   }
 
+  @ViewBuilder
   func formSection() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       field("찾고 싶은 주제") {
@@ -79,6 +81,7 @@ private extension ClassTopicView {
     }
   }
 
+  @ViewBuilder
   func field(
     _ label: String,
     @ViewBuilder content: () -> some View
@@ -91,6 +94,7 @@ private extension ClassTopicView {
     }
   }
 
+  @ViewBuilder
   func levelSegment() -> some View {
     HStack(spacing: 0) {
       ForEach(ClassAudienceLevel.allCases, id: \.self) { level in
@@ -106,6 +110,7 @@ private extension ClassTopicView {
     .pickeBoxSegmentTrack()
   }
 
+  @ViewBuilder
   func categoryGrid() -> some View {
     LazyVGrid(
       columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
@@ -123,7 +128,7 @@ private extension ClassTopicView {
     }
   }
 
-  func searchButton() -> some View {
+  var searchButton: some View {
     Button {
       send(.searchTapped)
     } label: {

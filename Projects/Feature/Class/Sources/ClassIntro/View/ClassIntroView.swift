@@ -27,8 +27,8 @@ public struct ClassIntroView: View {
         Spacer(minLength: 24)
         menuCards()
           .padding(.bottom, 16)
-        createButton()
-        ticketButton()
+        createButton
+        ticketButton
       }
       .padding(.top, 24)
       .padding(.horizontal, 16)
@@ -84,8 +84,7 @@ private extension ClassIntroView {
     }
   }
 
-  @ViewBuilder
-  func createButton() -> some View {
+  var createButton: some View {
     Button {
       send(.createTapped)
     } label: {
@@ -94,8 +93,7 @@ private extension ClassIntroView {
     .ctaButtonStyle(.primary, size: .large, height: 52)
   }
 
-  @ViewBuilder
-  func ticketButton() -> some View {
+  var ticketButton: some View {
     Button {
       send(.ticketTapped)
     } label: {

@@ -148,56 +148,38 @@ public var body: some View {
 - 한 메서드 안에서 다시 큰 블록이 생기면 더 작게 쪼개기 (재귀 적용)
 - 공통 컴포넌트는 별도 파일 (`Components/*.swift`) 로 추출
 
-#### 🧱 `@ViewBuilder` + `private func` — 모든 sub-view 는 함수 형태 (필수)
+#### 🧱 sub-view 형태 — 자식 2개 이상 stack 은 `@ViewBuilder func`, 단일 뷰는 `var` (필수)
 
-분리한 sub-view 는 **자식 개수 / 분기 유무와 상관없이 무조건 `@ViewBuilder` + `private func` 형태** 로 통일한다.
+분리한 sub-view 는 **자식 개수로 형태를 정한다**.
 
-`private var ...: some View` 형태는 **금지** — 모든 sub-view 는 호출부에서 일관되게 `()` 호출이 보이도록 함수 형태로만 작성한다.
+- stack / grid 안에 자식이 **2개 이상** (`ForEach` 반복, `if` 분기 포함) → `@ViewBuilder private func name() -> some View`
+- **단일 뷰** (Button 하나, Text 하나, 이미 만든 컴포넌트 하나) → `private var name: some View`
+- 파라미터가 필요하면 자식 수와 상관없이 func (`func thumbnail(url:)`)
 
 ```swift
-// ✅ 다중 자식 / 분기 / 반복
+// ✅ 자식 2개 이상 — @ViewBuilder func
 @ViewBuilder
-private func hotBattlesSection() -> some View {
-  VStack(alignment: .leading, spacing: 12) {
-    HomeSectionHeader(title: "지금 뜨는 배틀") { send(.seeMoreTapped(.hotBattles)) }
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 16) {
-        ForEach(store.hotBattles) { HotBattleCardView(battle: $0) }
-      }
-    }
+private func titleSection() -> some View {
+  VStack(alignment: .leading, spacing: 6) {
+    Text("어떤 주제로\n이야기 나눌까요?")
+    Text("관심 있는 주제나 수업 조건을 선택해 주세요.")
   }
 }
 
-@ViewBuilder
-private func thumbnail(url: URL?) -> some View {
-  if let url {
-    KFImage(url).resizable().scaledToFill()
-  } else {
-    Color.neutral200
+// ✅ 단일 뷰 — var
+private var searchButton: some View {
+  Button {
+    send(.searchTapped)
+  } label: {
+    Text("조건에 맞는 콘텐츠 보기")
   }
+  .ctaButtonStyle(.primary, size: .large, height: 52)
 }
 
-// ✅ 단일 뷰여도 함수 형태로
-@ViewBuilder
-private func primaryButton() -> some View {
-  CustomButton(
-    action: { send(.primaryButtonTapped) },
-    title: "사전 투표하기",
-    config: CustomButtonConfig.primary(.large, height: 52),
-    isEnable: store.isPrimaryButtonEnabled
-  )
-}
-
-// ❌ 금지 — sub-view 를 var 로 선언
-private var primaryButton: some View { ... }
-private var section: some View { VStack { ... } }
+// ❌ 금지 — 단일 뷰를 func 로, 다중 자식을 var 로
+private func searchButton() -> some View { Button { ... } }
+private var titleSection: some View { VStack { Text(...); Text(...) } }
 ```
-
-규칙:
-- **모든 sub-view = `@ViewBuilder private func name() -> some View`** (단일 뷰 / 다중 자식 / 분기 무관)
-- `private var ...: some View` 패턴 금지 — 호출부에서 `name` vs `name()` 형태 혼재되는 것을 방지
-- `body` 만 `var body: some View` 유지 (View 프로토콜 요구사항)
-- body 안에서 호출은 항상 `()` 가 붙은 함수 형태로 — 가독성 통일
 
 #### 📏 함수 시그니처 — 파라미터 2개 이상이면 멀티 라인 (필수)
 
