@@ -7,13 +7,13 @@ public struct MyClassFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public enum Ownership: Equatable, CaseIterable {
+    public enum Ownership: Hashable, CaseIterable {
       case all
       case created
       case joined
     }
 
-    public enum Progress: Equatable, CaseIterable {
+    public enum Progress: Hashable, CaseIterable {
       case all
       case open
       case closed

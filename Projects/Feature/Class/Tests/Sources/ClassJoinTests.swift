@@ -28,10 +28,10 @@ struct ClassJoinTests {
       $0.joinCode = " pk9t3s "
     }
     await store.send(.view(.findTapped))
-    await store.receive(.async(.find("PK9T3S"))) {
+    await store.receive(\.async, .find("PK9T3S")) {
       $0.isLoading = true
     }
-    await store.receive(\.inner.found) {
+    await store.receive(\.inner, .found(.success(room))) {
       $0.preview = room
       $0.isLoading = false
     }
@@ -54,10 +54,10 @@ struct ClassJoinTests {
     }
 
     await store.send(.view(.joinTapped))
-    await store.receive(.async(.join(joinCode: room.joinCode, nickname: "민지"))) {
+    await store.receive(\.async, .join(joinCode: room.joinCode, nickname: "민지")) {
       $0.isLoading = true
     }
-    await store.receive(\.inner.joined) {
+    await store.receive(\.inner, .joined(.success(room))) {
       $0.preview = nil
       $0.isLoading = false
     }
@@ -78,10 +78,10 @@ struct ClassJoinTests {
       $0.joinCode = "INVALID"
     }
     await store.send(.view(.findTapped))
-    await store.receive(.async(.find("INVALID"))) {
+    await store.receive(\.async, .find("INVALID")) {
       $0.isLoading = true
     }
-    await store.receive(\.inner.found) {
+    await store.receive(\.inner, .found(.failure(.invalidCode))) {
       $0.isLoading = false
       $0.errorMessage = "참여 코드를 다시 확인해 주세요."
     }

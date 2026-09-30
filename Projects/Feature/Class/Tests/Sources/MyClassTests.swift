@@ -31,6 +31,6 @@ struct MyClassTests {
     }
 
     await store.send(.view(.roomTapped(1)))
-    await store.receive(.delegate(.openRoom(ClassRoom.mocks[0])))
+    await store.receive(\.delegate, .openRoom(ClassRoom.mocks[0]))
   }
 }

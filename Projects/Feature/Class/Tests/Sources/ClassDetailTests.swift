@@ -44,6 +44,6 @@ struct ClassDetailTests {
     }
 
     await store.send(.view(.battleTapped))
-    await store.receive(.delegate(.openBattle(room.battle)))
+    await store.receive(\.delegate, .openBattle(room.battle))
   }
 }
