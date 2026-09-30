@@ -21,8 +21,8 @@ public struct AppReducer: Sendable {
   @ObservableState
   public enum State: Equatable {
     case splash(SplashFeature.State)
-    case auth(AppAuthCoordinator.State)
-    case mainTab(AppMainTabCoordinator.State)
+    case auth(AuthCoordinator.State)
+    case mainTab(MainTabCoordinator.State)
 
     public init() {
       self = .splash(SplashFeature.State())
@@ -79,8 +79,8 @@ public struct AppReducer: Sendable {
   @CasePathable
   public enum ScopeAction {
     case splash(SplashFeature.Action)
-    case auth(AppAuthCoordinator.Action)
-    case mainTab(AppMainTabCoordinator.Action)
+    case auth(AuthCoordinator.Action)
+    case mainTab(MainTabCoordinator.Action)
   }
 
   @Dependency(\.continuousClock) var clock
@@ -144,10 +144,10 @@ public struct AppReducer: Sendable {
       SplashFeature()
     }
     .ifCaseLet(\.auth, action: \.scope.auth) {
-      AppAuthCoordinator()
+      AuthCoordinator()
     }
     .ifCaseLet(\.mainTab, action: \.scope.mainTab) {
-      AppMainTabCoordinator()
+      MainTabCoordinator()
     }
   }
 
@@ -207,30 +207,30 @@ public struct AppReducer: Sendable {
       case let .battle(battleId):
         // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 배틀 상세 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
           .send(.scope(.mainTab(.home(.view(.openBattle(battleId: battleId))))))
         )
       case let .perspective(perspectiveId, commentId):
         // 홈 탭 전환 후 HomeCoordinator(Chat 보유)가 관점(답글) 화면 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.home.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.home.rawValue)))),
           .send(.scope(.mainTab(.home(.view(.openPerspective(perspectiveId: perspectiveId, commentId: commentId))))))
         )
       case .point:
         // 마이페이지 탭 전환 후 포인트 내역 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
           .send(.scope(.mainTab(.myPage(.view(.openPointHistory)))))
         )
       case .terms:
         // 마이페이지 탭 전환 후 서비스 약관 웹뷰 push.
         return .merge(
-          .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.myPage.rawValue)))),
+          .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.myPage.rawValue)))),
           .send(.scope(.mainTab(.myPage(.view(.openTerms)))))
         )
       case .quickBattle:
         // 빠른 배틀은 탭 자체가 목적지라 전환만 한다.
-        return .send(.scope(.mainTab(.selectTab(AppMainTabCoordinator.Tab.quickBattle.rawValue))))
+        return .send(.scope(.mainTab(.selectTab(MainTabCoordinator.Tab.quickBattle.rawValue))))
       }
     }
   }

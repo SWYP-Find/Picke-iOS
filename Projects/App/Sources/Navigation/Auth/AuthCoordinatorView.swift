@@ -1,5 +1,5 @@
 //
-//  AppAuthCoordinatorView.swift
+//  AuthCoordinatorView.swift
 //  Picke
 //
 
@@ -9,10 +9,10 @@ import ComposableArchitecture
 import FeatureAssembly
 import TCAFlow
 
-public struct AppAuthCoordinatorView: View {
-  @Bindable private var store: StoreOf<AppAuthCoordinator>
+public struct AuthCoordinatorView: View {
+  @Bindable private var store: StoreOf<AuthCoordinator>
 
-  public init(store: StoreOf<AppAuthCoordinator>) {
+  public init(store: StoreOf<AuthCoordinator>) {
     self.store = store
   }
 

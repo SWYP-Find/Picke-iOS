@@ -1,5 +1,5 @@
 //
-//  AppHifiCoordinator.swift
+//  HifiCoordinator.swift
 //  Picke
 //
 
@@ -10,15 +10,15 @@ import ComposableArchitecture
 import FeatureAssembly
 import TCAFlow
 
-@FlowCoordinator(screen: "AppHifiScreen", navigation: true)
-public struct AppHifiCoordinator {
+@FlowCoordinator(screen: "HifiScreen", navigation: true)
+public struct HifiCoordinator {
   public init() {}
 
   @Dependency(\.audioPlayer) private var audioPlayer
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<AppHifiScreen.State>]
+    public var routes: [Route<HifiScreen.State>]
 
     public init() {
       routes = [.root(.hifi(.init()), embedInNavigationView: true)]
@@ -27,7 +27,7 @@ public struct AppHifiCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<AppHifiScreen>)
+    case router(IndexedRouterActionOf<HifiScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -59,10 +59,10 @@ public struct AppHifiCoordinator {
   }
 }
 
-private extension AppHifiCoordinator {
+private extension HifiCoordinator {
   func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<AppHifiScreen>
+    action: IndexedRouterActionOf<HifiScreen>
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .hifi(.delegate(.openBattle(battleId)))):
@@ -116,9 +116,9 @@ private extension AppHifiCoordinator {
 }
 
 // swiftformat:disable extensionAccessControl
-extension AppHifiCoordinator {
+extension HifiCoordinator {
   @Reducer
-  public enum AppHifiScreen {
+  public enum HifiScreen {
     case hifi(HifiFeature)
     case chat(ChatCoordinator)
     case notification(NotificationCoordinator)
@@ -127,4 +127,4 @@ extension AppHifiCoordinator {
 
 // swiftformat:enable extensionAccessControl
 
-extension AppHifiCoordinator.AppHifiScreen.State: Equatable {}
+extension HifiCoordinator.HifiScreen.State: Equatable {}

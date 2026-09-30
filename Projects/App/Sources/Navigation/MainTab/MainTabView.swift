@@ -1,5 +1,5 @@
 //
-//  AppMainTabView.swift
+//  MainTabView.swift
 //  Picke
 //
 //  Created by Codex on 7/11/26.
@@ -14,10 +14,10 @@ import PickeDesignKit
 import FeatureAssembly
 import TCAFlow
 
-public struct AppMainTabView: View {
-  @Bindable private var store: StoreOf<AppMainTabCoordinator>
+public struct MainTabView: View {
+  @Bindable private var store: StoreOf<MainTabCoordinator>
 
-  public init(store: StoreOf<AppMainTabCoordinator>) {
+  public init(store: StoreOf<MainTabCoordinator>) {
     Self.configureTabBarAppearance()
     self.store = store
   }
@@ -25,7 +25,7 @@ public struct AppMainTabView: View {
   public var body: some View {
     TCAFlowTabRouter(
       selectedTab: $store.selectedTab.sending(\.selectTab),
-      tabs: AppMainTabCoordinator.Tab.allCases.map {
+      tabs: MainTabCoordinator.Tab.allCases.map {
         TabItem(
           title: $0.title,
           icon: $0.iconAsset(isSelected: false).rawValue,
@@ -46,7 +46,7 @@ public struct AppMainTabView: View {
   }
 }
 
-private extension AppMainTabView {
+private extension MainTabView {
   static func configureTabBarAppearance() {
     let selectedColor = UIColor.neutral900
     let normalColor = UIColor.gray200
@@ -118,7 +118,7 @@ private extension AppMainTabView {
   @ViewBuilder
   func tabIcon(for tab: TabItem) -> some View {
     let isSelected = store.selectedTab == tab.tag
-    let asset = AppMainTabCoordinator.Tab(rawValue: tab.tag)?
+    let asset = MainTabCoordinator.Tab(rawValue: tab.tag)?
       .iconAsset(isSelected: isSelected) ?? .none
 
     Image(asset: asset)
@@ -132,31 +132,31 @@ private extension AppMainTabView {
   // 각 탭이 처음 화면에 올라올 때까지 스토어 스코프와 뷰 생성을 미룬다.
   @ViewBuilder
   func tabContent(for tab: Int) -> some View {
-    switch AppMainTabCoordinator.Tab(rawValue: tab) {
+    switch MainTabCoordinator.Tab(rawValue: tab) {
     case .home:
       LazyView {
-        AppHomeCoordinatorView(
+        HomeCoordinatorView(
           store: store.scope(state: \.homeState, action: \.home)
         )
       }
 
     case .explore:
       LazyView {
-        AppHifiCoordinatorView(
+        HifiCoordinatorView(
           store: store.scope(state: \.exploreState, action: \.explore)
         )
       }
 
     case .quickBattle:
       LazyView {
-        AppBattleCoordinatorView(
+        BattleCoordinatorView(
           store: store.scope(state: \.quickBattleState, action: \.quickBattle)
         )
       }
 
     case .myPage:
       LazyView {
-        AppProfileCoordinatorView(
+        ProfileCoordinatorView(
           store: store.scope(state: \.myPageState, action: \.myPage)
         )
       }
@@ -168,9 +168,9 @@ private extension AppMainTabView {
 }
 
 #Preview {
-  AppMainTabView(
-    store: Store(initialState: AppMainTabCoordinator.State()) {
-      AppMainTabCoordinator()
+  MainTabView(
+    store: Store(initialState: MainTabCoordinator.State()) {
+      MainTabCoordinator()
     }
   )
 }

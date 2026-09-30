@@ -15,7 +15,7 @@ public struct ContentView: View {
 }
 
 #Preview {
-  AppAuthCoordinatorView(store: .init(initialState: AppAuthCoordinator.State(), reducer: {
-    AppAuthCoordinator()
+  AuthCoordinatorView(store: .init(initialState: AuthCoordinator.State(), reducer: {
+    AuthCoordinator()
   }))
 }

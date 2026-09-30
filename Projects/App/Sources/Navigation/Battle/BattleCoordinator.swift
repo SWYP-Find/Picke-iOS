@@ -1,5 +1,5 @@
 //
-//  AppBattleCoordinator.swift
+//  BattleCoordinator.swift
 //  Picke
 //
 
@@ -12,15 +12,15 @@ import PickeDesignKit
 import FeatureAssembly
 import TCAFlow
 
-@FlowCoordinator(screen: "AppBattleScreen", navigation: true)
-public struct AppBattleCoordinator {
+@FlowCoordinator(screen: "BattleScreen", navigation: true)
+public struct BattleCoordinator {
   public init() {}
 
   @Dependency(\.audioPlayer) private var audioPlayer
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<AppBattleScreen.State>]
+    public var routes: [Route<BattleScreen.State>]
 
     public init() {
       routes = [.root(.battle(.init()), embedInNavigationView: true)]
@@ -29,7 +29,7 @@ public struct AppBattleCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<AppBattleScreen>)
+    case router(IndexedRouterActionOf<BattleScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -61,10 +61,10 @@ public struct AppBattleCoordinator {
   }
 }
 
-private extension AppBattleCoordinator {
+private extension BattleCoordinator {
   func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<AppBattleScreen>
+    action: IndexedRouterActionOf<BattleScreen>
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .battle(.delegate(.openBattle(battleId)))):
@@ -127,9 +127,9 @@ private extension AppBattleCoordinator {
 }
 
 // swiftformat:disable extensionAccessControl
-extension AppBattleCoordinator {
+extension BattleCoordinator {
   @Reducer
-  public enum AppBattleScreen {
+  public enum BattleScreen {
     case battle(BattleFeature)
     case chatRoom(ChatRoomFeature)
     case chat(ChatCoordinator)
@@ -138,4 +138,4 @@ extension AppBattleCoordinator {
 
 // swiftformat:enable extensionAccessControl
 
-extension AppBattleCoordinator.AppBattleScreen.State: Equatable {}
+extension BattleCoordinator.BattleScreen.State: Equatable {}

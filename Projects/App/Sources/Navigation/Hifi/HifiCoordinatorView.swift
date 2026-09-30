@@ -1,5 +1,5 @@
 //
-//  AppHifiCoordinatorView.swift
+//  HifiCoordinatorView.swift
 //  Picke
 //
 
@@ -9,10 +9,10 @@ import ComposableArchitecture
 import FeatureAssembly
 import TCAFlow
 
-public struct AppHifiCoordinatorView: View {
-  @Bindable private var store: StoreOf<AppHifiCoordinator>
+public struct HifiCoordinatorView: View {
+  @Bindable private var store: StoreOf<HifiCoordinator>
 
-  public init(store: StoreOf<AppHifiCoordinator>) {
+  public init(store: StoreOf<HifiCoordinator>) {
     self.store = store
   }
 

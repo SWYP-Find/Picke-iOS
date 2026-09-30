@@ -1,5 +1,5 @@
 //
-//  AppHomeCoordinator.swift
+//  HomeCoordinator.swift
 //  Picke
 //
 
@@ -12,15 +12,15 @@ import PickeDesignKit
 import FeatureAssembly
 import TCAFlow
 
-@FlowCoordinator(screen: "AppHomeScreen", navigation: true)
-public struct AppHomeCoordinator {
+@FlowCoordinator(screen: "HomeScreen", navigation: true)
+public struct HomeCoordinator {
   public init() {}
 
   @Dependency(\.audioPlayer) private var audioPlayer
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<AppHomeScreen.State>]
+    public var routes: [Route<HomeScreen.State>]
 
     public init() {
       routes = [.root(.home(.init()), embedInNavigationView: true)]
@@ -29,7 +29,7 @@ public struct AppHomeCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<AppHomeScreen>)
+    case router(IndexedRouterActionOf<HomeScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -63,10 +63,10 @@ public struct AppHomeCoordinator {
   }
 }
 
-private extension AppHomeCoordinator {
+private extension HomeCoordinator {
   func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<AppHomeScreen>
+    action: IndexedRouterActionOf<HomeScreen>
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .home(.delegate(.presentPreVote(battleId)))):
@@ -140,9 +140,9 @@ private extension AppHomeCoordinator {
 }
 
 // swiftformat:disable extensionAccessControl
-extension AppHomeCoordinator {
+extension HomeCoordinator {
   @Reducer
-  public enum AppHomeScreen {
+  public enum HomeScreen {
     case home(HomeFeature)
     case chat(ChatCoordinator)
     case notification(NotificationCoordinator)
@@ -151,4 +151,4 @@ extension AppHomeCoordinator {
 
 // swiftformat:enable extensionAccessControl
 
-extension AppHomeCoordinator.AppHomeScreen.State: Equatable {}
+extension HomeCoordinator.HomeScreen.State: Equatable {}

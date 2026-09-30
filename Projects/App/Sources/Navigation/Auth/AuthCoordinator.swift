@@ -1,5 +1,5 @@
 //
-//  AppAuthCoordinator.swift
+//  AuthCoordinator.swift
 //  Picke
 //
 
@@ -9,13 +9,13 @@ import ComposableArchitecture
 import FeatureAssembly
 import TCAFlow
 
-@FlowCoordinator(screen: "AppAuthScreen", navigation: true)
-public struct AppAuthCoordinator {
+@FlowCoordinator(screen: "AuthScreen", navigation: true)
+public struct AuthCoordinator {
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
-    var routes: [Route<AppAuthScreen.State>]
+    var routes: [Route<AuthScreen.State>]
 
     public init() {
       routes = [.root(.login(.init()), embedInNavigationView: true)]
@@ -24,7 +24,7 @@ public struct AppAuthCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<AppAuthScreen>)
+    case router(IndexedRouterActionOf<AuthScreen>)
     case view(View)
     case navigation(NavigationAction)
   }
@@ -56,10 +56,10 @@ public struct AppAuthCoordinator {
   }
 }
 
-private extension AppAuthCoordinator {
+private extension AuthCoordinator {
   func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<AppAuthScreen>
+    action: IndexedRouterActionOf<AuthScreen>
   ) -> Effect<Action> {
     switch action {
     case .routeAction(_, action: .login(.delegate(.presentOnboarding))):
@@ -101,9 +101,9 @@ private extension AppAuthCoordinator {
 }
 
 // swiftformat:disable extensionAccessControl
-extension AppAuthCoordinator {
+extension AuthCoordinator {
   @Reducer
-  public enum AppAuthScreen {
+  public enum AuthScreen {
     case login(LoginFeature)
     case onboarding(OnBoardingFeature)
     case web(WebReducer)
@@ -112,4 +112,4 @@ extension AppAuthCoordinator {
 
 // swiftformat:enable extensionAccessControl
 
-extension AppAuthCoordinator.AppAuthScreen.State: Equatable {}
+extension AuthCoordinator.AuthScreen.State: Equatable {}

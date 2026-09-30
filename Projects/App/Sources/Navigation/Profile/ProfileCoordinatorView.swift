@@ -1,5 +1,5 @@
 //
-//  AppProfileCoordinatorView.swift
+//  ProfileCoordinatorView.swift
 //  Picke
 //
 
@@ -9,10 +9,10 @@ import ComposableArchitecture
 import FeatureAssembly
 import TCAFlow
 
-public struct AppProfileCoordinatorView: View {
-  @Bindable private var store: StoreOf<AppProfileCoordinator>
+public struct ProfileCoordinatorView: View {
+  @Bindable private var store: StoreOf<ProfileCoordinator>
 
-  public init(store: StoreOf<AppProfileCoordinator>) {
+  public init(store: StoreOf<ProfileCoordinator>) {
     self.store = store
   }
 

@@ -1,5 +1,5 @@
 //
-//  AppMainTabCoordinator.swift
+//  MainTabCoordinator.swift
 //  Picke
 //
 //  Created by Codex on 7/11/26.
@@ -14,7 +14,7 @@ import FeatureAssembly
 import TCAFlow
 
 @Reducer
-public struct AppMainTabCoordinator {
+public struct MainTabCoordinator {
   public init() {}
 
   public enum Tab: Int, CaseIterable {
@@ -46,10 +46,10 @@ public struct AppMainTabCoordinator {
   public struct State: Equatable {
     public var selectedTab: Int
     public var previousTab: Int = Tab.home.rawValue
-    public var homeState: AppHomeCoordinator.State
-    public var exploreState: AppHifiCoordinator.State
-    public var quickBattleState: AppBattleCoordinator.State
-    public var myPageState: AppProfileCoordinator.State
+    public var homeState: HomeCoordinator.State
+    public var exploreState: HifiCoordinator.State
+    public var quickBattleState: BattleCoordinator.State
+    public var myPageState: ProfileCoordinator.State
 
     public var shouldHideTabBar: Bool {
       switch Tab(rawValue: selectedTab) {
@@ -79,10 +79,10 @@ public struct AppMainTabCoordinator {
   public enum Action {
     case selectTab(Int)
     case tabReselected(Int)
-    case home(AppHomeCoordinator.Action)
-    case explore(AppHifiCoordinator.Action)
-    case quickBattle(AppBattleCoordinator.Action)
-    case myPage(AppProfileCoordinator.Action)
+    case home(HomeCoordinator.Action)
+    case explore(HifiCoordinator.Action)
+    case quickBattle(BattleCoordinator.Action)
+    case myPage(ProfileCoordinator.Action)
     case delegate(DelegateAction)
   }
 
@@ -94,16 +94,16 @@ public struct AppMainTabCoordinator {
 
   public var body: some ReducerOf<Self> {
     Scope(state: \.homeState, action: \.home) {
-      AppHomeCoordinator()
+      HomeCoordinator()
     }
     Scope(state: \.exploreState, action: \.explore) {
-      AppHifiCoordinator()
+      HifiCoordinator()
     }
     Scope(state: \.quickBattleState, action: \.quickBattle) {
-      AppBattleCoordinator()
+      BattleCoordinator()
     }
     Scope(state: \.myPageState, action: \.myPage) {
-      AppProfileCoordinator()
+      ProfileCoordinator()
     }
 
     Reduce { state, action in
@@ -151,7 +151,7 @@ public struct AppMainTabCoordinator {
   }
 }
 
-private extension AppMainTabCoordinator {
+private extension MainTabCoordinator {
   func trackTabSelection(_ tab: Int) {
     switch Tab(rawValue: tab) {
     case .home:

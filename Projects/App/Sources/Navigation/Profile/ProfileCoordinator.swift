@@ -1,5 +1,5 @@
 //
-//  AppProfileCoordinator.swift
+//  ProfileCoordinator.swift
 //  Picke
 //
 
@@ -11,15 +11,15 @@ import DomainAssembly
 import FeatureAssembly
 import TCAFlow
 
-@FlowCoordinator(screen: "AppProfileScreen", navigation: true)
-public struct AppProfileCoordinator {
+@FlowCoordinator(screen: "ProfileScreen", navigation: true)
+public struct ProfileCoordinator {
   public init() {}
 
   @Dependency(\.audioPlayer) private var audioPlayer
 
   @ObservableState
   public struct State: Equatable {
-    public var routes: [Route<AppProfileScreen.State>]
+    public var routes: [Route<ProfileScreen.State>]
 
     public init() {
       routes = [.root(.profile(.init()), embedInNavigationView: true)]
@@ -28,7 +28,7 @@ public struct AppProfileCoordinator {
 
   @CasePathable
   public enum Action {
-    case router(IndexedRouterActionOf<AppProfileScreen>)
+    case router(IndexedRouterActionOf<ProfileScreen>)
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -62,10 +62,10 @@ public struct AppProfileCoordinator {
   }
 }
 
-private extension AppProfileCoordinator {
+private extension ProfileCoordinator {
   func routerAction(
     state: inout State,
-    action: IndexedRouterActionOf<AppProfileScreen>
+    action: IndexedRouterActionOf<ProfileScreen>
   ) -> Effect<Action> {
     switch action {
     case .routeAction(_, action: .profile(.delegate(.editProfile))):
@@ -207,9 +207,9 @@ private extension AppProfileCoordinator {
 }
 
 // swiftformat:disable extensionAccessControl
-extension AppProfileCoordinator {
+extension ProfileCoordinator {
   @Reducer
-  public enum AppProfileScreen {
+  public enum ProfileScreen {
     case profile(ProfileFeature)
     case pointHistory(PointHistoryFeature)
     case settings(SettingsFeature)
@@ -228,4 +228,4 @@ extension AppProfileCoordinator {
 
 // swiftformat:enable extensionAccessControl
 
-extension AppProfileCoordinator.AppProfileScreen.State: Equatable {}
+extension ProfileCoordinator.ProfileScreen.State: Equatable {}
