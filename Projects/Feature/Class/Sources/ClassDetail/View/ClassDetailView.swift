@@ -42,6 +42,21 @@ public struct ClassDetailView: View {
     } message: {
       Text("삭제한 클래스는 다시 복구할 수 없어요.")
     }
+    .alert(
+      "요청을 완료하지 못했어요",
+      isPresented: Binding(
+        get: { store.errorMessage != nil },
+        set: {
+          if !$0 {
+            store.errorMessage = nil
+          }
+        }
+      )
+    ) {
+      Button("확인", role: .cancel) {}
+    } message: {
+      Text(store.errorMessage ?? "다시 시도해 주세요.")
+    }
   }
 }
 
@@ -161,6 +176,7 @@ private extension ClassDetailView {
 
       Button("수정하기") { send(.deadlineSaved) }
         .ctaButtonStyle(.primary, size: .large, height: 52)
+        .disabled(store.isLoading)
     }
     .padding(20)
     .screenBackground()

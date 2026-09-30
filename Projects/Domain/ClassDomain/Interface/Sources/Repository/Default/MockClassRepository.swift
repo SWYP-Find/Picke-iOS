@@ -89,4 +89,38 @@ public actor MockClassRepository: ClassInterface {
     availableRooms.remove(at: index)
     return joined
   }
+
+  public func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom {
+    guard let index = rooms.firstIndex(where: { $0.id == id }) else {
+      throw ClassError.invalidCode
+    }
+    let room = rooms[index]
+    guard room.role == .owner else {
+      throw ClassError.unknown("클래스 관리자만 마감일을 변경할 수 있습니다.")
+    }
+    let updated = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment
+    )
+    rooms[index] = updated
+    return updated
+  }
+
+  public func deleteClass(id: Int) async throws {
+    guard let index = rooms.firstIndex(where: { $0.id == id }) else {
+      throw ClassError.invalidCode
+    }
+    guard rooms[index].role == .owner else {
+      throw ClassError.unknown("클래스 관리자만 삭제할 수 있습니다.")
+    }
+    rooms.remove(at: index)
+  }
 }

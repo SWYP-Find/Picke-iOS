@@ -25,4 +25,12 @@ public struct ClassRepositoryImpl: ClassInterface {
   public func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
     try await Self.mock.joinClass(joinCode: joinCode, nickname: nickname)
   }
+
+  public func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom {
+    try await Self.mock.updateDeadline(id: id, deadline: deadline)
+  }
+
+  public func deleteClass(id: Int) async throws {
+    try await Self.mock.deleteClass(id: id)
+  }
 }

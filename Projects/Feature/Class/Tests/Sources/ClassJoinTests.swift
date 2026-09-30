@@ -1,6 +1,7 @@
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 import Testing
 
 @MainActor
@@ -113,4 +114,10 @@ private struct StubClassUseCase: ClassInterface {
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
     try await joinClass(joinCode, nickname)
   }
+
+  func updateDeadline(id _: Int, deadline _: Date) async throws -> ClassRoom {
+    .mockJoinable
+  }
+
+  func deleteClass(id _: Int) async throws {}
 }

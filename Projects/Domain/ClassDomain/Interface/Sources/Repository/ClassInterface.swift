@@ -7,6 +7,8 @@ public protocol ClassInterface: Sendable {
   func createClass(_ creation: ClassCreation) async throws -> ClassRoom
   func fetchClass(joinCode: String) async throws -> ClassRoom
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom
+  func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom
+  func deleteClass(id: Int) async throws
 }
 
 public enum ClassRepositoryDependency: TestDependencyKey {

@@ -79,4 +79,31 @@ struct ClassDomainTests {
     #expect(middle.map(\.id) == [101])
     #expect(high.isEmpty)
   }
+
+  @Test
+  func 마감일_변경은_목록과_참여코드_조회에_반영된다() async throws {
+    let repository = MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: [])
+    let deadline = Date(timeIntervalSince1970: 1_801_000_000)
+
+    let updated = try await repository.updateDeadline(id: 1, deadline: deadline)
+
+    #expect(updated.deadline == deadline)
+    #expect(try await repository.fetchMyClasses()[0].deadline == deadline)
+    #expect(try await repository.fetchClass(joinCode: updated.joinCode).deadline == deadline)
+  }
+
+  @Test
+  func 클래스_삭제는_목록과_참여코드_조회에_반영된다() async throws {
+    let repository = MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: [])
+
+    try await repository.deleteClass(id: 1)
+
+    #expect(try await repository.fetchMyClasses().isEmpty)
+    do {
+      _ = try await repository.fetchClass(joinCode: "PK7M2Q")
+      Issue.record("삭제한 클래스를 조회할 수 있음")
+    } catch {
+      #expect(ClassError.from(error) == .invalidCode)
+    }
+  }
 }
