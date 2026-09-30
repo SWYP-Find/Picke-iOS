@@ -117,66 +117,8 @@ private extension ClassSettingView {
   func battleSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       sectionLabel("선택한 배틀")
-      selectedBattleCard()
+      ClassSelectedBattleCard(battle: store.battle)
     }
-  }
-
-  @ViewBuilder
-  func selectedBattleCard() -> some View {
-    HStack(alignment: .top, spacing: 8) {
-      PickeRemoteImage(url: store.battle.thumbnailURL) { Color.beige600 }
-        .frame(width: 76, height: 106)
-        .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
-
-      VStack(alignment: .leading, spacing: 24) {
-        VStack(alignment: .leading, spacing: 8) {
-          HStack(spacing: 6) {
-            Text("#\(store.battle.category.title)")
-              .pickeBadge(.filled, size: .tag)
-            Text(store.battle.title)
-              .pretendardFont(.headingSmall)
-              .foregroundStyle(.gray500)
-              .lineLimit(1)
-          }
-
-          Text(store.battle.summary)
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray400)
-            .lineLimit(2)
-            .padding(.horizontal, 2)
-        }
-
-        HStack(spacing: 6) {
-          Spacer(minLength: 0)
-          metaLabel(
-            systemImage: "clock",
-            text: "\(store.battle.durationMinutes)분"
-          )
-          metaLabel(
-            systemImage: "eye",
-            text: store.battle.viewCount.decimalFormatted
-          )
-        }
-      }
-    }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .pickeCard(.beige50, border: .beige600, radius: 0)
-  }
-
-  @ViewBuilder
-  func metaLabel(
-    systemImage: String,
-    text: String
-  ) -> some View {
-    HStack(spacing: 2) {
-      Image(systemName: systemImage)
-        .pretendardFont(.labelXSmall)
-      Text(text)
-        .pretendardFont(.labelSmall)
-    }
-    .foregroundStyle(.gray300)
   }
 
   var commentToggle: some View {

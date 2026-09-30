@@ -84,7 +84,12 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .setting(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case .routeAction(_, action: .setting(.delegate(.created))):
+    case let .routeAction(_, action: .setting(.delegate(.created(room)))):
+      state.routes.push(.share(.init(room: room)))
+      return .none
+
+    case .routeAction(_, action: .share(.delegate(.dismiss))),
+         .routeAction(_, action: .share(.delegate(.enterClass))):
       return .send(.view(.backToRootAction))
 
     default:
@@ -116,6 +121,7 @@ extension ClassCoordinator {
     case topic(ClassTopicFeature)
     case recommend(ClassRecommendFeature)
     case setting(ClassSettingFeature)
+    case share(ClassShareFeature)
   }
 }
 

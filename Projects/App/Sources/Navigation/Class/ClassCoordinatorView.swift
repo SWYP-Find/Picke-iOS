@@ -29,6 +29,9 @@ public struct ClassCoordinatorView: View {
 
       case let .setting(settingStore):
         ClassSettingView(store: settingStore)
+
+      case let .share(shareStore):
+        ClassShareView(store: shareStore)
       }
     }
   }
