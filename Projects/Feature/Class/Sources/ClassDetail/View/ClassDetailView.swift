@@ -76,8 +76,10 @@ private extension ClassDetailView {
       informationRow("참여 코드", value: store.room.joinCode)
 
       if store.room.role == .owner {
-        Button("코드 공유하기") { send(.codeShareTapped) }
-          .pretendardFont(.semiBold15)
+        ShareLink(item: "[Picke] '\(store.room.name)' 클래스 참여 코드: \(store.room.joinCode)") {
+          Text("코드 공유하기")
+        }
+        .pretendardFont(.semiBold15)
       }
 
       informationRow(

@@ -32,6 +32,21 @@ public struct ClassCoordinatorView: View {
 
       case let .share(shareStore):
         ClassShareView(store: shareStore)
+
+      case let .join(joinStore):
+        ClassJoinView(store: joinStore)
+
+      case let .myClasses(myClassesStore):
+        MyClassView(store: myClassesStore)
+
+      case let .detail(detailStore):
+        ClassDetailView(store: detailStore)
+
+      case let .members(membersStore):
+        ClassMemberView(store: membersStore)
+
+      case let .chat(chatStore):
+        ChatCoordinatorView(store: chatStore)
       }
     }
   }

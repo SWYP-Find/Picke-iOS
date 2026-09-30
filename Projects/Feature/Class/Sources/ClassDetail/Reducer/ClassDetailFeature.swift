@@ -29,7 +29,6 @@ public struct ClassDetailFeature {
 
   public enum View {
     case backTapped
-    case codeShareTapped
     case membersTapped
     case battleTapped
     case deadlineTapped
@@ -40,7 +39,6 @@ public struct ClassDetailFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
-    case shareCode(String)
     case openMembers(ClassRoom)
     case openBattle(ClassBattleSummary)
     case deleted(Int)
@@ -66,8 +64,6 @@ extension ClassDetailFeature {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))
-    case .codeShareTapped:
-      return .send(.delegate(.shareCode(state.room.joinCode)))
     case .membersTapped:
       return .send(.delegate(.openMembers(state.room)))
     case .battleTapped:
