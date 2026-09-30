@@ -21,6 +21,9 @@ public struct ClassCoordinatorView: View {
       switch screen.case {
       case let .intro(introStore):
         ClassIntroView(store: introStore)
+
+      case let .topic(topicStore):
+        ClassTopicView(store: topicStore)
       }
     }
   }

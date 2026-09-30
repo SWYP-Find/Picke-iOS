@@ -59,10 +59,20 @@ public struct ClassCoordinator {
 
 private extension ClassCoordinator {
   func routerAction(
-    state _: inout State,
-    action _: IndexedRouterActionOf<ClassScreen>
+    state: inout State,
+    action: IndexedRouterActionOf<ClassScreen>
   ) -> Effect<Action> {
-    return .none
+    switch action {
+    case .routeAction(_, action: .intro(.delegate(.create))):
+      state.routes.push(.topic(.init()))
+      return .none
+
+    case .routeAction(_, action: .topic(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    default:
+      return .none
+    }
   }
 
   func handleViewAction(
@@ -86,6 +96,7 @@ extension ClassCoordinator {
   @Reducer
   public enum ClassScreen {
     case intro(ClassIntroFeature)
+    case topic(ClassTopicFeature)
   }
 }
 
