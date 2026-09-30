@@ -5,6 +5,8 @@
 
 // MARK: - Domain 레이어 한번에 노출
 
+@_exported import AdDomain
+@_exported import AdDomainInterface
 @_exported import AppUpdateDomain
 @_exported import AppUpdateDomainInterface
 @_exported import AttendanceDomain
@@ -13,8 +15,8 @@
 @_exported import AuthDomainInterface
 @_exported import BattleDomain
 @_exported import BattleDomainInterface
-@_exported import AdDomain
-@_exported import AdDomainInterface
+@_exported import ClassDomain
+@_exported import ClassDomainInterface
 @_exported import CommentDomain
 @_exported import CommentDomainInterface
 @_exported import HomeDomain
