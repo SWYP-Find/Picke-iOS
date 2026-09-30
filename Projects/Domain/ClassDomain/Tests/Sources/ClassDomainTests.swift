@@ -1,8 +1,25 @@
+import ClassDomain
 import ClassDomainInterface
 import Foundation
 import Testing
 
 struct ClassDomainTests {
+  @Test
+  func 서로_다른_live_저장소에서_생성한_클래스를_조회할_수_있다() async throws {
+    let created = try await ClassRepositoryImpl().createClass(
+      ClassCreation(
+        name: "공유 상태 확인",
+        deadline: Date(timeIntervalSince1970: 1_800_000_000),
+        battleId: 101,
+        isVoteEnabled: true,
+        requiresComment: false
+      )
+    )
+
+    let rooms = try await ClassRepositoryImpl().fetchMyClasses()
+    #expect(rooms.contains(created))
+  }
+
   @Test
   func 생성한_클래스는_목록에_추가되고_선생님_역할을_갖는다() async throws {
     let repository = MockClassRepository(rooms: [], availableRooms: [])
