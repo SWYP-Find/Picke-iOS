@@ -43,7 +43,8 @@ public struct ClassRecommendFeature {
 
   public enum Action: ViewAction {
     case view(View)
-    case response(Response)
+    case async(AsyncAction)
+    case inner(InnerAction)
     case delegate(DelegateAction)
   }
 
@@ -57,8 +58,11 @@ public struct ClassRecommendFeature {
     case selectTapped
   }
 
-  @CasePathable
-  public enum Response: Equatable {
+  public enum AsyncAction: Equatable {
+    case fetch(ClassTopicFilter)
+  }
+
+  public enum InnerAction: Equatable {
     case battles(Result<[ClassBattleSummary], ClassError>)
   }
 
@@ -78,8 +82,11 @@ public struct ClassRecommendFeature {
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
 
-      case let .response(response):
-        return handleResponse(state: &state, response: response)
+      case let .async(asyncAction):
+        return handleAsyncAction(state: &state, action: asyncAction)
+
+      case let .inner(innerAction):
+        return handleInnerAction(state: &state, action: innerAction)
 
       case .delegate:
         return .none
@@ -88,23 +95,15 @@ public struct ClassRecommendFeature {
   }
 }
 
-private extension ClassRecommendFeature {
-  func handleViewAction(
+extension ClassRecommendFeature {
+  private func handleViewAction(
     state: inout State,
     action: View
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
       guard state.battles.isEmpty else { return .none }
-      state.isLoading = true
-      return .run { [classUseCase, filter = state.filter] send in
-        let result = await Result {
-          try await classUseCase.fetchRecommendedBattles(filter: filter)
-        }
-        .mapError(ClassError.from)
-        await send(.response(.battles(result)))
-      }
-      .cancellable(id: CancelID.fetch, cancelInFlight: true)
+      return .send(.async(.fetch(state.filter)))
 
     case .backTapped, .editConditionTapped:
       return .send(.delegate(.dismiss))
@@ -122,11 +121,29 @@ private extension ClassRecommendFeature {
     }
   }
 
-  func handleResponse(
+  private func handleAsyncAction(
     state: inout State,
-    response: Response
+    action: AsyncAction
   ) -> Effect<Action> {
-    switch response {
+    switch action {
+    case let .fetch(filter):
+      state.isLoading = true
+      return .run { [classUseCase] send in
+        let result = await Result {
+          try await classUseCase.fetchRecommendedBattles(filter: filter)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.battles(result)))
+      }
+      .cancellable(id: CancelID.fetch, cancelInFlight: true)
+    }
+  }
+
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
     case let .battles(result):
       state.isLoading = false
       if case let .success(battles) = result {

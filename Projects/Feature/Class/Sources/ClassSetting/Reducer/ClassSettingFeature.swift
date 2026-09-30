@@ -64,7 +64,8 @@ public struct ClassSettingFeature {
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
-    case response(Response)
+    case async(AsyncAction)
+    case inner(InnerAction)
     case delegate(DelegateAction)
   }
 
@@ -75,8 +76,12 @@ public struct ClassSettingFeature {
     case createTapped
   }
 
+  public enum AsyncAction: Equatable {
+    case create(ClassCreation)
+  }
+
   @CasePathable
-  public enum Response: Equatable {
+  public enum InnerAction: Equatable {
     case created(Result<ClassRoom, ClassError>)
   }
 
@@ -100,8 +105,11 @@ public struct ClassSettingFeature {
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
 
-      case let .response(response):
-        return handleResponse(state: &state, response: response)
+      case let .async(asyncAction):
+        return handleAsyncAction(state: &state, action: asyncAction)
+
+      case let .inner(innerAction):
+        return handleInnerAction(state: &state, action: innerAction)
 
       case .delegate:
         return .none
@@ -110,8 +118,8 @@ public struct ClassSettingFeature {
   }
 }
 
-private extension ClassSettingFeature {
-  func handleViewAction(
+extension ClassSettingFeature {
+  private func handleViewAction(
     state: inout State,
     action: View
   ) -> Effect<Action> {
@@ -125,23 +133,33 @@ private extension ClassSettingFeature {
 
     case .createTapped:
       guard state.canCreate else { return .none }
+      return .send(.async(.create(state.creation)))
+    }
+  }
+
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .create(creation):
       state.isLoading = true
-      return .run { [classUseCase, creation = state.creation] send in
+      return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.createClass(creation)
         }
         .mapError(ClassError.from)
-        await send(.response(.created(result)))
+        await send(.inner(.created(result)))
       }
       .cancellable(id: CancelID.create, cancelInFlight: true)
     }
   }
 
-  func handleResponse(
+  private func handleInnerAction(
     state: inout State,
-    response: Response
+    action: InnerAction
   ) -> Effect<Action> {
-    switch response {
+    switch action {
     case let .created(result):
       state.isLoading = false
       guard case let .success(room) = result else { return .none }

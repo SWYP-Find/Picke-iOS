@@ -11,10 +11,13 @@ struct ClassRecommendTests {
       ClassRecommendFeature()
     }
 
-    await store.send(.view(.onAppear)) {
+    await store.send(.view(.onAppear))
+    await store.receive(\.async, .fetch(.init(level: .middle))) {
       $0.isLoading = true
     }
-    await store.receive(\.response.battles) {
+    await store.receive(\.inner, .battles(.success(
+      ClassBattleSummary.mocks.filter { $0.level == .middle }
+    ))) {
       $0.isLoading = false
       $0.battles = ClassBattleSummary.mocks.filter { $0.level == .middle }
     }

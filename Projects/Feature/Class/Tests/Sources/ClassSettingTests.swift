@@ -39,10 +39,11 @@ struct ClassSettingTests {
     }
     store.exhaustivity = .off
 
-    await store.send(.view(.createTapped)) {
+    await store.send(.view(.createTapped))
+    await store.receive(\.async, .create(state.creation)) {
       $0.isLoading = true
     }
-    await store.receive(\.response.created) {
+    await store.receive(\.inner.created) {
       $0.isLoading = false
     }
     await store.receive(\.delegate.created)
