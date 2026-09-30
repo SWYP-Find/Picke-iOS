@@ -35,6 +35,8 @@ public enum ImageAsset: String {
   case tabExploreActive
   case tabQuickBattle
   case tabQuickBattleActive
+  case tabClass
+  case tabClassActive
   case tabMyPage
   case tabMyPageActive
 
@@ -59,4 +61,10 @@ public enum ImageAsset: String {
   // MARK: - 댓글(관점)
 
   case heartPlus
+
+  // MARK: - 클래스
+
+  case classIntroBackground
+  case classJoin
+  case classMine
 }

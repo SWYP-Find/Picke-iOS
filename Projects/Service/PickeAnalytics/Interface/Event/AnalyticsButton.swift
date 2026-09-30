@@ -24,6 +24,7 @@ public enum AnalyticsButton: String, Sendable {
   case tabHome = "tab_home"
   case tabExplore = "tab_explore"
   case tabQuickBattle = "tab_quick_battle"
+  case tabClass = "tab_class"
   case tabMypage = "tab_mypage"
   // 댓글
   case commentShare = "comment_share"
