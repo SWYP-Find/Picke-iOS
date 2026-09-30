@@ -70,6 +70,13 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .topic(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .topic(.delegate(.search(filter)))):
+      state.routes.push(.recommend(.init(filter: filter)))
+      return .none
+
+    case .routeAction(_, action: .recommend(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     default:
       return .none
     }
@@ -97,6 +104,7 @@ extension ClassCoordinator {
   public enum ClassScreen {
     case intro(ClassIntroFeature)
     case topic(ClassTopicFeature)
+    case recommend(ClassRecommendFeature)
   }
 }
 

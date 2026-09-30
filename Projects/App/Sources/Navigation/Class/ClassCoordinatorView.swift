@@ -3,10 +3,9 @@
 //  Picke
 //
 
-import SwiftUI
-
 import ComposableArchitecture
 import FeatureAssembly
+import SwiftUI
 import TCAFlow
 
 public struct ClassCoordinatorView: View {
@@ -24,6 +23,9 @@ public struct ClassCoordinatorView: View {
 
       case let .topic(topicStore):
         ClassTopicView(store: topicStore)
+
+      case let .recommend(recommendStore):
+        ClassRecommendView(store: recommendStore)
       }
     }
   }
