@@ -9,15 +9,15 @@ import ComposableArchitecture
 import FeatureAssembly
 import PickeCoreUI
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 import TCAFlow
-import UIKit
 
 public struct MainTabView: View {
   @Bindable private var store: StoreOf<MainTabCoordinator>
 
   public init(store: StoreOf<MainTabCoordinator>) {
-    Self.configureTabBarAppearance()
+    PickeTabBarAppearance.configure()
     self.store = store
   }
 
@@ -46,84 +46,17 @@ public struct MainTabView: View {
 }
 
 private extension MainTabView {
-  static func configureTabBarAppearance() {
-    let selectedColor = UIColor.neutral900
-    let normalColor = UIColor.gray200
-    let backgroundColor = UIColor.bgDefault
-    let borderColor = UIColor.borderDefault.withAlphaComponent(0.4)
-    let font = UIFont.pretendardFontFamily(family: .Medium, size: 12)
-
-    let appearance = UITabBarAppearance()
-    appearance.configureWithOpaqueBackground()
-    appearance.backgroundColor = backgroundColor
-    appearance.shadowColor = borderColor
-    appearance.selectionIndicatorImage = UIImage()
-
-    configureItemAppearance(
-      appearance.stackedLayoutAppearance,
-      selectedColor,
-      normalColor,
-      font
-    )
-    configureItemAppearance(
-      appearance.inlineLayoutAppearance,
-      selectedColor,
-      normalColor,
-      font
-    )
-    configureItemAppearance(
-      appearance.compactInlineLayoutAppearance,
-      selectedColor,
-      normalColor,
-      font
-    )
-
-    UITabBar.appearance().standardAppearance = appearance
-    UITabBar.appearance().scrollEdgeAppearance = appearance
-    UITabBar.appearance().tintColor = selectedColor
-    UITabBar.appearance().unselectedItemTintColor = normalColor
-  }
-
-  static func configureItemAppearance(
-    _ itemAppearance: UITabBarItemAppearance,
-    _ selectedColor: UIColor,
-    _ normalColor: UIColor,
-    _ font: UIFont
-  ) {
-    itemAppearance.normal.iconColor = normalColor
-    itemAppearance.normal.titleTextAttributes = [
-      .font: font,
-      .foregroundColor: normalColor,
-    ]
-
-    itemAppearance.selected.iconColor = selectedColor
-    itemAppearance.selected.titleTextAttributes = [
-      .font: font,
-      .foregroundColor: selectedColor,
-    ]
-  }
-
-  func tabLabel(for tab: TabItem) -> some View {
-    Label {
-      Text(tab.title)
-        .pretendardFont(.labelSmall)
-    } icon: {
-      tabIcon(for: tab)
-    }
-    .accessibilityIdentifier("tab.\(tab.tag)")
-  }
-
   @ViewBuilder
-  func tabIcon(for tab: TabItem) -> some View {
+  func tabLabel(for tab: TabItem) -> some View {
     let isSelected = store.selectedTab == tab.tag
     let asset = MainTabCoordinator.Tab(rawValue: tab.tag)?
       .iconAsset(isSelected: isSelected) ?? .none
 
-    Image(asset: asset)
-      .renderingMode(.template)
-      .resizable()
-      .scaledToFit()
-      .frame(width: 24, height: 24)
+    PickeTabItemLabel(
+      title: tab.title,
+      icon: asset,
+      tag: tab.tag
+    )
   }
 
   /// TabView 는 네 탭의 콘텐츠를 한꺼번에 만들기 때문에, LazyView 로 감싸
