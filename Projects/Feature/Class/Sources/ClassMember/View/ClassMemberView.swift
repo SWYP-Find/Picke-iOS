@@ -49,7 +49,7 @@ private extension ClassMemberView {
       Image(systemName: "magnifyingglass")
         .font(.system(size: 18))
         .foregroundStyle(.gray300)
-      TextField("멤버 검색", text: $store.searchText)
+      TextField("이름을 입력해 주세요.", text: $store.searchText)
         .pretendardFont(.medium15)
         .foregroundStyle(.gray800)
     }

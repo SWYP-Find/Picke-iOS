@@ -125,13 +125,13 @@ private extension ClassReportView {
     reportCard(padding: 16, spacing: 8) {
       cardHeading("내 댓글")
       HStack {
-        Text("낮춰야 한다").pickeBadge(.filled, size: .tag)
+        Text("낮춰야한다").pickeBadge(.filled, size: .tag)
         Spacer()
         Text("26.09.23. 14:02")
           .pretendardFont(family: .SemiBold, size: 10)
           .foregroundStyle(.gray300)
       }
-      Text("청소년 범죄가 날로 잔혹해지는 만큼 처벌 연령을 낮춰야 한다고 생각해요. 피해자 보호를 위해서라도 책임을 물어야 해요.")
+      Text("제도화가 무서운 건, 사회적 압력이 '선택'을 '의무'로 바꿀 수 있다는 거예요. 네덜란드 사례를 보면 우려가 현실이 되고 있죠.")
         .pretendardFont(.regular13)
         .foregroundStyle(.gray700)
       HStack(spacing: 12) {
@@ -147,7 +147,7 @@ private extension ClassReportView {
         Text("김민지 · 교정이 우선이다")
           .pretendardFont(family: .SemiBold, size: 12)
           .foregroundStyle(.gray500)
-        Text("“피해자 보호를 위한 기준도 함께 필요하지 않을까요?”")
+        Text("제도화가 무서운 건, 사회적 압력이 '선택'을 '의무'로 바꿀 수 있다는 거예요.")
           .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
       }
@@ -157,7 +157,7 @@ private extension ClassReportView {
       Text("↳ 내 대댓글")
         .pretendardFont(family: .SemiBold, size: 12)
         .foregroundStyle(.primary500)
-      Text("처벌만으로는 해결되지 않아요. 교육과 보호도 함께 필요하다고 생각해요.")
+      Text("토론을 들으면서 처벌만으로는 해결되지 않는 점을 이해하게 됐어요. 교육과 보호도 함께 필요하다고 생각해요.")
         .pretendardFont(.regular13)
         .foregroundStyle(.gray700)
       HStack {

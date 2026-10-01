@@ -101,7 +101,7 @@ extension ClassMemberFeature {
       else { return .none }
       state.selectedMember = member
       state.customAlert = CustomAlertState(
-        title: "\(member.name)님을\n클래스에서 내보낼까요?",
+        title: "\(member.name)님을 클래스에서 내보낼까요?\n한 번 내보내면 되돌릴 수 없어요.",
         confirmTitle: "내보내기",
         cancelTitle: "뒤로가기",
         isDestructive: true,
