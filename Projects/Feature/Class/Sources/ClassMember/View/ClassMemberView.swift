@@ -20,6 +20,15 @@ public struct ClassMemberView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
 
+      if store.room.role == .owner {
+        Text("멤버 내보내기는 서버 연동 후 제공됩니다.")
+          .pretendardFont(family: .Medium, size: 12)
+          .foregroundStyle(.gray300)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.horizontal, 16)
+          .padding(.top, 8)
+      }
+
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
           Text("멤버 \(store.members.count)")
@@ -45,7 +54,6 @@ public struct ClassMemberView: View {
     ) { filterStore in
       filterSheet(store: filterStore)
     }
-    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
@@ -91,14 +99,6 @@ private extension ClassMemberView {
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
           .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
-      } else if store.room.role == .owner {
-        Button { send(.removeTapped(member.id)) } label: {
-          Image(systemName: "minus.circle")
-            .font(.system(size: 20))
-            .foregroundStyle(.gray500)
-            .frame(width: 32, height: 32)
-        }
-        .accessibilityLabel("\(member.name) 내보내기")
       }
     }
     .frame(height: 68)
@@ -117,31 +117,35 @@ private extension ClassMemberView {
         sheetHandle
         filterSection(
           title: "참여 상태",
-          detail: "총 " + String(self.store.members.count) + "명",
+          detail: "제공 예정",
           options: ClassMemberFilterFeature.Participation.allCases.filter { $0 != .all },
           selected: { store.participation == $0 },
-          action: { store.send(.participationSelected($0)) }
+          action: { store.send(.participationSelected($0)) },
+          enabled: { _ in false }
         )
         filterSection(
           title: "미완료",
-          detail: "총 " + String(self.store.members.count) + "명",
+          detail: "제공 예정",
           options: ClassMemberFilterFeature.Completion.allCases.filter { $0 != .all },
           selected: { store.completion == $0 },
-          action: { store.send(.completionSelected($0)) }
+          action: { store.send(.completionSelected($0)) },
+          enabled: { _ in false }
         )
         filterSection(
           title: "입장 변화",
-          detail: "총 " + String(self.store.members.count) + "명",
+          detail: "제공 예정",
           options: ClassMemberFilterFeature.Attendance.allCases.filter { $0 != .all },
           selected: { store.attendance == $0 },
-          action: { store.send(.attendanceSelected($0)) }
+          action: { store.send(.attendanceSelected($0)) },
+          enabled: { _ in false }
         )
         filterSection(
           title: "정렬",
-          detail: "총 " + String(self.store.members.count) + "명",
+          detail: "이름순만 제공",
           options: ClassMemberFilterFeature.Sort.allCases,
           selected: { store.sort == $0 },
-          action: { store.send(.sortSelected($0)) }
+          action: { store.send(.sortSelected($0)) },
+          enabled: { $0 == .name }
         )
 
         Button { store.send(.applyTapped) } label: {
@@ -167,7 +171,8 @@ private extension ClassMemberView {
     detail: String,
     options: [Option],
     selected: @escaping (Option) -> Bool,
-    action: @escaping (Option) -> Void
+    action: @escaping (Option) -> Void,
+    enabled: @escaping (Option) -> Bool
   ) -> some View where Option.RawValue == String {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 10) {
@@ -186,6 +191,7 @@ private extension ClassMemberView {
             Text(option.rawValue)
               .pretendardFont(family: .Medium, size: 13)
               .foregroundStyle(selected(option) ? .beige50 : .gray300)
+              .opacity(enabled(option) ? 1 : 0.5)
               .lineLimit(1)
               .fixedSize(horizontal: true, vertical: false)
               .padding(.horizontal, 12)
@@ -193,6 +199,7 @@ private extension ClassMemberView {
               .background(selected(option) ? .primary500 : .beige200, in: RoundedRectangle(cornerRadius: 2))
           }
           .buttonStyle(.plain)
+          .disabled(!enabled(option))
         }
         Spacer(minLength: 0)
       }

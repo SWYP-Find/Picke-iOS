@@ -14,6 +14,7 @@ public struct ClassIntroFeature {
   @ObservableState
   public struct State: Equatable {
     @Presents public var join: ClassJoinFeature.State?
+    public var showTicketNotice = false
 
     public init() {}
   }
@@ -32,6 +33,7 @@ public struct ClassIntroFeature {
     case myClassesTapped
     case createTapped
     case ticketTapped
+    case ticketNoticeDismissed
   }
 
   @CasePathable
@@ -109,7 +111,12 @@ extension ClassIntroFeature {
       return .send(.delegate(.create))
 
     case .ticketTapped:
-      return .send(.delegate(.ticket))
+      state.showTicketNotice = true
+      return .none
+
+    case .ticketNoticeDismissed:
+      state.showTicketNotice = false
+      return .none
     }
   }
 

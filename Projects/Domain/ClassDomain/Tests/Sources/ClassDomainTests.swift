@@ -1,23 +1,30 @@
 import ClassDomain
 import ClassDomainInterface
+import ComposableArchitecture
 import Foundation
 import Testing
 
 struct ClassDomainTests {
   @Test
-  func 서로_다른_live_저장소에서_생성한_클래스를_조회할_수_있다() async throws {
-    let created = try await ClassRepositoryImpl().createClass(
-      ClassCreation(
-        name: "공유 상태 확인",
-        deadline: Date(timeIntervalSince1970: 1_800_000_000),
-        battleId: 101,
-        allowsAnonymousOpinion: true,
-        requiresComment: false
-      )
-    )
+  func live_저장소는_mock_클래스를_반환하지_않는다() async throws {
+    do {
+      _ = try await ClassRepositoryImpl().fetchMyClasses()
+      Issue.record("live 저장소가 서버 연결 없이 클래스 목록을 반환함")
+    } catch {
+      #expect(ClassError.from(error) == .network("클래스 서버 API가 연결되지 않았습니다."))
+    }
+  }
 
-    let rooms = try await ClassRepositoryImpl().fetchMyClasses()
-    #expect(rooms.contains(created))
+  @Test
+  func useCase는_주입된_repository를_사용한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let useCase = withDependencies {
+      $0.classRepository = MockClassRepository(rooms: [room], availableRooms: [])
+    } operation: {
+      ClassUseCaseImpl()
+    }
+
+    #expect(try await useCase.fetchMyClasses() == [room])
   }
 
   @Test

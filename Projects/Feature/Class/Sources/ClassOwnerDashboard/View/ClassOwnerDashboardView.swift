@@ -23,9 +23,9 @@ public struct ClassOwnerDashboardView: View {
         get: { store.selectedTab },
         set: { send(.tabSelected($0)) }
       )) {
-        ScrollView { homePage().padding(16) }.tag(ClassOwnerDashboardFeature.Tab.home)
-        ScrollView { membersPage().padding(16) }.tag(ClassOwnerDashboardFeature.Tab.members)
-        ScrollView { opinionsPage().padding(16) }.tag(ClassOwnerDashboardFeature.Tab.opinions)
+        ScrollView { homePage().padding(16) }.tag(ClassOwnerTab.home)
+        ScrollView { membersPage().padding(16) }.tag(ClassOwnerTab.members)
+        ScrollView { opinionsPage().padding(16) }.tag(ClassOwnerTab.opinions)
       }
       .tabViewStyle(.page(indexDisplayMode: .never))
     }
@@ -82,7 +82,7 @@ private extension ClassOwnerDashboardView {
   @ViewBuilder
   func dashboardTabs() -> some View {
     HStack(spacing: 0) {
-      ForEach(ClassOwnerDashboardFeature.Tab.allCases, id: \.self) { tab in
+      ForEach(ClassOwnerTab.allCases, id: \.self) { tab in
         Button { send(.tabSelected(tab)) } label: {
           Text(tab.rawValue)
             .pretendardFont(family: .Medium, size: 13)
@@ -145,7 +145,7 @@ private extension ClassOwnerDashboardView {
       .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 8) {
-          ForEach(ClassOwnerDashboardFeature.MemberSort.allCases, id: \.self) { sort in
+          ForEach(ClassOwnerMemberSort.allCases, id: \.self) { sort in
             Button { send(.memberSortSelected(sort)) } label: {
               Text(sort.rawValue).pickeSortChip(isSelected: store.memberSort == sort)
             }
@@ -171,7 +171,7 @@ private extension ClassOwnerDashboardView {
   func opinionFilters() -> some View {
     ScrollView(.horizontal, showsIndicators: false) {
       HStack(spacing: 8) {
-        ForEach(ClassOwnerDashboardFeature.OpinionFilter.allCases, id: \.self) { filter in
+        ForEach(ClassOwnerOpinionFilter.allCases, id: \.self) { filter in
           Button { send(.opinionFilterSelected(filter)) } label: {
             Text(filter.rawValue).pickeSortChip(isSelected: store.opinionFilter == filter)
           }.buttonStyle(.plain)
@@ -219,7 +219,7 @@ private extension ClassOwnerDashboardView {
   }
 
   @ViewBuilder
-  func memberRow(_ member: ClassOwnerDashboardFeature.Member, action: String) -> some View {
+  func memberRow(_ member: ClassOwnerMember, action: String) -> some View {
     Button {
       send(member.needsReview ? .feedbackTapped(member.id) : .memberTapped(member.id))
     } label: {
@@ -237,7 +237,7 @@ private extension ClassOwnerDashboardView {
   }
 
   @ViewBuilder
-  func opinionRow(_ opinion: ClassOwnerDashboardFeature.Opinion) -> some View {
+  func opinionRow(_ opinion: ClassOwnerOpinion) -> some View {
     Button { send(.opinionTapped(opinion.id)) } label: {
       VStack(alignment: .leading, spacing: 7) {
         HStack {

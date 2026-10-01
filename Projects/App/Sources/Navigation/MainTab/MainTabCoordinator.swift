@@ -18,11 +18,11 @@ public struct MainTabCoordinator {
   public init() {}
 
   public enum Tab: Int, CaseIterable {
-    case home
-    case explore
-    case quickBattle
-    case classroom
-    case myPage
+    case home = 0
+    case explore = 1
+    case quickBattle = 2
+    case classroom = 4
+    case myPage = 3
 
     public var title: String {
       switch self {

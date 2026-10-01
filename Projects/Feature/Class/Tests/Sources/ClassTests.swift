@@ -73,6 +73,20 @@ struct ClassTests {
   }
 
   @Test
+  func 이용권_등록_기능이_없으면_안내를_표시한다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    }
+
+    await store.send(.view(.ticketTapped)) {
+      $0.showTicketNotice = true
+    }
+    await store.send(.view(.ticketNoticeDismissed)) {
+      $0.showTicketNotice = false
+    }
+  }
+
+  @Test
   func 같은_카테고리를_다시_누르면_선택이_해제된다() async {
     let store = TestStore(initialState: ClassTopicFeature.State()) {
       ClassTopicFeature()

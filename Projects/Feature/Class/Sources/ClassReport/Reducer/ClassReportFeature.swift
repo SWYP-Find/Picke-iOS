@@ -16,7 +16,6 @@ public struct ClassReportFeature {
   public struct State: Equatable {
     public var room: ClassRoom
     public var selectedTab: Tab = .summary
-    public var isChartDrawn = false
 
     public init(room: ClassRoom) {
       self.room = room
@@ -32,7 +31,6 @@ public struct ClassReportFeature {
   public enum View: Equatable {
     case backTapped
     case tabSelected(Tab)
-    case chartAnimationStarted
   }
 
   @CasePathable
@@ -48,12 +46,6 @@ public struct ClassReportFeature {
       case let .view(.tabSelected(tab)):
         guard state.selectedTab != tab else { return .none }
         state.selectedTab = tab
-        state.isChartDrawn = false
-        return .none
-      case .view(.chartAnimationStarted):
-        if state.selectedTab == .classResult {
-          state.isChartDrawn = true
-        }
         return .none
       case .delegate:
         return .none

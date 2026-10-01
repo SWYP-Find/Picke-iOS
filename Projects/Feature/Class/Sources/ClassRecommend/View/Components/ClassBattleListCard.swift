@@ -61,9 +61,11 @@ private extension ClassBattleListCard {
         Text("미리듣기")
           .pretendardFont(.semiBold12)
       }
-      .foregroundStyle(.primary500)
+      .foregroundStyle(.gray300)
     }
     .buttonStyle(.plain)
+    .disabled(true)
+    .accessibilityHint("미리듣기는 준비 중입니다")
   }
 
   @ViewBuilder

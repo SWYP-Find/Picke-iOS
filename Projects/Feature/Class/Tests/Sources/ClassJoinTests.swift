@@ -22,7 +22,7 @@ struct ClassJoinTests {
     let store = TestStore(initialState: ClassJoinFeature.State()) {
       ClassJoinFeature()
     } withDependencies: {
-      $0.classUseCase = StubClassUseCase(fetchClass: { _ in room })
+      $0.classRepository = StubClassUseCase(fetchClass: { _ in room })
     }
 
     await store.send(.binding(.set(\.joinCode, " pk9t3s "))) {
@@ -46,7 +46,7 @@ struct ClassJoinTests {
     let store = TestStore(initialState: state) {
       ClassJoinFeature()
     } withDependencies: {
-      $0.classUseCase = StubClassUseCase(joinClass: { code, nickname in
+      $0.classRepository = StubClassUseCase(joinClass: { code, nickname in
         #expect(code == room.joinCode)
         #expect(nickname == "민지")
         return room
@@ -69,7 +69,7 @@ struct ClassJoinTests {
     let store = TestStore(initialState: ClassJoinFeature.State()) {
       ClassJoinFeature()
     } withDependencies: {
-      $0.classUseCase = StubClassUseCase(fetchClass: { _ in
+      $0.classRepository = StubClassUseCase(fetchClass: { _ in
         throw ClassError.invalidCode
       })
     }

@@ -1,34 +1,20 @@
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
-import PickeSharedUI
 import Testing
 
 @MainActor
 struct ClassMemberTests {
   @Test
-  func 선생님은_멤버를_선택하고_삭제할_수_있다() async {
+  func 멤버_내보내기는_서버_연동_전까지_상태를_변경하지_않는다() async {
     let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
       ClassMemberFeature()
     }
     let member = store.state.members[1]
+    let originalMembers = store.state.members
 
-    await store.send(.view(.removeTapped(member.id))) {
-      $0.selectedMember = member
-      $0.customAlert = CustomAlertState(
-        title: "\(member.name)님을 클래스에서 내보낼까요?\n한 번 내보내면 되돌릴 수 없어요.",
-        confirmTitle: "내보내기",
-        cancelTitle: "뒤로가기",
-        isDestructive: true,
-        style: .deleteConfirm
-      )
-    }
-    await store.send(.customAlert(.presented(.confirmTapped))) {
-      $0.members.remove(at: 1)
-      $0.selectedMember = nil
-      $0.customAlert = nil
-    }
-    #expect(store.state.members.count == ClassRoom.mocks[0].memberCount - 1)
+    await store.send(.view(.removeTapped(member.id)))
+    #expect(store.state.members == originalMembers)
   }
 
   @Test
@@ -38,7 +24,7 @@ struct ClassMemberTests {
     }
 
     await store.send(.view(.removeTapped(2)))
-    #expect(store.state.selectedMember == nil)
+    #expect(store.state.members.count == ClassRoom.mocks[1].memberCount)
   }
 
   @Test
@@ -64,13 +50,29 @@ struct ClassMemberTests {
     }
     await store.send(
       .filter(.presented(.participationSelected(.completed)))
-    ) {
-      $0.filter?.participation = .completed
-    }
+    )
     await store.send(.filter(.presented(.applyTapped))) {
-      $0.appliedFilter.participation = .completed
       $0.filter = nil
     }
+    #expect(store.state.appliedFilter.participation == .all)
+  }
+
+  @Test
+  func 이름순_정렬은_시드된_멤버에_적용된다() async {
+    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
+      ClassMemberFeature()
+    }
+
+    await store.send(.view(.filterTapped)) {
+      $0.filter = .init()
+    }
+    await store.send(.filter(.presented(.sortSelected(.name))))
+    await store.send(.filter(.presented(.applyTapped))) {
+      $0.filter = nil
+    }
+    #expect(store.state.visibleMembers == store.state.members.sorted {
+      $0.name.localizedStandardCompare($1.name) == .orderedAscending
+    })
     await store.send(.view(.filterTapped)) {
       $0.filter = $0.appliedFilter
     }

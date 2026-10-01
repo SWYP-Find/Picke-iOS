@@ -47,6 +47,21 @@ public struct ClassIntroView: View {
     ) { joinStore in
       ClassJoinView(store: joinStore)
     }
+    .alert(
+      "이용권 등록 준비 중",
+      isPresented: Binding(
+        get: { store.showTicketNotice },
+        set: {
+          if !$0 {
+            send(.ticketNoticeDismissed)
+          }
+        }
+      )
+    ) {
+      Button("확인", role: .cancel) {}
+    } message: {
+      Text("이용권 등록 기능은 아직 사용할 수 없습니다.")
+    }
   }
 }
 

@@ -2,35 +2,35 @@ import ClassDomainInterface
 import Foundation
 
 public struct ClassRepositoryImpl: ClassInterface {
-  private static let mock = MockClassRepository()
+  private static let unavailableMessage = "클래스 서버 API가 연결되지 않았습니다."
 
   public init() {}
 
   public func fetchMyClasses() async throws -> [ClassRoom] {
-    try await Self.mock.fetchMyClasses()
+    throw ClassError.network(Self.unavailableMessage)
   }
 
-  public func fetchRecommendedBattles(filter: ClassTopicFilter) async throws -> [ClassBattleSummary] {
-    try await Self.mock.fetchRecommendedBattles(filter: filter)
+  public func fetchRecommendedBattles(filter _: ClassTopicFilter) async throws -> [ClassBattleSummary] {
+    throw ClassError.network(Self.unavailableMessage)
   }
 
-  public func createClass(_ creation: ClassCreation) async throws -> ClassRoom {
-    try await Self.mock.createClass(creation)
+  public func createClass(_: ClassCreation) async throws -> ClassRoom {
+    throw ClassError.network(Self.unavailableMessage)
   }
 
-  public func fetchClass(joinCode: String) async throws -> ClassRoom {
-    try await Self.mock.fetchClass(joinCode: joinCode)
+  public func fetchClass(joinCode _: String) async throws -> ClassRoom {
+    throw ClassError.network(Self.unavailableMessage)
   }
 
-  public func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
-    try await Self.mock.joinClass(joinCode: joinCode, nickname: nickname)
+  public func joinClass(joinCode _: String, nickname _: String) async throws -> ClassRoom {
+    throw ClassError.network(Self.unavailableMessage)
   }
 
-  public func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom {
-    try await Self.mock.updateDeadline(id: id, deadline: deadline)
+  public func updateDeadline(id _: Int, deadline _: Date) async throws -> ClassRoom {
+    throw ClassError.network(Self.unavailableMessage)
   }
 
-  public func deleteClass(id: Int) async throws {
-    try await Self.mock.deleteClass(id: id)
+  public func deleteClass(id _: Int) async throws {
+    throw ClassError.network(Self.unavailableMessage)
   }
 }

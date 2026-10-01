@@ -1,7 +1,6 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
-import PickeSharedUI
 
 @Reducer
 public struct ClassMemberFeature {
@@ -24,10 +23,8 @@ public struct ClassMemberFeature {
     public let room: ClassRoom
     public var members: [Member]
     public var searchText = ""
-    public var selectedMember: Member?
     public var appliedFilter = ClassMemberFilterFeature.State()
     @Presents public var filter: ClassMemberFilterFeature.State?
-    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(room: ClassRoom) {
       self.room = room
@@ -39,7 +36,18 @@ public struct ClassMemberFeature {
 
     public var visibleMembers: [Member] {
       let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-      return query.isEmpty ? members : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
+      let filteredMembers = query.isEmpty
+        ? members
+        : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
+
+      switch appliedFilter.sort {
+      case .name:
+        return filteredMembers.sorted {
+          $0.name.localizedStandardCompare($1.name) == .orderedAscending
+        }
+      case .comments, .replies, .recommendations:
+        return filteredMembers
+      }
     }
   }
 
@@ -47,7 +55,6 @@ public struct ClassMemberFeature {
     case binding(BindingAction<State>)
     case view(View)
     case filter(PresentationAction<ClassMemberFilterFeature.Action>)
-    case customAlert(PresentationAction<CustomAlertAction>)
     case delegate(DelegateAction)
   }
 
@@ -55,8 +62,6 @@ public struct ClassMemberFeature {
     case backTapped
     case filterTapped
     case removeTapped(Int)
-    case removeConfirmed
-    case removeCancelled
   }
 
   public enum DelegateAction: Equatable {
@@ -82,28 +87,12 @@ public struct ClassMemberFeature {
         return .none
       case .filter:
         return .none
-      case let .customAlert(alertAction):
-        switch alertAction {
-        case .presented(.confirmTapped):
-          guard let member = state.selectedMember else { return .none }
-          state.members.removeAll(where: { $0.id == member.id })
-          state.selectedMember = nil
-          state.customAlert = nil
-          return .none
-        case .presented(.cancelTapped), .dismiss:
-          state.selectedMember = nil
-          state.customAlert = nil
-          return .none
-        }
       case .delegate:
         return .none
       }
     }
     .ifLet(\.$filter, action: \.filter) {
       ClassMemberFilterFeature()
-    }
-    .ifLet(\.$customAlert, action: \.customAlert) {
-      CustomConfirmAlert()
     }
   }
 }
@@ -117,27 +106,8 @@ extension ClassMemberFeature {
       state.filter = state.appliedFilter
       return .none
     case let .removeTapped(id):
-      guard state.room.role == .owner,
-            let member = state.members.first(where: { $0.id == id && !$0.isOwner })
-      else { return .none }
-      state.selectedMember = member
-      state.customAlert = CustomAlertState(
-        title: "\(member.name)님을 클래스에서 내보낼까요?\n한 번 내보내면 되돌릴 수 없어요.",
-        confirmTitle: "내보내기",
-        cancelTitle: "뒤로가기",
-        isDestructive: true,
-        style: .deleteConfirm
-      )
-      return .none
-    case .removeConfirmed:
-      guard let member = state.selectedMember else { return .none }
-      state.members.removeAll(where: { $0.id == member.id })
-      state.selectedMember = nil
-      state.customAlert = nil
-      return .none
-    case .removeCancelled:
-      state.selectedMember = nil
-      state.customAlert = nil
+      // Member removal requires a server mutation. Keep this action inert until that API exists.
+      _ = id
       return .none
     }
   }
@@ -198,12 +168,16 @@ public struct ClassMemberFilterFeature {
     Reduce { state, action in
       switch action {
       case let .participationSelected(value):
+        guard value == .all else { return .none }
         state.participation = value
       case let .completionSelected(value):
+        guard value == .all else { return .none }
         state.completion = value
       case let .attendanceSelected(value):
+        guard value == .all else { return .none }
         state.attendance = value
       case let .sortSelected(value):
+        guard value == .name else { return .none }
         state.sort = value
       case .applyTapped, .dismissTapped:
         break
