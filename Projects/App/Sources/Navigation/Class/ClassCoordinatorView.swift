@@ -45,6 +45,9 @@ public struct ClassCoordinatorView: View {
       case let .members(membersStore):
         ClassMemberView(store: membersStore)
 
+      case let .report(reportStore):
+        ClassReportView(store: reportStore)
+
       case let .chat(chatStore):
         ChatCoordinatorView(store: chatStore)
       }

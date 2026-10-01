@@ -3,11 +3,10 @@
 //  Class
 //
 
-import SwiftUI
-
 import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
+import SwiftUI
 
 @ViewAction(for: ClassIntroFeature.self)
 public struct ClassIntroView: View {
@@ -19,14 +18,17 @@ public struct ClassIntroView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(centerTitle: "클래스")
-        .foregroundStyle(.white)
+      PickeNavigationBar(
+        onBack: { send(.backTapped) },
+        centerTitle: "클래스"
+      )
+      .foregroundStyle(.beige50)
 
       VStack(alignment: .leading, spacing: 0) {
         titleSection()
         Spacer(minLength: 24)
         menuCards()
-          .padding(.bottom, 16)
+          .padding(.bottom, 6)
         createButton
         ticketButton
       }
@@ -35,7 +37,15 @@ public struct ClassIntroView: View {
       .padding(.bottom, 16)
     }
     .background(backgroundImage())
-    .toolbar(.hidden, for: .navigationBar)
+    .hidesSystemBars()
+    .pickeModal(
+      $store.scope(
+        state: \.join,
+        action: \.join
+      )
+    ) { joinStore in
+      ClassJoinView(store: joinStore)
+    }
   }
 }
 
@@ -53,16 +63,21 @@ private extension ClassIntroView {
 
   @ViewBuilder
   func titleSection() -> some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(spacing: 12) {
       Text("함께 생각하는\n수업을 시작해 보세요")
         .pretendardFont(family: .SemiBold, size: 24)
-        .lineSpacing(7)
-        .foregroundStyle(.white)
+        .kerning(-0.6)
+        .lineSpacing(2.4)
+        .multilineTextAlignment(.center)
+        .foregroundStyle(.beige50)
 
       Text("콘텐츠를 고르고, 클래스로 함께 나눠요.")
         .pretendardFont(family: .SemiBold, size: 16)
+        .kerning(-0.4)
+        .multilineTextAlignment(.center)
         .foregroundStyle(.gray300)
     }
+    .frame(maxWidth: .infinity)
   }
 
   @ViewBuilder
@@ -98,11 +113,10 @@ private extension ClassIntroView {
       send(.ticketTapped)
     } label: {
       Text("이용권 등록하기")
-        .pretendardFont(family: .Medium, size: 14)
+        .pretendardFont(.labelSmall)
         .foregroundStyle(.gray300)
-        .underline()
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
     }
     .buttonStyle(.plain)
   }

@@ -2,6 +2,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeSharedUI
 import Testing
 
 @MainActor
@@ -15,7 +16,7 @@ struct ClassDetailTests {
     let updated = room.deadline.addingTimeInterval(86400)
 
     await store.send(.view(.deadlineTapped)) {
-      $0.isDeadlineSheetPresented = true
+      $0.modal = .init(kind: .deadline)
     }
     await store.send(.binding(.set(\.draftDeadline, updated))) {
       $0.draftDeadline = updated
@@ -40,7 +41,7 @@ struct ClassDetailTests {
       $0.isLoading = false
       $0.room = updatedRoom
       $0.deadline = updated
-      $0.isDeadlineSheetPresented = false
+      $0.modal = nil
     }
   }
 
@@ -66,6 +67,17 @@ struct ClassDetailTests {
   }
 
   @Test
+  func 결과보기를_누르면_현재_클래스를_리포트로_전달한다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.reportTapped))
+    await store.receive(\.delegate, .openReport(room))
+  }
+
+  @Test
   func 삭제가_완료된_뒤에만_화면을_닫는다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
@@ -73,10 +85,16 @@ struct ClassDetailTests {
     }
 
     await store.send(.view(.deleteTapped)) {
-      $0.isDeleteAlertPresented = true
+      $0.customAlert = CustomAlertState(
+        title: "삭제 후에는 복구할 수 없어요.\n그럼에도 삭제하시겠습니까?",
+        confirmTitle: "삭제하기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
     }
     await store.send(.view(.deleteConfirmed)) {
-      $0.isDeleteAlertPresented = false
+      $0.customAlert = nil
     }
     await store.receive(\.async, .delete(room.id)) {
       $0.isLoading = true

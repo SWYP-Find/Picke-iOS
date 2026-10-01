@@ -20,6 +20,16 @@ public struct ClassCoordinator {
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
+
+    /// 내 클래스 · 클래스 상세 · 멤버 목록 화면에서만 탭바를 보여준다.
+    public var showsTabBar: Bool {
+      switch routes.last?.screen {
+      case .myClasses?, .detail?, .members?, .report?:
+        return true
+      default:
+        return false
+      }
+    }
   }
 
   @CasePathable
@@ -62,8 +72,8 @@ private extension ClassCoordinator {
     action: IndexedRouterActionOf<ClassScreen>
   ) -> Effect<Action> {
     switch action {
-    case .routeAction(_, action: .intro(.delegate(.join))):
-      state.routes.push(.join(.init()))
+    case let .routeAction(_, action: .intro(.delegate(.joined(room)))):
+      state.routes.push(.detail(.init(room: room)))
       return .none
 
     case .routeAction(_, action: .intro(.delegate(.myClasses))):
@@ -122,6 +132,19 @@ private extension ClassCoordinator {
       state.routes.push(.chat(.init(route: .preVote(battleId: battle.id))))
       return .none
 
+    case let .routeAction(_, action: .detail(.delegate(.openReport(room)))):
+      state.routes.push(.report(.init(room: room)))
+      return .none
+
+    case .routeAction(_, action: .report(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
+      return .send(.view(.backToRootAction))
+
     case .routeAction(_, action: .detail(.delegate(.deleted))):
       return .send(.view(.backToRootAction))
 
@@ -159,6 +182,7 @@ extension ClassCoordinator {
     case myClasses(MyClassFeature)
     case detail(ClassDetailFeature)
     case members(ClassMemberFeature)
+    case report(ClassReportFeature)
     case chat(ChatCoordinator)
   }
 }

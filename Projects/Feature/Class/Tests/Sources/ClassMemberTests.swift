@@ -1,6 +1,7 @@
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
+import PickeSharedUI
 import Testing
 
 @MainActor
@@ -14,10 +15,18 @@ struct ClassMemberTests {
 
     await store.send(.view(.removeTapped(member.id))) {
       $0.selectedMember = member
+      $0.customAlert = CustomAlertState(
+        title: "\(member.name)님을\n클래스에서 내보낼까요?",
+        confirmTitle: "내보내기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
     }
-    await store.send(.view(.removeConfirmed)) {
+    await store.send(.customAlert(.presented(.confirmTapped))) {
       $0.members.remove(at: 1)
       $0.selectedMember = nil
+      $0.customAlert = nil
     }
     #expect(store.state.members.count == ClassRoom.mocks[0].memberCount - 1)
   }
@@ -30,5 +39,17 @@ struct ClassMemberTests {
 
     await store.send(.view(.removeTapped(2)))
     #expect(store.state.selectedMember == nil)
+  }
+
+  @Test
+  func 검색어에_맞는_멤버만_표시한다() async {
+    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
+      ClassMemberFeature()
+    }
+
+    await store.send(.binding(.set(\.searchText, "학생 1"))) {
+      $0.searchText = "학생 1"
+    }
+    #expect(store.state.visibleMembers.allSatisfy { $0.name.contains("학생 1") })
   }
 }

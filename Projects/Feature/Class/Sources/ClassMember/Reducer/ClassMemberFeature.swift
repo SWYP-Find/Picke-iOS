@@ -1,5 +1,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
+import PickeSharedUI
 
 @Reducer
 public struct ClassMemberFeature {
@@ -21,7 +23,9 @@ public struct ClassMemberFeature {
 
     public let room: ClassRoom
     public var members: [Member]
+    public var searchText = ""
     public var selectedMember: Member?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(room: ClassRoom) {
       self.room = room
@@ -30,10 +34,17 @@ public struct ClassMemberFeature {
           Member(id: index + 2, name: "학생 \(index + 1)")
         }
     }
+
+    public var visibleMembers: [Member] {
+      let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+      return query.isEmpty ? members : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
+    }
   }
 
-  public enum Action: ViewAction {
+  public enum Action: ViewAction, BindableAction {
+    case binding(BindingAction<State>)
     case view(View)
+    case customAlert(PresentationAction<CustomAlertAction>)
     case delegate(DelegateAction)
   }
 
@@ -49,13 +60,32 @@ public struct ClassMemberFeature {
   }
 
   public var body: some Reducer<State, Action> {
+    BindingReducer()
     Reduce { state, action in
       switch action {
+      case .binding:
+        return .none
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
+      case let .customAlert(alertAction):
+        switch alertAction {
+        case .presented(.confirmTapped):
+          guard let member = state.selectedMember else { return .none }
+          state.members.removeAll(where: { $0.id == member.id })
+          state.selectedMember = nil
+          state.customAlert = nil
+          return .none
+        case .presented(.cancelTapped), .dismiss:
+          state.selectedMember = nil
+          state.customAlert = nil
+          return .none
+        }
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$customAlert, action: \.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -70,14 +100,23 @@ extension ClassMemberFeature {
             let member = state.members.first(where: { $0.id == id && !$0.isOwner })
       else { return .none }
       state.selectedMember = member
+      state.customAlert = CustomAlertState(
+        title: "\(member.name)님을\n클래스에서 내보낼까요?",
+        confirmTitle: "내보내기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
       return .none
     case .removeConfirmed:
       guard let member = state.selectedMember else { return .none }
       state.members.removeAll(where: { $0.id == member.id })
       state.selectedMember = nil
+      state.customAlert = nil
       return .none
     case .removeCancelled:
       state.selectedMember = nil
+      state.customAlert = nil
       return .none
     }
   }
