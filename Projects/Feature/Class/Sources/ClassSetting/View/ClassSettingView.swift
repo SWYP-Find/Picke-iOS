@@ -30,7 +30,7 @@ public struct ClassSettingView: View {
         VStack(alignment: .leading, spacing: 32) {
           Text("수업 정보에 맞게\n클래스를 설정해 주세요")
             .pretendardFont(.semiBold24)
-            .lineSpacing(7)
+            .lineSpacing(2.4)
             .foregroundStyle(.gray500)
 
           nameSection()

@@ -11,6 +11,7 @@ import SwiftUI
 @ViewAction(for: ClassTopicFeature.self)
 public struct ClassTopicView: View {
   @Bindable public var store: StoreOf<ClassTopicFeature>
+  @Namespace private var levelNamespace
 
   public init(store: StoreOf<ClassTopicFeature>) {
     self.store = store
@@ -49,7 +50,7 @@ private extension ClassTopicView {
     VStack(alignment: .leading, spacing: 6) {
       Text("어떤 주제로\n이야기 나눌까요?")
         .pretendardFont(.semiBold24)
-        .lineSpacing(7)
+        .lineSpacing(2.4)
         .foregroundStyle(.gray800)
 
       Text("관심 있는 주제나 수업 조건을 선택해 주세요.")
@@ -99,10 +100,15 @@ private extension ClassTopicView {
     HStack(spacing: 0) {
       ForEach(ClassAudienceLevel.allCases, id: \.self) { level in
         Button {
-          store.level = level
+          withAnimation(.snappy(duration: 0.25)) {
+            store.level = level
+          }
         } label: {
           Text(level.title)
-            .pickeBoxSegment(isSelected: store.level == level)
+            .pickeBoxSegment(
+              isSelected: store.level == level,
+              namespace: levelNamespace
+            )
         }
         .buttonStyle(.plain)
       }
