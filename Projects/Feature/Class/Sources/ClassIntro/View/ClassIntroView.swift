@@ -37,7 +37,7 @@ public struct ClassIntroView: View {
       .padding(.bottom, 16)
     }
     .background(backgroundImage())
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
     .pickeModal(
       $store.scope(
         state: \.join,
