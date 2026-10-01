@@ -5,6 +5,7 @@ import SwiftUI
 @ViewAction(for: ClassReportFeature.self)
 public struct ClassReportView: View {
   public let store: StoreOf<ClassReportFeature>
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   public init(store: StoreOf<ClassReportFeature>) {
     self.store = store
@@ -19,21 +20,20 @@ public struct ClassReportView: View {
       }
       .foregroundStyle(.gray800)
 
-      ScrollView {
-        VStack(spacing: 16) {
-          reportTitle()
-          reportTabs()
-          reportContent()
-            .padding(.horizontal, 16)
-        }
+      reportTitle()
         .padding(.top, 16)
-        .padding(.bottom, 16)
-      }
-      .scrollIndicators(.hidden)
+      reportTabs()
+        .padding(.top, 16)
+      reportPages()
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.visible, for: .tabBar)
+    .toolbar(.hidden, for: .tabBar)
+    .onChange(of: store.selectedTab) { _, tab in
+      if tab == .classResult {
+        send(.chartAnimationStarted)
+      }
+    }
   }
 }
 
@@ -76,9 +76,30 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
-  func reportContent() -> some View {
+  func reportPages() -> some View {
+    TabView(selection: Binding(
+      get: { store.selectedTab },
+      set: { send(.tabSelected($0)) }
+    )) {
+      ForEach(ClassReportFeature.Tab.allCases, id: \.self) { tab in
+        ScrollView {
+          reportContent(for: tab)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 16)
+        }
+        .scrollIndicators(.hidden)
+        .tag(tab)
+      }
+    }
+    .tabViewStyle(.page(indexDisplayMode: .never))
+    .animation(.easeInOut(duration: 0.25), value: store.selectedTab)
+  }
+
+  @ViewBuilder
+  func reportContent(for tab: ClassReportFeature.Tab) -> some View {
     VStack(spacing: 16) {
-      switch store.selectedTab {
+      switch tab {
       case .summary:
         summaryContent()
       case .participation:
@@ -218,7 +239,11 @@ private extension ClassReportView {
       Divider().overlay(.beige500)
       feedbackRow("다른 해결방법을 제안했어요", description: "반대의견에 그치지 않고 “교육과 보호”라는 대안을 덧붙였어요.", icon: "lightbulb")
       Divider().overlay(.beige500)
-      feedbackRow("근거를 한 단계 더 구체적으로", description: "교육과 보호가 재범을 줄이는 데 어떤 도움이 되는지, 사례나 자료 하나를 연결하면 주장이 더 설득력 있어져요.", icon: "sparkles")
+      feedbackRow(
+        "근거를 한 단계 더 구체적으로",
+        description: "교육과 보호가 재범을 줄이는 데 어떤 도움이 되는지, 사례나 자료 하나를 연결하면 주장이 더 설득력 있어져요.",
+        icon: "sparkles"
+      )
       Divider().overlay(.beige500)
       Text("분석에 사용한 내 대댓글 보기")
         .pretendardFont(family: .Bold, size: 12)
@@ -341,15 +366,21 @@ private extension ClassReportView {
     VStack(alignment: .leading, spacing: 6) {
       Text(title).pretendardFont(.regular13).foregroundStyle(.gray500)
       GeometryReader { proxy in
-        HStack(spacing: 12) {
-          Text(primary)
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray800)
+        ZStack(alignment: .leading) {
+          RoundedRectangle(cornerRadius: 2)
+            .fill(color)
             .frame(width: proxy.size.width * fraction, height: 34)
-            .background(color, in: RoundedRectangle(cornerRadius: 2))
-          Text(secondary)
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray500)
+            .scaleEffect(x: store.isChartDrawn ? 1 : 0, anchor: .leading)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.7), value: store.isChartDrawn)
+          HStack(spacing: 12) {
+            Text(primary)
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray800)
+              .frame(width: proxy.size.width * fraction, height: 34)
+            Text(secondary)
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray500)
+          }
         }
       }
       .frame(height: 34)

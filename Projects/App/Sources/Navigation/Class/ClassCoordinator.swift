@@ -21,13 +21,13 @@ public struct ClassCoordinator {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
 
-    /// 내 클래스 · 클래스 상세 · 리포트에서 탭바를 보여준다.
-    /// 클래스 상세의 모달이 열려 있거나 멤버 화면이면 숨긴다.
+    /// 내 클래스와 클래스 상세에서만 탭바를 보여준다.
+    /// 클래스 상세의 모달이 열려 있거나 멤버·리포트 화면이면 숨긴다.
     public var showsTabBar: Bool {
       switch routes.last?.screen {
       case let .detail(detail)?:
         return detail.modal == nil
-      case .myClasses?, .report?:
+      case .myClasses?:
         return true
       default:
         return false

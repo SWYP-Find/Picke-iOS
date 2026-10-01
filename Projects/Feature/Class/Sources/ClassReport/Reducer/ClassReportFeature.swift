@@ -5,7 +5,7 @@ import ComposableArchitecture
 public struct ClassReportFeature {
   public init() {}
 
-  public enum Tab: String, CaseIterable, Equatable {
+  public enum Tab: String, CaseIterable, Hashable {
     case summary = "요약"
     case participation = "내 참여"
     case classResult = "클래스 결과"
@@ -16,6 +16,7 @@ public struct ClassReportFeature {
   public struct State: Equatable {
     public var room: ClassRoom
     public var selectedTab: Tab = .summary
+    public var isChartDrawn = false
 
     public init(room: ClassRoom) {
       self.room = room
@@ -31,6 +32,7 @@ public struct ClassReportFeature {
   public enum View: Equatable {
     case backTapped
     case tabSelected(Tab)
+    case chartAnimationStarted
   }
 
   @CasePathable
@@ -44,7 +46,14 @@ public struct ClassReportFeature {
       case .view(.backTapped):
         return .send(.delegate(.dismiss))
       case let .view(.tabSelected(tab)):
+        guard state.selectedTab != tab else { return .none }
         state.selectedTab = tab
+        state.isChartDrawn = false
+        return .none
+      case .view(.chartAnimationStarted):
+        if state.selectedTab == .classResult {
+          state.isChartDrawn = true
+        }
         return .none
       case .delegate:
         return .none

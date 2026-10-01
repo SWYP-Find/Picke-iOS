@@ -14,6 +14,14 @@ struct ClassReportTests {
     await store.send(.view(.tabSelected(.classResult))) {
       $0.selectedTab = .classResult
     }
+    await store.send(.view(.chartAnimationStarted)) {
+      $0.isChartDrawn = true
+    }
+    await store.send(.view(.tabSelected(.classResult)))
+    await store.send(.view(.tabSelected(.feedback))) {
+      $0.selectedTab = .feedback
+      $0.isChartDrawn = false
+    }
   }
 
   @Test
