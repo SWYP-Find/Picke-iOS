@@ -41,7 +41,7 @@ public struct MainTabView: View {
       tabContent(for: $0)
     }
     .tint(.neutral900)
-    .toolbar(store.shouldHideTabBar ? .hidden : .automatic, for: .tabBar)
+    .toolbar(store.shouldHideTabBar ? .hidden : .visible, for: .tabBar)
   }
 }
 

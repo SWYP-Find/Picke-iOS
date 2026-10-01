@@ -64,7 +64,7 @@ public struct MainTabCoordinator {
       case .quickBattle:
         return quickBattleState.routes.count > 1
       case .classroom:
-        return classState.routes.count > 1
+        return !classState.showsTabBar
       case .myPage:
         return myPageState.routes.count > 1
       case .none:
@@ -136,6 +136,10 @@ public struct MainTabCoordinator {
         return .none
 
       case .myPage(.router(.routeAction(_, action: .profile(.delegate(.backToHome))))):
+        state.selectedTab = state.previousTab
+        return .none
+
+      case .classroom(.router(.routeAction(_, action: .intro(.delegate(.backToHome))))):
         state.selectedTab = state.previousTab
         return .none
 
