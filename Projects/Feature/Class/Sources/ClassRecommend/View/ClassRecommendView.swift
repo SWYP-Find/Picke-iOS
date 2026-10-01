@@ -6,6 +6,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassRecommendFeature.self)
@@ -49,7 +50,7 @@ private extension ClassRecommendView {
       VStack(alignment: .leading, spacing: 6) {
         Text("수업에 어울리는\n배틀을 찾았어요")
           .pretendardFont(.semiBold24)
-          .lineSpacing(7)
+          .lineSpacing(2.4)
           .foregroundStyle(.gray800)
 
         Text("미리 듣고 클래스에 사용할 배틀을 골라보세요.")
@@ -90,6 +91,21 @@ private extension ClassRecommendView {
 
   @ViewBuilder
   func resultSection() -> some View {
+    Group {
+      if store.shouldShowLoadError {
+        PickeRetryErrorView(message: "추천 배틀을 불러오지 못했어요") { send(.retryTapped) }
+          .frame(maxWidth: .infinity, minHeight: 160)
+      } else if store.shouldShowSkeleton {
+        ClassRecommendSkeletonView()
+      } else {
+        resultList()
+      }
+    }
+    .padding([.horizontal, .top], 16)
+  }
+
+  @ViewBuilder
+  func resultList() -> some View {
     VStack(alignment: .leading, spacing: 16) {
       Text(store.resultTitle)
         .pretendardFont(.headingSmall)
@@ -104,7 +120,6 @@ private extension ClassRecommendView {
         .onTapGesture { send(.battleTapped(battle.id)) }
       }
     }
-    .padding([.horizontal, .top], 16)
   }
 
   @ViewBuilder

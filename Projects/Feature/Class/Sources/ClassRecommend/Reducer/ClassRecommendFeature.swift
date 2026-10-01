@@ -19,6 +19,7 @@ public struct ClassRecommendFeature {
     public var battles: [ClassBattleSummary] = []
     public var selectedBattleId: Int?
     public var isLoading = false
+    public var loadFailed = false
 
     public init(filter: ClassTopicFilter) {
       self.filter = filter
@@ -39,6 +40,15 @@ public struct ClassRecommendFeature {
     public var canSelect: Bool {
       selectedBattle != nil
     }
+
+    public var shouldShowSkeleton: Bool {
+      isLoading && battles.isEmpty
+    }
+
+    /// 로드 실패 & 표시할 배틀이 없을 때 스켈레톤 대신 오류를 노출한다.
+    public var shouldShowLoadError: Bool {
+      loadFailed && battles.isEmpty
+    }
   }
 
   public enum Action: ViewAction {
@@ -51,6 +61,7 @@ public struct ClassRecommendFeature {
   @CasePathable
   public enum View {
     case onAppear
+    case retryTapped
     case backTapped
     case editConditionTapped
     case battleTapped(Int)
@@ -105,6 +116,9 @@ extension ClassRecommendFeature {
       guard state.battles.isEmpty else { return .none }
       return .send(.async(.fetch(state.filter)))
 
+    case .retryTapped:
+      return .send(.async(.fetch(state.filter)))
+
     case .backTapped, .editConditionTapped:
       return .send(.delegate(.dismiss))
 
@@ -128,6 +142,7 @@ extension ClassRecommendFeature {
     switch action {
     case let .fetch(filter):
       state.isLoading = true
+      state.loadFailed = false
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.fetchRecommendedBattles(filter: filter)
@@ -146,8 +161,11 @@ extension ClassRecommendFeature {
     switch action {
     case let .battles(result):
       state.isLoading = false
-      if case let .success(battles) = result {
+      switch result {
+      case let .success(battles):
         state.battles = battles
+      case .failure:
+        state.loadFailed = true
       }
       return .none
     }
