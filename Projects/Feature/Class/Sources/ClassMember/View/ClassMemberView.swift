@@ -39,6 +39,12 @@ public struct ClassMemberView: View {
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(.hidden, for: .tabBar)
+    .pickeModal(
+      $store.scope(state: \.filter, action: \.filter),
+      dimOpacity: 0.28
+    ) { filterStore in
+      filterSheet(store: filterStore)
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
@@ -49,9 +55,17 @@ private extension ClassMemberView {
       Image(systemName: "magnifyingglass")
         .font(.system(size: 18))
         .foregroundStyle(.gray300)
-      TextField("이름을 입력해 주세요.", text: $store.searchText)
-        .pretendardFont(.medium15)
+      TextField("이름을 입력해주세요.", text: $store.searchText)
+        .pretendardFont(family: .Medium, size: 13)
         .foregroundStyle(.gray800)
+
+      Button { send(.filterTapped) } label: {
+        Image(systemName: "slider.horizontal.3")
+          .font(.system(size: 16, weight: .semibold))
+          .foregroundStyle(.gray500)
+          .frame(width: 32, height: 32)
+      }
+      .accessibilityLabel("멤버 필터")
     }
     .padding(.horizontal, 12)
     .frame(height: 44)
@@ -89,5 +103,107 @@ private extension ClassMemberView {
     }
     .frame(height: 68)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
+  }
+
+  @ViewBuilder
+  func filterSheet(store: StoreOf<ClassMemberFilterFeature>) -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { store.send(.dismissTapped) }
+
+      VStack(alignment: .leading, spacing: 20) {
+        sheetHandle
+        filterSection(
+          title: "참여 상태",
+          detail: "총 " + String(self.store.members.count) + "명",
+          options: ClassMemberFilterFeature.Participation.allCases.filter { $0 != .all },
+          selected: { store.participation == $0 },
+          action: { store.send(.participationSelected($0)) }
+        )
+        filterSection(
+          title: "미완료",
+          detail: "총 " + String(self.store.members.count) + "명",
+          options: ClassMemberFilterFeature.Completion.allCases.filter { $0 != .all },
+          selected: { store.completion == $0 },
+          action: { store.send(.completionSelected($0)) }
+        )
+        filterSection(
+          title: "입장 변화",
+          detail: "총 " + String(self.store.members.count) + "명",
+          options: ClassMemberFilterFeature.Attendance.allCases.filter { $0 != .all },
+          selected: { store.attendance == $0 },
+          action: { store.send(.attendanceSelected($0)) }
+        )
+        filterSection(
+          title: "정렬",
+          detail: "총 " + String(self.store.members.count) + "명",
+          options: ClassMemberFilterFeature.Sort.allCases,
+          selected: { store.sort == $0 },
+          action: { store.send(.sortSelected($0)) }
+        )
+
+        Button { store.send(.applyTapped) } label: {
+          Text("적용하기")
+        }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+      }
+      .padding(.top, 12)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 32)
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
+  }
+
+  @ViewBuilder
+  func filterSection<Option: RawRepresentable & Hashable>(
+    title: String,
+    detail: String,
+    options: [Option],
+    selected: @escaping (Option) -> Bool,
+    action: @escaping (Option) -> Void
+  ) -> some View where Option.RawValue == String {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(spacing: 10) {
+        Text(title)
+          .pretendardFont(family: .SemiBold, size: 13)
+          .foregroundStyle(.gray800)
+        Spacer(minLength: 0)
+        Text(detail)
+          .pretendardFont(family: .Medium, size: 10)
+          .foregroundStyle(.gray300)
+      }
+
+      HStack(spacing: 8) {
+        ForEach(options, id: \.self) { option in
+          Button { action(option) } label: {
+            Text(option.rawValue)
+              .pretendardFont(family: .Medium, size: 13)
+              .foregroundStyle(selected(option) ? .beige50 : .gray300)
+              .lineLimit(1)
+              .fixedSize(horizontal: true, vertical: false)
+              .padding(.horizontal, 12)
+              .frame(height: 30)
+              .background(selected(option) ? .primary500 : .beige200, in: RoundedRectangle(cornerRadius: 2))
+          }
+          .buttonStyle(.plain)
+        }
+        Spacer(minLength: 0)
+      }
+    }
+  }
+
+  var sheetHandle: some View {
+    Capsule()
+      .fill(.gray50)
+      .frame(width: 40, height: 4)
+      .frame(maxWidth: .infinity)
+      .padding(.bottom, 10)
   }
 }

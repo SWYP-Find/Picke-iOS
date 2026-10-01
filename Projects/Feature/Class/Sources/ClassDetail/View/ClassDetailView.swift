@@ -42,7 +42,10 @@ public struct ClassDetailView: View {
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .toolbar(store.modal == nil ? .visible : .hidden, for: .tabBar)
-    .pickeModal($store.scope(state: \.modal, action: \.modal)) { modalStore in
+    .pickeModal(
+      $store.scope(state: \.modal, action: \.modal),
+      dimOpacity: 0.28
+    ) { modalStore in
       switch modalStore.kind {
       case .management:
         modalBackdrop({ send(.managementDismissed) }) { managementSheet() }
@@ -51,7 +54,7 @@ public struct ClassDetailView: View {
       case .code:
         modalBackdrop({ send(.codeDismissed) }) { codeSheet() }
       case .nickname:
-        EmptyView()
+        modalBackdrop({ modalStore.send(.dismissTapped) }) { nicknameSheet() }
       }
     }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
@@ -87,6 +90,11 @@ private extension ClassDetailView {
       Text(store.room.name)
         .pretendardFont(.semiBold24)
         .foregroundStyle(.gray800)
+        .contextMenu {
+          if store.room.role == .member {
+            Button("내 이름 수정") { send(.nicknameTapped) }
+          }
+        }
     }
   }
 
@@ -231,8 +239,9 @@ private extension ClassDetailView {
     @ViewBuilder content: () -> some View
   ) -> some View {
     ZStack(alignment: .bottom) {
-      Color.black.opacity(0.28)
+      Color.clear
         .ignoresSafeArea()
+        .contentShape(Rectangle())
         .onTapGesture(perform: onDismiss)
       content()
         .frame(maxWidth: .infinity)
@@ -348,5 +357,31 @@ private extension ClassDetailView {
     .padding(.top, 16)
     .padding(.horizontal, 16)
     .padding(.bottom, 40)
+  }
+
+  @ViewBuilder
+  func nicknameSheet() -> some View {
+    VStack(alignment: .leading, spacing: 20) {
+      sheetHandle
+      VStack(alignment: .leading, spacing: 6) {
+        Text("이름을 입력해주세요")
+          .pretendardFont(.semiBold24)
+          .foregroundStyle(.gray800)
+        Text("이 클래스에서만 보이는 이름이에요.")
+          .pretendardFont(.regular13)
+          .foregroundStyle(.gray300)
+      }
+
+      TextField("이름을 입력해주세요", text: $store.draftNickname)
+        .textInputAutocapitalization(.never)
+        .pickeTextField(height: 52)
+
+      Button("수정하기") { send(.nicknameSaved) }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+        .disabled(store.draftNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+    .padding(.top, 12)
+    .padding(.horizontal, 16)
+    .padding(.bottom, 32)
   }
 }

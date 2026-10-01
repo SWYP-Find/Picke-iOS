@@ -16,7 +16,7 @@ struct ClassMemberTests {
     await store.send(.view(.removeTapped(member.id))) {
       $0.selectedMember = member
       $0.customAlert = CustomAlertState(
-        title: "\(member.name)님을\n클래스에서 내보낼까요?",
+        title: "\(member.name)님을 클래스에서 내보낼까요?\n한 번 내보내면 되돌릴 수 없어요.",
         confirmTitle: "내보내기",
         cancelTitle: "뒤로가기",
         isDestructive: true,
@@ -51,5 +51,28 @@ struct ClassMemberTests {
       $0.searchText = "학생 1"
     }
     #expect(store.state.visibleMembers.allSatisfy { $0.name.contains("학생 1") })
+  }
+
+  @Test
+  func 멤버_필터를_열고_선택한_조건을_적용한다() async {
+    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
+      ClassMemberFeature()
+    }
+
+    await store.send(.view(.filterTapped)) {
+      $0.filter = .init()
+    }
+    await store.send(
+      .filter(.presented(.participationSelected(.completed)))
+    ) {
+      $0.filter?.participation = .completed
+    }
+    await store.send(.filter(.presented(.applyTapped))) {
+      $0.appliedFilter.participation = .completed
+      $0.filter = nil
+    }
+    await store.send(.view(.filterTapped)) {
+      $0.filter = $0.appliedFilter
+    }
   }
 }

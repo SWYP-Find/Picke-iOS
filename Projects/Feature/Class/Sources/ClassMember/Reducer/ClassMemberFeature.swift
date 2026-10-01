@@ -25,6 +25,8 @@ public struct ClassMemberFeature {
     public var members: [Member]
     public var searchText = ""
     public var selectedMember: Member?
+    public var appliedFilter = ClassMemberFilterFeature.State()
+    @Presents public var filter: ClassMemberFilterFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(room: ClassRoom) {
@@ -44,12 +46,14 @@ public struct ClassMemberFeature {
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
+    case filter(PresentationAction<ClassMemberFilterFeature.Action>)
     case customAlert(PresentationAction<CustomAlertAction>)
     case delegate(DelegateAction)
   }
 
   public enum View {
     case backTapped
+    case filterTapped
     case removeTapped(Int)
     case removeConfirmed
     case removeCancelled
@@ -67,6 +71,17 @@ public struct ClassMemberFeature {
         return .none
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
+      case .filter(.presented(.applyTapped)):
+        if let filter = state.filter {
+          state.appliedFilter = filter
+        }
+        state.filter = nil
+        return .none
+      case .filter(.presented(.dismissTapped)), .filter(.dismiss):
+        state.filter = nil
+        return .none
+      case .filter:
+        return .none
       case let .customAlert(alertAction):
         switch alertAction {
         case .presented(.confirmTapped):
@@ -84,6 +99,9 @@ public struct ClassMemberFeature {
         return .none
       }
     }
+    .ifLet(\.$filter, action: \.filter) {
+      ClassMemberFilterFeature()
+    }
     .ifLet(\.$customAlert, action: \.customAlert) {
       CustomConfirmAlert()
     }
@@ -95,6 +113,9 @@ extension ClassMemberFeature {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))
+    case .filterTapped:
+      state.filter = state.appliedFilter
+      return .none
     case let .removeTapped(id):
       guard state.room.role == .owner,
             let member = state.members.first(where: { $0.id == id && !$0.isOwner })
@@ -117,6 +138,76 @@ extension ClassMemberFeature {
     case .removeCancelled:
       state.selectedMember = nil
       state.customAlert = nil
+      return .none
+    }
+  }
+}
+
+@Reducer
+public struct ClassMemberFilterFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public var participation: Participation = .all
+    public var completion: Completion = .all
+    public var attendance: Attendance = .all
+    public var sort: Sort = .name
+
+    public init() {}
+  }
+
+  public enum Action: Equatable {
+    case participationSelected(Participation)
+    case completionSelected(Completion)
+    case attendanceSelected(Attendance)
+    case sortSelected(Sort)
+    case applyTapped
+    case dismissTapped
+  }
+
+  public enum Participation: String, CaseIterable, Equatable {
+    case all = "전체"
+    case notParticipated = "미참여 4"
+    case completed = "참여 완료 18"
+    case inProgress = "진행 중 10"
+  }
+
+  public enum Completion: String, CaseIterable, Equatable {
+    case all = "전체"
+    case noComment = "댓글 미작성"
+    case noAfterVote = "사후 투표 미완료"
+    case inProgress = "진행 중 10"
+  }
+
+  public enum Attendance: String, CaseIterable, Equatable {
+    case all = "전체"
+    case changed = "입장 변화"
+    case unchanged = "입장 유지"
+    case inProgress = "진행 중 10"
+  }
+
+  public enum Sort: String, CaseIterable, Equatable {
+    case name = "이름순"
+    case comments = "댓글 많은순"
+    case replies = "대댓글 많은순"
+    case recommendations = "추천순"
+  }
+
+  public init() {}
+
+  public var body: some Reducer<State, Action> {
+    Reduce { state, action in
+      switch action {
+      case let .participationSelected(value):
+        state.participation = value
+      case let .completionSelected(value):
+        state.completion = value
+      case let .attendanceSelected(value):
+        state.attendance = value
+      case let .sortSelected(value):
+        state.sort = value
+      case .applyTapped, .dismissTapped:
+        break
+      }
       return .none
     }
   }

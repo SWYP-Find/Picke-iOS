@@ -221,9 +221,12 @@ private extension ClassReportView {
       Text("“피해자 보호를 위한 기준도 함께 필요하지 않을까요?”")
         .pretendardFont(.regular13)
         .foregroundStyle(.gray700)
-      Text("좋아요 1,340  ·  대댓글 23")
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray300)
+      HStack(spacing: 12) {
+        Label("1,340", systemImage: "heart")
+        Label("23", systemImage: "bubble")
+      }
+      .pretendardFont(family: .Medium, size: 12)
+      .foregroundStyle(.gray300)
     }
   }
 
@@ -253,7 +256,7 @@ private extension ClassReportView {
     reportCard(padding: 16, spacing: 8) {
       cardHeading("다음 생각 해보기")
       Text("처벌과 교화를 함께 한다면,\n무엇을 기준으로 균형을 잡을까요?")
-        .pretendardFont(.regular13)
+        .pretendardFont(family: .SemiBold, size: 18)
         .foregroundStyle(.gray700)
       Text("내 의견과 반대되는 입장도 함께 떠올려 보세요.")
         .pretendardFont(.regular13)

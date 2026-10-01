@@ -78,6 +78,25 @@ struct ClassDetailTests {
   }
 
   @Test
+  func 닉네임_수정_모달은_입력한_이름을_보존하고_닫힌다() async {
+    let store = TestStore(initialState: ClassDetailFeature.State(room: ClassRoom.mocks[1])) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.nicknameTapped)) {
+      $0.modal = .init(kind: .nickname)
+      $0.draftNickname = ""
+    }
+    await store.send(.binding(.set(\.draftNickname, " 민지 "))) {
+      $0.draftNickname = " 민지 "
+    }
+    await store.send(.view(.nicknameSaved)) {
+      $0.modal = nil
+      $0.draftNickname = "민지"
+    }
+  }
+
+  @Test
   func 삭제가_완료된_뒤에만_화면을_닫는다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {

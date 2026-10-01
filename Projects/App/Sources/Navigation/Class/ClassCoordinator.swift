@@ -29,6 +29,8 @@ public struct ClassCoordinator {
         return detail.modal == nil
       case .myClasses?:
         return true
+      case .ownerDashboard?:
+        return true
       default:
         return false
       }
@@ -136,10 +138,49 @@ private extension ClassCoordinator {
       return .none
 
     case let .routeAction(_, action: .detail(.delegate(.openReport(room)))):
-      state.routes.push(.report(.init(room: room)))
+      if room.role == .owner {
+        state.routes.push(.ownerDashboard(.init(room: room)))
+      } else {
+        state.routes.push(.report(.init(room: room)))
+      }
       return .none
 
     case .routeAction(_, action: .report(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.dismiss))),
+         .routeAction(_, action: .ownerMemberDetail(.delegate(.dismiss))),
+         .routeAction(_, action: .ownerReplyDetail(.delegate(.dismiss))),
+         .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .ownerDashboard(.delegate(.openMemberDetail(member)))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerMemberDetail(.init(room: dashboard.room, memberName: member.name)))
+      return .none
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.openReplyDetail))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerReplyDetail(.init(room: dashboard.room)))
+      return .none
+
+    case let .routeAction(_, action: .ownerDashboard(.delegate(.openFeedback(member)))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerFeedback(.init(room: dashboard.room, memberName: member.name)))
+      return .none
+
+    case .routeAction(_, action: .ownerMemberDetail(.delegate(.replySelected))),
+         .routeAction(_, action: .ownerMemberDetail(.delegate(.commentSelected))):
+      guard case let .ownerMemberDetail(member)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerReplyDetail(.init(room: member.room)))
+      return .none
+
+    case .routeAction(_, action: .ownerMemberDetail(.delegate(.feedbackSelected))):
+      guard case let .ownerMemberDetail(member)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerFeedback(.init(room: member.room, memberName: member.memberName)))
+      return .none
+
+    case .routeAction(_, action: .ownerFeedback(.delegate(.submitted))):
       return .send(.view(.backAction))
 
     case .routeAction(_, action: .chat(.delegate(.dismiss))):
@@ -186,6 +227,10 @@ extension ClassCoordinator {
     case detail(ClassDetailFeature)
     case members(ClassMemberFeature)
     case report(ClassReportFeature)
+    case ownerDashboard(ClassOwnerDashboardFeature)
+    case ownerMemberDetail(ClassMemberDetailFeature)
+    case ownerReplyDetail(ClassReplyDetailFeature)
+    case ownerFeedback(ClassFeedbackComposeFeature)
     case chat(ChatCoordinator)
   }
 }

@@ -19,8 +19,9 @@ public struct ClassJoinView: View {
 
   public var body: some View {
     ZStack(alignment: .bottom) {
-      Color.black.opacity(0.28)
+      Color.clear
         .ignoresSafeArea()
+        .contentShape(Rectangle())
         .onTapGesture { send(.backTapped) }
       switch store.mode {
       case .code:

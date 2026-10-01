@@ -14,6 +14,8 @@ public struct ClassDetailFeature {
     public var room: ClassRoom
     public var deadline: Date
     public var draftDeadline: Date
+    /// The nickname draft is kept locally until the class API exposes an update contract.
+    public var draftNickname = ""
     @Presents public var modal: ClassModalFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var isLoading = false
@@ -47,6 +49,8 @@ public struct ClassDetailFeature {
     case codeDismissed
     case deadlineTapped
     case deadlineSaved
+    case nicknameTapped
+    case nicknameSaved
     case deleteTapped
     case deleteConfirmed
   }
@@ -140,6 +144,16 @@ extension ClassDetailFeature {
     case .deadlineSaved:
       guard !state.isLoading else { return .none }
       return .send(.async(.updateDeadline(state.room.id, state.draftDeadline)))
+    case .nicknameTapped:
+      state.modal = .init(kind: .nickname)
+      return .none
+    case .nicknameSaved:
+      guard !state.draftNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .none }
+      // There is currently no server contract for updating a class nickname.
+      // Keep the entered value in the feature and close the modal until one exists.
+      state.draftNickname = state.draftNickname.trimmingCharacters(in: .whitespacesAndNewlines)
+      state.modal = nil
+      return .none
     case .deleteTapped:
       guard state.room.role == .owner else { return .none }
       state.modal = nil

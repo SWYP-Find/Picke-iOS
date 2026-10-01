@@ -42,7 +42,8 @@ public struct ClassIntroView: View {
       $store.scope(
         state: \.join,
         action: \.join
-      )
+      ),
+      dimOpacity: 0.28
     ) { joinStore in
       ClassJoinView(store: joinStore)
     }
