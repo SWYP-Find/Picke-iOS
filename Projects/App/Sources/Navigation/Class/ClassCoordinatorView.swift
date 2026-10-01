@@ -20,6 +20,7 @@ public struct ClassCoordinatorView: View {
       switch screen.case {
       case let .intro(introStore):
         ClassIntroView(store: introStore)
+          .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
 
       case let .topic(topicStore):
         ClassTopicView(store: topicStore)

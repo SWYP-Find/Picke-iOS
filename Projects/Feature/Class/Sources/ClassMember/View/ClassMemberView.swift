@@ -38,7 +38,7 @@ public struct ClassMemberView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.visible, for: .tabBar)
+    .toolbar(.hidden, for: .tabBar)
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
