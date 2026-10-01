@@ -26,7 +26,7 @@ public struct ClassIntroView: View {
 
       VStack(alignment: .leading, spacing: 0) {
         titleSection()
-        Spacer(minLength: 24)
+        Spacer(minLength: 20)
         menuCards()
           .padding(.bottom, 6)
         createButton

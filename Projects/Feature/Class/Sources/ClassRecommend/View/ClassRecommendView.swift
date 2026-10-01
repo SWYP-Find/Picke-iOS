@@ -135,7 +135,6 @@ private extension ClassRecommendView {
 
       selectButton
         .padding(.horizontal, 12)
-        .padding(.bottom, 16)
         .background(.beige200)
     }
   }

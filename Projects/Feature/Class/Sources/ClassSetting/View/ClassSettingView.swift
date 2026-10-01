@@ -62,6 +62,12 @@ private extension ClassSettingView {
         "",
         text: $store.name,
         prompt: Text("ex) 2학년 3반 1학기 토론")
+          .font(
+            .pretendardFontFamily(
+              family: .Medium,
+              size: 13
+            )
+          )
           .foregroundStyle(.gray300)
       )
       .pickeTextField()
