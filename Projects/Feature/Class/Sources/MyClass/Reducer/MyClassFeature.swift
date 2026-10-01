@@ -7,12 +7,6 @@ public struct MyClassFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public enum Ownership: Hashable, CaseIterable {
-      case all
-      case created
-      case joined
-    }
-
     public enum Progress: Hashable, CaseIterable {
       case all
       case open
@@ -20,26 +14,28 @@ public struct MyClassFeature {
     }
 
     public var rooms: [ClassRoom] = []
-    public var ownership: Ownership = .all
     public var progress: Progress = .all
     public var isLoading = false
     public var errorMessage: String?
 
     public init() {}
 
+    public var shouldShowSkeleton: Bool {
+      isLoading && rooms.isEmpty
+    }
+
+    /// 로드 실패 & 표시할 클래스가 없을 때 스켈레톤 대신 오류를 노출한다.
+    public var shouldShowLoadError: Bool {
+      errorMessage != nil && rooms.isEmpty
+    }
+
     public var visibleRooms: [ClassRoom] {
       rooms.filter { room in
-        let matchesOwnership: Bool = switch ownership {
-        case .all: true
-        case .created: room.role == .owner
-        case .joined: room.role == .member
-        }
-        let matchesProgress: Bool = switch progress {
+        switch progress {
         case .all: true
         case .open: room.status == .open
         case .closed: room.status == .closed
         }
-        return matchesOwnership && matchesProgress
       }
     }
   }
@@ -53,8 +49,8 @@ public struct MyClassFeature {
 
   public enum View {
     case onAppear
+    case retryTapped
     case backTapped
-    case ownershipTapped(State.Ownership)
     case progressTapped(State.Progress)
     case roomTapped(Int)
   }
@@ -93,13 +89,10 @@ public struct MyClassFeature {
 extension MyClassFeature {
   private func handleViewAction(state: inout State, action: View) -> Effect<Action> {
     switch action {
-    case .onAppear:
+    case .onAppear, .retryTapped:
       return .send(.async(.fetchRooms))
     case .backTapped:
       return .send(.delegate(.dismiss))
-    case let .ownershipTapped(ownership):
-      state.ownership = ownership
-      return .none
     case let .progressTapped(progress):
       state.progress = progress
       return .none

@@ -6,20 +6,22 @@ import Testing
 @MainActor
 struct MyClassTests {
   @Test
-  func 소유_역할과_진행_상태를_함께_필터링한다() async {
+  func 진행_상태로_필터링한다() async {
     var state = MyClassFeature.State()
     state.rooms = ClassRoom.mocks
     let store = TestStore(initialState: state) {
       MyClassFeature()
     }
 
-    await store.send(.view(.ownershipTapped(.joined))) {
-      $0.ownership = .joined
+    await store.send(.view(.progressTapped(.closed))) {
+      $0.progress = .closed
     }
+    #expect(store.state.visibleRooms.isEmpty)
+
     await store.send(.view(.progressTapped(.open))) {
       $0.progress = .open
     }
-    #expect(store.state.visibleRooms.map(\.id) == [2])
+    #expect(store.state.visibleRooms.map(\.id) == [1, 2])
   }
 
   @Test
@@ -32,5 +34,20 @@ struct MyClassTests {
 
     await store.send(.view(.roomTapped(1)))
     await store.receive(\.delegate, .openRoom(ClassRoom.mocks[0]))
+  }
+
+  @Test
+  func 로딩_중이고_클래스가_없으면_스켈레톤을_보여주고_실패하면_오류로_바꾼다() {
+    var state = MyClassFeature.State()
+    state.isLoading = true
+    #expect(state.shouldShowSkeleton)
+
+    state.isLoading = false
+    state.errorMessage = "error"
+    #expect(state.shouldShowSkeleton == false)
+    #expect(state.shouldShowLoadError)
+
+    state.rooms = ClassRoom.mocks
+    #expect(state.shouldShowLoadError == false)
   }
 }
