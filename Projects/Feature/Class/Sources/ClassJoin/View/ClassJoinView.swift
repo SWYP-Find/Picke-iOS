@@ -6,6 +6,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassJoinFeature.self)
@@ -17,40 +18,45 @@ public struct ClassJoinView: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      PickeNavigationBar(
-        onBack: { send(.backTapped) },
-        centerTitle: "클래스 참여하기"
-      )
-      .foregroundStyle(.gray500)
-
-      ScrollView {
-        contentSection()
-          .padding(16)
+    ZStack(alignment: .bottom) {
+      Color.black.opacity(0.28)
+        .ignoresSafeArea()
+        .onTapGesture { send(.backTapped) }
+      switch store.mode {
+      case .code:
+        codeSheet()
+      case .nickname:
+        nicknameSheet()
       }
-      .scrollIndicators(.hidden)
-
-      primaryButton
-        .padding(.horizontal, 16)
-        .padding(.bottom, 16)
     }
-    .screenBackground()
-    .hidesSystemBars()
   }
 }
 
 private extension ClassJoinView {
   @ViewBuilder
+  func codeSheet() -> some View {
+    VStack(alignment: .leading, spacing: 20) {
+      sheetHandle
+      contentSection()
+      primaryButton
+    }
+    .padding(.top, 12)
+    .padding(.horizontal, 16)
+    .padding(.bottom, 32)
+    .frame(maxWidth: .infinity)
+    .background(
+      UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+        .fill(.beige50)
+        .ignoresSafeArea(edges: .bottom)
+    )
+  }
+
+  @ViewBuilder
   func contentSection() -> some View {
-    VStack(alignment: .leading, spacing: 28) {
+    VStack(alignment: .leading, spacing: 20) {
       titleSection()
 
-      if store.preview == nil {
-        codeSection()
-      } else {
-        previewSection()
-        nicknameSection()
-      }
+      codeSection()
 
       if let errorMessage = store.errorMessage {
         Text(errorMessage)
@@ -63,17 +69,13 @@ private extension ClassJoinView {
   @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text(store.preview == nil ? "참여 코드를 입력해주세요" : "이름을 입력해주세요")
+      Text("참여 코드를 입력해주세요")
         .pretendardFont(.semiBold24)
         .foregroundStyle(.gray800)
 
-      Text(
-        store.preview == nil
-          ? "선생님에게 받은 코드를 입력하면 클래스에 참여할 수 있어요."
-          : "이 클래스에서만 보이는 이름이에요."
-      )
-      .pretendardFont(.medium15)
-      .foregroundStyle(.gray300)
+      Text("선생님에게 받은 코드를 입력하면 클래스에 참여할 수 있어요.")
+        .pretendardFont(.medium15)
+        .foregroundStyle(.gray300)
     }
   }
 
@@ -95,56 +97,65 @@ private extension ClassJoinView {
   }
 
   @ViewBuilder
-  func previewSection() -> some View {
-    if let preview = store.preview {
-      VStack(alignment: .leading, spacing: 12) {
-        Text("참여할 클래스")
-          .pretendardFont(.semiBold15)
+  func nicknameSheet() -> some View {
+    VStack(alignment: .leading, spacing: 20) {
+      sheetHandle
+
+      VStack(alignment: .leading, spacing: 6) {
+        Text("이름을 입력해주세요")
+          .pretendardFont(.semiBold24)
           .foregroundStyle(.gray800)
-
-        VStack(alignment: .leading, spacing: 8) {
-          Text(preview.name)
-            .pretendardFont(family: .SemiBold, size: 18)
-            .foregroundStyle(.gray800)
-
-          Text(preview.battle.title)
-            .pretendardFont(.medium15)
-            .foregroundStyle(.gray500)
-
-          Text("현재 (preview.memberCount)명이 참여 중")
-            .pretendardFont(.medium13)
-            .foregroundStyle(.gray300)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .pickeCard(.beige50, border: .beige600)
+        Text("이 클래스에서만 보이는 이름이에요.\n입장 후에도 수정할 수 있어요.")
+          .pretendardFont(family: .Regular, size: 14)
+          .foregroundStyle(.gray300)
       }
+
+      nicknameInput
+      if let errorMessage = store.errorMessage {
+        Text(errorMessage)
+          .pretendardFont(.bodySmall)
+          .foregroundStyle(.errorDefault)
+      }
+      joinButton
     }
+    .padding(.top, 12)
+    .padding(.horizontal, 16)
+    .padding(.bottom, 32)
+    .frame(maxWidth: .infinity)
+    .background(
+      UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+        .fill(.beige50)
+        .ignoresSafeArea(edges: .bottom)
+    )
   }
 
-  @ViewBuilder
-  func nicknameSection() -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("이름")
-        .pretendardFont(.semiBold15)
-        .foregroundStyle(.gray800)
+  var sheetHandle: some View {
+    Capsule()
+      .fill(.gray50)
+      .frame(width: 40, height: 4)
+      .frame(maxWidth: .infinity)
+      .padding(.bottom, 10)
+  }
 
-      TextField(
-        "입력해주세요",
-        text: $store.nickname
-      )
+  var nicknameInput: some View {
+    TextField("이름을 입력해주세요", text: $store.nickname)
       .textInputAutocapitalization(.never)
-      .pickeTextField()
+      .pickeTextField(height: 52)
+  }
+
+  var joinButton: some View {
+    Button { send(.joinTapped) } label: {
+      Text("입장하기")
     }
+    .ctaButtonStyle(.primary, size: .large, height: 52)
+    .disabled(!store.canJoin)
   }
 
   var primaryButton: some View {
-    Button {
-      send(store.preview == nil ? .findTapped : .joinTapped)
-    } label: {
-      Text(store.preview == nil ? "클래스 찾기" : "참여하기")
+    Button { send(.findTapped) } label: {
+      Text("클래스 찾기")
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
-    .disabled(store.preview == nil ? !store.canFindClass : !store.canJoin)
+    .disabled(!store.canFindClass)
   }
 }

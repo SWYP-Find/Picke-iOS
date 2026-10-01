@@ -17,7 +17,7 @@ struct ClassJoinTests {
   }
 
   @Test
-  func 참여코드를_조회하면_클래스_미리보기를_표시한다() async {
+  func 참여코드를_조회하면_코드_모달을_닫기_위해_클래스를_전달한다() async {
     let room = ClassRoom.mockJoinable
     let store = TestStore(initialState: ClassJoinFeature.State()) {
       ClassJoinFeature()
@@ -33,16 +33,15 @@ struct ClassJoinTests {
       $0.isLoading = true
     }
     await store.receive(\.inner, .found(.success(room))) {
-      $0.preview = room
       $0.isLoading = false
     }
+    await store.receive(\.delegate.found, room)
   }
 
   @Test
   func 이름을_입력하고_참여하면_클래스_참여_델리게이트를_보낸다() async {
     let room = ClassRoom.mockJoinable
-    var state = ClassJoinFeature.State()
-    state.preview = room
+    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
     state.nickname = " 민지 "
     let store = TestStore(initialState: state) {
       ClassJoinFeature()

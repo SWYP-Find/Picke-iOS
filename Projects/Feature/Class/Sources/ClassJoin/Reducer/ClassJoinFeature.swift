@@ -8,22 +8,32 @@ public struct ClassJoinFeature {
 
   public init() {}
 
+  public enum Mode: Equatable {
+    case code
+    case nickname
+  }
+
   @ObservableState
   public struct State: Equatable {
+    public var mode: Mode
     public var joinCode = ""
     public var nickname = ""
     public var preview: ClassRoom?
     public var isLoading = false
     public var errorMessage: String?
 
-    public init() {}
+    public init(mode: Mode = .code, preview: ClassRoom? = nil) {
+      self.mode = mode
+      self.preview = preview
+    }
 
     public var canFindClass: Bool {
-      !joinCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading
+      mode == .code && !joinCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading
     }
 
     public var canJoin: Bool {
-      preview != nil && !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading
+      mode == .nickname && preview != nil && !nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+        .isEmpty && !isLoading
     }
   }
 
@@ -40,7 +50,6 @@ public struct ClassJoinFeature {
     case backTapped
     case findTapped
     case joinTapped
-    case previewDismissed
   }
 
   public enum AsyncAction: Equatable {
@@ -56,6 +65,7 @@ public struct ClassJoinFeature {
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
+    case found(ClassRoom)
     case joined(ClassRoom)
   }
 
@@ -102,11 +112,6 @@ private extension ClassJoinFeature {
       guard state.canJoin, let room = state.preview else { return .none }
       let nickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
       return .send(.async(.join(joinCode: room.joinCode, nickname: nickname)))
-
-    case .previewDismissed:
-      state.preview = nil
-      state.nickname = ""
-      return .none
     }
   }
 
@@ -142,8 +147,7 @@ private extension ClassJoinFeature {
     state.isLoading = false
     switch action {
     case let .found(.success(room)):
-      state.preview = room
-      return .none
+      return .send(.delegate(.found(room)))
 
     case let .joined(.success(room)):
       state.preview = nil
