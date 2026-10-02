@@ -58,14 +58,13 @@ struct ClassRecommendTests {
   func 로딩_중이고_배틀이_없으면_스켈레톤을_보여주고_실패하면_오류로_바꾼다() {
     var state = ClassRecommendFeature.State(filter: .init())
     state.isLoading = true
-    #expect(state.shouldShowSkeleton)
+    #expect(state.viewState == .loading)
 
     state.isLoading = false
     state.loadFailed = true
-    #expect(state.shouldShowSkeleton == false)
-    #expect(state.shouldShowLoadError)
+    #expect(state.viewState == .error)
 
     state.battles = ClassBattleSummary.mocks
-    #expect(state.shouldShowLoadError == false)
+    #expect(state.viewState == .loaded)
   }
 }

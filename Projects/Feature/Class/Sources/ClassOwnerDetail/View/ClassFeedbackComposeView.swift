@@ -15,12 +15,6 @@ public struct ClassFeedbackComposeView: View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name)
         .foregroundStyle(.gray800)
-      Text("예시 데이터")
-        .pretendardFont(.medium10)
-        .foregroundStyle(.gray300)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-
       ScrollView {
         VStack(alignment: .leading, spacing: 16) {
           HStack(spacing: 12) {
@@ -73,9 +67,6 @@ private extension ClassFeedbackComposeView {
           .pretendardFont(family: .SemiBold, size: 13)
           .foregroundStyle(.gray800)
         Spacer()
-        Text("총 47회 참여")
-          .pretendardFont(family: .Medium, size: 10)
-          .foregroundStyle(.gray300)
       }
       TextEditor(text: $store.feedback)
         .pretendardFont(.regular13)

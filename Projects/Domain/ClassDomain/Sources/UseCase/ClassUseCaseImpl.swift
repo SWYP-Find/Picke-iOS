@@ -1,19 +1,8 @@
+import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 
-public struct ClassUseCaseImpl: ClassInterface, DependencyKey {
-  public static var liveValue: ClassUseCaseImpl {
-    ClassUseCaseImpl()
-  }
-
-  public static var testValue: ClassUseCaseImpl {
-    ClassUseCaseImpl()
-  }
-
-  public static var previewValue: ClassUseCaseImpl {
-    ClassUseCaseImpl()
-  }
-
+public struct ClassUseCaseImpl: ClassInterface {
   @Dependency(\.classRepository) private var repository
 
   public init() {}

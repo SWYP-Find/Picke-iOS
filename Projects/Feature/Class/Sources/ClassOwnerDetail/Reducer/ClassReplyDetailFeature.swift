@@ -7,7 +7,14 @@ public struct ClassReplyDetailFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public enum ViewState: Equatable {
+      case unavailable
+      case empty
+      case loaded([Reply])
+    }
+
     public let room: ClassRoom
+    public let opinion: ClassOwnerOpinion?
     public let replies: [Reply]
 
     public struct Reply: Equatable, Identifiable, Sendable {
@@ -24,9 +31,15 @@ public struct ClassReplyDetailFeature {
       }
     }
 
-    public init(room: ClassRoom, replies: [Reply]? = nil) {
+    public init(room: ClassRoom, opinion: ClassOwnerOpinion? = nil, replies: [Reply] = []) {
       self.room = room
-      self.replies = replies ?? Reply.mocks
+      self.opinion = opinion
+      self.replies = replies
+    }
+
+    public var viewState: ViewState {
+      guard replies.isEmpty else { return .loaded(replies) }
+      return opinion?.replyCount == 0 ? .empty : .unavailable
     }
   }
 
@@ -55,12 +68,4 @@ public struct ClassReplyDetailFeature {
       }
     }
   }
-}
-
-private extension ClassReplyDetailFeature.State.Reply {
-  static let mocks = [
-    Self(id: 1, author: "김민지", body: "피해자 보호를 위한 기준도 함께 필요하지 않을까요?", date: "26.09.23. 14:02"),
-    Self(id: 2, author: "플라톤", body: "교육과 보호도 함께 필요하다고 생각해요.", date: "26.09.23. 14:02"),
-    Self(id: 3, author: "이도윤", body: "처벌만으로는 문제를 해결하기 어렵다고 느꼈어요.", date: "26.09.23. 14:03"),
-  ]
 }

@@ -1,3 +1,4 @@
+import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
@@ -31,13 +32,28 @@ public struct ClassMemberView: View {
 
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
-          Text("멤버 \(store.members.count)")
+          Text(store.members.isEmpty ? "클래스 멤버 \(store.room.memberCount)" : "멤버 \(store.members.count)")
             .pretendardFont(family: .Medium, size: 14)
             .foregroundStyle(.gray300)
             .padding(.bottom, 4)
 
-          ForEach(store.visibleMembers) { member in
-            memberRow(member)
+          switch store.viewState {
+          case .unavailable:
+            Text("멤버 목록을 불러올 수 없어요.")
+              .pretendardFont(family: .Medium, size: 14)
+              .foregroundStyle(.gray300)
+              .frame(maxWidth: .infinity)
+              .padding(.top, 72)
+          case .noSearchResults:
+            Text("검색 결과가 없어요.")
+              .pretendardFont(family: .Medium, size: 14)
+              .foregroundStyle(.gray300)
+              .frame(maxWidth: .infinity)
+              .padding(.top, 72)
+          case let .members(members):
+            ForEach(members) { member in
+              memberRow(member)
+            }
           }
         }
         .padding(.horizontal, 16)
@@ -56,6 +72,14 @@ public struct ClassMemberView: View {
     }
   }
 }
+
+#if DEBUG
+  #Preview("클래스 멤버") {
+    ClassMemberView(store: Store(initialState: .preview(room: ClassRoom.mocks[0])) {
+      ClassMemberFeature()
+    })
+  }
+#endif
 
 private extension ClassMemberView {
   var searchField: some View {
@@ -82,7 +106,7 @@ private extension ClassMemberView {
   }
 
   @ViewBuilder
-  func memberRow(_ member: ClassMemberFeature.State.Member) -> some View {
+  func memberRow(_ member: ClassMember) -> some View {
     HStack(spacing: 12) {
       PickeAvatarView(imageURL: nil, fallback: member.name, size: 36)
 
@@ -118,7 +142,7 @@ private extension ClassMemberView {
         filterSection(
           title: "참여 상태",
           detail: "제공 예정",
-          options: ClassMemberFilterFeature.Participation.allCases.filter { $0 != .all },
+          options: ClassMemberParticipation.allCases.filter { $0 != .all },
           selected: { store.participation == $0 },
           action: { store.send(.participationSelected($0)) },
           enabled: { _ in false }
@@ -126,7 +150,7 @@ private extension ClassMemberView {
         filterSection(
           title: "미완료",
           detail: "제공 예정",
-          options: ClassMemberFilterFeature.Completion.allCases.filter { $0 != .all },
+          options: ClassMemberCompletion.allCases.filter { $0 != .all },
           selected: { store.completion == $0 },
           action: { store.send(.completionSelected($0)) },
           enabled: { _ in false }
@@ -134,7 +158,7 @@ private extension ClassMemberView {
         filterSection(
           title: "입장 변화",
           detail: "제공 예정",
-          options: ClassMemberFilterFeature.Attendance.allCases.filter { $0 != .all },
+          options: ClassMemberAttendance.allCases.filter { $0 != .all },
           selected: { store.attendance == $0 },
           action: { store.send(.attendanceSelected($0)) },
           enabled: { _ in false }
@@ -142,7 +166,7 @@ private extension ClassMemberView {
         filterSection(
           title: "정렬",
           detail: "이름순만 제공",
-          options: ClassMemberFilterFeature.Sort.allCases,
+          options: ClassMemberSort.allCases,
           selected: { store.sort == $0 },
           action: { store.send(.sortSelected($0)) },
           enabled: { $0 == .name }

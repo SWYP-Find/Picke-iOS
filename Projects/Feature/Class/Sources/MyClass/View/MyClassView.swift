@@ -50,19 +50,20 @@ private extension MyClassView {
 
   @ViewBuilder
   func roomList() -> some View {
-    if store.shouldShowLoadError {
+    switch store.viewState {
+    case .error:
       PickeRetryErrorView(message: "클래스를 불러오지 못했어요") { send(.retryTapped) }
         .frame(maxWidth: .infinity, minHeight: 160)
-    } else if store.shouldShowSkeleton {
+    case .loading:
       MyClassSkeletonView()
-    } else if store.visibleRooms.isEmpty {
+    case .empty:
       Text("아직 클래스가 없어요")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
         .frame(maxWidth: .infinity, minHeight: 160)
-    } else {
+    case let .loaded(rooms):
       LazyVStack(spacing: 12) {
-        ForEach(store.visibleRooms) { room in
+        ForEach(rooms) { room in
           Button { send(.roomTapped(room.id)) } label: {
             MyClassRoomCard(room: room)
           }

@@ -8,33 +8,24 @@ public struct ClassMemberFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public struct Member: Equatable, Identifiable {
-      public let id: Int
-      public let name: String
-      public let isOwner: Bool
-
-      public init(id: Int, name: String, isOwner: Bool = false) {
-        self.id = id
-        self.name = name
-        self.isOwner = isOwner
-      }
+    public enum ViewState: Equatable {
+      case unavailable
+      case noSearchResults
+      case members([ClassMember])
     }
 
     public let room: ClassRoom
-    public var members: [Member]
+    public var members: [ClassMember]
     public var searchText = ""
     public var appliedFilter = ClassMemberFilterFeature.State()
     @Presents public var filter: ClassMemberFilterFeature.State?
 
-    public init(room: ClassRoom) {
+    public init(room: ClassRoom, members: [ClassMember] = []) {
       self.room = room
-      members = [Member(id: 1, name: "선생님", isOwner: true)]
-        + (0 ..< max(0, room.memberCount - 1)).map { index in
-          Member(id: index + 2, name: "학생 \(index + 1)")
-        }
+      self.members = members
     }
 
-    public var visibleMembers: [Member] {
+    public var visibleMembers: [ClassMember] {
       let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
       let filteredMembers = query.isEmpty
         ? members
@@ -48,6 +39,12 @@ public struct ClassMemberFeature {
       case .comments, .replies, .recommendations:
         return filteredMembers
       }
+    }
+
+    public var viewState: ViewState {
+      guard !members.isEmpty else { return .unavailable }
+      let visible = visibleMembers
+      return visible.isEmpty ? .noSearchResults : .members(visible)
     }
   }
 
@@ -97,6 +94,28 @@ public struct ClassMemberFeature {
   }
 }
 
+#if DEBUG
+  public extension ClassMemberFeature.State {
+    static func preview(room: ClassRoom) -> Self {
+      Self(
+        room: room,
+        members: [
+          ClassMember(id: 1, name: "김선생", isOwner: true),
+          ClassMember(id: 2, name: "공은지"),
+          ClassMember(id: 3, name: "권동현"),
+          ClassMember(id: 4, name: "김민지"),
+          ClassMember(id: 5, name: "천다올"),
+          ClassMember(id: 6, name: "유시영"),
+          ClassMember(id: 7, name: "주천수"),
+          ClassMember(id: 8, name: "김예은"),
+          ClassMember(id: 9, name: "서원지"),
+          ClassMember(id: 10, name: "현준혁"),
+        ]
+      )
+    }
+  }
+#endif
+
 extension ClassMemberFeature {
   private func handleViewAction(state: inout State, action: View) -> Effect<Action> {
     switch action {
@@ -117,49 +136,21 @@ extension ClassMemberFeature {
 public struct ClassMemberFilterFeature {
   @ObservableState
   public struct State: Equatable {
-    public var participation: Participation = .all
-    public var completion: Completion = .all
-    public var attendance: Attendance = .all
-    public var sort: Sort = .name
+    public var participation: ClassMemberParticipation = .all
+    public var completion: ClassMemberCompletion = .all
+    public var attendance: ClassMemberAttendance = .all
+    public var sort: ClassMemberSort = .name
 
     public init() {}
   }
 
   public enum Action: Equatable {
-    case participationSelected(Participation)
-    case completionSelected(Completion)
-    case attendanceSelected(Attendance)
-    case sortSelected(Sort)
+    case participationSelected(ClassMemberParticipation)
+    case completionSelected(ClassMemberCompletion)
+    case attendanceSelected(ClassMemberAttendance)
+    case sortSelected(ClassMemberSort)
     case applyTapped
     case dismissTapped
-  }
-
-  public enum Participation: String, CaseIterable, Equatable {
-    case all = "전체"
-    case notParticipated = "미참여 4"
-    case completed = "참여 완료 18"
-    case inProgress = "진행 중 10"
-  }
-
-  public enum Completion: String, CaseIterable, Equatable {
-    case all = "전체"
-    case noComment = "댓글 미작성"
-    case noAfterVote = "사후 투표 미완료"
-    case inProgress = "진행 중 10"
-  }
-
-  public enum Attendance: String, CaseIterable, Equatable {
-    case all = "전체"
-    case changed = "입장 변화"
-    case unchanged = "입장 유지"
-    case inProgress = "진행 중 10"
-  }
-
-  public enum Sort: String, CaseIterable, Equatable {
-    case name = "이름순"
-    case comments = "댓글 많은순"
-    case replies = "대댓글 많은순"
-    case recommendations = "추천순"
   }
 
   public init() {}

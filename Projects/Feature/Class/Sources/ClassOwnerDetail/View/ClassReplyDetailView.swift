@@ -5,7 +5,7 @@ import SwiftUI
 
 @ViewAction(for: ClassReplyDetailFeature.self)
 public struct ClassReplyDetailView: View {
-  public let store: StoreOf<ClassReplyDetailFeature>
+  @Bindable public var store: StoreOf<ClassReplyDetailFeature>
 
   public init(store: StoreOf<ClassReplyDetailFeature>) {
     self.store = store
@@ -15,16 +15,46 @@ public struct ClassReplyDetailView: View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name)
         .foregroundStyle(.gray800)
-      Text("예시 데이터")
-        .pretendardFont(.medium10)
-        .foregroundStyle(.gray300)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16)
-
       ScrollView {
         VStack(spacing: 12) {
-          ForEach(store.replies) { reply in
-            replyCard(reply)
+          if let opinion = store.opinion {
+            VStack(alignment: .leading, spacing: 12) {
+              HStack(spacing: 8) {
+                PickeAvatarView(imageURL: nil, fallback: opinion.author, size: 36)
+                Text(opinion.author)
+                  .pretendardFont(.semiBold15)
+                  .foregroundStyle(.gray800)
+                Spacer()
+              }
+              Text(opinion.text)
+                .pretendardFont(.regular13)
+                .foregroundStyle(.gray700)
+                .frame(maxWidth: .infinity, alignment: .leading)
+              Label("\(opinion.replyCount)", systemImage: "bubble")
+                .pretendardFont(.regular13)
+                .foregroundStyle(.gray300)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+          }
+          switch store.viewState {
+          case .unavailable:
+            Text("대댓글을 불러올 수 없어요.")
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray300)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(16)
+          case .empty:
+            Text("아직 대댓글이 없어요.")
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray300)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(16)
+          case let .loaded(replies):
+            ForEach(replies) { reply in
+              replyCard(reply)
+            }
           }
         }
         .padding(16)
@@ -55,12 +85,6 @@ private extension ClassReplyDetailView {
         .pretendardFont(.regular13)
         .foregroundStyle(.gray700)
         .frame(maxWidth: .infinity, alignment: .leading)
-      HStack(spacing: 12) {
-        Label("12", systemImage: "heart")
-        Label("답글", systemImage: "bubble")
-      }
-      .pretendardFont(.regular13)
-      .foregroundStyle(.gray300)
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)

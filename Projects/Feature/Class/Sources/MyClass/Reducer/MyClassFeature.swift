@@ -7,6 +7,13 @@ public struct MyClassFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public enum ViewState: Equatable {
+      case loading
+      case error
+      case empty
+      case loaded([ClassRoom])
+    }
+
     public enum Progress: Hashable, CaseIterable {
       case all
       case open
@@ -20,13 +27,15 @@ public struct MyClassFeature {
 
     public init() {}
 
-    public var shouldShowSkeleton: Bool {
-      isLoading && rooms.isEmpty
-    }
-
-    /// 로드 실패 & 표시할 클래스가 없을 때 스켈레톤 대신 오류를 노출한다.
-    public var shouldShowLoadError: Bool {
-      errorMessage != nil && rooms.isEmpty
+    public var viewState: ViewState {
+      if errorMessage != nil && rooms.isEmpty {
+        return .error
+      }
+      if isLoading && rooms.isEmpty {
+        return .loading
+      }
+      let visible = visibleRooms
+      return visible.isEmpty ? .empty : .loaded(visible)
     }
 
     public var visibleRooms: [ClassRoom] {

@@ -17,14 +17,20 @@ public enum ClassRepositoryDependency: TestDependencyKey {
   }
 }
 
+public enum ClassUseCaseDependency: TestDependencyKey {
+  public static var testValue: any ClassInterface {
+    MockClassRepository()
+  }
+}
+
 public extension DependencyValues {
   var classRepository: any ClassInterface {
     get { self[ClassRepositoryDependency.self] }
     set { self[ClassRepositoryDependency.self] = newValue }
   }
 
-  var classUseCase: ClassUseCaseImpl {
-    get { self[ClassUseCaseImpl.self] }
-    set { self[ClassUseCaseImpl.self] = newValue }
+  var classUseCase: any ClassInterface {
+    get { self[ClassUseCaseDependency.self] }
+    set { self[ClassUseCaseDependency.self] = newValue }
   }
 }

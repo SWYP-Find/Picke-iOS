@@ -156,12 +156,12 @@ private extension ClassCoordinator {
 
     case let .routeAction(_, action: .ownerDashboard(.delegate(.openMemberDetail(member)))):
       guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
-      state.routes.push(.ownerMemberDetail(.init(room: dashboard.room, memberName: member.name)))
+      state.routes.push(.ownerMemberDetail(.init(room: dashboard.room, member: member)))
       return .none
 
-    case .routeAction(_, action: .ownerDashboard(.delegate(.openReplyDetail))):
+    case let .routeAction(_, action: .ownerDashboard(.delegate(.openReplyDetail(opinion)))):
       guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
-      state.routes.push(.ownerReplyDetail(.init(room: dashboard.room)))
+      state.routes.push(.ownerReplyDetail(.init(room: dashboard.room, opinion: opinion)))
       return .none
 
     case let .routeAction(_, action: .ownerDashboard(.delegate(.openFeedback(member)))):
@@ -169,15 +169,14 @@ private extension ClassCoordinator {
       state.routes.push(.ownerFeedback(.init(room: dashboard.room, memberName: member.name)))
       return .none
 
-    case .routeAction(_, action: .ownerMemberDetail(.delegate(.replySelected))),
-         .routeAction(_, action: .ownerMemberDetail(.delegate(.commentSelected))):
+    case let .routeAction(_, action: .ownerMemberDetail(.delegate(.commentSelected(opinion)))):
       guard case let .ownerMemberDetail(member)? = state.routes.last?.screen else { return .none }
-      state.routes.push(.ownerReplyDetail(.init(room: member.room)))
+      state.routes.push(.ownerReplyDetail(.init(room: member.room, opinion: opinion)))
       return .none
 
     case .routeAction(_, action: .ownerMemberDetail(.delegate(.feedbackSelected))):
       guard case let .ownerMemberDetail(member)? = state.routes.last?.screen else { return .none }
-      state.routes.push(.ownerFeedback(.init(room: member.room, memberName: member.memberName)))
+      state.routes.push(.ownerFeedback(.init(room: member.room, memberName: member.member.name)))
       return .none
 
     case .routeAction(_, action: .ownerFeedback(.delegate(.submitted))):

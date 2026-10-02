@@ -92,12 +92,13 @@ private extension ClassRecommendView {
   @ViewBuilder
   func resultSection() -> some View {
     Group {
-      if store.shouldShowLoadError {
+      switch store.viewState {
+      case .error:
         PickeRetryErrorView(message: "추천 배틀을 불러오지 못했어요") { send(.retryTapped) }
           .frame(maxWidth: .infinity, minHeight: 160)
-      } else if store.shouldShowSkeleton {
+      case .loading:
         ClassRecommendSkeletonView()
-      } else {
+      case .empty, .loaded:
         resultList()
       }
     }

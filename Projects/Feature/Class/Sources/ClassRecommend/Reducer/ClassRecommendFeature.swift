@@ -15,6 +15,13 @@ public struct ClassRecommendFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public enum ViewState: Equatable {
+      case loading
+      case error
+      case empty
+      case loaded
+    }
+
     public var filter: ClassTopicFilter
     public var battles: [ClassBattleSummary] = []
     public var selectedBattleId: Int?
@@ -41,13 +48,14 @@ public struct ClassRecommendFeature {
       selectedBattle != nil
     }
 
-    public var shouldShowSkeleton: Bool {
-      isLoading && battles.isEmpty
-    }
-
-    /// 로드 실패 & 표시할 배틀이 없을 때 스켈레톤 대신 오류를 노출한다.
-    public var shouldShowLoadError: Bool {
-      loadFailed && battles.isEmpty
+    public var viewState: ViewState {
+      if loadFailed && battles.isEmpty {
+        return .error
+      }
+      if isLoading && battles.isEmpty {
+        return .loading
+      }
+      return battles.isEmpty ? .empty : .loaded
     }
   }
 

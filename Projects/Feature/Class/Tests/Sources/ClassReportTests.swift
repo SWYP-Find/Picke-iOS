@@ -29,4 +29,15 @@ struct ClassReportTests {
     await store.send(.view(.backTapped))
     await store.receive(\.delegate.dismiss)
   }
+
+  #if DEBUG
+    @Test
+    func 리포트_예시_내용은_명시적인_미리보기_자료에_보관한다() {
+      let preview = ClassReportPreviewContent.figma
+
+      #expect(preview[.participantCount] == "28 / 32")
+      #expect(preview[.teacherName] == "김민지 선생님")
+      #expect(preview.initialVoteLeading == 0.64)
+    }
+  #endif
 }
