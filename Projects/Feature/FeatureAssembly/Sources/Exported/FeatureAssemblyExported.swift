@@ -12,6 +12,7 @@
 @_exported import Auth
 @_exported import Battle
 @_exported import Chat
+@_exported import Class
 @_exported import Hifi
 @_exported import Home
 @_exported import Notification

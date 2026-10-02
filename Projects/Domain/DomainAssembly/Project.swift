@@ -16,6 +16,7 @@ let project = Project.makeModule(
     .domain(.attendance, .implementation),
     .domain(.auth, .implementation),
     .domain(.battle, .implementation),
+    .domain(.classroom, .implementation),
     .domain(.ad, .implementation),
     .domain(.search, .implementation),
     .domain(.comment, .implementation),

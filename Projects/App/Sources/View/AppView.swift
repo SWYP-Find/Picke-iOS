@@ -31,7 +31,7 @@ struct AppView: View {
 
         case .auth:
           if let store = store.scope(state: \.auth, action: \.scope.auth) {
-            AppAuthCoordinatorView(store: store)
+            AuthCoordinatorView(store: store)
               .transition(.asymmetric(
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)
@@ -40,7 +40,7 @@ struct AppView: View {
 
         case .mainTab:
           if let store = store.scope(state: \.mainTab, action: \.scope.mainTab) {
-            AppMainTabView(store: store)
+            MainTabView(store: store)
               .transition(.asymmetric(
                 insertion: .move(edge: .trailing),
                 removal: .move(edge: .leading)

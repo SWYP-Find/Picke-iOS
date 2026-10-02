@@ -1,0 +1,43 @@
+@testable import Class
+import ClassDomainInterface
+import ComposableArchitecture
+import Testing
+
+@MainActor
+struct ClassReportTests {
+  @Test
+  func 결과_탭을_선택하면_해당_내용으로_바뀐다() async {
+    let store = TestStore(initialState: ClassReportFeature.State(room: ClassRoom.mocks[0])) {
+      ClassReportFeature()
+    }
+
+    await store.send(.view(.tabSelected(.classResult))) {
+      $0.selectedTab = .classResult
+    }
+    await store.send(.view(.tabSelected(.classResult)))
+    await store.send(.view(.tabSelected(.feedback))) {
+      $0.selectedTab = .feedback
+    }
+  }
+
+  @Test
+  func 결과_뒤로가기는_코디네이터에_닫기를_알린다() async {
+    let store = TestStore(initialState: ClassReportFeature.State(room: ClassRoom.mocks[0])) {
+      ClassReportFeature()
+    }
+
+    await store.send(.view(.backTapped))
+    await store.receive(\.delegate.dismiss)
+  }
+
+  #if DEBUG
+    @Test
+    func 리포트_예시_내용은_명시적인_미리보기_자료에_보관한다() {
+      let preview = ClassReportPreviewContent.figma
+
+      #expect(preview[.participantCount] == "28 / 32")
+      #expect(preview[.teacherName] == "김민지 선생님")
+      #expect(preview.initialVoteLeading == 0.64)
+    }
+  #endif
+}
