@@ -44,7 +44,7 @@ struct AIBattleHeaderView: View {
           ForEach(1 ... max(roundCount, 1), id: \.self) { index in
             Capsule()
               .fill(index == round ? Color.primary500 : Color.beige600)
-              .frame(width: index == round ? 48 : 24, height: 4)
+              .frame(width: 48, height: 4)
           }
         }
       }
@@ -60,7 +60,7 @@ struct AIBattleHeaderView: View {
     VStack(spacing: 0) {
       Color.beige50.frame(height: 45)
       AIBattleHeaderView(
-        title: "슬픔을 드러내지 않은 외로움을 비난할 수 있을까?",
+        title: "슬픔을 드러내지 않은 뫼르소를 비난할 수 있을까?",
         round: 1,
         roundCount: 3,
         onBack: {}

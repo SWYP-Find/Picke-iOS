@@ -82,9 +82,14 @@ struct ClassDomainTests {
     let high = try await repository.fetchRecommendedBattles(
       filter: .init(level: .high, category: .society)
     )
+    let philosophy = try await repository.fetchRecommendedBattles(
+      filter: .init(level: .middle, category: .philosophy)
+    )
 
     #expect(middle.map(\.id) == [101])
     #expect(high.isEmpty)
+    #expect(philosophy.count == 8)
+    #expect(philosophy.first?.title == "인간은 본래 선한가, 악한가?")
   }
 
   @Test

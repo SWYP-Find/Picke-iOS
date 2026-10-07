@@ -130,7 +130,7 @@ private extension ClassSettingView {
   @ViewBuilder
   func contentSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      sectionLabel(store.aiQuestion == nil ? "선택한 배틀" : "선택한 질문")
+      sectionLabel("선택한 배틀")
       if let question = store.aiQuestion {
         ClassSelectedAIQuestionCard(question: question)
       } else if let battle = store.battle {
@@ -143,7 +143,7 @@ private extension ClassSettingView {
     Toggle(isOn: $store.requiresComment) {
       VStack(alignment: .leading, spacing: 2) {
         sectionLabel("댓글 달기 필수")
-        Text("멤버의 생각을 댓글로 확인해요.")
+        Text(store.aiQuestion == nil ? "멤버의 생각을 댓글로 확인해요." : "학생들의 생각을 댓글로 확인해요.")
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
       }

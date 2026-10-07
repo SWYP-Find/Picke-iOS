@@ -94,10 +94,14 @@ struct ClassTests {
     }
 
     await store.send(.view(.ticketTapped)) {
-      $0.showTicketNotice = true
+      $0.customAlert = .alert(
+        title: "이용권 등록 준비 중",
+        message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
+        cancelTitle: ""
+      )
     }
-    await store.send(.view(.ticketNoticeDismissed)) {
-      $0.showTicketNotice = false
+    await store.send(.customAlert(.presented(.confirmTapped))) {
+      $0.customAlert = nil
     }
   }
 

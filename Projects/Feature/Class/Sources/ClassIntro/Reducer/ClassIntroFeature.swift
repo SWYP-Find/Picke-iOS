@@ -6,6 +6,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeSharedUI
 
 @Reducer
 public struct ClassIntroFeature {
@@ -14,7 +15,7 @@ public struct ClassIntroFeature {
   @ObservableState
   public struct State: Equatable {
     @Presents public var join: ClassJoinFeature.State?
-    public var showTicketNotice = false
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init() {}
   }
@@ -22,6 +23,7 @@ public struct ClassIntroFeature {
   public enum Action: ViewAction {
     case view(View)
     case join(PresentationAction<ClassJoinFeature.Action>)
+    case customAlert(PresentationAction<CustomAlertAction>)
     case inner(InnerAction)
     case delegate(DelegateAction)
   }
@@ -33,7 +35,6 @@ public struct ClassIntroFeature {
     case myClassesTapped
     case createTapped
     case ticketTapped
-    case ticketNoticeDismissed
   }
 
   @CasePathable
@@ -75,6 +76,15 @@ public struct ClassIntroFeature {
           action: presentationAction
         )
 
+      case .customAlert(.presented(.confirmTapped)),
+           .customAlert(.presented(.cancelTapped)),
+           .customAlert(.dismiss):
+        state.customAlert = nil
+        return .none
+
+      case .customAlert:
+        return .none
+
       case let .inner(innerAction):
         return handleInnerAction(
           state: &state,
@@ -87,6 +97,9 @@ public struct ClassIntroFeature {
     }
     .ifLet(\.$join, action: \.join) {
       ClassJoinFeature()
+    }
+    .ifLet(\.$customAlert, action: \.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -111,11 +124,11 @@ extension ClassIntroFeature {
       return .send(.delegate(.create))
 
     case .ticketTapped:
-      state.showTicketNotice = true
-      return .none
-
-    case .ticketNoticeDismissed:
-      state.showTicketNotice = false
+      state.customAlert = .alert(
+        title: "이용권 등록 준비 중",
+        message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
+        cancelTitle: ""
+      )
       return .none
     }
   }

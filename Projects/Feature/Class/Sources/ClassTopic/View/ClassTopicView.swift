@@ -104,7 +104,7 @@ private extension ClassTopicView {
             store.level = level
           }
         } label: {
-          Text(level.title)
+          Text(level.topicTitle)
             .pickeBoxSegment(
               isSelected: store.level == level,
               namespace: levelNamespace

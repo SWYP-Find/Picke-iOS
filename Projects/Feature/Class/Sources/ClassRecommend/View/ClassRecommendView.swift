@@ -53,7 +53,7 @@ private extension ClassRecommendView {
           .lineSpacing(2.4)
           .foregroundStyle(.gray800)
 
-        Text(store.mode == .aiQuestions ? "예시 질문을 골라 클래스를 설정해 주세요." : "미리 듣고 클래스에 사용할 배틀을 골라보세요.")
+        Text(store.mode == .aiQuestions ? "모임에서 나눌 질문을 골라 자유롭게 수정해보세요." : "미리 듣고 클래스에 사용할 배틀을 골라보세요.")
           .pretendardFont(.medium15)
           .foregroundStyle(.gray300)
       }

@@ -104,9 +104,18 @@ private extension ClassStartMethodView {
 
         Spacer(minLength: 0)
 
-        Image(systemName: selected ? "checkmark.circle.fill" : "circle.fill")
-          .font(.system(size: 24))
-          .foregroundStyle(selected ? Color.primary500 : Color.primary50)
+        ZStack {
+          Circle()
+            .fill(selected ? Color.primary500 : Color.primary50)
+          Circle()
+            .strokeBorder(selected ? Color.primary500 : Color.beige600, lineWidth: 1)
+          if selected {
+            Image(systemName: "checkmark")
+              .font(.system(size: 11, weight: .bold))
+              .foregroundStyle(.beige50)
+          }
+        }
+        .frame(width: 24, height: 24)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(16)

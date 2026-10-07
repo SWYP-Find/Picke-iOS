@@ -267,11 +267,7 @@ extension CustomConfirmationPopup {
     }
     .padding(.top, 20)
     .frame(maxWidth: 313)
-    .pickeCard(
-      .beige500,
-      border: .primary500,
-      lineWidth: 1.5
-    )
+    .background(.beige500)
     .opacity(0.9)
     .clipShape(RoundedRectangle(cornerRadius: 2))
     .onTapGesture {}

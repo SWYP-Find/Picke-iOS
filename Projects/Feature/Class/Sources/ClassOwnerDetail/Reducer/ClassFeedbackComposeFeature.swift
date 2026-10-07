@@ -1,6 +1,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeSharedUI
 
 @Reducer
 public struct ClassFeedbackComposeFeature {
@@ -11,7 +12,7 @@ public struct ClassFeedbackComposeFeature {
     public let room: ClassRoom
     public let memberName: String
     public var feedback = ""
-    public var showUnavailableAlert = false
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(room: ClassRoom, memberName: String) {
       self.room = room
@@ -22,6 +23,7 @@ public struct ClassFeedbackComposeFeature {
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
+    case customAlert(PresentationAction<CustomAlertAction>)
     case delegate(DelegateAction)
   }
 
@@ -49,11 +51,25 @@ public struct ClassFeedbackComposeFeature {
       case .view(.submitTapped):
         let feedback = state.feedback.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !feedback.isEmpty else { return .none }
-        state.showUnavailableAlert = true
+        state.customAlert = .alert(
+          title: "전송 준비 중",
+          message: "서버 연동 전이라 피드백을 전송할 수 없습니다.",
+          cancelTitle: ""
+        )
+        return .none
+      case .customAlert(.presented(.confirmTapped)),
+           .customAlert(.presented(.cancelTapped)),
+           .customAlert(.dismiss):
+        state.customAlert = nil
+        return .none
+      case .customAlert:
         return .none
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$customAlert, action: \.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }

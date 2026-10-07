@@ -151,7 +151,14 @@ struct ClassOwnerDashboardTests {
       $0.feedback = "좋은 의견이에요"
     }
     await store.send(.view(.submitTapped)) {
-      $0.showUnavailableAlert = true
+      $0.customAlert = .alert(
+        title: "전송 준비 중",
+        message: "서버 연동 전이라 피드백을 전송할 수 없습니다.",
+        cancelTitle: ""
+      )
+    }
+    await store.send(.customAlert(.presented(.confirmTapped))) {
+      $0.customAlert = nil
     }
   }
 }

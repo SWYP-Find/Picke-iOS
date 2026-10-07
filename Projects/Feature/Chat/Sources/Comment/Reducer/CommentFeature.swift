@@ -3,16 +3,15 @@
 //  Chat
 //
 
-import Foundation
-import PickeCoreLogger
-
 import BattleDomainInterface
 import CommentDomainInterface
 import ComposableArchitecture
+import Foundation
 import PerspectiveDomainInterface
+import PickeAnalyticsInterface
+import PickeCoreLogger
 import PickeDesignKit
 import PickeSharedUI
-import PickeAnalyticsInterface
 
 @Reducer
 public struct CommentFeature {
@@ -50,6 +49,7 @@ public struct CommentFeature {
 
     public var comments: [CommentItem] = []
     public var commentText: String = ""
+    public var isComposerExpanded: Bool = false
 
     public var filteredComments: [CommentItem] {
       switch selectedFilter {
@@ -104,6 +104,8 @@ public struct CommentFeature {
     case commentMenu(id: UUID, action: CommentMenuAction)
     case commentRow(id: UUID, action: CommentRowAction)
     case sendTapped
+    case composeTapped
+    case composeDismissed
   }
 
   public enum CommentMenuAction: Equatable {
@@ -261,6 +263,7 @@ extension CommentFeature {
         else { return .none }
         state.editingPerspectiveId = pid
         state.commentText = comment.content
+        state.isComposerExpanded = true
       case .delete:
         state.menuTargetCommentID = nil
         guard let comment = state.comments.first(where: { $0.id == id }),
@@ -302,6 +305,17 @@ extension CommentFeature {
         return .send(.async(.updatePerspective(perspectiveId: editId, content: text)))
       }
       return .send(.async(.createComment(content: text)))
+
+    case .composeTapped:
+      state.isComposerExpanded = true
+      return .none
+
+    case .composeDismissed:
+      guard !state.isSubmitting else { return .none }
+      state.isComposerExpanded = false
+      state.editingPerspectiveId = nil
+      state.commentText = ""
+      return .none
     }
   }
 
@@ -383,7 +397,9 @@ extension CommentFeature {
     case let .fetchPerspectives(reset):
       state.isLoadingComments = true
       // 초기/정렬/필터/등록 후 reset 시 리스트를 비워 스켈레톤이 노출되도록 한다.
-      if reset { state.comments = [] }
+      if reset {
+        state.comments = []
+      }
       let battleId = state.battleId
       let cursor = reset ? nil : state.nextCursor
       let optionId: Int? = {
@@ -518,7 +534,9 @@ extension CommentFeature {
       switch result {
       case let .success(perspective):
         state.perspectiveId = perspective?.perspectiveId
-        if let optionId = perspective?.option.optionId { state.myOptionId = optionId }
+        if let optionId = perspective?.option.optionId {
+          state.myOptionId = optionId
+        }
         // 내 perspectiveId 가 늦게 로드돼도 기존 목록에서 내 글을 표시.
         if let myPid = perspective?.perspectiveId {
           for index in state.comments.indices where state.comments[index].perspectiveId == myPid {
@@ -585,6 +603,7 @@ extension CommentFeature {
       state.isSubmitting = false
       switch result {
       case let .success(perspective):
+        state.isComposerExpanded = false
         // 서버는 댓글을 "유저가 투표한 진영"에 저장한다(요청 optionId 무시). 재조회로 실제 진영을
         // 알아낸 경우에만 필터를 전환하고, 못 알아냈으면 현재 탭 그대로 목록만 갱신한다.
         if let votedOptionId = perspective?.option.optionId {
@@ -604,6 +623,7 @@ extension CommentFeature {
     case .mutationFinished:
       // 관점 수정/삭제 완료 → 입력 상태 복구 + 목록 갱신
       state.isSubmitting = false
+      state.isComposerExpanded = false
       return .send(.async(.fetchPerspectives(reset: true)))
 
     case let .perspectiveLikesResponse(result):

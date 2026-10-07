@@ -6,10 +6,43 @@
 //
 
 @testable import Chat
+import ComposableArchitecture
 import HomeDomainInterface
 import Testing
 
 struct ChatTests {
+  @Test
+  func commentComposerStartsCollapsedAndOpensForEditing() async {
+    let store = TestStore(initialState: CommentFeature.State(battleId: 901)) {
+      CommentFeature()
+    }
+
+    #expect(store.state.isComposerExpanded == false)
+    await store.send(.view(.composeTapped)) {
+      $0.isComposerExpanded = true
+    }
+    await store.send(.view(.composeDismissed)) {
+      $0.isComposerExpanded = false
+    }
+  }
+
+  @Test
+  func dismissingEditedCommentClearsDraftAndEditTarget() async {
+    var state = CommentFeature.State(battleId: 901)
+    state.isComposerExpanded = true
+    state.editingPerspectiveId = 42
+    state.commentText = "수정 중"
+    let store = TestStore(initialState: state) {
+      CommentFeature()
+    }
+
+    await store.send(.view(.composeDismissed)) {
+      $0.isComposerExpanded = false
+      $0.editingPerspectiveId = nil
+      $0.commentText = ""
+    }
+  }
+
   @Test
   func chatExample() {
     // This is an example of a test case.
