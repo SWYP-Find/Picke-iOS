@@ -109,11 +109,18 @@ private extension ClassBattleListCard {
     imageURL: URL?
   ) -> some View {
     HStack(spacing: 4) {
-      PickeAvatarView(
-        imageURL: imageURL?.absoluteString,
-        fallback: philosopher,
-        size: 40
-      )
+      if imageURL == nil, philosopher == "순자" {
+        Image(asset: .avatarSunja)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 40, height: 40)
+      } else {
+        PickeAvatarView(
+          imageURL: imageURL?.absoluteString,
+          fallback: philosopher,
+          size: 40
+        )
+      }
 
       VStack(alignment: .leading, spacing: 2) {
         Text(title)

@@ -83,7 +83,7 @@ extension CustomConfirmationPopup {
     VStack(spacing: 16) {
       Text(title)
         .pretendardFont(.labelMedium)
-        .foregroundStyle(.neutral900)
+        .foregroundStyle(.primary800)
         .lineSpacing(14 * 0.4)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
