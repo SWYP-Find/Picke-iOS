@@ -1,3 +1,4 @@
+import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
 import SwiftUI
@@ -44,7 +45,6 @@ public struct ClassReportView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
   }
 }
 
@@ -68,7 +68,7 @@ private extension ClassReportView {
   @ViewBuilder
   func reportTabs() -> some View {
     HStack(spacing: 0) {
-      ForEach(ClassReportFeature.Tab.allCases, id: \.self) { tab in
+      ForEach(ClassReportTab.allCases, id: \.self) { tab in
         Button { send(.tabSelected(tab)) } label: {
           Text(tab.rawValue)
             .pretendardFont(family: .Medium, size: 14)
@@ -92,7 +92,7 @@ private extension ClassReportView {
       get: { store.selectedTab },
       set: { send(.tabSelected($0)) }
     )) {
-      ForEach(ClassReportFeature.Tab.allCases, id: \.self) { tab in
+      ForEach(ClassReportTab.allCases, id: \.self) { tab in
         ScrollView {
           reportContent(for: tab)
             .padding(.horizontal, 16)
@@ -108,7 +108,7 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
-  func reportContent(for tab: ClassReportFeature.Tab) -> some View {
+  func reportContent(for tab: ClassReportTab) -> some View {
     VStack(spacing: 16) {
       switch tab {
       case .summary:
@@ -422,7 +422,7 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
-  func cardHeading(_ title: String, destination: ClassReportFeature.Tab? = nil) -> some View {
+  func cardHeading(_ title: String, destination: ClassReportTab? = nil) -> some View {
     HStack {
       Text(title)
         .pretendardFont(.semiBold15)
@@ -458,7 +458,7 @@ private extension ClassReportView {
 }
 
 #if DEBUG
-  private func figmaReportStore(tab: ClassReportFeature.Tab) -> StoreOf<ClassReportFeature> {
+  private func figmaReportStore(tab: ClassReportTab) -> StoreOf<ClassReportFeature> {
     var state = ClassReportFeature.State(room: .mocks[0])
     state.selectedTab = tab
     return Store(initialState: state) { ClassReportFeature() }

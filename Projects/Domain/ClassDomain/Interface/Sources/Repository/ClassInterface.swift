@@ -23,6 +23,12 @@ public enum ClassUseCaseDependency: TestDependencyKey {
   }
 }
 
+public enum ClassMockRepositoryDependency: TestDependencyKey {
+  public static var testValue: MockClassRepository? {
+    nil
+  }
+}
+
 public extension DependencyValues {
   var classRepository: any ClassInterface {
     get { self[ClassRepositoryDependency.self] }
@@ -32,5 +38,10 @@ public extension DependencyValues {
   var classUseCase: any ClassInterface {
     get { self[ClassUseCaseDependency.self] }
     set { self[ClassUseCaseDependency.self] = newValue }
+  }
+
+  var classMockRepository: MockClassRepository? {
+    get { self[ClassMockRepositoryDependency.self] }
+    set { self[ClassMockRepositoryDependency.self] = newValue }
   }
 }

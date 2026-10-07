@@ -29,8 +29,34 @@ public struct MyClassView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.visible, for: .tabBar)
     .onAppear { send(.onAppear) }
+    .pickeModal(
+      $store.scope(state: \.modal, action: \.modal),
+      dimOpacity: 0.28
+    ) { _ in
+      if let roomID = store.selectedRoomID,
+         let room = store.rooms.first(where: { $0.id == roomID })
+      {
+        ZStack(alignment: .bottom) {
+          Color.clear
+            .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture { send(.managementDismissed) }
+          ClassManagementSheet(
+            room: room,
+            onEdit: { send(.editClassTapped) },
+            onDelete: { send(.deleteTapped) }
+          )
+          .frame(maxWidth: .infinity)
+          .background(
+            UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+              .fill(.beige50)
+              .ignoresSafeArea(edges: .bottom)
+          )
+        }
+      }
+    }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
@@ -64,10 +90,11 @@ private extension MyClassView {
     case let .loaded(rooms):
       LazyVStack(spacing: 12) {
         ForEach(rooms) { room in
-          Button { send(.roomTapped(room.id)) } label: {
-            MyClassRoomCard(room: room)
-          }
-          .buttonStyle(.plain)
+          MyClassRoomCard(
+            room: room,
+            onOpen: { send(.roomTapped(room.id)) },
+            onManage: { send(.managementTapped(room.id)) }
+          )
         }
       }
     }

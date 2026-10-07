@@ -5,13 +5,12 @@
 //  Created by Wonji Suh on 5/16/26.
 //
 
-import SwiftUI
-import UIKit
-
 import BattleDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
+import SwiftUI
+import UIKit
 
 @ViewAction(for: PreVoteFeature.self)
 public struct PreVoteView: View {
@@ -21,11 +20,19 @@ public struct PreVoteView: View {
     self.store = store
   }
 
-  // 안드로이드 시안: 사후(최종) 투표는 사전투표와 구분되도록 화면 배경을 통째로 검정으로 교체.
-  // (VoteScreen.kt — PRE: surface, POST: Color.Black. 옵션 카드/CTA/상단바 색은 동일)
-  private var isPostVote: Bool { store.voteMode == .post }
-  private var screenBackground: Color { isPostVote ? .black : .beige50 }
-  private var titleColor: Color { isPostVote ? .beige50 : .neutral500 }
+  /// 안드로이드 시안: 사후(최종) 투표는 사전투표와 구분되도록 화면 배경을 통째로 검정으로 교체.
+  /// (VoteScreen.kt — PRE: surface, POST: Color.Black. 옵션 카드/CTA/상단바 색은 동일)
+  private var isPostVote: Bool {
+    store.voteMode == .post
+  }
+
+  private var screenBackground: Color {
+    isPostVote ? .black : .beige50
+  }
+
+  private var titleColor: Color {
+    isPostVote ? .beige50 : .neutral500
+  }
 
   public var body: some View {
     Group {
@@ -333,7 +340,10 @@ extension PreVoteView {
       .padding(8)
       .frame(maxWidth: .infinity)
       .frame(height: PreVoteLayout.optionCardHeight)
-      .pickeCard(.beige300, border: isSelected ? .beige700 : .beige500)
+      .pickeCard(
+        .beige300,
+        border: isSelected ? (isPostVote ? .secondary500 : .beige700) : .beige500
+      )
       .opacity(isSelected ? 1.0 : 0.88)
     }
     .buttonStyle(.plain)

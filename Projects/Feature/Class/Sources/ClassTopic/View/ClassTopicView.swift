@@ -40,7 +40,7 @@ public struct ClassTopicView: View {
         .padding(.bottom, 16)
     }
     .screenBackground()
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
   }
 }
 
@@ -53,7 +53,7 @@ private extension ClassTopicView {
         .lineSpacing(2.4)
         .foregroundStyle(.gray800)
 
-      Text("관심 있는 주제나 수업 조건을 선택해 주세요.")
+      Text("관심 있는 주제나 배틀 조건을 선택해 주세요.")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
     }

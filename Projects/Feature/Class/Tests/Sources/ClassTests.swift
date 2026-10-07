@@ -43,6 +43,21 @@ struct ClassTests {
   }
 
   @Test
+  func 이름으로_참여하면_입력한_이름을_상위_델리게이트에_전달한다() async {
+    let room = ClassRoom.mockJoinable
+    var state = ClassIntroFeature.State()
+    state.join = ClassJoinFeature.State(mode: .nickname, preview: room)
+    let store = TestStore(initialState: state) {
+      ClassIntroFeature()
+    }
+
+    await store.send(.join(.presented(.delegate(.joined(room, nickname: "민지"))))) {
+      $0.join = nil
+    }
+    await store.receive(\.delegate, .joined(room, nickname: "민지"))
+  }
+
+  @Test
   func 이름_입력_모달_대기_중_뒤로가면_예약된_모달을_취소한다() async {
     let clock = TestClock()
     let room = ClassRoom.mockJoinable

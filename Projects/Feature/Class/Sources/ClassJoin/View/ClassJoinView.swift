@@ -12,6 +12,7 @@ import SwiftUI
 @ViewAction(for: ClassJoinFeature.self)
 public struct ClassJoinView: View {
   @Bindable public var store: StoreOf<ClassJoinFeature>
+  @FocusState private var isCodeFocused: Bool
 
   public init(store: StoreOf<ClassJoinFeature>) {
     self.store = store
@@ -70,11 +71,11 @@ private extension ClassJoinView {
   @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("참여 코드를 입력해주세요")
+      Text("공유받은 코드로\n클래스에 참여하세요")
         .pretendardFont(.semiBold24)
         .foregroundStyle(.gray800)
 
-      Text("선생님에게 받은 코드를 입력하면 클래스에 참여할 수 있어요.")
+      Text("전달받은 6자리 코드를 입력해 주세요.")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
     }
@@ -87,14 +88,53 @@ private extension ClassJoinView {
         .pretendardFont(.semiBold15)
         .foregroundStyle(.gray800)
 
-      TextField(
-        "예) PK9T3S",
-        text: $store.joinCode
-      )
-      .textInputAutocapitalization(.characters)
-      .autocorrectionDisabled()
-      .pickeTextField()
+      ZStack {
+        HStack(spacing: 8) {
+          ForEach(0 ..< 6, id: \.self) { index in
+            Text(index < store.joinCode.count ? String(Array(store.joinCode)[index]) : "")
+              .pretendardFont(.semiBold24)
+              .foregroundStyle(.gray800)
+              .frame(maxWidth: .infinity)
+              .frame(height: 54)
+              .background(.beige50)
+              .overlay {
+                Rectangle()
+                  .strokeBorder(.beige600, lineWidth: 1)
+              }
+          }
+        }
+        .accessibilityHidden(true)
+
+        TextField("", text: $store.joinCode)
+          .textInputAutocapitalization(.characters)
+          .autocorrectionDisabled()
+          .keyboardType(.asciiCapable)
+          .textContentType(.oneTimeCode)
+          .focused($isCodeFocused)
+          .accessibilityLabel("참여 코드, 6자리")
+          .foregroundStyle(.clear)
+          .tint(.clear)
+      }
+      .contentShape(Rectangle())
+      .onTapGesture { isCodeFocused = true }
+
+      helpCard
     }
+  }
+
+  var helpCard: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("코드를 찾을 수 없나요?")
+        .pretendardFont(.semiBold15)
+        .foregroundStyle(.gray800)
+
+      Text("클래스를 만든 선생님이나 모임장에게\n참여 코드를 확인해 주세요.")
+        .pretendardFont(.bodySmall)
+        .foregroundStyle(.gray300)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(16)
+    .background(.beige100)
   }
 
   @ViewBuilder
@@ -154,7 +194,7 @@ private extension ClassJoinView {
 
   var primaryButton: some View {
     Button { send(.findTapped) } label: {
-      Text("클래스 찾기")
+      Text("클래스 참여하기")
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(!store.canFindClass)

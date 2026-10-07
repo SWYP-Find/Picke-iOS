@@ -41,38 +41,26 @@ public struct ClassDetailView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(store.modal == nil ? .visible : .hidden, for: .tabBar)
     .pickeModal(
       $store.scope(state: \.modal, action: \.modal),
       dimOpacity: 0.28
     ) { modalStore in
       switch modalStore.kind {
       case .management:
-        modalBackdrop({ send(.managementDismissed) }) { managementSheet() }
+        modalBackdrop({ send(.managementDismissed) }) {
+          ClassManagementSheet(
+            room: store.room,
+            onEdit: { send(.deadlineTapped) },
+            onDelete: { send(.deleteTapped) }
+          )
+        }
       case .deadline:
         modalBackdrop({ modalStore.send(.dismissTapped) }) { deadlineSheet() }
       case .code:
         modalBackdrop({ send(.codeDismissed) }) { codeSheet() }
-      case .nickname:
-        modalBackdrop({ modalStore.send(.dismissTapped) }) { nicknameSheet() }
       }
     }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
-    .alert(
-      "요청을 완료하지 못했어요",
-      isPresented: Binding(
-        get: { store.errorMessage != nil },
-        set: {
-          if !$0 {
-            store.errorMessage = nil
-          }
-        }
-      )
-    ) {
-      Button("확인", role: .cancel) {}
-    } message: {
-      Text(store.errorMessage ?? "다시 시도해 주세요.")
-    }
   }
 }
 
@@ -90,11 +78,6 @@ private extension ClassDetailView {
       Text(store.room.name)
         .pretendardFont(.semiBold24)
         .foregroundStyle(.gray800)
-        .contextMenu {
-          if store.room.role == .member {
-            Button("내 이름 수정") { send(.nicknameTapped) }
-          }
-        }
     }
   }
 
@@ -113,7 +96,7 @@ private extension ClassDetailView {
       Button { send(.deadlineTapped) } label: {
         informationRow(
           "참여 마감일",
-          detail: Self.deadlineFormatter.string(from: store.deadline) + "까지",
+          detail: store.deadlineText,
           actionTitle: "수정"
         )
       }
@@ -148,13 +131,6 @@ private extension ClassDetailView {
     }
     .frame(height: 64)
   }
-
-  static let deadlineFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "ko_KR")
-    formatter.dateFormat = "yyyy. MM. dd. EEEE HH:mm"
-    return formatter
-  }()
 
   @ViewBuilder
   func battleSection() -> some View {
@@ -210,12 +186,6 @@ private extension ClassDetailView {
     }
   }
 
-  var deleteButton: some View {
-    managementRow("클래스 삭제", detail: "삭제 후에는 복구할 수 없어요.", icon: "trash") {
-      send(.deleteTapped)
-    }
-  }
-
   @ViewBuilder
   func actionButtons() -> some View {
     VStack(spacing: 12) {
@@ -262,60 +232,6 @@ private extension ClassDetailView {
   }
 
   @ViewBuilder
-  func managementSheet() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      sheetHandle
-      Text("클래스 관리")
-        .pretendardFont(.semiBold24)
-        .foregroundStyle(.gray800)
-      VStack(spacing: 0) {
-        managementRow("클래스 정보 수정", detail: "클래스 기본 정보를 수정해요.", icon: "pencil") {
-          send(.deadlineTapped)
-        }
-        Rectangle().fill(.beige600).frame(height: 1)
-        ShareLink(item: "[Picke] '\(store.room.name)' 클래스 참여 코드: \(store.room.joinCode)") {
-          managementRowContent("참여 코드 공유", detail: "클래스 참여 코드를 공유해요.", icon: "square.and.arrow.up")
-        }
-        .buttonStyle(.plain)
-        Rectangle().fill(.beige600).frame(height: 1)
-        deleteButton
-      }
-    }
-    .padding(.top, 12)
-    .padding(.horizontal, 16)
-    .padding(.bottom, 32)
-  }
-
-  @ViewBuilder
-  func managementRow(_ title: String, detail: String, icon: String, action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      managementRowContent(title, detail: detail, icon: icon)
-    }
-    .buttonStyle(.plain)
-  }
-
-  @ViewBuilder
-  func managementRowContent(_ title: String, detail: String, icon: String) -> some View {
-    HStack(spacing: 12) {
-      Image(systemName: icon)
-        .font(.system(size: 18))
-        .foregroundStyle(.primary500)
-        .frame(width: 40, height: 40)
-        .background(.primary50, in: Circle())
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title).pretendardFont(.semiBold15).foregroundStyle(.gray800)
-        Text(detail).pretendardFont(.medium13).foregroundStyle(.gray300)
-      }
-      Spacer()
-      Image(systemName: "chevron.right")
-        .font(.system(size: 12))
-        .foregroundStyle(.gray800)
-    }
-    .frame(height: 72)
-    .contentShape(Rectangle())
-  }
-
-  @ViewBuilder
   func deadlineSheet() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       sheetHandle
@@ -357,31 +273,5 @@ private extension ClassDetailView {
     .padding(.top, 16)
     .padding(.horizontal, 16)
     .padding(.bottom, 40)
-  }
-
-  @ViewBuilder
-  func nicknameSheet() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      sheetHandle
-      VStack(alignment: .leading, spacing: 6) {
-        Text("이름을 입력해주세요")
-          .pretendardFont(.semiBold24)
-          .foregroundStyle(.gray800)
-        Text("이 클래스에서만 보이는 이름이에요.")
-          .pretendardFont(.regular13)
-          .foregroundStyle(.gray300)
-      }
-
-      TextField("이름을 입력해주세요", text: $store.draftNickname)
-        .textInputAutocapitalization(.never)
-        .pickeTextField(height: 52)
-
-      Button("수정하기") { send(.nicknameSaved) }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
-        .disabled(store.draftNickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-    }
-    .padding(.top, 12)
-    .padding(.horizontal, 16)
-    .padding(.bottom, 32)
   }
 }

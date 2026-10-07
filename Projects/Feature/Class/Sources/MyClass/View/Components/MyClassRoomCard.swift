@@ -10,20 +10,38 @@ import SwiftUI
 /// 내 클래스 목록 카드 (Figma 12178:8263 `Card/BattleListCard`).
 struct MyClassRoomCard: View {
   let room: ClassRoom
+  let onOpen: () -> Void
+  let onManage: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    Button(action: onOpen) {
       VStack(alignment: .leading, spacing: 12) {
-        badgeRow()
-        titleSection()
-      }
+        VStack(alignment: .leading, spacing: 12) {
+          badgeRow()
+          titleSection()
+        }
 
-      footer()
+        footer()
+      }
+      .padding(12)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .pickeCard(.beige50, border: .beige600)
+      .contentShape(Rectangle())
     }
-    .padding(12)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .pickeCard(.beige50, border: .beige600)
-    .contentShape(Rectangle())
+    .buttonStyle(.plain)
+    .overlay(alignment: .topTrailing) {
+      if room.role == .owner {
+        Button(action: onManage) {
+          Image(systemName: "ellipsis")
+            .font(.pretendardFontFamily(family: .Bold, size: 14))
+            .foregroundStyle(.gray900)
+            .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("클래스 관리")
+        .padding(12)
+      }
+    }
   }
 }
 
@@ -34,11 +52,6 @@ private extension MyClassRoomCard {
       statusBadge
 
       Spacer(minLength: 0)
-
-      Image(systemName: "ellipsis")
-        .font(.pretendardFontFamily(family: .Bold, size: 14))
-        .foregroundStyle(.gray900)
-        .frame(width: 24, height: 24)
     }
   }
 

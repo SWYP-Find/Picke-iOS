@@ -4,9 +4,8 @@
 //
 //  팝업 종류별 컨텐츠 뷰 구성
 
-import SwiftUI
-
 import PickeDesignKit
+import SwiftUI
 
 extension CustomConfirmationPopup {
   func popupMaxWidth(for containerWidth: CGFloat) -> CGFloat {
@@ -274,6 +273,22 @@ extension CustomConfirmationPopup {
       lineWidth: 1.5
     )
     .opacity(0.9)
+    .clipShape(RoundedRectangle(cornerRadius: 2))
     .onTapGesture {}
   }
 }
+
+#if DEBUG
+  #Preview("최종 투표 확인") {
+    CustomConfirmationPopup(
+      title: "최종투표하고 투표 결과를 보시겠습니까?",
+      message: "",
+      confirmTitle: "최종투표하기",
+      cancelTitle: "다시 들어볼래요",
+      isDestructive: false,
+      style: .finalVote,
+      onConfirm: {},
+      onCancel: {}
+    )
+  }
+#endif

@@ -13,6 +13,11 @@ public struct ClassRecommendFeature {
 
   public init() {}
 
+  public enum Mode: Equatable {
+    case existingContent
+    case aiQuestions
+  }
+
   @ObservableState
   public struct State: Equatable {
     public enum ViewState: Equatable {
@@ -23,13 +28,17 @@ public struct ClassRecommendFeature {
     }
 
     public var filter: ClassTopicFilter
+    public var mode: Mode
     public var battles: [ClassBattleSummary] = []
+    public var questions: [ClassAIQuestion] = []
     public var selectedBattleId: Int?
+    public var selectedQuestionId: Int?
     public var isLoading = false
     public var loadFailed = false
 
-    public init(filter: ClassTopicFilter) {
+    public init(filter: ClassTopicFilter, mode: Mode = .existingContent) {
       self.filter = filter
+      self.mode = mode
     }
 
     public var conditionTitles: [String] {
@@ -37,18 +46,25 @@ public struct ClassRecommendFeature {
     }
 
     public var resultTitle: String {
-      "추천 결과 \(battles.count)개"
+      "추천 결과 \(mode == .aiQuestions ? questions.count : battles.count)개"
     }
 
     public var selectedBattle: ClassBattleSummary? {
       battles.first { $0.id == selectedBattleId }
     }
 
+    public var selectedQuestion: ClassAIQuestion? {
+      questions.first { $0.id == selectedQuestionId }
+    }
+
     public var canSelect: Bool {
-      selectedBattle != nil
+      mode == .aiQuestions ? selectedQuestion != nil : selectedBattle != nil
     }
 
     public var viewState: ViewState {
+      if mode == .aiQuestions {
+        return questions.isEmpty ? .empty : .loaded
+      }
       if loadFailed && battles.isEmpty {
         return .error
       }
@@ -73,6 +89,8 @@ public struct ClassRecommendFeature {
     case backTapped
     case editConditionTapped
     case battleTapped(Int)
+    case questionTapped(Int)
+    case recommendAgainTapped
     case previewTapped(Int)
     case selectTapped
   }
@@ -89,6 +107,7 @@ public struct ClassRecommendFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case select(ClassBattleSummary)
+    case selectAIQuestion(ClassAIQuestion)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -121,10 +140,17 @@ extension ClassRecommendFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
+      if state.mode == .aiQuestions {
+        if state.questions.isEmpty {
+          state.questions = ClassAIQuestion.examples
+        }
+        return .none
+      }
       guard state.battles.isEmpty else { return .none }
       return .send(.async(.fetch(state.filter)))
 
     case .retryTapped:
+      guard state.mode == .existingContent else { return .none }
       return .send(.async(.fetch(state.filter)))
 
     case .backTapped, .editConditionTapped:
@@ -134,10 +160,25 @@ extension ClassRecommendFeature {
       state.selectedBattleId = state.selectedBattleId == id ? nil : id
       return .none
 
+    case let .questionTapped(id):
+      guard state.questions.contains(where: { $0.id == id }) else { return .none }
+      state.selectedQuestionId = state.selectedQuestionId == id ? nil : id
+      return .none
+
+    case .recommendAgainTapped:
+      guard state.mode == .aiQuestions else { return .none }
+      state.questions = Array(state.questions.dropFirst()) + state.questions.prefix(1)
+      state.selectedQuestionId = nil
+      return .none
+
     case .previewTapped:
       return .none
 
     case .selectTapped:
+      if state.mode == .aiQuestions {
+        guard let question = state.selectedQuestion else { return .none }
+        return .send(.delegate(.selectAIQuestion(question)))
+      }
       guard let battle = state.selectedBattle else { return .none }
       return .send(.delegate(.select(battle)))
     }

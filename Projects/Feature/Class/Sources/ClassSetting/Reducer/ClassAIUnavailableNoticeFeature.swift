@@ -1,22 +1,17 @@
+//
+//  ClassAIUnavailableNoticeFeature.swift
+//  Class
+//
+
 import ComposableArchitecture
 
 @Reducer
-public struct ClassModalFeature {
+public struct ClassAIUnavailableNoticeFeature {
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
-    public enum Kind: Equatable {
-      case management
-      case deadline
-      case code
-    }
-
-    public let kind: Kind
-
-    public init(kind: Kind) {
-      self.kind = kind
-    }
+    public init() {}
   }
 
   public enum Action {

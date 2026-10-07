@@ -50,7 +50,6 @@ public struct ClassFeedbackComposeView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
     .alert("전송 준비 중", isPresented: $store.showUnavailableAlert) {
       Button("확인", role: .cancel) {}
     } message: {

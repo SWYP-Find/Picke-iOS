@@ -10,4 +10,12 @@ public enum ClassAudienceLevel: String, CaseIterable, Equatable, Sendable {
     case .adult: "성인"
     }
   }
+
+  public var topicTitle: String {
+    switch self {
+    case .middle: "초급"
+    case .high: "중급"
+    case .adult: "고급"
+    }
+  }
 }

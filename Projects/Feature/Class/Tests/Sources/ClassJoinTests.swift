@@ -26,7 +26,7 @@ struct ClassJoinTests {
     }
 
     await store.send(.binding(.set(\.joinCode, " pk9t3s "))) {
-      $0.joinCode = " pk9t3s "
+      $0.joinCode = "PK9T3S"
     }
     await store.send(.view(.findTapped))
     await store.receive(\.async, .find("PK9T3S")) {
@@ -57,11 +57,11 @@ struct ClassJoinTests {
     await store.receive(\.async, .join(joinCode: room.joinCode, nickname: "민지")) {
       $0.isLoading = true
     }
-    await store.receive(\.inner, .joined(.success(room))) {
+    await store.receive(\.inner, .joined(.success(room), nickname: "민지")) {
       $0.preview = nil
       $0.isLoading = false
     }
-    await store.receive(\.delegate.joined)
+    await store.receive(\.delegate, .joined(room, nickname: "민지"))
   }
 
   @Test
@@ -74,17 +74,42 @@ struct ClassJoinTests {
       })
     }
 
-    await store.send(.binding(.set(\.joinCode, "INVALID"))) {
-      $0.joinCode = "INVALID"
+    await store.send(.binding(.set(\.joinCode, "BAD123"))) {
+      $0.joinCode = "BAD123"
     }
     await store.send(.view(.findTapped))
-    await store.receive(\.async, .find("INVALID")) {
+    await store.receive(\.async, .find("BAD123")) {
       $0.isLoading = true
     }
     await store.receive(\.inner, .found(.failure(.invalidCode))) {
       $0.isLoading = false
       $0.errorMessage = "참여 코드를 다시 확인해 주세요."
     }
+  }
+
+  @Test
+  func 붙여넣은_코드는_영문숫자만_대문자로_6자리까지_저장한다() async {
+    let store = TestStore(initialState: ClassJoinFeature.State()) {
+      ClassJoinFeature()
+    }
+
+    await store.send(.binding(.set(\.joinCode, " ab-12한글cd9 "))) {
+      $0.joinCode = "AB12CD"
+    }
+    #expect(store.state.canFindClass)
+  }
+
+  @Test
+  func 여섯자리_미만_또는_한글_조합_중에는_코드를_조회하지_않는다() async {
+    let store = TestStore(initialState: ClassJoinFeature.State()) {
+      ClassJoinFeature()
+    }
+
+    await store.send(.binding(.set(\.joinCode, "a1가나"))) {
+      $0.joinCode = "A1"
+    }
+    #expect(!store.state.canFindClass)
+    await store.send(.view(.findTapped))
   }
 }
 

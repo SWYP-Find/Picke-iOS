@@ -113,4 +113,83 @@ struct ClassDomainTests {
       #expect(ClassError.from(error) == .invalidCode)
     }
   }
+
+  @Test
+  func 목_멤버는_클래스_인원수와_일치하고_운영자를_포함한다() async throws {
+    let repository = MockClassRepository()
+    for room in ClassRoom.mocks + [.mockJoinable] {
+      let members = try await repository.fetchMembers(roomID: room.id)
+      #expect(members.count == room.memberCount)
+      #expect(members.first?.id == 1)
+      #expect(members.first?.isOwner == true)
+    }
+  }
+
+  @Test
+  func 생성과_참여는_같은_actor의_멤버와_인원수를_갱신한다() async throws {
+    let repository = MockClassRepository(rooms: [], availableRooms: [.mockJoinable])
+    let created = try await repository.createClass(
+      ClassCreation(
+        name: "새 클래스",
+        deadline: Date(timeIntervalSince1970: 1_800_000_000),
+        battleId: 101,
+        allowsAnonymousOpinion: true,
+        requiresComment: false
+      )
+    )
+    #expect(try await repository.fetchMembers(roomID: created.id).count == 1)
+    #expect(try await repository.currentMemberID(roomID: created.id) == 1)
+
+    let joined = try await repository.joinClass(joinCode: "PK9T3S", nickname: "민지")
+    let members = try await repository.fetchMembers(roomID: joined.id)
+    #expect(members.count == joined.memberCount)
+    #expect(members.last?.name == "민지")
+    #expect(try await repository.currentMemberID(roomID: joined.id) == members.last?.id)
+  }
+
+  @Test
+  func 목_멤버_제거는_운영자만_가능하고_목록과_마감일_변경에도_인원수가_유지된다() async throws {
+    let repository = MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: [])
+    let updated = try await repository.removeMember(roomID: 1, memberID: 2, currentMemberID: 1)
+    #expect(updated.memberCount == ClassRoom.mocks[0].memberCount - 1)
+    #expect(try await repository.fetchMembers(roomID: 1).count == updated.memberCount)
+    #expect(try await repository.fetchMyClasses()[0].memberCount == updated.memberCount)
+
+    let deadline = try await repository.updateDeadline(id: 1, deadline: Date(timeIntervalSince1970: 1_801_000_000))
+    #expect(deadline.memberCount == updated.memberCount)
+    #expect(try await repository.fetchClass(joinCode: updated.joinCode).memberCount == updated.memberCount)
+
+    for (memberID, currentMemberID) in [(1, 1), (3, 3), (3, 2)] {
+      do {
+        _ = try await repository.removeMember(roomID: 1, memberID: memberID, currentMemberID: currentMemberID)
+        Issue.record("권한 없는 멤버 제거가 허용됨")
+      } catch {
+        #expect(ClassError.from(error) != .invalidCode)
+      }
+    }
+  }
+
+  @Test
+  func 목_이름_수정은_본인에게만_허용된다() async throws {
+    let repository = MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: [])
+    let renamed = try await repository.updateDisplayName(
+      roomID: 1, memberID: 1, currentMemberID: 1, name: " 김 선생님 "
+    )
+    #expect(renamed.name == "김 선생님")
+    #expect(try await repository.fetchMembers(roomID: 1).first?.name == "김 선생님")
+
+    do {
+      _ = try await repository.updateDisplayName(roomID: 1, memberID: 2, currentMemberID: 1, name: "다른 이름")
+      Issue.record("다른 멤버의 이름 수정이 허용됨")
+    } catch {
+      #expect(ClassError.from(error) != .invalidCode)
+    }
+  }
+
+  @Test
+  func 성인_추천_배틀을_조회할_수_있다() async throws {
+    let repository = MockClassRepository()
+    let battles = try await repository.fetchRecommendedBattles(filter: .init(level: .adult))
+    #expect(battles.map(\.id) == [103])
+  }
 }

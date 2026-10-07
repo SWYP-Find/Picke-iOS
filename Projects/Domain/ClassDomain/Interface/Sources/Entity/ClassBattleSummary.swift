@@ -81,5 +81,44 @@ public extension ClassBattleSummary {
       audioDuration: 6 * 60,
       viewCount: 902
     ),
+    .init(
+      id: 103,
+      title: "인공지능의 결정에 책임을 물을 수 있을까?",
+      summary: "기술과 인간의 책임을 함께 생각해요.",
+      philosopherA: "개발자의 책임",
+      optionATitle: "만든 사람이 책임져야 한다",
+      philosopherB: "사용자의 책임",
+      optionBTitle: "사용한 사람이 책임져야 한다",
+      category: .society,
+      level: .adult,
+      audioDuration: 7 * 60,
+      viewCount: 318
+    ),
+    .init(
+      id: 104,
+      title: "인간은 본래 선한가?",
+      summary: "인간의 본성과 선택을 함께 생각해요.",
+      philosopherA: "성선설",
+      optionATitle: "인간은 본래 선하다",
+      philosopherB: "성악설",
+      optionBTitle: "인간은 본래 악하다",
+      category: .philosophy,
+      level: .high,
+      audioDuration: 6 * 60,
+      viewCount: 512
+    ),
+    .init(
+      id: 105,
+      title: "무지는 죄인가?",
+      summary: "알지 못한 일에 대한 책임을 토론해요.",
+      philosopherA: "책임의 관점",
+      optionATitle: "무지도 책임져야 한다",
+      philosopherB: "이해의 관점",
+      optionBTitle: "모르는 것만으로는 죄가 아니다",
+      category: .literature,
+      level: .middle,
+      audioDuration: 5 * 60,
+      viewCount: 441
+    ),
   ]
 }

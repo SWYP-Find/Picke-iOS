@@ -16,7 +16,7 @@ struct MyClassTests {
     await store.send(.view(.progressTapped(.closed))) {
       $0.progress = .closed
     }
-    #expect(store.state.visibleRooms.isEmpty)
+    #expect(store.state.visibleRooms.map(\.id) == [3])
 
     await store.send(.view(.progressTapped(.open))) {
       $0.progress = .open
@@ -34,6 +34,24 @@ struct MyClassTests {
 
     await store.send(.view(.roomTapped(1)))
     await store.receive(\.delegate, .openRoom(ClassRoom.mocks[0]))
+  }
+
+  @Test
+  func 카드_더보기는_목록_위에_기존_관리_모달을_연다() async {
+    var state = MyClassFeature.State()
+    state.rooms = ClassRoom.mocks
+    let store = TestStore(initialState: state) {
+      MyClassFeature()
+    }
+
+    await store.send(.view(.managementTapped(1))) {
+      $0.selectedRoomID = 1
+      $0.modal = .init(kind: .management)
+    }
+    await store.send(.view(.managementDismissed)) {
+      $0.modal = nil
+    }
+    #expect(store.state.rooms.count == 3)
   }
 
   @Test

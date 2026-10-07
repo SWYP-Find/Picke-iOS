@@ -61,7 +61,7 @@ private extension ClassBattleListCard {
         Text("미리듣기")
           .pretendardFont(.semiBold12)
       }
-      .foregroundStyle(.gray300)
+      .foregroundStyle(.primary500)
     }
     .buttonStyle(.plain)
     .disabled(true)

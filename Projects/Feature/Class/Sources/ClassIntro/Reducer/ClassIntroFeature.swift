@@ -44,7 +44,7 @@ public struct ClassIntroFeature {
   @CasePathable
   public enum DelegateAction: Equatable {
     case backToHome
-    case joined(ClassRoom)
+    case joined(ClassRoom, nickname: String)
     case myClasses
     case create
     case ticket
@@ -138,9 +138,9 @@ extension ClassIntroFeature {
       }
       .cancellable(id: CancelID.nicknameModal, cancelInFlight: true)
 
-    case let .presented(.delegate(.joined(room))):
+    case let .presented(.delegate(.joined(room, nickname: nickname))):
       state.join = nil
-      return .send(.delegate(.joined(room)))
+      return .send(.delegate(.joined(room, nickname: nickname)))
 
     case .presented, .dismiss:
       return .none

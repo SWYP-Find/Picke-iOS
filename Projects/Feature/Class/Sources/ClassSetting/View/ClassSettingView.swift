@@ -28,15 +28,16 @@ public struct ClassSettingView: View {
 
       ScrollView {
         VStack(alignment: .leading, spacing: 32) {
-          Text("수업 정보에 맞게\n클래스를 설정해 주세요")
+          Text("운영 목적에 맞게\n클래스를 설정해 주세요")
             .pretendardFont(.semiBold24)
             .lineSpacing(2.4)
             .foregroundStyle(.gray500)
 
           nameSection()
           deadlineSection()
-          battleSection()
+          contentSection()
           commentToggle
+          ownerParticipationToggle
         }
         .padding(16)
       }
@@ -48,7 +49,14 @@ public struct ClassSettingView: View {
         .padding(.bottom, 16)
     }
     .screenBackground()
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
+    .pickeModal(
+      $store.scope(state: \.unavailableNotice, action: \.unavailableNotice),
+      dimOpacity: 0.28
+    ) { noticeStore in
+      unavailableNotice(store: noticeStore)
+    }
   }
 }
 
@@ -120,10 +128,14 @@ private extension ClassSettingView {
   }
 
   @ViewBuilder
-  func battleSection() -> some View {
+  func contentSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      sectionLabel("선택한 배틀")
-      ClassSelectedBattleCard(battle: store.battle)
+      sectionLabel(store.aiQuestion == nil ? "선택한 배틀" : "선택한 질문")
+      if let question = store.aiQuestion {
+        ClassSelectedAIQuestionCard(question: question)
+      } else if let battle = store.battle {
+        ClassSelectedBattleCard(battle: battle)
+      }
     }
   }
 
@@ -131,12 +143,26 @@ private extension ClassSettingView {
     Toggle(isOn: $store.requiresComment) {
       VStack(alignment: .leading, spacing: 2) {
         sectionLabel("댓글 달기 필수")
-        Text("학생들의 생각을 댓글로 확인해요.")
+        Text("멤버의 생각을 댓글로 확인해요.")
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
       }
     }
     .toggleStyle(.picke)
+  }
+
+  var ownerParticipationToggle: some View {
+    Toggle(isOn: .constant(false)) {
+      VStack(alignment: .leading, spacing: 2) {
+        sectionLabel("운영자 참여")
+        Text("운영자도 콘텐츠에 참여해요.")
+          .pretendardFont(.bodySmall)
+          .foregroundStyle(.gray300)
+      }
+    }
+    .toggleStyle(.picke)
+    .disabled(true)
+    .accessibilityHint("운영자 참여 기능은 준비 중입니다")
   }
 
   func sectionLabel(_ title: String) -> some View {
@@ -153,5 +179,44 @@ private extension ClassSettingView {
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(!store.canCreate)
+  }
+
+  func unavailableNotice(store: StoreOf<ClassAIUnavailableNoticeFeature>) -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { store.send(.dismissTapped) }
+
+      VStack(alignment: .leading, spacing: 20) {
+        Capsule()
+          .fill(Color.beige700)
+          .frame(width: 36, height: 4)
+          .frame(maxWidth: .infinity)
+
+        VStack(alignment: .leading, spacing: 8) {
+          Text("AI 질문 클래스 준비 중")
+            .pretendardFont(.semiBold24)
+            .foregroundStyle(.gray800)
+          Text("지금은 예시 질문을 살펴볼 수 있어요. AI 질문으로 클래스 만들기는 아직 사용할 수 없습니다.")
+            .pretendardFont(.medium15)
+            .foregroundStyle(.gray300)
+        }
+
+        Button { store.send(.dismissTapped) } label: {
+          Text("확인")
+        }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+      }
+      .padding(.top, 12)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 32)
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
   }
 }

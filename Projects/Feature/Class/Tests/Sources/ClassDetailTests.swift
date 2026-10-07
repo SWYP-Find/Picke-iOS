@@ -56,14 +56,22 @@ struct ClassDetailTests {
   }
 
   @Test
-  func 배틀을_누르면_현재_클래스의_배틀을_전달한다() async {
-    let room = ClassRoom.mocks[0]
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
-      ClassDetailFeature()
-    }
+  func 목_배틀을_누르면_준비_안내를_표시한다() async {
+    for room in ClassRoom.mocks {
+      let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+        ClassDetailFeature()
+      }
 
-    await store.send(.view(.battleTapped))
-    await store.receive(\.delegate, .openBattle(room.battle))
+      await store.send(.view(.battleTapped)) {
+        $0.customAlert = .alert(
+          title: "배틀을 준비하고 있어요",
+          message: "이 클래스의 배틀은 아직 참여할 수 없어요."
+        )
+      }
+      await store.send(.customAlert(.presented(.confirmTapped))) {
+        $0.customAlert = nil
+      }
+    }
   }
 
   @Test
@@ -78,21 +86,26 @@ struct ClassDetailTests {
   }
 
   @Test
-  func 닉네임_수정_모달은_입력한_이름을_보존하고_닫힌다() async {
-    let store = TestStore(initialState: ClassDetailFeature.State(room: ClassRoom.mocks[1])) {
+  func 멤버_변경_뒤_상세_인원수를_동기화한다() async {
+    let room = ClassRoom.mocks[0]
+    let updated = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount - 1,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment
+    )
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
       ClassDetailFeature()
     }
 
-    await store.send(.view(.nicknameTapped)) {
-      $0.modal = .init(kind: .nickname)
-      $0.draftNickname = ""
-    }
-    await store.send(.binding(.set(\.draftNickname, " 민지 "))) {
-      $0.draftNickname = " 민지 "
-    }
-    await store.send(.view(.nicknameSaved)) {
-      $0.modal = nil
-      $0.draftNickname = "민지"
+    await store.send(.dataUpdated(updated)) {
+      $0.room = updated
     }
   }
 
