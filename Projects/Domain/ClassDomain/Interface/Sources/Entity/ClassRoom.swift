@@ -58,7 +58,7 @@ public extension ClassRoom {
       battle: ClassBattleSummary.mocks[3],
       deadline: Date(timeIntervalSince1970: 1_790_154_000),
       memberCount: 32,
-      role: .member,
+      role: .owner,
       status: .open,
       allowsAnonymousOpinion: true,
       requiresComment: false

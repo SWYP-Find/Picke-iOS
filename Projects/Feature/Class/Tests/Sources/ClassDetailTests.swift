@@ -47,7 +47,7 @@ struct ClassDetailTests {
 
   @Test
   func 학생은_마감일과_삭제_동작을_사용할_수_없다() async {
-    let store = TestStore(initialState: ClassDetailFeature.State(room: ClassRoom.mocks[1])) {
+    let store = TestStore(initialState: ClassDetailFeature.State(room: ClassRoom.mockJoinable)) {
       ClassDetailFeature()
     }
 

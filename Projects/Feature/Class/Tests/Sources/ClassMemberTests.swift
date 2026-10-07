@@ -38,7 +38,7 @@ struct ClassMemberTests {
   @Test
   func 학생은_다른_멤버를_삭제할_수_없다() async {
     let store = TestStore(initialState: ClassMemberFeature.State(
-      room: ClassRoom.mocks[1],
+      room: ClassRoom.mockJoinable,
       members: [ClassMember(id: 1, name: "김선생", isOwner: true), ClassMember(id: 2, name: "김민지")],
       currentMemberID: 2
     )) {
@@ -64,7 +64,7 @@ struct ClassMemberTests {
 
   @Test
   func 본인_이름만_수정하고_갱신된_목_자료를_반영한다() async {
-    let room = ClassRoom.mocks[1]
+    let room = ClassRoom.mockJoinable
     let member = ClassMember(id: 2, name: "김민지")
     let store = TestStore(initialState: ClassMemberFeature.State(
       room: room, members: [member], currentMemberID: 2

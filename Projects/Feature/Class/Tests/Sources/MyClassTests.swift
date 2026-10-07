@@ -22,6 +22,8 @@ struct MyClassTests {
       $0.progress = .open
     }
     #expect(store.state.visibleRooms.map(\.id) == [1, 2])
+    #expect(ClassRoom.mocks.allSatisfy { $0.role == .owner })
+    #expect(ClassRoom.mockJoinable.role == .member)
   }
 
   @Test
