@@ -11,12 +11,16 @@ public actor MockClassRepository: ClassInterface {
     rooms: [ClassRoom] = ClassRoom.mocks,
     availableRooms: [ClassRoom] = [ClassRoom.mockJoinable]
   ) {
+    let previewNames = ["김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은"]
     self.rooms = rooms
     self.availableRooms = availableRooms
     membersByRoom = Dictionary(
       uniqueKeysWithValues: (rooms + availableRooms).map { room in
         (room.id, (1 ... max(1, room.memberCount)).map { id in
-          ClassMember(id: id, name: id == 1 ? "운영자" : "참여자 \(id)", isOwner: id == 1)
+          let name = room.id == ClassRoom.mocks[0].id && id <= previewNames.count
+            ? previewNames[id - 1]
+            : (id == 1 ? "운영자" : "참여자 \(id)")
+          return ClassMember(id: id, name: name, isOwner: id == 1)
         })
       }
     )

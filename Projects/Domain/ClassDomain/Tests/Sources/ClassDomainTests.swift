@@ -131,6 +131,15 @@ struct ClassDomainTests {
   }
 
   @Test
+  func 기본_클래스_멤버는_디자인의_표시_이름으로_시작한다() async throws {
+    let members = try await MockClassRepository().fetchMembers(roomID: ClassRoom.mocks[0].id)
+
+    #expect(members.prefix(8).map(\.name) == [
+      "김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은",
+    ])
+  }
+
+  @Test
   func 생성과_참여는_같은_actor의_멤버와_인원수를_갱신한다() async throws {
     let repository = MockClassRepository(rooms: [], availableRooms: [.mockJoinable])
     let created = try await repository.createClass(

@@ -24,6 +24,7 @@ public struct ClassMemberFeature {
     public var errorMessage: String?
     public var isSaving = false
     public var appliedFilter = ClassMemberFilterFeature.State()
+    public var hasAppliedSort = false
     @Presents public var filter: ClassMemberFilterFeature.State?
     @Presents public var editName: ClassMemberEditNameFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
@@ -40,6 +41,7 @@ public struct ClassMemberFeature {
         ? members
         : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
 
+      guard hasAppliedSort else { return filteredMembers }
       switch appliedFilter.sort {
       case .name:
         return filteredMembers.sorted {
@@ -95,6 +97,7 @@ public struct ClassMemberFeature {
       case .filter(.presented(.applyTapped)):
         if let filter = state.filter {
           state.appliedFilter = filter
+          state.hasAppliedSort = true
         }
         state.filter = nil
         return .none

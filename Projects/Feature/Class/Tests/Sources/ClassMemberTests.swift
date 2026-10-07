@@ -178,6 +178,7 @@ struct ClassMemberTests {
     )
     await store.send(.filter(.presented(.applyTapped))) {
       $0.filter = nil
+      $0.hasAppliedSort = true
     }
     #expect(store.state.appliedFilter.participation == .all)
   }
@@ -192,12 +193,15 @@ struct ClassMemberTests {
       ClassMemberFeature()
     }
 
+    #expect(store.state.visibleMembers == members)
+
     await store.send(.view(.filterTapped)) {
       $0.filter = .init()
     }
     await store.send(.filter(.presented(.sortSelected(.name))))
     await store.send(.filter(.presented(.applyTapped))) {
       $0.filter = nil
+      $0.hasAppliedSort = true
     }
     #expect(store.state.visibleMembers == store.state.members.sorted {
       $0.name.localizedStandardCompare($1.name) == .orderedAscending
@@ -222,6 +226,7 @@ struct ClassMemberTests {
     await store.send(.filter(.presented(.sortSelected(.comments))))
     await store.send(.filter(.presented(.applyTapped))) {
       $0.filter = nil
+      $0.hasAppliedSort = true
     }
     #expect(store.state.appliedFilter == .init())
   }
