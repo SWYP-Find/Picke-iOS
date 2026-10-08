@@ -101,7 +101,7 @@ private extension ClassTopicView {
       ForEach(ClassAudienceLevel.allCases, id: \.self) { level in
         Button {
           withAnimation(.snappy(duration: 0.25)) {
-            store.level = level
+            send(.levelTapped(level))
           }
         } label: {
           Text(level.topicTitle)

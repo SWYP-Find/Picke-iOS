@@ -38,6 +38,7 @@ public struct ClassTopicFeature {
   @CasePathable
   public enum View {
     case backTapped
+    case levelTapped(ClassAudienceLevel)
     case categoryTapped(ClassCategory)
     case searchTapped
   }
@@ -73,6 +74,10 @@ extension ClassTopicFeature {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))
+
+    case let .levelTapped(level):
+      state.level = level
+      return .none
 
     case let .categoryTapped(category):
       state.category = state.category == category ? nil : category

@@ -104,27 +104,13 @@ private extension ClassStartMethodView {
 
         Spacer(minLength: 0)
 
-        ZStack {
-          Circle()
-            .fill(selected ? Color.primary500 : Color.primary50)
-          Circle()
-            .strokeBorder(selected ? Color.primary500 : Color.beige600, lineWidth: 1)
-          if selected {
-            Image(systemName: "checkmark")
-              .font(.system(size: 11, weight: .bold))
-              .foregroundStyle(.beige50)
-          }
-        }
-        .frame(width: 24, height: 24)
+        Image(systemName: "checkmark")
+          .pickeCheckbox(isChecked: selected, size: 24)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(16)
       .frame(height: 124)
-      .background(Color.beige50)
-      .overlay {
-        Rectangle()
-          .strokeBorder(selected ? Color.primary500 : Color.beige600, lineWidth: 1)
-      }
+      .pickeCard(.beige50, border: selected ? .primary500 : .beige600, radius: 0)
     }
     .buttonStyle(.plain)
   }
