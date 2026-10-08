@@ -107,7 +107,9 @@ private extension MyClassRoomCard {
 
       Spacer(minLength: 0)
 
-      viewLabel
+      if room.role == .owner {
+        viewLabel
+      }
     }
     .padding(.top, 12)
     .overlay(alignment: .top) {

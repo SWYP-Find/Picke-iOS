@@ -28,7 +28,7 @@ public struct ClassSettingView: View {
 
       ScrollView {
         VStack(alignment: .leading, spacing: 32) {
-          Text("거의 다 왔어요!\n클래스 정보를 입력해 주세요")
+          Text(store.heading)
             .pretendardFont(.semiBold24)
             .lineSpacing(2.4)
             .foregroundStyle(.gray500)
@@ -66,9 +66,11 @@ private extension ClassSettingView {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 4) {
         sectionLabel("클래스 명")
-        Text("*")
-          .pretendardFont(.semiBold15)
-          .foregroundStyle(.primary500)
+        if store.showsNameRequiredIndicator {
+          Text("*")
+            .pretendardFont(.semiBold15)
+            .foregroundStyle(.primary500)
+        }
       }
 
       TextField(
@@ -93,7 +95,7 @@ private extension ClassSettingView {
       Toggle(isOn: $store.isDeadlineEnabled) {
         VStack(alignment: .leading, spacing: 2) {
           sectionLabel("참여 마감일")
-          Text("마감 전까지 학생이 클래스에 참여할 수 있어요")
+          Text(store.deadlineDescription)
             .pretendardFont(.bodySmall)
             .foregroundStyle(.gray300)
         }
@@ -149,7 +151,7 @@ private extension ClassSettingView {
     Toggle(isOn: $store.requiresComment) {
       VStack(alignment: .leading, spacing: 2) {
         sectionLabel("댓글 달기 필수")
-        Text("멤버의 생각을 댓글로 확인해요.")
+        Text(store.commentDescription)
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
       }
@@ -160,8 +162,8 @@ private extension ClassSettingView {
   var ownerParticipationToggle: some View {
     Toggle(isOn: $store.ownerParticipates) {
       VStack(alignment: .leading, spacing: 2) {
-        sectionLabel("나도 참여하기")
-        Text("운영자도 배틀에 참여해요")
+        sectionLabel(store.ownerParticipationTitle)
+        Text(store.ownerParticipationDescription)
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
       }

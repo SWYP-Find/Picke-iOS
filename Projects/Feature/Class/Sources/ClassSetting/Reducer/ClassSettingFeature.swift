@@ -53,6 +53,32 @@ public struct ClassSettingFeature {
       Self.deadlineFormatter.string(from: deadline)
     }
 
+    public var heading: String {
+      aiQuestion == nil
+        ? "거의 다 왔어요!\n클래스 정보를 입력해 주세요"
+        : "운영 목적에 맞게\n클래스를 설정해 주세요"
+    }
+
+    public var showsNameRequiredIndicator: Bool { aiQuestion == nil }
+
+    public var deadlineDescription: String {
+      aiQuestion == nil
+        ? "마감 전까지 학생이 클래스에 참여할 수 있어요"
+        : "마감 전까지 학생이 클래스에 참여할 수 있어요."
+    }
+
+    public var commentDescription: String {
+      aiQuestion == nil ? "멤버의 생각을 댓글로 확인해요." : "멤버들의 생각을 댓글로 확인해요."
+    }
+
+    public var ownerParticipationTitle: String {
+      aiQuestion == nil ? "나도 참여하기" : "운영자 참여"
+    }
+
+    public var ownerParticipationDescription: String {
+      aiQuestion == nil ? "운영자도 배틀에 참여해요" : "운영자도 콘텐츠에 참여해요."
+    }
+
     public var canCreate: Bool {
       !trimmedName.isEmpty && !isLoading
     }
