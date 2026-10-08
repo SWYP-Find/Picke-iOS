@@ -25,6 +25,12 @@ public struct AppReducer: Sendable {
     case mainTab(MainTabCoordinator.State)
 
     public init() {
+      #if DEBUG && targetEnvironment(simulator)
+        if ProcessInfo.processInfo.arguments.contains("-picke-class-visual-qa") {
+          self = .mainTab(.init(selectedTab: MainTabCoordinator.Tab.classroom.rawValue))
+          return
+        }
+      #endif
       self = .splash(SplashFeature.State())
     }
 
