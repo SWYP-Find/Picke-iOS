@@ -6,7 +6,9 @@ import SwiftUI
 
 @ViewAction(for: ClassOwnerDashboardFeature.self)
 public struct ClassOwnerDashboardView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Bindable public var store: StoreOf<ClassOwnerDashboardFeature>
+  @State private var chartProgress: CGFloat = 0
 
   public init(store: StoreOf<ClassOwnerDashboardFeature>) {
     self.store = store
@@ -126,6 +128,7 @@ private extension ClassOwnerDashboardView {
           .padding(.horizontal, 17)
           .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
           .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+          .onAppear(perform: animateChartsIfNeeded)
         } else {
           unavailableContent("참여 현황을 불러올 수 없어요")
         }
@@ -133,15 +136,18 @@ private extension ClassOwnerDashboardView {
       dashboardSection("입장 분포") {
         if let metrics = previewMetrics {
           let total = metrics.optionAVoteCount + metrics.optionBVoteCount
+          let optionAShare = ratio(metrics.optionAVoteCount, of: total)
           HStack(spacing: 20) {
             ZStack {
               Circle().stroke(.beige600, lineWidth: 11)
-              Circle()
-                .trim(from: 0, to: ratio(metrics.optionAVoteCount, of: total))
+              ClassDistributionSegment(start: 0, end: optionAShare, progress: chartProgress)
                 .stroke(.primary500, style: StrokeStyle(lineWidth: 11, lineCap: .butt))
-              Circle()
-                .trim(from: ratio(metrics.optionAVoteCount, of: total), to: total > 0 ? 1 : 0)
-                .stroke(.secondary500, style: StrokeStyle(lineWidth: 11, lineCap: .butt))
+              ClassDistributionSegment(
+                start: optionAShare,
+                end: total > 0 ? 1 : 0,
+                progress: chartProgress
+              )
+              .stroke(.secondary500, style: StrokeStyle(lineWidth: 11, lineCap: .butt))
               VStack(spacing: 0) {
                 Text("\(total)명").pretendardFont(.semiBold24)
                 Text("총 참여").pretendardFont(.regular10).foregroundStyle(.gray500)
@@ -344,6 +350,15 @@ private extension ClassOwnerDashboardView {
     #endif
   }
 
+  func animateChartsIfNeeded() {
+    guard chartProgress == 0 else { return }
+    guard !reduceMotion else {
+      chartProgress = 1
+      return
+    }
+    withAnimation(.easeOut(duration: 0.8)) { chartProgress = 1 }
+  }
+
   func ratio(_ count: Int, of total: Int) -> CGFloat {
     guard total > 0 else { return 0 }
     return CGFloat(count) / CGFloat(total)
@@ -393,7 +408,7 @@ private extension ClassOwnerDashboardView {
       GeometryReader { geometry in
         ZStack(alignment: .leading) {
           Capsule().fill(.beige600)
-          Capsule().fill(tint).frame(width: geometry.size.width * progress)
+          Capsule().fill(tint).frame(width: geometry.size.width * progress * chartProgress)
         }
       }
       .frame(height: 6)
@@ -449,6 +464,22 @@ private extension ClassOwnerDashboardView {
     }
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
     .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+  }
+}
+
+private struct ClassDistributionSegment: Shape {
+  let start: CGFloat
+  let end: CGFloat
+  var progress: CGFloat
+
+  var animatableData: CGFloat {
+    get { progress }
+    set { progress = newValue }
+  }
+
+  func path(in rect: CGRect) -> Path {
+    let visibleEnd = min(end, max(start, progress))
+    return Path(ellipseIn: rect).trimmedPath(from: start, to: visibleEnd)
   }
 }
 
