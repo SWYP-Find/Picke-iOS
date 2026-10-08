@@ -61,10 +61,10 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
       category: "철학",
       title: "삶에 정해진 의미가 없다는 태도는 자유일까?",
       summary: "뫼르소의 삶의 태도를 개인의 자유와 책임이라는 관점에서 생각해봐요.",
-      optionATitle: "자유다",
-      optionADescription: "의미는 스스로 만드는 것",
-      optionBTitle: "책임이 따른다",
-      optionBDescription: "선택에는 결과가 따른다"
+      optionATitle: "개인의 자유다",
+      optionADescription: "의미는 스스로 정할 수 있다",
+      optionBTitle: "무책임한 태도다",
+      optionBDescription: "타인과 사회에 대한 책임이 있다"
     ),
     .init(
       id: 4,
