@@ -70,11 +70,14 @@ private extension ClassRecommendView {
         .pretendardFont(.medium13)
         .foregroundStyle(.gray300)
 
-      HStack(spacing: 6) {
-        ForEach(store.conditionTitles, id: \.self) {
-          Text($0).pickePill()
+      ScrollView(.horizontal) {
+        HStack(spacing: 6) {
+          ForEach(store.conditionTitles, id: \.self) {
+            Text($0).pickePill()
+          }
         }
       }
+      .scrollIndicators(.hidden)
 
       Spacer(minLength: 0)
 

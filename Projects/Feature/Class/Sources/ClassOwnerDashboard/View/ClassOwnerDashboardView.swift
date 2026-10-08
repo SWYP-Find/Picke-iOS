@@ -68,7 +68,7 @@ private extension ClassOwnerDashboardView {
       HStack(spacing: 8) {
         Text(store.room.status == .closed || reportPreviewContent != nil ? "마감" : "진행 중")
           .pickeBadge(.filled, size: .tag)
-        Text("#\(store.room.battle.category.title)")
+        Text("#\(store.room.battle.categoryDisplayTitle)")
           .pickeBadge(.filled, size: .tag)
       }
       Text(store.room.battle.title)

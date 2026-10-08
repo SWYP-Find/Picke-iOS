@@ -47,6 +47,30 @@ struct ClassDomainTests {
   }
 
   @Test
+  func 운영자_참여_선택은_저장과_수정_뒤에도_유지되고_멤버_권한은_유지된다() async throws {
+    let repository = MockClassRepository(rooms: [], availableRooms: [])
+    let deadline = Date(timeIntervalSince1970: 1_800_000_000)
+    let creation = ClassCreation(
+      name: "토론 수업",
+      deadline: deadline,
+      battleId: 101,
+      allowsAnonymousOpinion: false,
+      requiresComment: false,
+      ownerParticipates: false
+    )
+    let created = try await repository.createClass(creation)
+    #expect(created.ownerParticipates == false)
+    #expect(created.role == .owner)
+    #expect(created.memberCount == 1)
+    #expect(try await repository.fetchMembers(roomID: created.id).first?.isOwner == true)
+    #expect(try await repository.currentMemberID(roomID: created.id) == 1)
+
+    let updated = try await repository.updateDeadline(id: created.id, deadline: deadline.addingTimeInterval(60))
+    #expect(updated.ownerParticipates == false)
+    #expect(try await repository.fetchClass(joinCode: created.joinCode).ownerParticipates == false)
+  }
+
+  @Test
   func AI_목_배틀은_별도_생성_경로로_저장된다() async throws {
     let repository = MockClassRepository(rooms: [], availableRooms: [])
     let source = ClassBattleSummary.mocks[0]
@@ -130,6 +154,16 @@ struct ClassDomainTests {
     #expect(high.isEmpty)
     #expect(philosophy.count == 8)
     #expect(philosophy.first?.title == "인간은 본래 선한가, 악한가?")
+  }
+
+  @Test
+  func 여러_카테고리_중_하나에_속한_배틀을_추천한다() async throws {
+    let repository = MockClassRepository()
+    let battles = try await repository.fetchRecommendedBattles(
+      filter: .init(level: .middle, categories: [.society, .literature])
+    )
+
+    #expect(battles.map(\.id) == [101, 105])
   }
 
   @Test

@@ -7,11 +7,14 @@ public struct ClassBattleSummary: Equatable, Identifiable, Sendable {
   public let thumbnailURL: URL?
   public let philosopherA: String
   public let optionATitle: String
+  public let optionADescription: String?
   public let philosopherAImageURL: URL?
   public let philosopherB: String
   public let optionBTitle: String
+  public let optionBDescription: String?
   public let philosopherBImageURL: URL?
   public let category: ClassCategory
+  public let categoryDisplayTitle: String
   public let level: ClassAudienceLevel
   public let audioDuration: Int
   public let viewCount: Int
@@ -24,11 +27,14 @@ public struct ClassBattleSummary: Equatable, Identifiable, Sendable {
     thumbnailURL: URL? = nil,
     philosopherA: String,
     optionATitle: String,
+    optionADescription: String? = nil,
     philosopherAImageURL: URL? = nil,
     philosopherB: String,
     optionBTitle: String,
+    optionBDescription: String? = nil,
     philosopherBImageURL: URL? = nil,
     category: ClassCategory,
+    categoryDisplayTitle: String? = nil,
     level: ClassAudienceLevel,
     audioDuration: Int,
     viewCount: Int,
@@ -40,11 +46,14 @@ public struct ClassBattleSummary: Equatable, Identifiable, Sendable {
     self.thumbnailURL = thumbnailURL
     self.philosopherA = philosopherA
     self.optionATitle = optionATitle
+    self.optionADescription = optionADescription
     self.philosopherAImageURL = philosopherAImageURL
     self.philosopherB = philosopherB
     self.optionBTitle = optionBTitle
+    self.optionBDescription = optionBDescription
     self.philosopherBImageURL = philosopherBImageURL
     self.category = category
+    self.categoryDisplayTitle = categoryDisplayTitle ?? category.title
     self.level = level
     self.audioDuration = audioDuration
     self.viewCount = viewCount

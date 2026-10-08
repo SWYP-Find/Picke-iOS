@@ -85,7 +85,7 @@ public actor MockClassRepository: ClassInterface {
       let matchesKeyword = filter.keyword.isEmpty
         || battle.title.localizedCaseInsensitiveContains(filter.keyword)
         || battle.summary.localizedCaseInsensitiveContains(filter.keyword)
-      let matchesCategory = filter.category.map { battle.category == $0 } ?? true
+      let matchesCategory = filter.categories.isEmpty || filter.categories.contains(battle.category)
       return battle.level == filter.level && matchesCategory && matchesKeyword
     }
   }
@@ -125,7 +125,8 @@ public actor MockClassRepository: ClassInterface {
       role: .owner,
       status: .open,
       allowsAnonymousOpinion: creation.allowsAnonymousOpinion,
-      requiresComment: creation.requiresComment
+      requiresComment: creation.requiresComment,
+      ownerParticipates: creation.ownerParticipates
     )
     rooms.append(room)
     membersByRoom[id] = [ClassMember(id: 1, name: "운영자", isOwner: true)]
@@ -166,7 +167,8 @@ public actor MockClassRepository: ClassInterface {
       role: .member,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates
     )
     rooms.append(joined)
     availableRooms.remove(at: index)
@@ -193,7 +195,8 @@ public actor MockClassRepository: ClassInterface {
       role: room.role,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates
     )
     rooms[index] = updated
     return updated
@@ -224,7 +227,8 @@ private extension ClassRoom {
       role: role,
       status: status,
       allowsAnonymousOpinion: allowsAnonymousOpinion,
-      requiresComment: requiresComment
+      requiresComment: requiresComment,
+      ownerParticipates: ownerParticipates
     )
   }
 }

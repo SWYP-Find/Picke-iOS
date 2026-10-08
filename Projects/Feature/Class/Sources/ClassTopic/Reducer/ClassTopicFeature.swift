@@ -3,10 +3,9 @@
 //  Class
 //
 
-import Foundation
-
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 
 @Reducer
 public struct ClassTopicFeature {
@@ -16,7 +15,7 @@ public struct ClassTopicFeature {
   public struct State: Equatable {
     public var keyword: String = ""
     public var level: ClassAudienceLevel = .middle
-    public var category: ClassCategory?
+    public var categories: [ClassCategory] = []
 
     public init() {}
 
@@ -24,7 +23,7 @@ public struct ClassTopicFeature {
       ClassTopicFilter(
         keyword: keyword.trimmingCharacters(in: .whitespacesAndNewlines),
         level: level,
-        category: category
+        categories: categories
       )
     }
   }
@@ -80,7 +79,11 @@ extension ClassTopicFeature {
       return .none
 
     case let .categoryTapped(category):
-      state.category = state.category == category ? nil : category
+      if let index = state.categories.firstIndex(of: category) {
+        state.categories.remove(at: index)
+      } else if state.categories.count < 3 {
+        state.categories.append(category)
+      }
       return .none
 
     case .searchTapped:

@@ -37,6 +37,8 @@ struct ClassTests {
       $0.join = nil
     }
     await clock.advance(by: .seconds(0.3))
+    #expect(store.state.join == nil)
+    await clock.advance(by: .seconds(0.1))
     await store.receive(\.inner.nicknameModalPresented, room) {
       $0.join = ClassJoinFeature.State(mode: .nickname, preview: room)
     }
@@ -58,6 +60,21 @@ struct ClassTests {
   }
 
   @Test
+  func 이름_입력_모달의_바인딩은_자식_리듀서에_전달된다() async {
+    let room = ClassRoom.mockJoinable
+    var state = ClassIntroFeature.State()
+    state.join = ClassJoinFeature.State(mode: .nickname, preview: room)
+    let store = TestStore(initialState: state) {
+      ClassIntroFeature()
+    }
+
+    await store.send(.join(.presented(.binding(.set(\.nickname, "로이"))))) {
+      $0.join?.nickname = "로이"
+    }
+    #expect(store.state.join?.canJoin == true)
+  }
+
+  @Test
   func 이름_입력_모달_대기_중_뒤로가면_예약된_모달을_취소한다() async {
     let clock = TestClock()
     let room = ClassRoom.mockJoinable
@@ -74,7 +91,7 @@ struct ClassTests {
     }
     await store.send(.view(.backTapped))
     await store.receive(\.delegate.backToHome)
-    await clock.advance(by: .seconds(0.3))
+    await clock.advance(by: .seconds(0.4))
   }
 
   @Test
@@ -112,10 +129,34 @@ struct ClassTests {
     }
 
     await store.send(.view(.categoryTapped(.philosophy))) {
-      $0.category = .philosophy
+      $0.categories = [.philosophy]
     }
     await store.send(.view(.categoryTapped(.philosophy))) {
-      $0.category = nil
+      $0.categories = []
+    }
+  }
+
+  @Test
+  func 카테고리는_최대_세_개까지_선택하고_해제하면_다시_추가할_수_있다() async {
+    let store = TestStore(initialState: ClassTopicFeature.State()) {
+      ClassTopicFeature()
+    }
+
+    await store.send(.view(.categoryTapped(.philosophy))) {
+      $0.categories = [.philosophy]
+    }
+    await store.send(.view(.categoryTapped(.society))) {
+      $0.categories = [.philosophy, .society]
+    }
+    await store.send(.view(.categoryTapped(.literature))) {
+      $0.categories = [.philosophy, .society, .literature]
+    }
+    await store.send(.view(.categoryTapped(.science)))
+    await store.send(.view(.categoryTapped(.society))) {
+      $0.categories = [.philosophy, .literature]
+    }
+    await store.send(.view(.categoryTapped(.science))) {
+      $0.categories = [.philosophy, .literature, .science]
     }
   }
 
@@ -124,7 +165,7 @@ struct ClassTests {
     var state = ClassTopicFeature.State()
     state.keyword = "  촉법소년 "
     state.level = .high
-    state.category = .society
+    state.categories = [.society, .philosophy]
     let store = TestStore(initialState: state) {
       ClassTopicFeature()
     }
@@ -133,7 +174,7 @@ struct ClassTests {
     await store.receive(\.delegate.search, ClassTopicFilter(
       keyword: "촉법소년",
       level: .high,
-      category: .society
+      categories: [.society, .philosophy]
     ))
   }
 }

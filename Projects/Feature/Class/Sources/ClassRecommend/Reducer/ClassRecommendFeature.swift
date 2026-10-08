@@ -42,7 +42,7 @@ public struct ClassRecommendFeature {
     }
 
     public var conditionTitles: [String] {
-      [filter.level.title, filter.category?.title].compactMap(\.self)
+      [filter.level.title] + filter.categories.map(\.title)
     }
 
     public var resultTitle: String {

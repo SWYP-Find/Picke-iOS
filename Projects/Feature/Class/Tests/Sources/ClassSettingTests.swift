@@ -31,6 +31,21 @@ struct ClassSettingTests {
   }
 
   @Test
+  func 운영자_참여_선택은_일반과_AI_클래스_생성_요청에_전달된다() {
+    var regular = ClassSettingFeature.State(battle: battle, deadline: deadline)
+    regular.name = "일반 토론"
+    #expect(regular.creation?.ownerParticipates == false)
+    regular.ownerParticipates = true
+    #expect(regular.creation?.ownerParticipates == true)
+
+    var ai = ClassSettingFeature.State(aiQuestion: ClassAIQuestion.examples[0], filter: .init(), deadline: deadline)
+    ai.name = "AI 토론"
+    #expect(ai.aiCreation?.ownerParticipates == false)
+    ai.ownerParticipates = true
+    #expect(ai.aiCreation?.ownerParticipates == true)
+  }
+
+  @Test
   func 클래스를_만들면_생성_델리게이트를_보낸다() async throws {
     var state = ClassSettingFeature.State(battle: battle, deadline: deadline)
     state.name = "2학년 3반"
@@ -81,16 +96,42 @@ struct ClassSettingTests {
     #expect(battle.title == question.title)
     #expect(battle.summary == question.summary)
     #expect(battle.optionATitle == question.optionATitle)
-    #expect(battle.philosopherA == question.optionADescription)
+    #expect(battle.philosopherA == "사르트르")
+    #expect(battle.optionADescription == "사회적 공감도 중요하다")
     #expect(battle.optionBTitle == question.optionBTitle)
-    #expect(battle.philosopherB == question.optionBDescription)
+    #expect(battle.philosopherB == "플라톤")
+    #expect(battle.optionBDescription == "연령과 교정 가능성 고려")
     #expect(battle.category == .literature)
+    #expect(battle.categoryDisplayTitle == "도덕")
     #expect(battle.level == .high)
     #expect(battle.audioDuration == 0)
     #expect(battle.viewCount == 0)
     #expect(state.aiCreation?.name == "2학년 3반")
     #expect(state.aiCreation?.battleId == battle.id)
     #expect(state.aiCreation?.requiresComment == true)
+  }
+
+  @Test
+  func 이름이_없는_AI_선택지의_설명과_카테고리를_따로_보존한다() throws {
+    let question = ClassAIQuestion.examples[1]
+    let state = ClassSettingFeature.State(
+      aiQuestion: question,
+      filter: .init(level: .adult, category: .society),
+      deadline: deadline
+    )
+    let battle = try #require(state.aiBattle)
+
+    #expect(battle.category == .society)
+    #expect(battle.categoryDisplayTitle == "범죄")
+    #expect(battle.philosopherA == "A 입장")
+    #expect(battle.optionADescription == question.optionADescription)
+    #expect(battle.philosopherB == "B 입장")
+    #expect(battle.optionBDescription == question.optionBDescription)
+    #expect(
+      ClassBattleSummary.mocks[0].categoryDisplayTitle
+        == ClassBattleSummary.mocks[0].category.title
+    )
+    #expect(ClassBattleSummary.mocks[0].optionADescription == nil)
   }
 
   @Test

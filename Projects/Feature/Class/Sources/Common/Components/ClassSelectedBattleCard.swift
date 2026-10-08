@@ -28,7 +28,7 @@ private extension ClassSelectedBattleCard {
   func battleInfo() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
-        Text("#\(battle.category.title)")
+        Text("#\(battle.categoryDisplayTitle)")
           .pickeBadge(.filled, size: .tag)
 
         Spacer(minLength: 0)

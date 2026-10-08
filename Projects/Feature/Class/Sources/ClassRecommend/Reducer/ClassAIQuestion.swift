@@ -12,8 +12,10 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
   public let summary: String
   public let optionATitle: String
   public let optionADescription: String
+  public let philosopherAName: String?
   public let optionBTitle: String
   public let optionBDescription: String
+  public let philosopherBName: String?
 
   public init(
     id: Int,
@@ -22,8 +24,10 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
     summary: String,
     optionATitle: String,
     optionADescription: String,
+    philosopherAName: String? = nil,
     optionBTitle: String,
-    optionBDescription: String
+    optionBDescription: String,
+    philosopherBName: String? = nil
   ) {
     self.id = id
     self.category = category
@@ -31,8 +35,10 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
     self.summary = summary
     self.optionATitle = optionATitle
     self.optionADescription = optionADescription
+    self.philosopherAName = philosopherAName
     self.optionBTitle = optionBTitle
     self.optionBDescription = optionBDescription
+    self.philosopherBName = philosopherBName
   }
 
   public static let examples: [Self] = [
@@ -43,8 +49,10 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
       summary: "감정을 표현하지 않는 태도를 도덕적으로 판단할 수 있는지 이야기해요.",
       optionATitle: "비난할 수 있다",
       optionADescription: "사회적 공감도 중요하다",
-      optionBTitle: "비난할 수 없다",
-      optionBDescription: "감정 표현은 개인의 자유다"
+      philosopherAName: "사르트르",
+      optionBTitle: "유지해야 한다",
+      optionBDescription: "연령과 교정 가능성 고려",
+      philosopherBName: "플라톤"
     ),
     .init(
       id: 2,

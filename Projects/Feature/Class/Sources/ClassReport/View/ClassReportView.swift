@@ -36,9 +36,12 @@ public struct ClassReportView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
-        Image(systemName: "ellipsis")
-          .font(.system(size: 20))
-          .frame(width: 24, height: 24)
+        Button { send(.backTapped) } label: {
+          Image(systemName: "xmark")
+            .font(.system(size: 20, weight: .light))
+            .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.plain)
       }
       .foregroundStyle(.gray800)
 
@@ -58,7 +61,7 @@ private extension ClassReportView {
       HStack(spacing: 8) {
         Text(store.room.status == .closed || showsFigmaPreview ? "마감" : "진행 중")
           .pickeBadge(.filled, size: .tag)
-        Text("#\(store.room.battle.category.title)").pickeBadge(.filled, size: .tag)
+        Text("#\(store.room.battle.categoryDisplayTitle)").pickeBadge(.filled, size: .tag)
       }
       Text(store.room.battle.title)
         .pretendardFont(.semiBold24)
@@ -373,7 +376,7 @@ private extension ClassReportView {
   func aiFeedbackSummary() -> some View {
     VStack(alignment: .leading, spacing: 0) {
       VStack(alignment: .leading, spacing: 8) {
-        ClassAIInsightHeading(title: previewText(.aiSummaryTitle))
+        ClassAIInsightHeading(title: "내 판단의 기준")
         Text(previewText(.aiSummaryDetail))
           .pretendardFont(.regular13)
       }
@@ -384,22 +387,25 @@ private extension ClassReportView {
 
       VStack(alignment: .leading, spacing: 16) {
         insightPoint(
-          "생각의 흐름",
-          title: previewText(.feedbackTitle1),
+          "이번에 잘한 점",
           detail: previewText(.feedbackDetail1)
         )
         Rectangle().fill(.beige600).frame(height: 1)
         insightPoint(
-          "내가 더한 관점",
-          title: previewText(.feedbackTitle2),
+          "한 가지 더 살펴볼 점",
           detail: previewText(.feedbackDetail2)
+        )
+        Rectangle().fill(.beige600).frame(height: 1)
+        insightPoint(
+          "다음 생각 한 걸음",
+          detail: previewText(.feedbackDetail3)
         )
         Rectangle().fill(.beige600).frame(height: 1)
         Button { send(.myOpinionsTapped) } label: {
           HStack {
             Text("내가 남긴 의견 \(previewContent?.myOpinions.count ?? 0)개 보기")
             Spacer()
-            Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.down")
+            Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
           }
           .pretendardFont(.semiBold13)
           .foregroundStyle(.primary500)
@@ -420,17 +426,14 @@ private extension ClassReportView {
     }
   }
 
-  func insightPoint(_ label: String, title: String, detail: String) -> some View {
+  func insightPoint(_ label: String, detail: String) -> some View {
     VStack(alignment: .leading, spacing: 8) {
       Text(label)
         .pretendardFont(.semiBold13)
         .foregroundStyle(.primary500)
-      Text(title)
-        .pretendardFont(.semiBold15)
-        .foregroundStyle(.gray800)
       Text(detail)
         .pretendardFont(.regular13)
-        .foregroundStyle(.gray300)
+        .foregroundStyle(.gray800)
     }
   }
 
@@ -587,11 +590,14 @@ private extension ClassReportView {
       thumbnailURL: room.battle.thumbnailURL,
       philosopherA: room.battle.philosopherA,
       optionATitle: "낮춰야 한다",
+      optionADescription: room.battle.optionADescription,
       philosopherAImageURL: room.battle.philosopherAImageURL,
       philosopherB: room.battle.philosopherB,
       optionBTitle: "교정이 우선이다",
+      optionBDescription: room.battle.optionBDescription,
       philosopherBImageURL: room.battle.philosopherBImageURL,
       category: room.battle.category,
+      categoryDisplayTitle: room.battle.categoryDisplayTitle,
       level: room.battle.level,
       audioDuration: room.battle.audioDuration,
       viewCount: room.battle.viewCount

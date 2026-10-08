@@ -168,7 +168,7 @@ private extension ClassDetailView {
           VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
               HStack(spacing: 6) {
-                Text("#\(store.room.battle.category.title)")
+                Text("#\(store.room.battle.categoryDisplayTitle)")
                   .pickeBadge(.filled, size: .tag)
                 Text(store.room.battle.title)
                   .pretendardFont(family: .SemiBold, size: 14)
@@ -199,6 +199,7 @@ private extension ClassDetailView {
         .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
       }
       .buttonStyle(.plain)
+      .disabled(!store.canParticipateInBattle)
     }
   }
 
@@ -220,6 +221,7 @@ private extension ClassDetailView {
             .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
         }
         .buttonStyle(.plain)
+        .disabled(!store.canParticipateInBattle)
         Button("결과 보기") { send(.reportTapped) }
           .ctaButtonStyle(.primary, size: .large, height: 52)
       }

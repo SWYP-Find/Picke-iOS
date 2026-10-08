@@ -26,7 +26,7 @@ public struct ClassTopicView: View {
       .foregroundStyle(.gray500)
 
       ScrollView {
-        VStack(alignment: .leading, spacing: 32) {
+        VStack(alignment: .leading, spacing: 40) {
           titleSection()
           formSection()
         }
@@ -61,22 +61,22 @@ private extension ClassTopicView {
 
   @ViewBuilder
   func formSection() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
+    VStack(alignment: .leading, spacing: 24) {
       field("찾고 싶은 주제") {
         TextField(
           "",
           text: $store.keyword,
-          prompt: Text("예) 촉법소년 · AI가 인간의 일을 대신해도 될까?")
+          prompt: Text("예) AI, 범죄, 촉법")
             .foregroundStyle(.gray300)
         )
         .pickeTextField()
       }
 
-      field("대상 수준") {
+      field("대상 수준", isRequired: true) {
         levelSegment()
       }
 
-      field("카테고리") {
+      field("카테고리 (최대 3개)", isRequired: true) {
         categoryGrid()
       }
     }
@@ -85,12 +85,19 @@ private extension ClassTopicView {
   @ViewBuilder
   func field(
     _ label: String,
+    isRequired: Bool = false,
     @ViewBuilder content: () -> some View
   ) -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text(label)
-        .pretendardFont(.semiBold15)
-        .foregroundStyle(.gray800)
+      HStack(spacing: 2) {
+        Text(label)
+          .foregroundStyle(.gray800)
+        if isRequired {
+          Text("*")
+            .foregroundStyle(.primary500)
+        }
+      }
+      .pretendardFont(.semiBold15)
       content()
     }
   }
@@ -127,7 +134,7 @@ private extension ClassTopicView {
           send(.categoryTapped(category))
         } label: {
           Text(category.title)
-            .pickeChoiceChip(isSelected: store.category == category)
+            .pickeChoiceChip(isSelected: store.categories.contains(category))
         }
         .buttonStyle(.plain)
       }

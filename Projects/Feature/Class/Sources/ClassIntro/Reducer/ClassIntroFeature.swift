@@ -144,9 +144,9 @@ extension ClassIntroFeature {
 
     case let .presented(.delegate(.found(room))):
       state.join = nil
-      // PickeModal exit 애니메이션(0.3초)이 끝난 뒤 이름 입력 모달을 새로 띄운다.
+      // 코드 모달이 닫힌 뒤 이름 입력 모달을 새로 띄운다.
       return .run { [clock] send in
-        try await clock.sleep(for: .seconds(0.3))
+        try await clock.sleep(for: .seconds(0.4))
         await send(.inner(.nicknameModalPresented(room)))
       }
       .cancellable(id: CancelID.nicknameModal, cancelInFlight: true)

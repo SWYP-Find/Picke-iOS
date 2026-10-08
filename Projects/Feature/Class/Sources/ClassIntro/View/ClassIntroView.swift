@@ -66,7 +66,7 @@ private extension ClassIntroView {
   @ViewBuilder
   func titleSection() -> some View {
     VStack(spacing: 12) {
-      Text("함께 생각을 나누는\n클래스를 시작해 보세요")
+      Text("우리끼리 생각을 나누는\n클래스를 시작해 보세요")
         .pretendardFont(family: .SemiBold, size: 24)
         .kerning(-0.6)
         .lineSpacing(2.4)
@@ -94,7 +94,7 @@ private extension ClassIntroView {
 
       ClassMenuCard(
         title: "내 클래스",
-        description: "참여중인 클래스",
+        description: "참여 중인 클래스",
         image: .classMine,
         action: { send(.myClassesTapped) }
       )

@@ -32,6 +32,10 @@ public struct ClassDetailFeature {
       guard deadline != .distantFuture else { return "마감일 없음" }
       return deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
     }
+
+    public var canParticipateInBattle: Bool {
+      room.role != .owner || room.ownerParticipates
+    }
   }
 
   public enum Action: ViewAction, BindableAction {
@@ -136,6 +140,7 @@ extension ClassDetailFeature {
     case .membersTapped:
       return .send(.delegate(.openMembers(state.room)))
     case .battleTapped:
+      guard state.canParticipateInBattle else { return .none }
       if state.room.status == .closed {
         return .send(.delegate(.openClosedBattle(state.room)))
       }

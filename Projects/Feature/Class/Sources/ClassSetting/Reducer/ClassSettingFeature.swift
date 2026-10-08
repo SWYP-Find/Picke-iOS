@@ -25,6 +25,7 @@ public struct ClassSettingFeature {
     public var isDeadlineEnabled = true
     public var isDatePickerPresented = false
     public var requiresComment = false
+    public var ownerParticipates = false
     public var isLoading = false
     public var errorMessage: String?
     @Presents public var unavailableNotice: ClassAIUnavailableNoticeFeature.State?
@@ -63,7 +64,8 @@ public struct ClassSettingFeature {
         deadline: isDeadlineEnabled ? deadline : .distantFuture,
         battleId: battle.id,
         allowsAnonymousOpinion: false,
-        requiresComment: requiresComment
+        requiresComment: requiresComment,
+        ownerParticipates: ownerParticipates
       )
     }
 
@@ -73,12 +75,15 @@ public struct ClassSettingFeature {
         id: -aiQuestion.id,
         title: aiQuestion.title,
         summary: aiQuestion.summary,
-        philosopherA: aiQuestion.optionADescription,
+        philosopherA: aiQuestion.philosopherAName ?? "A 입장",
         optionATitle: aiQuestion.optionATitle,
-        philosopherB: aiQuestion.optionBDescription,
+        optionADescription: aiQuestion.optionADescription,
+        philosopherB: aiQuestion.philosopherBName ?? "B 입장",
         optionBTitle: aiQuestion.optionBTitle,
+        optionBDescription: aiQuestion.optionBDescription,
         category: ClassCategory.allCases.first(where: { $0.title == aiQuestion.category })
           ?? filter.category ?? .philosophy,
+        categoryDisplayTitle: aiQuestion.category,
         level: filter.level,
         audioDuration: 0,
         viewCount: 0
@@ -92,7 +97,8 @@ public struct ClassSettingFeature {
         deadline: isDeadlineEnabled ? deadline : .distantFuture,
         battleId: aiBattle.id,
         allowsAnonymousOpinion: false,
-        requiresComment: requiresComment
+        requiresComment: requiresComment,
+        ownerParticipates: ownerParticipates
       )
     }
 

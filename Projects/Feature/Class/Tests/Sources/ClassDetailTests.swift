@@ -22,6 +22,38 @@ struct ClassDetailTests {
   }
 
   @Test
+  func 참여하지_않는_운영자는_배틀_진입만_제한되고_관리는_가능하다() async {
+    let source = ClassRoom.mocks[0]
+    let room = ClassRoom(
+      id: source.id,
+      name: source.name,
+      joinCode: source.joinCode,
+      battle: source.battle,
+      deadline: source.deadline,
+      memberCount: source.memberCount,
+      role: source.role,
+      status: source.status,
+      allowsAnonymousOpinion: source.allowsAnonymousOpinion,
+      requiresComment: source.requiresComment,
+      ownerParticipates: false
+    )
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+    }
+
+    #expect(store.state.canParticipateInBattle == false)
+    await store.send(.view(.battleTapped))
+    await store.send(.view(.managementTapped)) {
+      $0.modal = .init(kind: .management)
+    }
+    await store.send(.view(.reportTapped))
+    await store.receive(\.delegate, .openReport(room))
+  }
+
+  @Test
   func 선생님은_마감일을_수정할_수_있다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {

@@ -33,7 +33,7 @@ private extension ClassBattleListCard {
   @ViewBuilder
   func metaRow() -> some View {
     HStack(spacing: 10) {
-      Text("#\(battle.category.title)")
+      Text("#\(battle.categoryDisplayTitle)")
         .pickeBadge(.filled, size: .tag)
 
       Spacer(minLength: 0)

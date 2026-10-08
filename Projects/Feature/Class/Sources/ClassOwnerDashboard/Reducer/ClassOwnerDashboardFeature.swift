@@ -198,6 +198,7 @@ public struct ClassOwnerDashboardFeature {
     case management(PresentationAction<ClassModalFeature.Action>)
   }
 
+  @CasePathable
   public enum View: Equatable {
     case backTapped
     case managementTapped

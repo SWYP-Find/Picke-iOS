@@ -27,7 +27,7 @@ extension ClassReportPreviewContent {
   static let figma = Self(
     texts: [
       .aiSummaryTitle: "이번 토론에서 생각의 기준이 넓어졌어요",
-      .aiSummaryDetail: "처음에는 뫼르소의 태도를 비난할 수 있다는 의견이 많았지만, 대화 후에는 행동과 감정을 분리해서 봐야 한다는 의견이 늘어났어요.",
+      .aiSummaryDetail: "마지막 의견에서는 재범을 줄이는 방법으로 교육과 보호를 중요하게 봤어요.",
       .teacherSummary: "“왜 생각이 달라졌는지 자신의 말로 설명한 점이 좋았어요”",
       .commentStance: "낮춰야한다",
       .commentDate: "26.09.23. 14:02",
@@ -47,11 +47,11 @@ extension ClassReportPreviewContent {
       .bestLikes: "1,340",
       .bestReplies: "23",
       .feedbackTitle1: "처벌의 필요성에서 교정 가능성까지 함께 보기 시작했어요",
-      .feedbackDetail1: "처음에는 범죄에 대한 책임을 중요하게 봤지만, 대화를 거치며 재범을 줄이기 위한 교육과 보호의 역할도 함께 고려했어요.",
+      .feedbackDetail1: "“처벌만으로는 해결되지 않는다”는 반대 의견에 그치지 않고, 교육과 보호라는 대안을 제시했어요. 해결 방법까지 논의를 이어 간 점이 좋았어요.",
       .feedbackTitle2: "반대하는 데서 끝나지 않고 다른 해결 방향을 제시했어요",
-      .feedbackDetail2: "“처벌만으로는 해결되지 않는다”는 생각에서 한 걸음 더 나아가 교육과 보호라는 대안을 의견에 덧붙였어요.",
+      .feedbackDetail2: "교육과 보호가 어떤 상황에서 효과적일지는 아직 설명되지 않았어요. 대안을 제시한 만큼, 그 대안이 효과를 낼 조건을 덧붙이면 주장이 더 분명해져요.",
       .feedbackTitle3: "근거를 한 단계 더 구체적으로",
-      .feedbackDetail3: "교육과 보호가 재범을 줄이는 데 어떤 도움이 되는지, 사례나 자료 하나를 연결하면 주장이 더 설득력 있어져요.",
+      .feedbackDetail3: "교육과 보호가 재범을 줄이려면, 어떤 조건이 가장 먼저 갖춰져야 할까요?",
       .nextQuestion: "처벌과 교화를 함께 한다면,\n무엇을 기준으로 균형을 잡을까요?",
       .nextHint: "내 의견과 반대되는 입장도 함께 떠올려 보세요.",
       .teacherFeedback: "처음과 나중의 생각이 어떻게 달라졌는지 스스로 정리한 점이 좋았어요. 단순히 입장을 바꾸는 데서 끝나지 않고, 왜 바뀌었는지 설명하려는 태도가 인상적이었습니다.",

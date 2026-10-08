@@ -6,18 +6,21 @@ public struct ClassCreation: Equatable, Sendable {
   public var battleId: Int
   public var allowsAnonymousOpinion: Bool
   public var requiresComment: Bool
+  public var ownerParticipates: Bool
 
   public init(
     name: String,
     deadline: Date,
     battleId: Int,
     allowsAnonymousOpinion: Bool,
-    requiresComment: Bool
+    requiresComment: Bool,
+    ownerParticipates: Bool = false
   ) {
     self.name = name
     self.deadline = deadline
     self.battleId = battleId
     self.allowsAnonymousOpinion = allowsAnonymousOpinion
     self.requiresComment = requiresComment
+    self.ownerParticipates = ownerParticipates
   }
 }

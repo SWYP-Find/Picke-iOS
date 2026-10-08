@@ -6,6 +6,15 @@ import Testing
 @MainActor
 struct ClassRecommendTests {
   @Test
+  func 선택한_여러_카테고리를_조건_칩에_표시한다() {
+    let state = ClassRecommendFeature.State(
+      filter: .init(level: .middle, categories: [.society, .art, .philosophy])
+    )
+
+    #expect(state.conditionTitles == ["중등", "사회", "예술", "철학"])
+  }
+
+  @Test
   func 화면이_뜨면_조건에_맞는_추천_배틀을_불러온다() async {
     let store = TestStore(initialState: ClassRecommendFeature.State(filter: .init(level: .middle))) {
       ClassRecommendFeature()

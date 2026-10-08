@@ -28,7 +28,7 @@ public struct ClassSettingView: View {
 
       ScrollView {
         VStack(alignment: .leading, spacing: 32) {
-          Text("운영 목적에 맞게\n클래스를 설정해 주세요")
+          Text("거의 다 왔어요!\n클래스 정보를 입력해 주세요")
             .pretendardFont(.semiBold24)
             .lineSpacing(2.4)
             .foregroundStyle(.gray500)
@@ -64,7 +64,12 @@ private extension ClassSettingView {
   @ViewBuilder
   func nameSection() -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      sectionLabel("클래스 명")
+      HStack(spacing: 4) {
+        sectionLabel("클래스 명")
+        Text("*")
+          .pretendardFont(.semiBold15)
+          .foregroundStyle(.primary500)
+      }
 
       TextField(
         "",
@@ -88,7 +93,7 @@ private extension ClassSettingView {
       Toggle(isOn: $store.isDeadlineEnabled) {
         VStack(alignment: .leading, spacing: 2) {
           sectionLabel("참여 마감일")
-          Text("마감 전까지 학생이 클래스에 참여할 수 있어요.")
+          Text("마감 전까지 학생이 클래스에 참여할 수 있어요")
             .pretendardFont(.bodySmall)
             .foregroundStyle(.gray300)
         }
@@ -144,7 +149,7 @@ private extension ClassSettingView {
     Toggle(isOn: $store.requiresComment) {
       VStack(alignment: .leading, spacing: 2) {
         sectionLabel("댓글 달기 필수")
-        Text(store.aiQuestion == nil ? "멤버의 생각을 댓글로 확인해요." : "학생들의 생각을 댓글로 확인해요.")
+        Text("멤버의 생각을 댓글로 확인해요.")
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
       }
@@ -153,17 +158,15 @@ private extension ClassSettingView {
   }
 
   var ownerParticipationToggle: some View {
-    Toggle(isOn: .constant(false)) {
+    Toggle(isOn: $store.ownerParticipates) {
       VStack(alignment: .leading, spacing: 2) {
-        sectionLabel("운영자 참여")
-        Text("운영자도 콘텐츠에 참여해요.")
+        sectionLabel("나도 참여하기")
+        Text("운영자도 배틀에 참여해요")
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
       }
     }
     .toggleStyle(.picke)
-    .disabled(true)
-    .accessibilityHint("운영자 참여 기능은 준비 중입니다")
   }
 
   func sectionLabel(_ title: String) -> some View {

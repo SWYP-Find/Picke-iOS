@@ -54,12 +54,14 @@ public struct ClassJoinFeature {
     case joinTapped
   }
 
+  @CasePathable
   public enum AsyncAction: Equatable {
     case find(String)
     case join(joinCode: String, nickname: String)
     case nameOwner(roomID: Int, nickname: String)
   }
 
+  @CasePathable
   public enum InnerAction: Equatable {
     case found(Result<ClassRoom, ClassError>)
     case joined(Result<ClassRoom, ClassError>, nickname: String)

@@ -11,6 +11,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
   public let status: ClassStatus
   public let allowsAnonymousOpinion: Bool
   public let requiresComment: Bool
+  public let ownerParticipates: Bool
 
   public init(
     id: Int,
@@ -22,7 +23,8 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     role: ClassRole,
     status: ClassStatus,
     allowsAnonymousOpinion: Bool,
-    requiresComment: Bool
+    requiresComment: Bool,
+    ownerParticipates: Bool = true
   ) {
     self.id = id
     self.name = name
@@ -34,6 +36,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     self.status = status
     self.allowsAnonymousOpinion = allowsAnonymousOpinion
     self.requiresComment = requiresComment
+    self.ownerParticipates = ownerParticipates
   }
 }
 

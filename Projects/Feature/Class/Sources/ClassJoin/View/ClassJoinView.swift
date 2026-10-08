@@ -121,23 +121,7 @@ private extension ClassJoinView {
       .contentShape(Rectangle())
       .onTapGesture { isCodeFocused = true }
 
-      helpCard
     }
-  }
-
-  var helpCard: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Label("코드를 찾을 수 없나요?", systemImage: "questionmark.circle")
-        .pretendardFont(.semiBold15)
-        .foregroundStyle(.gray800)
-
-      Text("클래스를 만든 모임장에게 참여 코드를 확인해 주세요.")
-        .pretendardFont(.bodySmall)
-        .foregroundStyle(.gray300)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(16)
-    .background(.beige100)
   }
 
   @ViewBuilder

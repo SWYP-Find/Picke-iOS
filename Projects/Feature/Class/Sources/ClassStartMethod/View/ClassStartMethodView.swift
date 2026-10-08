@@ -31,22 +31,21 @@ public struct ClassStartMethodView: View {
           methodCard(
             .existingContent,
             badge: "TTS 포함",
-            title: "Pické 기존 콘텐츠로 시작",
-            description: "준비된 지식 배틀을 골라 바로 클래스를 만들어요."
+            title: "Pické 배틀로 클래스 만들기",
+            description: "기존 배틀 콘텐츠를 골라 클래스를 만들어요"
           )
           methodCard(
             .ownTopic,
-            badge: "AI 발제 추천",
-            title: "내 주제로 시작",
-            description: "원하는 주제를 입력하고, 질문을 만들어보세요."
+            badge: "AI 채팅",
+            title: "커스텀 배틀로 클래스 만들기",
+            description: "원하는 주제로 직접 배틀을 만들어보세요"
           )
         }
-        .padding(.horizontal, 6)
 
         Spacer(minLength: 16)
 
         Button { send(.continueTapped) } label: {
-          Text("주제 설정하기")
+          Text("주제 정하기")
         }
         .ctaButtonStyle(.primary, size: .large, height: 52)
       }
@@ -62,12 +61,12 @@ public struct ClassStartMethodView: View {
 private extension ClassStartMethodView {
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("어떤 방식으로\n클래스를 시작할까요?")
+      Text("어떤 방식으로\n클래스를 만들까요?")
         .pretendardFont(.semiBold24)
         .lineSpacing(2.4)
         .foregroundStyle(.gray800)
 
-      Text("준비된 콘텐츠를 바로 쓰거나, 내 주제로 직접 시작할 수 있어요.")
+      Text("준비된 콘텐츠를 쓰거나, 내 주제로 직접 시작할 수 있어요")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
         .fixedSize(horizontal: false, vertical: true)
@@ -109,7 +108,7 @@ private extension ClassStartMethodView {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(16)
-      .frame(height: 124)
+      .frame(height: 120)
       .pickeCard(.beige50, border: selected ? .primary500 : .beige600, radius: 0)
     }
     .buttonStyle(.plain)

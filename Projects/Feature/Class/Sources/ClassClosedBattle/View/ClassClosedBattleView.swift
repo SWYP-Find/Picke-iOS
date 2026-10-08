@@ -16,8 +16,11 @@ public struct ClassClosedBattleView: View {
     GeometryReader { geometry in
       ZStack(alignment: .top) {
         Color.white.ignoresSafeArea()
-        artwork(height: geometry.size.height * 0.66 + geometry.safeAreaInsets.top)
-          .offset(y: -geometry.safeAreaInsets.top)
+        artwork(
+          width: geometry.size.width,
+          height: geometry.size.height * 0.66 + geometry.safeAreaInsets.top
+        )
+        .offset(y: -geometry.safeAreaInsets.top)
 
         VStack(spacing: 0) {
           navigationBar
@@ -40,7 +43,7 @@ private extension ClassClosedBattleView {
   }
 
   @ViewBuilder
-  func artwork(height: CGFloat) -> some View {
+  func artwork(width: CGFloat, height: CGFloat) -> some View {
     Group {
       if store.room.id == ClassRoom.mockClosedSociety.id {
         Image(asset: .classClosedBattle)
@@ -50,8 +53,7 @@ private extension ClassClosedBattleView {
         remoteArtwork
       }
     }
-    .frame(maxWidth: .infinity)
-    .frame(height: height)
+    .frame(width: width, height: height)
     .clipped()
     .overlay {
       LinearGradient(
@@ -78,7 +80,7 @@ private extension ClassClosedBattleView {
   func battleInformation() -> some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack {
-        Text("#\(store.room.battle.category.title)")
+        Text("#\(store.room.battle.categoryDisplayTitle)")
           .pickeBadge(.filled, size: .tag)
         Spacer()
         if store.room.battle.commentCount > 0 {
