@@ -300,7 +300,10 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
       PerspectiveComment(
         commentId: comment.key,
         user: PerspectiveCommentUser(userTag: "나", nickname: "나", characterType: "", characterImageUrl: nil),
-        stance: option(for: value, id: value.postVoteOptionID ?? 1).title,
+        stance: option(
+          for: value,
+          id: value.perspectiveOptionID ?? value.postVoteOptionID ?? value.preVoteOptionID ?? 1
+        ).title,
         content: comment.value,
         likeCount: 0,
         isLiked: false,

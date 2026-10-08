@@ -319,7 +319,9 @@ private extension ClassCoordinator {
 
     case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(battleID)))):
       guard case .aiVote? = state.routes.last?.screen else { return .none }
-      state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+      var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
+      chat.routes[screenAt: 0] = .comment(.init(battleId: battleID, isMindChanged: true))
+      state.routes.push(.chat(chat))
       return .none
 
     case .routeAction(_, action: .detail(.delegate(.deleted))):

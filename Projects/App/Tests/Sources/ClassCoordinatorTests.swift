@@ -96,6 +96,7 @@ struct ClassCoordinatorTests {
       return
     }
     #expect(comment.battleId == battleID)
+    #expect(comment.isMindChanged)
 
     let routeCount = store.state.routes.count
     await store.send(.router(.routeAction(
@@ -173,6 +174,28 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func AI_B_투표_후_남긴_댓글은_B_진영으로_표시된다() async throws {
+    let room = ClassRoom.mocks[0]
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    _ = try await session.submitPreVote(battleId: battleID, optionId: 2)
+    let created = try await session.createPerspective(
+      battleId: battleID,
+      content: "B를 선택한 의견",
+      optionId: nil
+    )
+    let perspective = try #require(created)
+    _ = try await session.createComment(perspectiveId: perspective.perspectiveId, content: "동의해요")
+
+    let comments = try await session.fetchLabeledComments(
+      perspectiveId: perspective.perspectiveId,
+      cursor: nil,
+      size: nil
+    )
+    #expect(comments.items.first?.stance == room.battle.optionBTitle)
+  }
+
+  @Test
   func 상세_관리_모달을_닫으면_탭바가_다시_보인다() {
     var state = ClassCoordinator.State()
     var detail = ClassDetailFeature.State(room: .mocks[0])
@@ -217,6 +240,32 @@ struct ClassCoordinatorTests {
       return
     }
     #expect(detail.modal?.kind == .deadline)
+  }
+
+  @Test
+  func 마감_배틀에서_연_운영자_요약의_삭제는_상세_확인창으로_돌아간다() async {
+    let room = ClassRoom.mocks[2]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.closedBattle(.init(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ownerDashboard(.delegate(.deleteClass))
+    )))
+    await store.finish()
+
+    #expect(store.state.routes.count == 2)
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("운영자 삭제 확인 화면이 클래스 상세로 돌아가지 않음")
+      return
+    }
+    #expect(detail.customAlert != nil)
   }
 
   @Test
