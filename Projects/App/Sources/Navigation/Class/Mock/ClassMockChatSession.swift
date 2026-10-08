@@ -5,10 +5,13 @@ import Dependencies
 import Foundation
 import HomeDomainInterface
 import PerspectiveDomainInterface
+import PickeDesignKit
 
 /// 클래스 사용자 흐름의 배틀 데이터를 앱 내부에만 보관한다.
 /// 실제 배틀 ID와 충돌하지 않도록 클래스 ID를 음수 ID로 분리한다.
-actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterface {
+actor ClassMockChatSession: @preconcurrency BattleInterface, @preconcurrency PerspectiveInterface,
+  @preconcurrency CommentInterface
+{
   private struct Entry {
     var room: ClassRoom
     var preVoteOptionID: Int?
@@ -21,6 +24,24 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
 
   private var entries: [Int: Entry] = [:]
   private var nextCommentID = -1
+  private var closedBattleArtworkURL: URL?
+
+  private func thumbnailURL(for battle: ClassBattleSummary) async -> URL? {
+    if let thumbnailURL = battle.thumbnailURL { return thumbnailURL }
+    guard battle.id == 101, battle.title == "촉법소년 연령을 낮춰야 할까?" else { return nil }
+    if let closedBattleArtworkURL { return closedBattleArtworkURL }
+
+    let imageData = await MainActor.run { PickeDesignKitAsset.classClosedBattle.image.pngData() }
+    guard let imageData else { return nil }
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("picke-class-closed-battle.png")
+    do {
+      try imageData.write(to: url, options: .atomic)
+      closedBattleArtworkURL = url
+      return url
+    } catch {
+      return nil
+    }
+  }
 
   func register(room: ClassRoom) -> Int {
     let battleID = -1_000_000 - room.id
@@ -32,6 +53,14 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
       entries[battleID] = Entry(room: room)
     }
     return battleID
+  }
+
+  func hasChangedMind(battleID: Int) -> Bool {
+    guard let value = entries[battleID],
+          let preVoteOptionID = value.preVoteOptionID,
+          let postVoteOptionID = value.postVoteOptionID
+    else { return false }
+    return preVoteOptionID != postVoteOptionID
   }
 
   private func entry(for battleID: Int) throws -> Entry {
@@ -91,6 +120,7 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
     let value = try entry(for: battleId)
     let room = value.room
     let battle = room.battle
+    let thumbnailURL = await thumbnailURL(for: battle)
     let votedOptionID = value.postVoteOptionID ?? value.preVoteOptionID
     let options = [
       BattleOption(
@@ -117,7 +147,7 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
         battleId: battleId,
         title: battle.title,
         summary: battle.summary,
-        thumbnailUrl: battle.thumbnailURL?.absoluteString ?? "",
+        thumbnailUrl: thumbnailURL?.absoluteString ?? "",
         viewCount: battle.viewCount,
         participantsCount: room.memberCount,
         audioDuration: battle.audioDuration,
@@ -128,7 +158,7 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
       shareUrl: "",
       userVoteStatus: votedOptionID == 1 ? .pro : votedOptionID == 2 ? .con : .none,
       currentStep: value.postVoteOptionID != nil ? .completed : value.preVoteOptionID != nil ? .listening : .preVote,
-      categoryTags: [],
+      categoryTags: [BattleTag(tagId: battle.id, name: battle.categoryDisplayTitle, type: .category)],
       philosopherTags: [],
       valueTags: []
     )
@@ -152,10 +182,12 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
   ) async throws -> PreVoteResult {
     guard optionId == 1 || optionId == 2 else { throw BattleError.noData }
     var value = try entry(for: battleId)
-    let status: PreVoteResultStatus = value.postVoteOptionID == nil ? .created : .updated
+    guard value.postVoteOptionID == nil else {
+      throw BattleError.backendError("이미 최종투표를 완료했어요.")
+    }
     value.postVoteOptionID = optionId
     entries[battleId] = value
-    return PreVoteResult(voteId: battleId * 10 - 3, status: status)
+    return PreVoteResult(voteId: battleId * 10 - 3, status: .created)
   }
 
   func fetchScenario(battleId: Int) async throws -> BattleScenario {
@@ -209,9 +241,7 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
   func fetchVoteStats(battleId: Int) async throws -> BattleVoteStats {
     let value = try entry(for: battleId)
     let battle = value.room.battle
-    let voteOptionID = value.room.battle.id < 0
-      ? value.preVoteOptionID
-      : value.postVoteOptionID
+    let voteOptionID = value.postVoteOptionID ?? value.preVoteOptionID
     let aCount = 17 + (voteOptionID == 1 ? 1 : 0)
     let bCount = 15 + (voteOptionID == 2 ? 1 : 0)
     let total = aCount + bCount
@@ -277,7 +307,7 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
     RecommendedBattlePage(items: [], nextCursor: nil, hasNext: false)
   }
 
-  func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal {
+  nonisolated func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal {
     try await MockBattleRepository().proposeBattle(draft)
   }
 

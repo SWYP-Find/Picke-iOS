@@ -16,8 +16,11 @@ public struct ClassAIVoteView: View {
     GeometryReader { geometry in
       ZStack(alignment: .top) {
         Color.white.ignoresSafeArea()
-        artwork(height: geometry.size.height * 0.66 + geometry.safeAreaInsets.top)
-          .offset(y: -geometry.safeAreaInsets.top)
+        artwork(
+          width: geometry.size.width,
+          height: geometry.size.height * 0.66 + geometry.safeAreaInsets.top
+        )
+        .offset(y: -geometry.safeAreaInsets.top)
 
         VStack(spacing: 0) {
           navigationBar
@@ -41,7 +44,7 @@ private extension ClassAIVoteView {
   }
 
   @ViewBuilder
-  func artwork(height: CGFloat) -> some View {
+  func artwork(width: CGFloat, height: CGFloat) -> some View {
     Group {
       if store.room.battle.thumbnailURL == nil {
         Image(asset: .classAIVoteArtwork)
@@ -55,8 +58,7 @@ private extension ClassAIVoteView {
         }
       }
     }
-    .frame(maxWidth: .infinity)
-    .frame(height: height)
+    .frame(width: width, height: height)
     .clipped()
     .overlay {
       LinearGradient(
@@ -81,7 +83,7 @@ private extension ClassAIVoteView {
   @ViewBuilder
   func voteContent() -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("#\(store.room.battle.category.title)")
+      Text("#\(store.room.battle.categoryDisplayTitle)")
         .pickeBadge(.filled, size: .tag)
         .padding(.bottom, 20)
 
@@ -127,7 +129,8 @@ private extension ClassAIVoteView {
       optionCard(
         id: 1,
         title: store.room.battle.optionATitle,
-        subtitle: store.room.battle.philosopherA
+        subtitle: store.room.battle.optionADescription
+          ?? store.room.battle.philosopherA
       )
       Text("vs")
         .pretendardFont(.semiBold13)
@@ -139,7 +142,8 @@ private extension ClassAIVoteView {
       optionCard(
         id: 2,
         title: store.room.battle.optionBTitle,
-        subtitle: store.room.battle.philosopherB
+        subtitle: store.room.battle.optionBDescription
+          ?? store.room.battle.philosopherB
       )
     }
   }

@@ -23,24 +23,19 @@ public struct ClassCoordinator {
   public struct State: Equatable {
     public var routes: [Route<ClassScreen.State>]
     public var usesAIQuestions = false
+    public var completedAIBattles: [Int: Bool] = [:]
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
 
-    /// 모달을 닫으면 해당 화면의 탭바를 다시 보여준다.
+    /// 클래스 목록과 상세에서만 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
       switch routes.last?.screen {
       case let .detail(detail)?:
         return detail.modal == nil && detail.customAlert == nil
-      case let .members(members)?:
-        return members.filter == nil && members.editName == nil && members.customAlert == nil
       case let .myClasses(myClasses)?:
         return myClasses.modal == nil && myClasses.customAlert == nil
-      case let .ownerDashboard(dashboard)?:
-        return dashboard.management == nil
-      case .report?:
-        return true
       default:
         return false
       }
@@ -69,6 +64,7 @@ public struct ClassCoordinator {
     case memberMutationCompleted(ClassRoom, [ClassMember])
     case memberMutationFailed(Int, String)
     case mockBattleRegistered(roomID: Int, battleID: Int)
+    case completedAIVoteResolved(battleID: Int, isMindChanged: Bool)
   }
 
   public enum NavigationAction: Equatable {}
@@ -79,13 +75,13 @@ public struct ClassCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .router(routeAction):
-      routerAction(state: &state, action: routeAction)
+      return routerAction(state: &state, action: routeAction)
     case let .view(viewAction):
-      handleViewAction(state: &state, action: viewAction)
+      return handleViewAction(state: &state, action: viewAction)
     case let .inner(innerAction):
-      handleInnerAction(state: &state, action: innerAction)
+      return handleInnerAction(state: &state, action: innerAction)
     case .async, .navigation:
-      .none
+      return .none
     }
   }
 }
@@ -318,14 +314,55 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .chat(.delegate(.popToRoot))):
       return .send(.view(.backToRootAction))
 
+    case let .routeAction(_, action: .chat(.router(.routeAction(_, action: .preVote(.delegate(.voteSubmitted(
+      battleID, .post, _, isMindChanged
+    ))))))):
+      guard case .aiChat? = state.routes.dropLast().last?.screen else { return .none }
+      state.completedAIBattles[battleID] = isMindChanged
+      return .none
+
+    case .routeAction(_, action: .chat(.router(.routeAction(_, action: .comment(.delegate(.dismiss)))))):
+      guard case .aiChat? = state.routes.dropLast().last?.screen else { return .none }
+      state.routes.goBack()
+      return .none
+
     case .routeAction(_, action: .aiVote(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(battleID)))):
-      guard case .aiVote? = state.routes.last?.screen else { return .none }
-      var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
-      chat.routes[screenAt: 0] = .comment(.init(battleId: battleID, isMindChanged: true))
-      state.routes.push(.chat(chat))
+    case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(
+      battleID: battleID,
+      selectedOptionID: selectedOptionID,
+      hasCompletedPostVote: hasCompletedPostVote
+    )))):
+      guard case let .aiVote(vote)? = state.routes.last?.screen else { return .none }
+      if hasCompletedPostVote {
+        return .run { [classMockChatSession] send in
+          let isMindChanged = await classMockChatSession.hasChangedMind(battleID: battleID)
+          await send(.inner(.completedAIVoteResolved(
+            battleID: battleID,
+            isMindChanged: isMindChanged
+          )))
+        }
+      }
+      state.routes.push(.aiChat(.init(
+        room: vote.room,
+        battleID: battleID,
+        selectedOptionID: selectedOptionID
+      )))
+      return .none
+
+    case .routeAction(_, action: .aiChat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .aiChat(.delegate(.finalVote(battleID: battleID)))):
+      guard case .aiChat? = state.routes.last?.screen else { return .none }
+      if let isMindChanged = state.completedAIBattles[battleID] {
+        var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
+        chat.routes[screenAt: 0] = .comment(.init(battleId: battleID, isMindChanged: isMindChanged))
+        state.routes.push(.chat(chat))
+      } else {
+        state.routes.push(.chat(.init(route: .finalVote(battleId: battleID))))
+      }
       return .none
 
     case .routeAction(_, action: .detail(.delegate(.deleted))):
@@ -375,6 +412,16 @@ private extension ClassCoordinator {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .completedAIVoteResolved(battleID, isMindChanged):
+      guard case let .aiVote(vote)? = state.routes.last?.screen,
+            vote.battleID == battleID
+      else { return .none }
+      state.completedAIBattles[battleID] = isMindChanged
+      var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
+      chat.routes[screenAt: 0] = .comment(.init(battleId: battleID, isMindChanged: isMindChanged))
+      state.routes.push(.chat(chat))
+      return .none
+
     case let .mockBattleRegistered(roomID, battleID):
       guard case let .detail(detail)? = state.routes.last?.screen,
             detail.room.id == roomID
@@ -450,42 +497,8 @@ extension ClassCoordinator {
     case ownerReplyDetail(ClassReplyDetailFeature)
     case ownerFeedback(ClassFeedbackComposeFeature)
     case aiVote(ClassAIVoteFeature)
+    case aiChat(ClassAIChatFeature)
     case chat(ChatCoordinator)
-
-    public static var body: some ReducerOf<Self> {
-      @Dependency(\.classMockChatSession) var classMockChatSession
-      @Dependency(\.classMockAudioPlayer) var classMockAudioPlayer
-      Reduce { _, _ in .none }
-        .ifCaseLet(\.intro, action: \.intro) { ClassIntroFeature() }
-        .ifCaseLet(\.startMethod, action: \.startMethod) { ClassStartMethodFeature() }
-        .ifCaseLet(\.topic, action: \.topic) { ClassTopicFeature() }
-        .ifCaseLet(\.recommend, action: \.recommend) { ClassRecommendFeature() }
-        .ifCaseLet(\.setting, action: \.setting) { ClassSettingFeature() }
-        .ifCaseLet(\.share, action: \.share) { ClassShareFeature() }
-        .ifCaseLet(\.join, action: \.join) { ClassJoinFeature() }
-        .ifCaseLet(\.myClasses, action: \.myClasses) { MyClassFeature() }
-        .ifCaseLet(\.detail, action: \.detail) { ClassDetailFeature() }
-        .ifCaseLet(\.members, action: \.members) { ClassMemberFeature() }
-        .ifCaseLet(\.report, action: \.report) { ClassReportFeature() }
-        .ifCaseLet(\.closedBattle, action: \.closedBattle) { ClassClosedBattleFeature() }
-        .ifCaseLet(\.ownerDashboard, action: \.ownerDashboard) { ClassOwnerDashboardFeature() }
-        .ifCaseLet(\.ownerMemberDetail, action: \.ownerMemberDetail) { ClassMemberDetailFeature() }
-        .ifCaseLet(\.ownerReplyDetail, action: \.ownerReplyDetail) { ClassReplyDetailFeature() }
-        .ifCaseLet(\.ownerFeedback, action: \.ownerFeedback) { ClassFeedbackComposeFeature() }
-        .ifCaseLet(\.aiVote, action: \.aiVote) {
-          ClassAIVoteFeature()
-            .dependency(\.battleUseCase, classMockChatSession)
-        }
-        .ifCaseLet(\.chat, action: \.chat) {
-          ChatCoordinator()
-            .dependency(\.battleUseCase, classMockChatSession)
-            .dependency(\.perspectiveUseCase, classMockChatSession)
-            .dependency(\.commentUseCase, classMockChatSession)
-            .dependency(\.audioPlayer, classMockAudioPlayer)
-            .dependency(\.analyticsUseCase, .testValue)
-            .dependency(\.shareUseCase, .testValue)
-        }
-    }
   }
 }
 

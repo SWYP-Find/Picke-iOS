@@ -7,6 +7,12 @@ extension ClassUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassAIChatUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassAIChatInterface {
+    ClassAIChatUseCaseImpl()
+  }
+}
+
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
     ClassMockRepositoryStorage.shared

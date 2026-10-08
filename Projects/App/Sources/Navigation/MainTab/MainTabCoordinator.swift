@@ -5,12 +5,14 @@
 //  Created by Codex on 7/11/26.
 //
 
-import Foundation
-
-import PickeAnalyticsInterface
+import AudioPlayerServiceInterface
 import ComposableArchitecture
-import PickeDesignKit
+import DomainAssembly
 import FeatureAssembly
+import Foundation
+import PickeAnalyticsInterface
+import PickeCoreUtility
+import PickeDesignKit
 import TCAFlow
 
 @Reducer
@@ -99,6 +101,8 @@ public struct MainTabCoordinator {
   }
 
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
+  @Dependency(\.classMockChatSession) private var classMockChatSession
+  @Dependency(\.classMockAudioPlayer) private var classMockAudioPlayer
 
   public var body: some ReducerOf<Self> {
     Scope(state: \.homeState, action: \.home) {
@@ -112,6 +116,12 @@ public struct MainTabCoordinator {
     }
     Scope(state: \.classState, action: \.classroom) {
       ClassCoordinator()
+        .dependency(\.battleUseCase, classMockChatSession)
+        .dependency(\.perspectiveUseCase, classMockChatSession)
+        .dependency(\.commentUseCase, classMockChatSession)
+        .dependency(\.audioPlayer, classMockAudioPlayer)
+        .dependency(\.analyticsUseCase, .testValue)
+        .dependency(\.shareUseCase, .testValue)
     }
     Scope(state: \.myPageState, action: \.myPage) {
       ProfileCoordinator()

@@ -14,6 +14,7 @@ public struct ClassAIVoteFeature {
     public let battleID: Int
     public var selectedOptionID: Int?
     public var hasSubmitted = false
+    public var hasCompletedPostVote = false
     public var isSubmitting = false
     public var errorMessage: String?
 
@@ -41,15 +42,25 @@ public struct ClassAIVoteFeature {
     case submitTapped
   }
 
+  public struct VoteProgress: Equatable {
+    public let status: UserVoteStatus
+    public let step: BattleStep
+
+    public init(status: UserVoteStatus, step: BattleStep) {
+      self.status = status
+      self.step = step
+    }
+  }
+
   public enum InnerAction: Equatable {
-    case voteLoaded(Result<UserVoteStatus, BattleError>)
+    case voteLoaded(Result<VoteProgress, BattleError>)
     case voteSubmitted(Result<PreVoteResult, BattleError>)
   }
 
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
-    case voteSubmitted(battleID: Int)
+    case voteSubmitted(battleID: Int, selectedOptionID: Int, hasCompletedPostVote: Bool)
   }
 
   public var body: some Reducer<State, Action> {
@@ -59,8 +70,11 @@ public struct ClassAIVoteFeature {
         let battleID = state.battleID
         return .run { send in
           do {
-            let status = try await battleUseCase.fetchBattle(battleId: battleID).userVoteStatus
-            await send(.inner(.voteLoaded(.success(status))))
+            let battle = try await battleUseCase.fetchBattle(battleId: battleID)
+            await send(.inner(.voteLoaded(.success(.init(
+              status: battle.userVoteStatus,
+              step: battle.currentStep
+            )))))
           } catch {
             await send(.inner(.voteLoaded(.failure(BattleError.from(error)))))
           }
@@ -80,7 +94,11 @@ public struct ClassAIVoteFeature {
       case .view(.submitTapped):
         guard let optionID = state.selectedOptionID, !state.isSubmitting else { return .none }
         if state.hasSubmitted {
-          return .send(.delegate(.voteSubmitted(battleID: state.battleID)))
+          return .send(.delegate(.voteSubmitted(
+            battleID: state.battleID,
+            selectedOptionID: optionID,
+            hasCompletedPostVote: state.hasCompletedPostVote
+          )))
         }
         state.isSubmitting = true
         state.errorMessage = nil
@@ -94,8 +112,8 @@ public struct ClassAIVoteFeature {
           }
         }
 
-      case let .inner(.voteLoaded(.success(status))):
-        switch status {
+      case let .inner(.voteLoaded(.success(progress))):
+        switch progress.status {
         case .pro:
           state.selectedOptionID = 1
           state.hasSubmitted = true
@@ -105,6 +123,7 @@ public struct ClassAIVoteFeature {
         case .none, .unknown:
           break
         }
+        state.hasCompletedPostVote = progress.step == .finished || progress.step == .completed
         return .none
 
       case .inner(.voteLoaded(.failure)):
@@ -114,7 +133,12 @@ public struct ClassAIVoteFeature {
       case .inner(.voteSubmitted(.success)):
         state.isSubmitting = false
         state.hasSubmitted = true
-        return .send(.delegate(.voteSubmitted(battleID: state.battleID)))
+        guard let optionID = state.selectedOptionID else { return .none }
+        return .send(.delegate(.voteSubmitted(
+          battleID: state.battleID,
+          selectedOptionID: optionID,
+          hasCompletedPostVote: false
+        )))
 
       case .inner(.voteSubmitted(.failure)):
         state.isSubmitting = false

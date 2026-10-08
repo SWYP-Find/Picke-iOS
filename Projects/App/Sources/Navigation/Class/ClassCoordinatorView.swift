@@ -71,6 +71,9 @@ public struct ClassCoordinatorView: View {
 
       case let .aiVote(voteStore):
         ClassAIVoteView(store: voteStore)
+
+      case let .aiChat(chatStore):
+        ClassAIChatView(store: chatStore)
       }
     }
     .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
