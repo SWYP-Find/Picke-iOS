@@ -9,26 +9,37 @@ import SwiftUI
 struct ClassAIQuestionCard: View {
   let question: ClassAIQuestion
   let isSelected: Bool
+  let showsSelection: Bool
+
+  init(question: ClassAIQuestion, isSelected: Bool, showsSelection: Bool = true) {
+    self.question = question
+    self.isSelected = isSelected
+    self.showsSelection = showsSelection
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      HStack {
-        Text("#\(question.category)")
-          .pickeBadge(.filled, size: .tag)
-        Spacer()
-        Image(systemName: "checkmark")
-          .pickeCheckbox(isChecked: isSelected)
-      }
+      VStack(alignment: .leading, spacing: showsSelection ? 16 : 12) {
+        HStack {
+          Text("#\(question.category)")
+            .pickeBadge(.filled, size: .tag)
+          if showsSelection {
+            Spacer()
+            Image(systemName: "checkmark")
+              .pickeCheckbox(isChecked: isSelected)
+          }
+        }
 
-      VStack(alignment: .leading, spacing: 4) {
-        Text(question.title)
-          .pretendardFont(.headingSmall)
-          .foregroundStyle(.gray500)
-          .lineLimit(2)
-        Text(question.summary)
-          .pretendardFont(.labelSmall)
-          .foregroundStyle(.gray300)
-          .lineLimit(2)
+        VStack(alignment: .leading, spacing: 4) {
+          Text(question.title)
+            .pretendardFont(.headingSmall)
+            .foregroundStyle(.gray500)
+            .lineLimit(showsSelection ? 2 : nil)
+          Text(question.summary)
+            .pretendardFont(.labelSmall)
+            .foregroundStyle(.gray300)
+            .lineLimit(showsSelection ? 2 : nil)
+        }
       }
 
       HStack(spacing: 8) {
@@ -43,7 +54,11 @@ struct ClassAIQuestionCard: View {
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .pickeCard(.beige50, border: isSelected ? .primary500 : .beige600)
+    .pickeCard(
+      .beige50,
+      border: isSelected ? .primary500 : .beige600,
+      radius: showsSelection ? .radiusDefault : 0
+    )
     .contentShape(Rectangle())
   }
 
