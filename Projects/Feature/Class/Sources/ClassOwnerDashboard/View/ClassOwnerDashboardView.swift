@@ -36,7 +36,6 @@ public struct ClassOwnerDashboardView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.visible, for: .tabBar)
   }
 }
 

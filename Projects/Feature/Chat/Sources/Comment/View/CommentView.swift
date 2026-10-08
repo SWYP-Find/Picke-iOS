@@ -3,13 +3,12 @@
 //  Chat
 //
 
-import SwiftUI
-
 import CommentDomainInterface
 import ComposableArchitecture
+import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
-import PickeCoreUtility
+import SwiftUI
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {
@@ -49,7 +48,24 @@ public struct CommentView: View {
             }
           }
       )
-      inputBar()
+      .overlay(alignment: .bottomTrailing) {
+        if !store.isComposerExpanded {
+          Button { send(.composeTapped) } label: {
+            Image(systemName: "paperplane")
+              .font(.system(size: 22, weight: .medium))
+              .foregroundStyle(.beige50)
+              .frame(width: 36, height: 36)
+              .background(.primary500, in: Circle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("댓글 작성")
+          .padding(.trailing, 16)
+          .padding(.bottom, 16)
+        }
+      }
+      if store.isComposerExpanded {
+        inputBar()
+      }
     }
     .screenBackground()
     .contentShape(Rectangle())
@@ -63,6 +79,9 @@ public struct CommentView: View {
       withAnimation(.easeOut(duration: 0.75).delay(0.15)) {
         hasAnimatedVoteProgress = true
       }
+    }
+    .onChange(of: store.isComposerExpanded) { _, isExpanded in
+      isCommentFocused = isExpanded
     }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
@@ -478,13 +497,28 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func inputBar() -> some View {
-    PickeCommentInputBar(
-      text: $store.commentText,
-      focus: $isCommentFocused,
-      placeholder: "댓글을 입력해주세요",
-      isSendEnabled: store.isSendEnabled,
-      onSend: { send(.sendTapped) }
-    )
+    VStack(spacing: 0) {
+      HStack {
+        Spacer()
+        Button { send(.composeDismissed) } label: {
+          Image(systemName: "xmark")
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(.gray500)
+            .frame(width: 36, height: 32)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("댓글 입력 닫기")
+      }
+      .padding(.horizontal, 12)
+      .background(.surfaceBeigeStrong)
+      PickeCommentInputBar(
+        text: $store.commentText,
+        focus: $isCommentFocused,
+        placeholder: "댓글을 입력해주세요",
+        isSendEnabled: store.isSendEnabled,
+        onSend: { send(.sendTapped) }
+      )
+    }
   }
 }
 

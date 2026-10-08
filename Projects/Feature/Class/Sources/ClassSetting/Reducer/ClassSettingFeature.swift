@@ -6,6 +6,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeSharedUI
 
 @Reducer
 public struct ClassSettingFeature {
@@ -15,19 +16,31 @@ public struct ClassSettingFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public var battle: ClassBattleSummary
+    public var battle: ClassBattleSummary?
+    public var aiQuestion: ClassAIQuestion?
     public var name = ""
     public var deadline: Date
     public var isDeadlineEnabled = true
     public var isDatePickerPresented = false
     public var requiresComment = false
     public var isLoading = false
+    public var errorMessage: String?
+    @Presents public var unavailableNotice: ClassAIUnavailableNoticeFeature.State?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(
       battle: ClassBattleSummary,
       deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60)
     ) {
       self.battle = battle
+      self.deadline = deadline
+    }
+
+    public init(
+      aiQuestion: ClassAIQuestion,
+      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60)
+    ) {
+      self.aiQuestion = aiQuestion
       self.deadline = deadline
     }
 
@@ -39,8 +52,9 @@ public struct ClassSettingFeature {
       !trimmedName.isEmpty && !isLoading
     }
 
-    public var creation: ClassCreation {
-      ClassCreation(
+    public var creation: ClassCreation? {
+      guard let battle else { return nil }
+      return ClassCreation(
         name: trimmedName,
         deadline: isDeadlineEnabled ? deadline : .distantFuture,
         battleId: battle.id,
@@ -67,6 +81,8 @@ public struct ClassSettingFeature {
     case async(AsyncAction)
     case inner(InnerAction)
     case delegate(DelegateAction)
+    case unavailableNotice(PresentationAction<ClassAIUnavailableNoticeFeature.Action>)
+    case customAlert(PresentationAction<CustomAlertAction>)
   }
 
   @CasePathable
@@ -102,6 +118,23 @@ public struct ClassSettingFeature {
       case .binding:
         return .none
 
+      case .unavailableNotice(.presented(.dismissTapped)):
+        state.unavailableNotice = nil
+        return .none
+
+      case .unavailableNotice:
+        return .none
+
+      case .customAlert(.presented(.confirmTapped)),
+           .customAlert(.presented(.cancelTapped)),
+           .customAlert(.dismiss):
+        state.customAlert = nil
+        state.errorMessage = nil
+        return .none
+
+      case .customAlert:
+        return .none
+
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
 
@@ -114,6 +147,12 @@ public struct ClassSettingFeature {
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$unavailableNotice, action: \.unavailableNotice) {
+      ClassAIUnavailableNoticeFeature()
+    }
+    .ifLet(\.$customAlert, action: \.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -133,7 +172,12 @@ extension ClassSettingFeature {
 
     case .createTapped:
       guard state.canCreate else { return .none }
-      return .send(.async(.create(state.creation)))
+      if state.aiQuestion != nil {
+        state.unavailableNotice = .init()
+        return .none
+      }
+      guard let creation = state.creation else { return .none }
+      return .send(.async(.create(creation)))
     }
   }
 
@@ -144,6 +188,7 @@ extension ClassSettingFeature {
     switch action {
     case let .create(creation):
       state.isLoading = true
+      state.errorMessage = nil
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.createClass(creation)
@@ -162,8 +207,17 @@ extension ClassSettingFeature {
     switch action {
     case let .created(result):
       state.isLoading = false
-      guard case let .success(room) = result else { return .none }
-      return .send(.delegate(.created(room)))
+      switch result {
+      case let .success(room):
+        return .send(.delegate(.created(room)))
+      case let .failure(error):
+        state.errorMessage = error.localizedDescription
+        state.customAlert = .alert(
+          title: "클래스를 만들지 못했어요",
+          message: error.localizedDescription
+        )
+        return .none
+      }
     }
   }
 }

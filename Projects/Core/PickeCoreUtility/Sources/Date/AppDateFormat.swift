@@ -12,6 +12,8 @@ public enum AppDateFormat: String, CaseIterable, Sendable {
   case yearMonthDayDotted = "yyyy.MM.dd"
   /// 0 을 채우지 않는 점 표기 (예: 2026.4.10)
   case yearMonthDayDotShort = "yyyy.M.d"
+  /// 한국어 요일 포함 (예: 2026. 10. 05. 월요일 14:00)
+  case dottedDateTimeWithWeekday = "yyyy. MM. dd. EEEE HH:mm"
   /// 타임존 없이 내려오는 서버 시각 (LocalDateTime)
   case serverDateTime = "yyyy-MM-dd'T'HH:mm:ss"
   case serverDateTimeMillis = "yyyy-MM-dd'T'HH:mm:ss.SSS"
@@ -37,7 +39,7 @@ enum AppDateFormatter {
   private static let formatters: [AppDateFormat: DateFormatter] = Dictionary(
     uniqueKeysWithValues: AppDateFormat.allCases.map { format in
       let formatter = DateFormatter()
-      formatter.locale = locale
+      formatter.locale = format == .dottedDateTimeWithWeekday ? Locale(identifier: "ko_KR") : locale
       formatter.timeZone = timeZone
       formatter.calendar = calendar
       formatter.dateFormat = format.rawValue

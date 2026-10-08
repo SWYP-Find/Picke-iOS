@@ -1,6 +1,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeSharedUI
 
 @Reducer
 public struct ClassMemberFeature {
@@ -14,15 +15,24 @@ public struct ClassMemberFeature {
       case members([ClassMember])
     }
 
-    public let room: ClassRoom
+    public var room: ClassRoom
     public var members: [ClassMember]
+    public var currentMemberID: Int
     public var searchText = ""
+    public var draftName = ""
+    public var pendingRemovalID: Int?
+    public var errorMessage: String?
+    public var isSaving = false
     public var appliedFilter = ClassMemberFilterFeature.State()
+    public var hasAppliedSort = false
     @Presents public var filter: ClassMemberFilterFeature.State?
+    @Presents public var editName: ClassMemberEditNameFeature.State?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
-    public init(room: ClassRoom, members: [ClassMember] = []) {
+    public init(room: ClassRoom, members: [ClassMember] = [], currentMemberID: Int = 1) {
       self.room = room
       self.members = members
+      self.currentMemberID = currentMemberID
     }
 
     public var visibleMembers: [ClassMember] {
@@ -31,6 +41,7 @@ public struct ClassMemberFeature {
         ? members
         : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
 
+      guard hasAppliedSort else { return filteredMembers }
       switch appliedFilter.sort {
       case .name:
         return filteredMembers.sorted {
@@ -52,17 +63,27 @@ public struct ClassMemberFeature {
     case binding(BindingAction<State>)
     case view(View)
     case filter(PresentationAction<ClassMemberFilterFeature.Action>)
+    case editName(PresentationAction<ClassMemberEditNameFeature.Action>)
+    case customAlert(PresentationAction<CustomAlertAction>)
+    case membersLoaded(room: ClassRoom, members: [ClassMember], currentMemberID: Int)
+    case dataUpdated(room: ClassRoom, members: [ClassMember])
+    case dataFailed(String)
     case delegate(DelegateAction)
   }
 
   public enum View {
     case backTapped
     case filterTapped
+    case editNameTapped(Int)
+    case nameSaved
     case removeTapped(Int)
+    case removeConfirmed
   }
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case removeMember(roomID: Int, memberID: Int, currentMemberID: Int)
+    case updateDisplayName(roomID: Int, memberID: Int, currentMemberID: Int, name: String)
   }
 
   public var body: some Reducer<State, Action> {
@@ -76,6 +97,7 @@ public struct ClassMemberFeature {
       case .filter(.presented(.applyTapped)):
         if let filter = state.filter {
           state.appliedFilter = filter
+          state.hasAppliedSort = true
         }
         state.filter = nil
         return .none
@@ -84,12 +106,55 @@ public struct ClassMemberFeature {
         return .none
       case .filter:
         return .none
+      case .editName(.presented(.dismissTapped)), .editName(.dismiss):
+        state.editName = nil
+        return .none
+      case .editName:
+        return .none
+      case .customAlert(.presented(.confirmTapped)):
+        let isRemovalConfirmation = state.customAlert?.style == .deleteConfirm
+        state.customAlert = nil
+        state.errorMessage = nil
+        return isRemovalConfirmation
+          ? handleViewAction(state: &state, action: .removeConfirmed)
+          : .none
+      case .customAlert(.presented(.cancelTapped)), .customAlert(.dismiss):
+        state.customAlert = nil
+        state.pendingRemovalID = nil
+        state.errorMessage = nil
+        return .none
+      case let .membersLoaded(room, members, currentMemberID):
+        state.room = room
+        state.members = members
+        state.currentMemberID = currentMemberID
+        return .none
+      case let .dataUpdated(room, members):
+        state.room = room
+        state.members = members
+        state.editName = nil
+        state.pendingRemovalID = nil
+        state.errorMessage = nil
+        state.isSaving = false
+        return .none
+      case let .dataFailed(message):
+        state.pendingRemovalID = nil
+        state.editName = nil
+        state.isSaving = false
+        state.errorMessage = message
+        state.customAlert = .alert(title: "요청을 완료하지 못했어요", message: message)
+        return .none
       case .delegate:
         return .none
       }
     }
     .ifLet(\.$filter, action: \.filter) {
       ClassMemberFilterFeature()
+    }
+    .ifLet(\.$editName, action: \.editName) {
+      ClassMemberEditNameFeature()
+    }
+    .ifLet(\.$customAlert, action: \.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -124,11 +189,74 @@ extension ClassMemberFeature {
     case .filterTapped:
       state.filter = state.appliedFilter
       return .none
-    case let .removeTapped(id):
-      // Member removal requires a server mutation. Keep this action inert until that API exists.
-      _ = id
+    case let .editNameTapped(id):
+      guard id == state.currentMemberID, let member = state.members.first(where: { $0.id == id }) else { return .none }
+      state.draftName = member.name
+      state.editName = .init()
       return .none
+    case .nameSaved:
+      guard !state.isSaving,
+            state.editName != nil,
+            state.members.contains(where: { $0.id == state.currentMemberID })
+      else { return .none }
+      let name = state.draftName.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !name.isEmpty else { return .none }
+      state.isSaving = true
+      return .send(.delegate(.updateDisplayName(
+        roomID: state.room.id,
+        memberID: state.currentMemberID,
+        currentMemberID: state.currentMemberID,
+        name: name
+      )))
+    case let .removeTapped(id):
+      guard state.room.role == .owner,
+            id != state.currentMemberID,
+            let member = state.members.first(where: { $0.id == id }),
+            !member.isOwner
+      else { return .none }
+      state.pendingRemovalID = id
+      state.customAlert = CustomAlertState(
+        title: "\(member.name)님을 클래스에서 내보낼까요?\n한 번 내보내면 되돌릴 수 없어요.",
+        confirmTitle: "내보내기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
+      return .none
+    case .removeConfirmed:
+      guard !state.isSaving,
+            state.room.role == .owner,
+            let id = state.pendingRemovalID,
+            id != state.currentMemberID,
+            let member = state.members.first(where: { $0.id == id }),
+            !member.isOwner
+      else { return .none }
+      state.pendingRemovalID = nil
+      state.isSaving = true
+      return .send(.delegate(.removeMember(
+        roomID: state.room.id,
+        memberID: id,
+        currentMemberID: state.currentMemberID
+      )))
     }
+  }
+}
+
+@Reducer
+public struct ClassMemberEditNameFeature {
+  @ObservableState
+  public struct State: Equatable {
+    public init() {}
+  }
+
+  public enum Action {
+    case dismissTapped
+  }
+
+  public init() {}
+
+  public var body: some Reducer<State, Action> {
+    EmptyReducer()
   }
 }
 

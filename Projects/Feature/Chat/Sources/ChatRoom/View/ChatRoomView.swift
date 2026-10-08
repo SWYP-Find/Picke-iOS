@@ -5,18 +5,17 @@
 //  Created by Wonji Suh on 5/19/26.
 //
 
-import SwiftUI
-
 import ComposableArchitecture
 import HomeDomainInterface
 import PickeDesignKit
 import PickeSharedUI
+import SwiftUI
 
 @ViewAction(for: ChatRoomFeature.self)
 public struct ChatRoomView: View {
   @Bindable public var store: StoreOf<ChatRoomFeature>
 
-  // [고정 36 슬롯][8][말풍선 고정폭][8][고정 36 슬롯] — 재생 상태와 무관하게 말풍선 크기 고정.
+  /// [고정 36 슬롯][8][말풍선 고정폭][8][고정 36 슬롯] — 재생 상태와 무관하게 말풍선 크기 고정.
   private enum Metric {
     static let sideSlotWidth: CGFloat = 36
     static let slotSpacing: CGFloat = 8
@@ -328,7 +327,9 @@ extension ChatRoomView {
     let message: ChatMessage
     let showsHeader: Bool
 
-    var id: UUID { message.id }
+    var id: UUID {
+      message.id
+    }
   }
 }
 
@@ -411,8 +412,7 @@ extension ChatRoomView {
         onForward: { send(.seekForwardTapped) },
         onReplay: { send(.replayTapped) },
         isReplayEnabled: store.canScrub,
-        // 안드로이드 시안: 재생 컨트롤 아이콘은 브라운(primary500).
-        tint: .primary500
+        tint: .neutral900
       )
     }
     .padding(.horizontal, 24)
@@ -468,3 +468,59 @@ extension ChatRoomView {
     return String(format: "%d:%02d", total / 60, total % 60)
   }
 }
+
+#if DEBUG
+  #Preview("채팅방 · 청취 중") {
+    let scenario = BattleScenario(
+      battleId: 0,
+      title: "뒤샹의 변기, 예술인가 도발인가",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "START",
+          audioDuration: 268,
+          autoNextNodeId: nil,
+          scripts: [
+            ScenarioScript(
+              scriptId: 1,
+              startTimeMs: 0,
+              speakerType: .a,
+              speakerName: "플라톤",
+              text: "이건 기만입니다. 하늘 아래 모든 사물은 그에 걸맞은 완벽한 목적과 형상을 가지고 있습니다."
+            ),
+            ScenarioScript(
+              scriptId: 2,
+              startTimeMs: 9000,
+              speakerType: .a,
+              speakerName: "플라톤",
+              text: "변기의 이데아는 감상하는 것이 아닙니다."
+            ),
+            ScenarioScript(
+              scriptId: 3,
+              startTimeMs: 18000,
+              speakerType: .b,
+              speakerName: "사르트르",
+              text: "사물은 그저 그곳에 존재할 뿐입니다."
+            ),
+          ],
+          interactiveOptions: []
+        ),
+      ]
+    )
+    let state: ChatRoomFeature.State = {
+      var state = ChatRoomFeature.State()
+      state.scenario = scenario
+      state.currentNodeId = scenario.startNodeId
+      state.visibleNodeIds = [scenario.startNodeId]
+      state.currentTime = 24
+      state.isPlaying = true
+      return state
+    }()
+    ChatRoomView(store: Store(initialState: state) { ChatRoomFeature() })
+  }
+#endif

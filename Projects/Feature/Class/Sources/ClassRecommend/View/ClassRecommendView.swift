@@ -38,7 +38,7 @@ public struct ClassRecommendView: View {
       bottomSection()
     }
     .screenBackground()
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
   }
 }
@@ -48,12 +48,12 @@ private extension ClassRecommendView {
   func introSection() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       VStack(alignment: .leading, spacing: 6) {
-        Text("수업에 어울리는\n배틀을 찾았어요")
+        Text(store.mode == .aiQuestions ? "AI가 주제에 어울리는\n질문을 만들었어요" : "주제에 어울리는\n배틀을 찾았어요")
           .pretendardFont(.semiBold24)
           .lineSpacing(2.4)
           .foregroundStyle(.gray800)
 
-        Text("미리 듣고 클래스에 사용할 배틀을 골라보세요.")
+        Text(store.mode == .aiQuestions ? "모임에서 나눌 질문을 골라 자유롭게 수정해보세요." : "미리 듣고 클래스에 사용할 배틀을 골라보세요.")
           .pretendardFont(.medium15)
           .foregroundStyle(.gray300)
       }
@@ -108,17 +108,38 @@ private extension ClassRecommendView {
   @ViewBuilder
   func resultList() -> some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text(store.resultTitle)
-        .pretendardFont(.headingSmall)
-        .foregroundStyle(.gray800)
+      HStack {
+        Text(store.resultTitle)
+          .pretendardFont(.headingSmall)
+          .foregroundStyle(.gray800)
+        Spacer()
+        if store.mode == .aiQuestions {
+          Button { send(.recommendAgainTapped) } label: {
+            Label("다시 추천", systemImage: "arrow.clockwise")
+              .pretendardFont(.medium13)
+              .foregroundStyle(.gray300)
+          }
+          .buttonStyle(.plain)
+        }
+      }
 
-      ForEach(store.battles) { battle in
-        ClassBattleListCard(
-          battle: battle,
-          isSelected: store.selectedBattleId == battle.id,
-          onPreview: { send(.previewTapped(battle.id)) }
-        )
-        .onTapGesture { send(.battleTapped(battle.id)) }
+      if store.mode == .aiQuestions {
+        ForEach(store.questions) { question in
+          ClassAIQuestionCard(
+            question: question,
+            isSelected: store.selectedQuestionId == question.id
+          )
+          .onTapGesture { send(.questionTapped(question.id)) }
+        }
+      } else {
+        ForEach(store.battles) { battle in
+          ClassBattleListCard(
+            battle: battle,
+            isSelected: store.selectedBattleId == battle.id,
+            onPreview: { send(.previewTapped(battle.id)) }
+          )
+          .onTapGesture { send(.battleTapped(battle.id)) }
+        }
       }
     }
   }
@@ -144,7 +165,7 @@ private extension ClassRecommendView {
     Button {
       send(.selectTapped)
     } label: {
-      Text("배틀 선택하기")
+      Text(store.mode == .aiQuestions ? "질문 선택하기" : "배틀 선택하기")
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(!store.canSelect)

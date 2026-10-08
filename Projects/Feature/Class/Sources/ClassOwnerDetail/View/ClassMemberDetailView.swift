@@ -30,7 +30,6 @@ public struct ClassMemberDetailView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
   }
 }
 

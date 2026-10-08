@@ -47,21 +47,7 @@ public struct ClassIntroView: View {
     ) { joinStore in
       ClassJoinView(store: joinStore)
     }
-    .alert(
-      "이용권 등록 준비 중",
-      isPresented: Binding(
-        get: { store.showTicketNotice },
-        set: {
-          if !$0 {
-            send(.ticketNoticeDismissed)
-          }
-        }
-      )
-    ) {
-      Button("확인", role: .cancel) {}
-    } message: {
-      Text("이용권 등록 기능은 아직 사용할 수 없습니다.")
-    }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
@@ -80,14 +66,14 @@ private extension ClassIntroView {
   @ViewBuilder
   func titleSection() -> some View {
     VStack(spacing: 12) {
-      Text("함께 생각하는\n수업을 시작해 보세요")
+      Text("함께 생각을 나누는\n클래스를 시작해 보세요")
         .pretendardFont(family: .SemiBold, size: 24)
         .kerning(-0.6)
         .lineSpacing(2.4)
         .multilineTextAlignment(.center)
         .foregroundStyle(.beige50)
 
-      Text("콘텐츠를 고르고, 클래스로 함께 나눠요.")
+      Text("콘텐츠를 직접 만들고 사람들을 초대하세요.")
         .pretendardFont(family: .SemiBold, size: 16)
         .kerning(-0.4)
         .multilineTextAlignment(.center)

@@ -39,7 +39,7 @@ public struct ClassShareView: View {
         .padding(.bottom, 16)
     }
     .screenBackground()
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
   }
 }
 

@@ -63,7 +63,6 @@ public struct ClassReplyDetailView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
   }
 }
 

@@ -21,18 +21,9 @@ public struct ClassMemberView: View {
         .padding(.horizontal, 16)
         .padding(.top, 12)
 
-      if store.room.role == .owner {
-        Text("멤버 내보내기는 서버 연동 후 제공됩니다.")
-          .pretendardFont(family: .Medium, size: 12)
-          .foregroundStyle(.gray300)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 16)
-          .padding(.top, 8)
-      }
-
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
-          Text(store.members.isEmpty ? "클래스 멤버 \(store.room.memberCount)" : "멤버 \(store.members.count)")
+          Text("멤버 \(store.room.memberCount)")
             .pretendardFont(family: .Medium, size: 14)
             .foregroundStyle(.gray300)
             .padding(.bottom, 4)
@@ -63,13 +54,19 @@ public struct ClassMemberView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
     .pickeModal(
       $store.scope(state: \.filter, action: \.filter),
       dimOpacity: 0.28
     ) { filterStore in
       filterSheet(store: filterStore)
     }
+    .pickeModal(
+      $store.scope(state: \.editName, action: \.editName),
+      dimOpacity: 0.28
+    ) { editNameStore in
+      nameSheet(store: editNameStore)
+    }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
@@ -114,6 +111,15 @@ private extension ClassMemberView {
         .pretendardFont(family: .Medium, size: 16)
         .foregroundStyle(.gray800)
 
+      if member.id == store.currentMemberID {
+        Button { send(.editNameTapped(member.id)) } label: {
+          Image(systemName: "pencil")
+            .font(.system(size: 14))
+            .foregroundStyle(.gray800)
+        }
+        .accessibilityLabel("내 이름 수정")
+      }
+
       Spacer(minLength: 0)
 
       if member.isOwner {
@@ -123,6 +129,13 @@ private extension ClassMemberView {
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
           .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+      } else if store.room.role == .owner, member.id != store.currentMemberID {
+        Button { send(.removeTapped(member.id)) } label: {
+          Image(systemName: "minus.circle.fill")
+            .font(.system(size: 18))
+            .foregroundStyle(.gray100)
+        }
+        .accessibilityLabel("\(member.name) 내보내기")
       }
     }
     .frame(height: 68)
@@ -236,5 +249,45 @@ private extension ClassMemberView {
       .frame(width: 40, height: 4)
       .frame(maxWidth: .infinity)
       .padding(.bottom, 10)
+  }
+
+  @ViewBuilder
+  func nameSheet(store editNameStore: StoreOf<ClassMemberEditNameFeature>) -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { editNameStore.send(.dismissTapped) }
+
+      VStack(alignment: .leading, spacing: 20) {
+        sheetHandle
+        VStack(alignment: .leading, spacing: 6) {
+          Text("이름을 입력해주세요")
+            .pretendardFont(.semiBold24)
+            .foregroundStyle(.gray800)
+          Text("이 클래스에서만 보이는 이름이에요.")
+            .pretendardFont(.regular13)
+            .foregroundStyle(.gray300)
+        }
+
+        TextField("이름을 입력해주세요", text: $store.draftName)
+          .textInputAutocapitalization(.never)
+          .pickeTextField(height: 52)
+
+        Button("수정하기") { send(.nameSaved) }
+          .disabled(store.isSaving)
+          .ctaButtonStyle(.primary, size: .large, height: 52)
+          .disabled(store.draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      }
+      .padding(.top, 12)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 32)
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
   }
 }

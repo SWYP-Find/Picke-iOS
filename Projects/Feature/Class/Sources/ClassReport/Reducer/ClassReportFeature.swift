@@ -5,17 +5,10 @@ import ComposableArchitecture
 public struct ClassReportFeature {
   public init() {}
 
-  public enum Tab: String, CaseIterable, Hashable {
-    case summary = "요약"
-    case participation = "내 참여"
-    case classResult = "클래스 결과"
-    case feedback = "피드백"
-  }
-
   @ObservableState
   public struct State: Equatable {
     public var room: ClassRoom
-    public var selectedTab: Tab = .summary
+    public var selectedTab: ClassReportTab = .summary
 
     public init(room: ClassRoom) {
       self.room = room
@@ -30,7 +23,7 @@ public struct ClassReportFeature {
   @CasePathable
   public enum View: Equatable {
     case backTapped
-    case tabSelected(Tab)
+    case tabSelected(ClassReportTab)
   }
 
   @CasePathable

@@ -28,7 +28,7 @@ public struct ClassJoinFeature {
     }
 
     public var canFindClass: Bool {
-      mode == .code && !joinCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading
+      mode == .code && joinCode.count == 6 && !isLoading
     }
 
     public var canJoin: Bool {
@@ -59,14 +59,14 @@ public struct ClassJoinFeature {
 
   public enum InnerAction: Equatable {
     case found(Result<ClassRoom, ClassError>)
-    case joined(Result<ClassRoom, ClassError>)
+    case joined(Result<ClassRoom, ClassError>, nickname: String)
   }
 
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
     case found(ClassRoom)
-    case joined(ClassRoom)
+    case joined(ClassRoom, nickname: String)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -79,6 +79,12 @@ public struct ClassJoinFeature {
     Reduce { state, action in
       switch action {
       case .binding:
+        state.joinCode = String(
+          state.joinCode.uppercased()
+            .filter { $0.isASCII && ($0.isLetter || $0.isNumber) }
+            .prefix(6)
+        )
+        state.errorMessage = nil
         return .none
 
       case let .view(viewAction):
@@ -105,8 +111,7 @@ private extension ClassJoinFeature {
 
     case .findTapped:
       guard state.canFindClass else { return .none }
-      let code = state.joinCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-      return .send(.async(.find(code)))
+      return .send(.async(.find(state.joinCode)))
 
     case .joinTapped:
       guard state.canJoin, let room = state.preview else { return .none }
@@ -137,7 +142,7 @@ private extension ClassJoinFeature {
           try await classUseCase.joinClass(joinCode: code, nickname: nickname)
         }
         .mapError(ClassError.from)
-        await send(.inner(.joined(result)))
+        await send(.inner(.joined(result, nickname: nickname)))
       }
       .cancellable(id: CancelID.join, cancelInFlight: true)
     }
@@ -149,24 +154,13 @@ private extension ClassJoinFeature {
     case let .found(.success(room)):
       return .send(.delegate(.found(room)))
 
-    case let .joined(.success(room)):
+    case let .joined(.success(room), nickname):
       state.preview = nil
-      return .send(.delegate(.joined(room)))
+      return .send(.delegate(.joined(room, nickname: nickname)))
 
-    case let .found(.failure(error)), let .joined(.failure(error)):
+    case let .found(.failure(error)), let .joined(.failure(error), _):
       state.errorMessage = error.message
       return .none
-    }
-  }
-}
-
-private extension ClassError {
-  var message: String {
-    switch self {
-    case .invalidCode: return "참여 코드를 다시 확인해 주세요."
-    case .closed: return "종료된 클래스입니다."
-    case .alreadyJoined: return "이미 참여한 클래스입니다."
-    case let .network(message), let .unknown(message): return message
     }
   }
 }
