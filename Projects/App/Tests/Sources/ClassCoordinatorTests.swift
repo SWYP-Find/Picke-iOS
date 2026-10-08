@@ -243,6 +243,44 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 운영자_마감일_수정_후_다시_연_보고서는_목_미리보기를_유지한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let updatedRoom = try await repository.updateDeadline(
+      id: room.id,
+      deadline: room.deadline.addingTimeInterval(86400)
+    )
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.ownerDashboard(.preview(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ownerDashboard(.delegate(.editClass))
+    )))
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.inner(.deadlineUpdated(.success(updatedRoom))))
+    )))
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openReport(updatedRoom)))
+    )))
+    await store.finish()
+
+    guard case let .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
+      Issue.record("마감일 변경 후 운영자 보고서가 열리지 않음")
+      return
+    }
+    #expect(dashboard.room.deadline == updatedRoom.deadline)
+    #expect(dashboard.usesPreviewContent)
+  }
+
+  @Test
   func 마감_배틀에서_연_운영자_요약의_삭제는_상세_확인창으로_돌아간다() async {
     let room = ClassRoom.mocks[2]
     var state = ClassCoordinator.State()

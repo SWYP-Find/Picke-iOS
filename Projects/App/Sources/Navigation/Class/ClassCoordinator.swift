@@ -256,7 +256,11 @@ private extension ClassCoordinator {
     case let .routeAction(_, action: .detail(.delegate(.openReport(room)))),
          let .routeAction(_, action: .closedBattle(.delegate(.openReport(room)))):
       if room.role == .owner {
-        let dashboard: ClassOwnerDashboardFeature.State = room == ClassRoom.mocks[0]
+        let previewRoom = ClassRoom.mocks[0]
+        let showsPreview = room.id == previewRoom.id
+          && room.joinCode == previewRoom.joinCode
+          && room.battle == previewRoom.battle
+        let dashboard: ClassOwnerDashboardFeature.State = showsPreview
           ? .preview(room: room)
           : .init(room: room)
         state.routes.push(.ownerDashboard(dashboard))
