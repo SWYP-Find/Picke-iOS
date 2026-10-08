@@ -13,7 +13,12 @@ final class ClassAIFoundationModelsTests: XCTestCase {
     let conversationID = UUID()
 
     do {
-      try await client.start(conversationID, "예술이 될 수 있다", "플라톤")
+      try await client.start(conversationID, ClassAIChatContext(
+        question: "뒤샹의 변기는 예술일까?",
+        selectedStance: "예술이 될 수 있다",
+        opponentStance: "예술이 아니다",
+        opponentPhilosopherName: "플라톤"
+      ))
       let reply = try await client.respond(conversationID, "평범한 물건도 새로운 의미를 부여하면 예술이 될 수 있어요.")
       await client.end(conversationID)
 

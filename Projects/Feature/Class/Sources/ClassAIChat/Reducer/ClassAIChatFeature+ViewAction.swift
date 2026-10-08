@@ -19,11 +19,17 @@ extension ClassAIChatFeature {
       let requestID = UUID()
       state.sessionRequestID = requestID
       let id = state.conversationID
-      let stance = state.selectedStanceTitle
       let opponent = state.opponentName
+      let context = ClassAIChatContext(
+        question: state.room.battle.title,
+        selectedStance: state.selectedStanceTitle,
+        opponentStance: state.selectedOptionID == 1
+          ? state.room.battle.optionBTitle : state.room.battle.optionATitle,
+        opponentPhilosopherName: opponent == "A 입장" || opponent == "B 입장" ? nil : opponent
+      )
       return .run { send in
         do {
-          try await chatUseCase.start(id, stance, opponent)
+          try await chatUseCase.start(id, context)
           await send(.inner(.sessionReady(requestID)))
         } catch {
           await send(.inner(.sessionFailed(requestID, error.localizedDescription)))

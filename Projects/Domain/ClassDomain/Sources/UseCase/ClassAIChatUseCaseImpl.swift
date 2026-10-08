@@ -4,10 +4,10 @@ import Foundation
 public struct ClassAIChatUseCaseImpl: ClassAIChatInterface {
   public init() {}
 
-  public func start(_ id: UUID, _ stance: String, _ opponent: String) async throws {
+  public func start(_ id: UUID, _ context: ClassAIChatContext) async throws {
     #if canImport(FoundationModels)
       if #available(iOS 26.0, *) {
-        try await ClassAIChatFoundationEngine.shared.start(id: id, stance: stance, opponent: opponent)
+        try await ClassAIChatFoundationEngine.shared.start(id: id, context: context)
         return
       }
     #endif

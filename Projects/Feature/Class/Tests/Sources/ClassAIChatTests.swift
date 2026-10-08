@@ -6,6 +6,18 @@ import Testing
 
 @MainActor
 struct ClassAIChatTests {
+  private actor ContextRecorder {
+    private var captured: ClassAIChatContext?
+
+    func record(_ context: ClassAIChatContext) {
+      captured = context
+    }
+
+    func value() -> ClassAIChatContext? {
+      captured
+    }
+  }
+
   private actor ResponseStub {
     private var attempts = 0
 
@@ -32,6 +44,67 @@ struct ClassAIChatTests {
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment
     )
+  }
+
+  private func room(for question: ClassAIQuestion) -> ClassRoom {
+    let room = ClassRoom.mocks[0]
+    return .init(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: ClassSettingFeature.State(aiQuestion: question, filter: .init()).aiBattle!,
+      deadline: room.deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment
+    )
+  }
+
+  private func assertForwardedContext(
+    question: ClassAIQuestion,
+    selectedOptionID: Int,
+    expectedPhilosopherName: String?
+  ) async throws {
+    let room = room(for: question)
+    let recorder = ContextRecorder()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: room,
+      battleID: room.battle.id,
+      selectedOptionID: selectedOptionID
+    )) {
+      ClassAIChatFeature()
+    } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, context in
+        await recorder.record(context)
+      })
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let requestID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(requestID))
+
+    let context = try #require(await recorder.value())
+    #expect(context.question == room.battle.title)
+    #expect(context.selectedStance == (selectedOptionID == 1 ? room.battle.optionATitle : room.battle.optionBTitle))
+    #expect(context.opponentStance == (selectedOptionID == 1 ? room.battle.optionBTitle : room.battle.optionATitle))
+    #expect(context.opponentPhilosopherName == expectedPhilosopherName)
+  }
+
+  @Test
+  func 이름있는_AI_질문의_양쪽_선택지를_원본대로_전달한다() async throws {
+    let question = ClassAIQuestion.examples[0]
+    try await assertForwardedContext(question: question, selectedOptionID: 1, expectedPhilosopherName: "플라톤")
+    try await assertForwardedContext(question: question, selectedOptionID: 2, expectedPhilosopherName: "사르트르")
+  }
+
+  @Test
+  func 이름없는_AI_질문의_양쪽_선택지는_철학자_이름없이_전달한다() async throws {
+    let question = ClassAIQuestion.examples[1]
+    try await assertForwardedContext(question: question, selectedOptionID: 1, expectedPhilosopherName: nil)
+    try await assertForwardedContext(question: question, selectedOptionID: 2, expectedPhilosopherName: nil)
   }
 
   @Test
@@ -65,7 +138,7 @@ struct ClassAIChatTests {
       ClassAIChatFeature()
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
-        start: { _, _, _ in },
+        start: { _, _ in },
         respond: { _, _ in "첫 답변. 두 번째 답변." },
         end: { _ in }
       )
@@ -103,7 +176,7 @@ struct ClassAIChatTests {
       ClassAIChatFeature()
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
-        start: { _, _, _ in },
+        start: { _, _ in },
         respond: { _, _ in try await stub.respond() },
         end: { _ in }
       )
@@ -150,7 +223,7 @@ struct ClassAIChatTests {
     let store = TestStore(initialState: initialState) {
       ClassAIChatFeature()
     } withDependencies: {
-      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, _, _ in }, respond: { _, _ in "" }, end: { _ in })
+      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, _ in }, respond: { _, _ in "" }, end: { _ in })
     }
     store.exhaustivity = .off
 

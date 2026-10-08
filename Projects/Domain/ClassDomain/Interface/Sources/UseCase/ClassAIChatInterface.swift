@@ -2,7 +2,7 @@ import ComposableArchitecture
 import Foundation
 
 public protocol ClassAIChatInterface: Sendable {
-  func start(_ id: UUID, _ stance: String, _ opponent: String) async throws
+  func start(_ id: UUID, _ context: ClassAIChatContext) async throws
   func respond(_ id: UUID, _ text: String) async throws -> String
   func end(_ id: UUID) async
 }
