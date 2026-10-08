@@ -111,9 +111,14 @@ struct ClassCoordinatorTests {
     #expect(votedStats.totalCount == previousStats.totalCount + 1)
     #expect(votedStats.options[0].voteCount == previousStats.options[0].voteCount + 1)
 
-    _ = try await session.createPerspective(battleId: battleID, content: "반대 의견", optionId: 2)
+    let opinion = try await session.createPerspective(
+      battleId: battleID,
+      content: "다른 탭에서 쓴 의견",
+      optionId: 2
+    )
     let battleAfterOpinion = try await session.fetchBattle(battleId: battleID)
     let statsAfterOpinion = try await session.fetchVoteStats(battleId: battleID)
+    #expect(opinion?.option.optionId == 1)
     #expect(battleAfterOpinion.userVoteStatus == .pro)
     #expect(statsAfterOpinion.options[0].voteCount == votedStats.options[0].voteCount)
     #expect(statsAfterOpinion.options[1].voteCount == votedStats.options[1].voteCount)
@@ -182,9 +187,10 @@ struct ClassCoordinatorTests {
     let created = try await session.createPerspective(
       battleId: battleID,
       content: "B를 선택한 의견",
-      optionId: nil
+      optionId: 1
     )
     let perspective = try #require(created)
+    #expect(perspective.option.optionId == 2)
     _ = try await session.createComment(perspectiveId: perspective.perspectiveId, content: "동의해요")
 
     let comments = try await session.fetchLabeledComments(

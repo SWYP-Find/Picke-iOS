@@ -264,7 +264,7 @@ actor ClassMockChatSession: BattleInterface, PerspectiveInterface, CommentInterf
   ) async throws -> BattlePerspective? {
     var value = try entry(for: battleId)
     value.perspectiveContent = content
-    value.perspectiveOptionID = optionId
+    value.perspectiveOptionID = value.postVoteOptionID ?? value.preVoteOptionID ?? optionId
     entries[battleId] = value
     return perspective(for: value, battleID: battleId)
   }

@@ -74,7 +74,7 @@ public struct ClassOwnerDashboardFeature {
         ClassOwnerMember(id: 6, name: "한도윤", participationCount: 0, needsReview: true),
       ]
       state.members += (7 ... 32).map { id in
-        ClassOwnerMember(id: id, name: "희망 \(id)", participationCount: id < 30 ? 1 : 0)
+        ClassOwnerMember(id: id, name: "희망 \(id)", participationCount: id < 32 ? 1 : 0)
       }
       state.opinions = [
         ClassOwnerOpinion(

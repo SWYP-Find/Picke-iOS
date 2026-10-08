@@ -124,19 +124,20 @@ struct ClassOwnerDashboardTests {
     #expect(store.state.visibleOpinions.map(\.id) == [1])
   }
 
-  #if DEBUG
-    @Test
-    func 미리보기_참여_수치와_멤버_목록이_같은_인원을_사용한다() {
-      let state = ClassOwnerDashboardFeature.State.preview(room: ClassRoom.mocks[0])
-      let participated = state.members.filter { $0.participationCount > 0 }.count
+  @Test
+  func 미리보기_참여_수치와_멤버_목록이_같은_인원을_사용한다() {
+    let state = ClassOwnerDashboardFeature.State.preview(room: ClassRoom.mocks[0])
+    let participated = state.members.filter { $0.participationCount > 0 }.count
 
-      #expect(state.members.count == 32)
-      #expect(participated == 28)
-      #expect(state.previewMetrics?.optionAVoteCount == 18)
-      #expect(state.previewMetrics?.optionBVoteCount == 10)
-      #expect(state.previewMetrics?.commentAuthorCount == 24)
-    }
-  #endif
+    #expect(state.members.count == 32)
+    #expect(participated == 28)
+    #expect(state.previewMetrics?.optionAVoteCount == 18)
+    #expect(state.previewMetrics?.optionBVoteCount == 10)
+    #expect(state.previewMetrics?.commentAuthorCount == 24)
+    let voteCount = (state.previewMetrics?.optionAVoteCount ?? 0)
+      + (state.previewMetrics?.optionBVoteCount ?? 0)
+    #expect(participated == voteCount)
+  }
 
   @Test
   func 서버_연동_전에는_피드백_등록을_전송하지_않는다() async {
