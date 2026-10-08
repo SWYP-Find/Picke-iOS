@@ -47,6 +47,46 @@ struct ClassDomainTests {
   }
 
   @Test
+  func AI_목_배틀은_별도_생성_경로로_저장된다() async throws {
+    let repository = MockClassRepository(rooms: [], availableRooms: [])
+    let source = ClassBattleSummary.mocks[0]
+    let battle = ClassBattleSummary(
+      id: -1,
+      title: "새 AI 질문",
+      summary: "설명",
+      philosopherA: "A 관점",
+      optionATitle: "A",
+      philosopherB: "B 관점",
+      optionBTitle: "B",
+      category: .philosophy,
+      level: .middle,
+      audioDuration: 0,
+      viewCount: 0
+    )
+    let creation = ClassCreation(
+      name: "AI 수업",
+      deadline: Date(timeIntervalSince1970: 1_800_000_000),
+      battleId: battle.id,
+      allowsAnonymousOpinion: false,
+      requiresComment: true
+    )
+    let created = try await repository.createClass(creation, battle: battle)
+    #expect(created.battle == battle)
+    #expect(created.role == .owner)
+    #expect(try await repository.fetchMyClasses() == [created])
+    #expect(try await repository.fetchClass(joinCode: created.joinCode) == created)
+
+    var mismatched = creation
+    mismatched.battleId = source.id
+    do {
+      _ = try await repository.createClass(mismatched, battle: battle)
+      Issue.record("다른 배틀 ID로 생성됨")
+    } catch {
+      #expect(try await repository.fetchMyClasses() == [created])
+    }
+  }
+
+  @Test
   func 참여하면_학생_역할로_목록에_추가되고_중복_참여는_거부한다() async throws {
     let repository = MockClassRepository(rooms: [], availableRooms: [.mockJoinable])
     let joined = try await repository.joinClass(joinCode: "PK9T3S", nickname: "민지")

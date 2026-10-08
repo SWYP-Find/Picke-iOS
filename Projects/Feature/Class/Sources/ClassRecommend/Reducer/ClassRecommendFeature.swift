@@ -107,7 +107,7 @@ public struct ClassRecommendFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case select(ClassBattleSummary)
-    case selectAIQuestion(ClassAIQuestion)
+    case selectAIQuestion(ClassAIQuestion, ClassTopicFilter)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -177,7 +177,7 @@ extension ClassRecommendFeature {
     case .selectTapped:
       if state.mode == .aiQuestions {
         guard let question = state.selectedQuestion else { return .none }
-        return .send(.delegate(.selectAIQuestion(question)))
+        return .send(.delegate(.selectAIQuestion(question, state.filter)))
       }
       guard let battle = state.selectedBattle else { return .none }
       return .send(.delegate(.select(battle)))

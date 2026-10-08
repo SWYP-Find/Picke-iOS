@@ -70,7 +70,8 @@ struct ClassRecommendTests {
 
   @Test
   func AI_예시_질문을_선택하면_설정_경로로_전달한다() async {
-    let store = TestStore(initialState: ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)) {
+    let filter = ClassTopicFilter(keyword: "뫼르소", level: .high, category: .literature)
+    let store = TestStore(initialState: ClassRecommendFeature.State(filter: filter, mode: .aiQuestions)) {
       ClassRecommendFeature()
     }
 
@@ -81,6 +82,6 @@ struct ClassRecommendTests {
       $0.selectedQuestionId = 1
     }
     await store.send(.view(.selectTapped))
-    await store.receive(\.delegate.selectAIQuestion, ClassAIQuestion.examples[0])
+    await store.receive(\.delegate, .selectAIQuestion(ClassAIQuestion.examples[0], filter))
   }
 }

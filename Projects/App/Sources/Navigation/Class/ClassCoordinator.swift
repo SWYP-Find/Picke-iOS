@@ -33,7 +33,7 @@ public struct ClassCoordinator {
         return members.filter == nil && members.editName == nil && members.customAlert == nil
       case let .myClasses(myClasses)?:
         return myClasses.modal == nil && myClasses.customAlert == nil
-      case .ownerDashboard?:
+      case .ownerDashboard?, .report?:
         return true
       default:
         return false
@@ -131,8 +131,8 @@ private extension ClassCoordinator {
       state.routes.push(.setting(.init(battle: battle)))
       return .none
 
-    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question)))):
-      state.routes.push(.setting(.init(aiQuestion: question)))
+    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question, filter)))):
+      state.routes.push(.setting(.init(aiQuestion: question, filter: filter)))
       return .none
 
     case .routeAction(_, action: .setting(.delegate(.dismiss))):
@@ -238,7 +238,14 @@ private extension ClassCoordinator {
 
     case let .routeAction(_, action: .detail(.delegate(.openReport(room)))):
       if room.role == .owner {
-        state.routes.push(.ownerDashboard(.init(room: room)))
+        #if DEBUG
+          let dashboard: ClassOwnerDashboardFeature.State = room == ClassRoom.mocks[0]
+            ? .preview(room: room)
+            : .init(room: room)
+          state.routes.push(.ownerDashboard(dashboard))
+        #else
+          state.routes.push(.ownerDashboard(.init(room: room)))
+        #endif
       } else {
         state.routes.push(.report(.init(room: room)))
       }

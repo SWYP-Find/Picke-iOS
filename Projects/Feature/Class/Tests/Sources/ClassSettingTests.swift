@@ -51,7 +51,7 @@ struct ClassSettingTests {
 
   @Test
   func AI_질문_클래스_만들기는_안내를_표시하고_생성하지_않는다() async {
-    var state = ClassSettingFeature.State(aiQuestion: ClassAIQuestion.examples[0], deadline: deadline)
+    var state = ClassSettingFeature.State(aiQuestion: ClassAIQuestion.examples[0], filter: .init(), deadline: deadline)
     state.name = "2학년 3반"
     #expect(state.creation == nil)
 
@@ -64,5 +64,96 @@ struct ClassSettingTests {
     await store.send(.unavailableNotice(.presented(.dismissTapped))) {
       $0.unavailableNotice = nil
     }
+  }
+
+  @Test
+  func AI_질문_필드를_목_배틀과_생성_요청으로_변환한다() throws {
+    let question = ClassAIQuestion.examples[0]
+    var state = ClassSettingFeature.State(
+      aiQuestion: question,
+      filter: .init(level: .high, category: .literature),
+      deadline: deadline
+    )
+    state.name = " 2학년 3반 "
+    state.requiresComment = true
+    let battle = try #require(state.aiBattle)
+    #expect(battle.id == -question.id)
+    #expect(battle.title == question.title)
+    #expect(battle.summary == question.summary)
+    #expect(battle.optionATitle == question.optionATitle)
+    #expect(battle.philosopherA == question.optionADescription)
+    #expect(battle.optionBTitle == question.optionBTitle)
+    #expect(battle.philosopherB == question.optionBDescription)
+    #expect(battle.category == .literature)
+    #expect(battle.level == .high)
+    #expect(battle.audioDuration == 0)
+    #expect(battle.viewCount == 0)
+    #expect(state.aiCreation?.name == "2학년 3반")
+    #expect(state.aiCreation?.battleId == battle.id)
+    #expect(state.aiCreation?.requiresComment == true)
+  }
+
+  @Test
+  func 목_저장소가_있을_때_AI_클래스를_만들고_라이브_유스케이스는_호출하지_않는다() async throws {
+    let repository = MockClassRepository(rooms: [], availableRooms: [])
+    var state = ClassSettingFeature.State(
+      aiQuestion: ClassAIQuestion.examples[1],
+      filter: .init(level: .adult, category: .society),
+      deadline: deadline
+    )
+    state.name = "AI 토론"
+    let creation = try #require(state.aiCreation)
+    let battle = try #require(state.aiBattle)
+    let store = TestStore(initialState: state) {
+      ClassSettingFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+      $0.classUseCase = FailingClassUseCase()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.createTapped))
+    try await store.receive(\.async, .createAI(creation, battle)) {
+      $0.isLoading = true
+    }
+    await store.receive(\.inner.created) {
+      $0.isLoading = false
+    }
+    await store.receive(\.delegate.created)
+    let rooms = try await repository.fetchMyClasses()
+    #expect(rooms.count == 1)
+    #expect(rooms[0].battle == battle)
+  }
+}
+
+private struct FailingClassUseCase: ClassInterface {
+  func fetchMyClasses() async throws -> [ClassRoom] {
+    fatalError("live use case called")
+  }
+
+  func fetchRecommendedBattles(filter _: ClassTopicFilter) async throws
+    -> [ClassBattleSummary]
+  {
+    fatalError("live use case called")
+  }
+
+  func createClass(_: ClassCreation) async throws -> ClassRoom {
+    fatalError("live use case called")
+  }
+
+  func fetchClass(joinCode _: String) async throws -> ClassRoom {
+    fatalError("live use case called")
+  }
+
+  func joinClass(joinCode _: String, nickname _: String) async throws -> ClassRoom {
+    fatalError("live use case called")
+  }
+
+  func updateDeadline(id _: Int, deadline _: Date) async throws -> ClassRoom {
+    fatalError("live use case called")
+  }
+
+  func deleteClass(id _: Int) async throws {
+    fatalError("live use case called")
   }
 }

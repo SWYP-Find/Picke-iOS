@@ -11,6 +11,7 @@ import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
 import PickeAnalyticsInterface
+import PickeAuthInterface
 import PickeCoreLogger
 import PickeCoreUtility
 
@@ -25,12 +26,6 @@ public struct AppReducer: Sendable {
     case mainTab(MainTabCoordinator.State)
 
     public init() {
-      #if DEBUG && targetEnvironment(simulator)
-        if ProcessInfo.processInfo.arguments.contains("-picke-class-visual-qa") {
-          self = .mainTab(.init(selectedTab: MainTabCoordinator.Tab.classroom.rawValue))
-          return
-        }
-      #endif
       self = .splash(SplashFeature.State())
     }
 
@@ -335,7 +330,7 @@ public struct AppReducer: Sendable {
   private func setupRefreshTokenExpiredListener() -> Effect<Action> {
     return .publisher {
       NotificationCenter.default
-        .publisher(for: NSNotification.Name("RefreshTokenExpired"))
+        .publisher(for: .pickeAuthSessionDidExpire)
         .map { _ in Action.async(.refreshTokenExpired) }
     }
     .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true)

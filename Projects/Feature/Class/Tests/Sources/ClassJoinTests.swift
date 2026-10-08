@@ -65,6 +65,48 @@ struct ClassJoinTests {
   }
 
   @Test
+  func 운영자_이름은_참여_API_호출_없이_목_저장소에_저장한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room])
+    var state = ClassJoinFeature.State(mode: .ownerName, preview: room)
+    state.nickname = " 새 운영자 "
+    let store = TestStore(initialState: state) {
+      ClassJoinFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+      $0.classUseCase = StubClassUseCase(joinClass: { _, _ in
+        Issue.record("운영자 이름 저장에서 joinClass를 호출하면 안 됩니다.")
+        throw ClassError.invalidCode
+      })
+    }
+
+    await store.send(.view(.joinTapped))
+    await store.receive(\.async.nameOwner) {
+      $0.isLoading = true
+    }
+    await store.receive(\.inner.ownerNamed) {
+      $0.isLoading = false
+      $0.preview = nil
+    }
+    await store.receive(\.delegate.ownerNamed, room)
+
+    let memberID = try await repository.currentMemberID(roomID: room.id)
+    let members = try await repository.fetchMembers(roomID: room.id)
+    #expect(members.first(where: { $0.id == memberID })?.name == "새 운영자")
+  }
+
+  @Test
+  func 운영자_이름이_비어_있으면_저장하지_않는다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: ClassJoinFeature.State(mode: .ownerName, preview: room)) {
+      ClassJoinFeature()
+    }
+
+    #expect(!store.state.canJoin)
+    await store.send(.view(.joinTapped))
+  }
+
+  @Test
   func 잘못된_코드_조회는_오류를_상태에_저장한다() async {
     let store = TestStore(initialState: ClassJoinFeature.State()) {
       ClassJoinFeature()

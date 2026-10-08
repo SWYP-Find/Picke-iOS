@@ -14,6 +14,7 @@ struct ClassReportPreviewContent {
   }
 
   let texts: [Key: String]
+  let myOpinions: [String]
   let initialVoteLeading: CGFloat
   let finalVoteLeading: CGFloat
 
@@ -26,8 +27,8 @@ struct ClassReportPreviewContent {
   extension ClassReportPreviewContent {
     static let figma = Self(
       texts: [
-        .aiSummaryTitle: "다른 해결방법까지 생각을 확장했어요",
-        .aiSummaryDetail: "“교육과 보호도 함께 필요하다”는 대댓글에서 처벌 외의 대안을 제시했어요",
+        .aiSummaryTitle: "이번 토론에서 생각의 기준이 넓어졌어요",
+        .aiSummaryDetail: "처음에는 뫼르소의 태도를 비난할 수 있다는 의견이 많았지만, 대화 후에는 행동과 감정을 분리해서 봐야 한다는 의견이 늘어났어요.",
         .teacherSummary: "“왜 생각이 달라졌는지 자신의 말로 설명한 점이 좋았어요”",
         .commentStance: "낮춰야한다",
         .commentDate: "26.09.23. 14:02",
@@ -46,10 +47,10 @@ struct ClassReportPreviewContent {
         .bestBody: "“피해자 보호를 위한 기준도 함께 필요하지 않을까요?”",
         .bestLikes: "1,340",
         .bestReplies: "23",
-        .feedbackTitle1: "내 생각의 변화를 설명했어요",
-        .feedbackDetail1: "“처벌만으로는 해결되지 않는 점”을 언급하며, 처음과 입장이 달리진 이유를 드러냈어요.",
-        .feedbackTitle2: "다른 해결방법을 제안했어요",
-        .feedbackDetail2: "반대의견에 그치지 않고 “교육과 보호”라는 대안을 덧붙였어요.",
+        .feedbackTitle1: "처벌의 필요성에서 교정 가능성까지 함께 보기 시작했어요",
+        .feedbackDetail1: "처음에는 범죄에 대한 책임을 중요하게 봤지만, 대화를 거치며 재범을 줄이기 위한 교육과 보호의 역할도 함께 고려했어요.",
+        .feedbackTitle2: "반대하는 데서 끝나지 않고 다른 해결 방향을 제시했어요",
+        .feedbackDetail2: "“처벌만으로는 해결되지 않는다”는 생각에서 한 걸음 더 나아가 교육과 보호라는 대안을 의견에 덧붙였어요.",
         .feedbackTitle3: "근거를 한 단계 더 구체적으로",
         .feedbackDetail3: "교육과 보호가 재범을 줄이는 데 어떤 도움이 되는지, 사례나 자료 하나를 연결하면 주장이 더 설득력 있어져요.",
         .nextQuestion: "처벌과 교화를 함께 한다면,\n무엇을 기준으로 균형을 잡을까요?",
@@ -59,9 +60,14 @@ struct ClassReportPreviewContent {
         .teacherDate: "26.09.23. 14:02",
         .initialChoice: "낮춰야 한다",
         .finalChoice: "교정이 우선이다",
-        .commentCount: "1",
-        .replyCount: "12",
-        .receivedLikeCount: "8",
+        .commentCount: "2",
+        .replyCount: "3",
+        .receivedLikeCount: "12",
+      ],
+      myOpinions: [
+        "처벌만으로 문제를 해결하기보다 교육과 보호의 역할도 함께 생각해야 한다고 봐요.",
+        "피해자의 안전을 지키면서도 다시 같은 일이 일어나지 않게 도울 방법이 필요해요.",
+        "토론을 들으며 연령만 낮추는 것보다 교정의 기준을 세우는 일이 중요하다고 느꼈어요.",
       ],
       initialVoteLeading: 0.64,
       finalVoteLeading: 0.50

@@ -11,6 +11,7 @@ import PickeSharedUI
 @Reducer
 public struct ClassSettingFeature {
   @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classMockRepository) private var classMockRepository
 
   public init() {}
 
@@ -18,6 +19,7 @@ public struct ClassSettingFeature {
   public struct State: Equatable {
     public var battle: ClassBattleSummary?
     public var aiQuestion: ClassAIQuestion?
+    public var filter: ClassTopicFilter?
     public var name = ""
     public var deadline: Date
     public var isDeadlineEnabled = true
@@ -38,9 +40,11 @@ public struct ClassSettingFeature {
 
     public init(
       aiQuestion: ClassAIQuestion,
+      filter: ClassTopicFilter,
       deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60)
     ) {
       self.aiQuestion = aiQuestion
+      self.filter = filter
       self.deadline = deadline
     }
 
@@ -58,6 +62,35 @@ public struct ClassSettingFeature {
         name: trimmedName,
         deadline: isDeadlineEnabled ? deadline : .distantFuture,
         battleId: battle.id,
+        allowsAnonymousOpinion: false,
+        requiresComment: requiresComment
+      )
+    }
+
+    public var aiBattle: ClassBattleSummary? {
+      guard let aiQuestion, let filter, aiQuestion.id > 0 else { return nil }
+      return ClassBattleSummary(
+        id: -aiQuestion.id,
+        title: aiQuestion.title,
+        summary: aiQuestion.summary,
+        philosopherA: aiQuestion.optionADescription,
+        optionATitle: aiQuestion.optionATitle,
+        philosopherB: aiQuestion.optionBDescription,
+        optionBTitle: aiQuestion.optionBTitle,
+        category: ClassCategory.allCases.first(where: { $0.title == aiQuestion.category })
+          ?? filter.category ?? .philosophy,
+        level: filter.level,
+        audioDuration: 0,
+        viewCount: 0
+      )
+    }
+
+    public var aiCreation: ClassCreation? {
+      guard let aiBattle else { return nil }
+      return ClassCreation(
+        name: trimmedName,
+        deadline: isDeadlineEnabled ? deadline : .distantFuture,
+        battleId: aiBattle.id,
         allowsAnonymousOpinion: false,
         requiresComment: requiresComment
       )
@@ -94,6 +127,7 @@ public struct ClassSettingFeature {
 
   public enum AsyncAction: Equatable {
     case create(ClassCreation)
+    case createAI(ClassCreation, ClassBattleSummary)
   }
 
   @CasePathable
@@ -173,8 +207,14 @@ extension ClassSettingFeature {
     case .createTapped:
       guard state.canCreate else { return .none }
       if state.aiQuestion != nil {
-        state.unavailableNotice = .init()
-        return .none
+        guard classMockRepository != nil,
+              let creation = state.aiCreation,
+              let battle = state.aiBattle
+        else {
+          state.unavailableNotice = .init()
+          return .none
+        }
+        return .send(.async(.createAI(creation, battle)))
       }
       guard let creation = state.creation else { return .none }
       return .send(.async(.create(creation)))
@@ -192,6 +232,19 @@ extension ClassSettingFeature {
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.createClass(creation)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.created(result)))
+      }
+      .cancellable(id: CancelID.create, cancelInFlight: true)
+
+    case let .createAI(creation, battle):
+      guard let classMockRepository else { return .none }
+      state.isLoading = true
+      state.errorMessage = nil
+      return .run { send in
+        let result = await Result {
+          try await classMockRepository.createClass(creation, battle: battle)
         }
         .mapError(ClassError.from)
         await send(.inner(.created(result)))

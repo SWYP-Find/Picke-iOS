@@ -97,7 +97,7 @@ private extension ClassDetailView {
         informationRow(
           "참여 마감일",
           detail: store.deadlineText,
-          actionTitle: "수정"
+          actionTitle: store.room.role == .owner ? "수정" : nil
         )
       }
       .buttonStyle(.plain)
@@ -110,7 +110,11 @@ private extension ClassDetailView {
   }
 
   @ViewBuilder
-  func informationRow(_ title: String, detail: String, actionTitle: String) -> some View {
+  func informationRow(
+    _ title: String,
+    detail: String,
+    actionTitle: String?
+  ) -> some View {
     HStack(spacing: 8) {
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
@@ -121,13 +125,15 @@ private extension ClassDetailView {
           .foregroundStyle(.gray300)
       }
       Spacer(minLength: 0)
-      HStack(spacing: 4) {
-        Text(actionTitle)
-          .pretendardFont(family: .Bold, size: 12)
-        Image(systemName: "chevron.right")
-          .font(.system(size: 10, weight: .semibold))
+      if let actionTitle {
+        HStack(spacing: 4) {
+          Text(actionTitle)
+            .pretendardFont(family: .Bold, size: 12)
+          Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(.primary500)
       }
-      .foregroundStyle(.primary500)
     }
     .frame(height: 64)
   }
@@ -189,8 +195,8 @@ private extension ClassDetailView {
   @ViewBuilder
   func actionButtons() -> some View {
     VStack(spacing: 12) {
-      Button { send(.codeTapped) } label: {
-        Text("참여 코드 보기")
+      Button { send(.battleTapped) } label: {
+        Text("배틀 참여")
           .pretendardFont(.headingMedium)
           .foregroundStyle(.primary500)
           .frame(maxWidth: .infinity)

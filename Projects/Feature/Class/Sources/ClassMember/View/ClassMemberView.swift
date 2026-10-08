@@ -87,14 +87,6 @@ private extension ClassMemberView {
       TextField("이름을 입력해주세요.", text: $store.searchText)
         .pretendardFont(family: .Medium, size: 13)
         .foregroundStyle(.gray800)
-
-      Button { send(.filterTapped) } label: {
-        Image(systemName: "slider.horizontal.3")
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(.gray500)
-          .frame(width: 32, height: 32)
-      }
-      .accessibilityLabel("멤버 필터")
     }
     .padding(.horizontal, 12)
     .frame(height: 44)

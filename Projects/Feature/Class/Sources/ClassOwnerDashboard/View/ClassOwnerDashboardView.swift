@@ -4,11 +4,6 @@ import Foundation
 import PickeDesignKit
 import SwiftUI
 
-private enum MemberRowAction: String {
-  case detail = "상세"
-  case feedback = "피드백"
-}
-
 @ViewAction(for: ClassOwnerDashboardFeature.self)
 public struct ClassOwnerDashboardView: View {
   @Bindable public var store: StoreOf<ClassOwnerDashboardFeature>
@@ -24,13 +19,9 @@ public struct ClassOwnerDashboardView: View {
 
       titleHeader()
       dashboardTabs()
-      TabView(selection: Binding(
-        get: { store.selectedTab },
-        set: { send(.tabSelected($0)) }
-      )) {
+      TabView(selection: $store.selectedTab.sending(\.view.tabSelected)) {
         ScrollView { homePage().padding(16) }.tag(ClassOwnerTab.home)
-        ScrollView { membersPage().padding(16) }.tag(ClassOwnerTab.members)
-        ScrollView { opinionsPage().padding(16) }.tag(ClassOwnerTab.opinions)
+        ScrollView { reportPage().padding(16) }.tag(ClassOwnerTab.report)
       }
       .tabViewStyle(.page(indexDisplayMode: .never))
     }
@@ -44,12 +35,11 @@ private extension ClassOwnerDashboardView {
   func titleHeader() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
-        Text(store.room.status == .open ? "진행 중" : "종료")
-          .foregroundStyle(.primary500)
+        Text(store.room.status == .closed || reportPreviewContent != nil ? "마감" : "진행 중")
+          .pickeBadge(.filled, size: .tag)
         Text("#\(store.room.battle.category.title)")
-          .foregroundStyle(.gray500)
+          .pickeBadge(.filled, size: .tag)
       }
-      .pretendardFont(.medium13)
       Text(store.room.battle.title)
         .pretendardFont(.semiBold24)
         .foregroundStyle(.gray800)
@@ -57,7 +47,7 @@ private extension ClassOwnerDashboardView {
         .frame(maxWidth: .infinity, alignment: .leading)
       Text("\(Self.deadlineFormatter.string(from: store.room.deadline))까지")
         .pretendardFont(.medium13)
-        .foregroundStyle(.gray500)
+        .foregroundStyle(.gray300)
     }
     .padding(.horizontal, 16)
     .frame(height: 118, alignment: .center)
@@ -70,23 +60,16 @@ private extension ClassOwnerDashboardView {
     return formatter
   }()
 
-  static let opinionDateFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "ko_KR")
-    formatter.dateFormat = "yy.MM.dd. HH:mm"
-    return formatter
-  }()
-
   @ViewBuilder
   func dashboardTabs() -> some View {
     HStack(spacing: 0) {
       ForEach(ClassOwnerTab.allCases, id: \.self) { tab in
         Button { send(.tabSelected(tab)) } label: {
-          Text(tab == .home ? "요약" : tab.rawValue)
+          Text(tab.rawValue)
             .pretendardFont(family: .Medium, size: 13)
             .foregroundStyle(store.selectedTab == tab ? .primary500 : .gray300)
             .frame(maxWidth: .infinity)
-            .frame(height: 36)
+            .frame(height: 44)
             .overlay(alignment: .bottom) {
               Rectangle()
                 .fill(store.selectedTab == tab ? .primary500 : .gray100)
@@ -101,6 +84,22 @@ private extension ClassOwnerDashboardView {
   @ViewBuilder
   func homePage() -> some View {
     VStack(alignment: .leading, spacing: 24) {
+      if let content = reportPreviewContent {
+        VStack(alignment: .leading, spacing: 8) {
+          ClassAIInsightHeading(title: "AI 인사이트")
+          Text(content[.aiSummaryDetail])
+            .pretendardFont(.regular13)
+        }
+        .foregroundStyle(.primary500)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+        .overlay(RoundedRectangle(cornerRadius: 2).stroke(.primary100, lineWidth: 1))
+      } else {
+        dashboardSection("AI 인사이트") {
+          unavailableContent("AI 인사이트를 준비 중이에요")
+        }
+      }
       dashboardSection("클래스 참여 현황") {
         if let metrics = previewMetrics {
           let total = store.members.count
@@ -111,14 +110,16 @@ private extension ClassOwnerDashboardView {
               value: percentage(participated, of: total),
               detail: "참여한 멤버",
               count: "\(participated) / \(total)명",
-              progress: ratio(participated, of: total)
+              progress: ratio(participated, of: total),
+              tint: .primary500
             )
             participationRow(
               "댓글 작성율",
               value: percentage(metrics.commentAuthorCount, of: total),
               detail: "댓글을 남긴 멤버",
               count: "\(metrics.commentAuthorCount) / \(total)명",
-              progress: ratio(metrics.commentAuthorCount, of: total)
+              progress: ratio(metrics.commentAuthorCount, of: total),
+              tint: .secondary500
             )
           }
           .frame(height: 152)
@@ -137,23 +138,30 @@ private extension ClassOwnerDashboardView {
               Circle().stroke(.beige600, lineWidth: 11)
               Circle()
                 .trim(from: 0, to: ratio(metrics.optionAVoteCount, of: total))
-                .stroke(.primary500, style: StrokeStyle(lineWidth: 11, lineCap: .round))
-                .rotationEffect(.degrees(-90))
+                .stroke(.primary500, style: StrokeStyle(lineWidth: 11, lineCap: .butt))
+              Circle()
+                .trim(from: ratio(metrics.optionAVoteCount, of: total), to: total > 0 ? 1 : 0)
+                .stroke(.secondary500, style: StrokeStyle(lineWidth: 11, lineCap: .butt))
               VStack(spacing: 0) {
                 Text("\(total)명").pretendardFont(.semiBold24)
-                Text("총 참여").pretendardFont(.regular10)
+                Text("총 참여").pretendardFont(.regular10).foregroundStyle(.gray500)
               }
             }
             .frame(width: 92, height: 92)
-            VStack(alignment: .leading, spacing: 6) {
-              Text(
-                "\(store.room.battle.optionATitle)  \(metrics.optionAVoteCount)명 · \(roundedPercentage(metrics.optionAVoteCount, of: total))"
+            VStack(alignment: .leading, spacing: 14) {
+              stanceLegendRow(
+                store.room.battle.optionATitle,
+                count: metrics.optionAVoteCount,
+                total: total,
+                tint: .primary500
               )
-              Text(
-                "\(store.room.battle.optionBTitle)  \(metrics.optionBVoteCount)명 · \(roundedPercentage(metrics.optionBVoteCount, of: total))"
+              stanceLegendRow(
+                store.room.battle.optionBTitle,
+                count: metrics.optionBVoteCount,
+                total: total,
+                tint: .secondary500
               )
             }
-            .pretendardFont(.regular13)
           }
           .foregroundStyle(.gray700)
           .padding(16)
@@ -165,28 +173,6 @@ private extension ClassOwnerDashboardView {
           unavailableContent("입장 분포를 불러올 수 없어요")
         }
       }
-      dashboardSection("확인이 필요한 멤버") {
-        switch store.needsReviewViewState {
-        case .unavailable:
-          unavailableContent("멤버 활동 정보가 없어요")
-        case .empty:
-          unavailableContent("확인이 필요한 멤버가 없어요")
-        case let .loaded(members):
-          ForEach(members) { memberRow($0, action: .feedback) }
-        }
-      }
-      dashboardSection("참여도가 높은 멤버") {
-        switch store.highParticipationViewState {
-        case .unavailable:
-          unavailableContent("멤버 활동 정보가 없어요")
-        case .empty:
-          unavailableContent("아직 참여한 멤버가 없어요")
-        case let .loaded(members):
-          ForEach(members) { member in
-            memberRow(member, action: .detail)
-          }
-        }
-      }
       dashboardSection("주요 의견") {
         switch store.topOpinionViewState {
         case .empty:
@@ -194,92 +180,139 @@ private extension ClassOwnerDashboardView {
         case .unavailable:
           unavailableContent("주요 의견을 집계할 수 없어요")
         case let .loaded(opinions):
-          ForEach(opinions) { opinion in opinionRow(opinion) }
+          topOpinionCard(opinions)
         }
       }
     }
   }
 
   @ViewBuilder
-  func membersPage() -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HStack(spacing: 8) {
-        Image(systemName: "magnifyingglass")
-          .foregroundStyle(.gray500)
-        TextField("이름을 입력해주세요.", text: Binding(
-          get: { store.searchText },
-          set: { send(.searchTextChanged($0)) }
-        ))
-        .pretendardFont(.regular13)
-      }
-      .padding(.horizontal, 12)
-      .frame(height: 44)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-      .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
-          ForEach(ClassOwnerDashboardFeature.MemberFilter.allCases, id: \.self) { filter in
-            Button { send(.memberFilterSelected(filter)) } label: {
-              Text(memberFilterTitle(filter))
-                .pickeSortChip(isSelected: store.memberFilter == filter)
+  func reportPage() -> some View {
+    VStack(alignment: .leading, spacing: 24) {
+      dashboardSection("내 투표 결과") {
+        if let content = reportPreviewContent {
+          VStack(spacing: 16) {
+            HStack(spacing: 8) {
+              reportChoice("사전 선택", value: content[.initialChoice])
+              Text("입장 변경")
+                .pretendardFont(.semiBold13)
+                .foregroundStyle(.beige50)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.primary500, in: Capsule())
+              reportChoice("사후 선택", value: content[.finalChoice])
             }
-            .buttonStyle(.plain)
-            .disabled(store.members.isEmpty && filter != .all)
-            .opacity(store.members.isEmpty && filter != .all ? 0.5 : 1)
-          }
-        }
-      }
-      Text(store.members.isEmpty ? "클래스 멤버 \(store.room.memberCount)" : "멤버 \(store.members.count)")
-        .pretendardFont(.semiBold15).foregroundStyle(.gray800)
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 8) {
-          ForEach(ClassOwnerMemberSort.allCases, id: \.self) { sort in
-            Button { send(.memberSortSelected(sort)) } label: {
-              Text(sort.rawValue).pickeSortChip(isSelected: store.memberSort == sort)
+            .padding(.vertical, 12)
+            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+
+            HStack(spacing: 0) {
+              reportActivity(content[.commentCount], label: "댓글")
+              Rectangle().fill(.beige600).frame(width: 1, height: 36)
+              reportActivity(content[.replyCount], label: "대댓글")
+              Rectangle().fill(.beige600).frame(width: 1, height: 36)
+              reportActivity(content[.receivedLikeCount], label: "받은 추천")
             }
-            .buttonStyle(.plain)
           }
+          .padding(16)
+          .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+          .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+        } else {
+          unavailableContent("내 투표와 참여 기록을 불러올 수 없어요")
         }
       }
-      switch store.memberViewState {
-      case .unavailable:
-        unavailableContent("멤버 활동 정보가 없어요")
-      case .noSearchResults:
-        unavailableContent("검색 결과가 없어요")
-      case let .loaded(members):
-        ForEach(members) { member in
-          memberRow(member, action: member.needsReview ? .feedback : .detail)
+
+      dashboardSection("AI 피드백") {
+        if let content = reportPreviewContent {
+          VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+              ClassAIInsightHeading(title: content[.aiSummaryTitle])
+              Text(content[.aiSummaryDetail]).pretendardFont(.regular13)
+            }
+            .foregroundStyle(.primary500)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.primary50)
+
+            VStack(alignment: .leading, spacing: 16) {
+              reportInsight("생각의 흐름", title: content[.feedbackTitle1], detail: content[.feedbackDetail1])
+              Rectangle().fill(.beige600).frame(height: 1)
+              reportInsight("내가 더한 관점", title: content[.feedbackTitle2], detail: content[.feedbackDetail2])
+              Rectangle().fill(.beige600).frame(height: 1)
+              Button { send(.myOpinionsTapped) } label: {
+                HStack {
+                  Text("내가 남긴 의견 \(content.myOpinions.count)개 보기")
+                  Spacer()
+                  Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.down")
+                }
+                .pretendardFont(.semiBold13)
+                .foregroundStyle(.primary500)
+              }
+              .buttonStyle(.plain)
+              if store.showsMyOpinions {
+                ForEach(content.myOpinions, id: \.self) { opinion in
+                  Text(opinion)
+                    .pretendardFont(.regular13)
+                    .foregroundStyle(.gray700)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+                }
+              }
+            }
+            .padding(16)
+          }
+          .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+          .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+        } else {
+          unavailableContent("AI 피드백을 준비하고 있어요")
         }
+      }
+
+      dashboardSection("다음 생각 해보기") {
+        VStack(alignment: .leading, spacing: 12) {
+          Text(reportPreviewContent?[.nextQuestion] ?? store.room.battle.title)
+            .pretendardFont(family: .SemiBold, size: 18)
+            .foregroundStyle(.gray800)
+          Text(reportPreviewContent?[.nextHint] ?? "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
+            .pretendardFont(.regular13)
+            .foregroundStyle(.gray500)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
       }
     }
   }
 
-  @ViewBuilder
-  func opinionsPage() -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      opinionFilters()
-      switch store.opinionViewState {
-      case .empty:
-        unavailableContent("등록된 의견이 없어요")
-      case let .loaded(opinions):
-        ForEach(opinions) { opinion in opinionRow(opinion) }
-      }
-    }
+  var reportPreviewContent: ClassReportPreviewContent? {
+    #if DEBUG
+      usesPreviewContent ? .figma : nil
+    #else
+      nil
+    #endif
   }
 
-  @ViewBuilder
-  func opinionFilters() -> some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 8) {
-        ForEach(ClassOwnerOpinionFilter.allCases, id: \.self) { filter in
-          Button { send(.opinionFilterSelected(filter)) } label: {
-            Text(filter.rawValue).pickeSortChip(isSelected: store.activeOpinionFilter == filter)
-          }
-          .buttonStyle(.plain)
-          .disabled(!store.availableOpinionFilters.contains(filter))
-          .opacity(store.availableOpinionFilters.contains(filter) ? 1 : 0.5)
-        }
-      }
+  func reportChoice(_ label: String, value: String) -> some View {
+    VStack(spacing: 4) {
+      Text(label).pretendardFont(.regular10).foregroundStyle(.gray500)
+      Text(value).pretendardFont(.semiBold13).foregroundStyle(.gray800)
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  func reportActivity(_ count: String, label: String) -> some View {
+    VStack(spacing: 4) {
+      Text(count).pretendardFont(.semiBold24).foregroundStyle(.gray800)
+      Text(label).pretendardFont(.regular13).foregroundStyle(.gray500)
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  func reportInsight(_ label: String, title: String, detail: String) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(label).pretendardFont(.semiBold13).foregroundStyle(.primary500)
+      Text(title).pretendardFont(.semiBold15).foregroundStyle(.gray800)
+      Text(detail).pretendardFont(.regular13).foregroundStyle(.gray500)
     }
   }
 
@@ -326,20 +359,6 @@ private extension ClassOwnerDashboardView {
     return "\(Int((Double(count) / Double(total) * 100).rounded()))%"
   }
 
-  func memberFilterTitle(_ filter: ClassOwnerDashboardFeature.MemberFilter) -> String {
-    switch filter {
-    case .all: return "전체"
-    case .participated:
-      return store.members.isEmpty
-        ? "참여 완료"
-        : "참여 완료 \(store.searchedMembers.filter { $0.participationCount > 0 }.count)"
-    case .notParticipated:
-      return store.members.isEmpty
-        ? "미참여"
-        : "미참여 \(store.searchedMembers.filter { $0.participationCount == 0 }.count)"
-    }
-  }
-
   func unavailableContent(_ message: String) -> some View {
     Text(message)
       .pretendardFont(.regular13)
@@ -350,7 +369,14 @@ private extension ClassOwnerDashboardView {
       .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
   }
 
-  func participationRow(_ title: String, value: String, detail: String, count: String, progress: CGFloat) -> some View {
+  func participationRow(
+    _ title: String,
+    value: String,
+    detail: String,
+    count: String,
+    progress: CGFloat,
+    tint: Color
+  ) -> some View {
     VStack(spacing: 4) {
       HStack {
         Text(title).pretendardFont(.medium13)
@@ -367,7 +393,7 @@ private extension ClassOwnerDashboardView {
       GeometryReader { geometry in
         ZStack(alignment: .leading) {
           Capsule().fill(.beige600)
-          Capsule().fill(.primary500).frame(width: geometry.size.width * progress)
+          Capsule().fill(tint).frame(width: geometry.size.width * progress)
         }
       }
       .frame(height: 6)
@@ -377,79 +403,52 @@ private extension ClassOwnerDashboardView {
   }
 
   @ViewBuilder
-  func memberRow(_ member: ClassOwnerMember, action: MemberRowAction) -> some View {
-    HStack(spacing: 10) {
-      Button { send(.memberTapped(member.id)) } label: {
-        HStack(spacing: 10) {
-          Text(String(member.name.prefix(1))).pickeAvatarFallback(size: 32).pickeAvatar(size: 32)
-          VStack(alignment: .leading, spacing: 2) {
-            Text(member.name).pretendardFont(.medium13).foregroundStyle(.gray700)
-            Text("배틀 참여 \(member.participationCount)회").pretendardFont(.regular10).foregroundStyle(.gray300)
-          }
-          Spacer()
-        }
+  func stanceLegendRow(
+    _ title: String,
+    count: Int,
+    total: Int,
+    tint: Color
+  ) -> some View {
+    HStack(alignment: .center, spacing: 8) {
+      Circle().fill(tint).frame(width: 8, height: 8)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(title).pretendardFont(.medium13).foregroundStyle(.gray800)
+        Text("\(count)명").pretendardFont(.regular10).foregroundStyle(.gray500)
       }
-      .buttonStyle(.plain)
-
-      Button {
-        send(action == .feedback ? .feedbackTapped(member.id) : .memberTapped(member.id))
-      } label: {
-        Text(action.rawValue).pretendardFont(family: .Bold, size: 12).foregroundStyle(.primary500)
-      }
-      .buttonStyle(.plain)
+      Spacer(minLength: 8)
+      Text(roundedPercentage(count, of: total))
+        .pretendardFont(.semiBold13)
+        .foregroundStyle(.gray800)
     }
-    .padding(.vertical, 7)
   }
 
   @ViewBuilder
-  func opinionRow(_ opinion: ClassOwnerOpinion) -> some View {
-    Button { send(.opinionTapped(opinion.id)) } label: {
-      VStack(alignment: .leading, spacing: 7) {
-        HStack {
-          Text(String(opinion.author.prefix(1))).pickeAvatarFallback(size: 36).pickeAvatar(size: 36)
-          VStack(alignment: .leading, spacing: 2) {
-            Text(opinion.author).pretendardFont(.medium13).foregroundStyle(.gray500)
-            if usesPreviewContent, let createdAt = opinion.createdAt {
-              Text(Self.opinionDateFormatter.string(from: createdAt))
-                .pretendardFont(.regular10)
-                .foregroundStyle(.gray300)
-            }
-          }
-          Spacer()
-          if usesPreviewContent {
-            Text(store.room.battle.optionATitle)
-              .pretendardFont(.regular10)
-              .foregroundStyle(.primary500)
-              .padding(.horizontal, 4)
-              .frame(height: 21)
-              .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
-          }
-          if opinion.isReported {
-            Text("신고").pretendardFont(.regular10).foregroundStyle(.errorDefault)
-          }
+  func topOpinionCard(_ opinions: [ClassOwnerOpinion]) -> some View {
+    VStack(spacing: 0) {
+      ForEach(opinions.indices, id: \.self) { index in
+        let opinion = opinions[index]
+        if opinion.id != opinions.first?.id {
+          Rectangle().fill(.beige600).frame(height: 1)
         }
-        Text(opinion.text)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.gray700)
-          .multilineTextAlignment(.leading)
-          .lineLimit(2)
-        Text("자세히 보기")
-          .pretendardFont(.regular10)
-          .foregroundStyle(.gray500)
-        HStack(spacing: 16) {
-          if let recommendationCount = opinion.recommendationCount {
-            Text("추천 \(recommendationCount.formatted())")
-          }
-          Text("대댓글 \(opinion.replyCount)")
+        VStack(alignment: .leading, spacing: 8) {
+          Text(index == 0 ? "많이 나온 의견" : "다른 관점")
+            .pretendardFont(.semiBold13)
+            .foregroundStyle(.primary500)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+          Text("“\(opinion.text)”")
+            .pretendardFont(.regular13)
+            .foregroundStyle(.gray700)
+            .multilineTextAlignment(.leading)
+            .lineLimit(3)
         }
-        .pretendardFont(.regular10)
-        .foregroundStyle(.gray300)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(12)
-      .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-      .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
-    }.buttonStyle(.plain)
+    }
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
   }
 }
 
@@ -460,14 +459,8 @@ private extension ClassOwnerDashboardView {
     })
   }
 
-  #Preview("운영자 대시보드 · 멤버") {
-    ClassOwnerDashboardView(store: Store(initialState: .preview(room: ClassRoom.mocks[0], tab: .members)) {
-      ClassOwnerDashboardFeature()
-    })
-  }
-
-  #Preview("운영자 대시보드 · 의견") {
-    ClassOwnerDashboardView(store: Store(initialState: .preview(room: ClassRoom.mocks[0], tab: .opinions)) {
+  #Preview("운영자 대시보드 · 내 리포트") {
+    ClassOwnerDashboardView(store: Store(initialState: .preview(room: ClassRoom.mocks[0], tab: .report)) {
       ClassOwnerDashboardFeature()
     })
   }

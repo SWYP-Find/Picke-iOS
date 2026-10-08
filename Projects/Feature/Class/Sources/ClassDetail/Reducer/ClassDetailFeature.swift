@@ -135,7 +135,9 @@ extension ClassDetailFeature {
       return .send(.delegate(.openMembers(state.room)))
     case .battleTapped:
       #if DEBUG
-        if ClassBattleSummary.mocks.contains(where: { $0.id == state.room.battle.id }) {
+        if state.room.battle.id < 0
+          || ClassBattleSummary.mocks.contains(where: { $0.id == state.room.battle.id })
+        {
           state.customAlert = .alert(
             title: "배틀을 준비하고 있어요",
             message: "이 클래스의 배틀은 아직 참여할 수 없어요."

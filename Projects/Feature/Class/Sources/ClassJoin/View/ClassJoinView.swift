@@ -27,7 +27,7 @@ public struct ClassJoinView: View {
       switch store.mode {
       case .code:
         codeSheet()
-      case .nickname:
+      case .nickname, .ownerName:
         nicknameSheet()
       }
     }
@@ -96,10 +96,13 @@ private extension ClassJoinView {
               .foregroundStyle(.gray800)
               .frame(maxWidth: .infinity)
               .frame(height: 54)
-              .background(.beige50)
+              .background(.beige50, in: RoundedRectangle(cornerRadius: 6))
               .overlay {
-                Rectangle()
-                  .strokeBorder(.beige600, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 6)
+                  .strokeBorder(
+                    isCodeFocused && index == store.joinCode.count ? Color.primary500 : Color.beige600,
+                    lineWidth: 1
+                  )
               }
           }
         }
@@ -124,11 +127,11 @@ private extension ClassJoinView {
 
   var helpCard: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("코드를 찾을 수 없나요?")
+      Label("코드를 찾을 수 없나요?", systemImage: "questionmark.circle")
         .pretendardFont(.semiBold15)
         .foregroundStyle(.gray800)
 
-      Text("클래스를 만든 선생님이나 모임장에게\n참여 코드를 확인해 주세요.")
+      Text("클래스를 만든 모임장에게 참여 코드를 확인해 주세요.")
         .pretendardFont(.bodySmall)
         .foregroundStyle(.gray300)
     }

@@ -1,5 +1,4 @@
 public enum ClassOwnerTab: String, CaseIterable, Hashable, Sendable {
-  case home = "홈"
-  case members = "멤버"
-  case opinions = "의견"
+  case home = "클래스 요약"
+  case report = "내 리포트"
 }

@@ -45,6 +45,7 @@ public struct ClassOwnerDashboardFeature {
 
     public let room: ClassRoom
     public var selectedTab: ClassOwnerTab = .home
+    public var showsMyOpinions = false
     public var opinionFilter: ClassOwnerOpinionFilter = .popular
     public var memberSort: ClassOwnerMemberSort = .name
     public var memberFilter: MemberFilter = .all
@@ -81,7 +82,7 @@ public struct ClassOwnerDashboardFeature {
           ClassOwnerOpinion(
             id: 1,
             author: "김민지",
-            text: "피해자 보호를 위한 기준도 함께 필요하지 않을까요?",
+            text: "슬픔을 겉으로 드러내지 않는다고 해서 타인을 사랑하지 않는다고 판단할 수는 없다고 생각해요.",
             replyCount: 23,
             recommendationCount: 1340,
             createdAt: Date(timeIntervalSince1970: 1_780_000_300)
@@ -89,7 +90,7 @@ public struct ClassOwnerDashboardFeature {
           ClassOwnerOpinion(
             id: 2,
             author: "이서준",
-            text: "제도화가 선택을 의무로 바꾸지 않도록 기준이 필요해요.",
+            text: "감정은 개인의 자유지만, 사회적 관계에서는 최소한의 공감 표현도 필요하다고 생각해요.",
             replyCount: 12,
             recommendationCount: 840,
             createdAt: Date(timeIntervalSince1970: 1_780_000_200)
@@ -202,6 +203,7 @@ public struct ClassOwnerDashboardFeature {
   public enum View: Equatable {
     case backTapped
     case tabSelected(ClassOwnerTab)
+    case myOpinionsTapped
     case opinionFilterSelected(ClassOwnerOpinionFilter)
     case memberSortSelected(ClassOwnerMemberSort)
     case memberFilterSelected(MemberFilter)
@@ -227,6 +229,8 @@ public struct ClassOwnerDashboardFeature {
           return .send(.delegate(.dismiss))
         case let .tabSelected(tab):
           state.selectedTab = tab
+        case .myOpinionsTapped:
+          state.showsMyOpinions.toggle()
         case let .opinionFilterSelected(filter):
           guard state.canSortOpinions(filter) else { return .none }
           state.opinionFilter = filter

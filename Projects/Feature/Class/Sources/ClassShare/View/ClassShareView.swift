@@ -5,6 +5,7 @@
 
 import ComposableArchitecture
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassShareFeature.self)
@@ -40,6 +41,12 @@ public struct ClassShareView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .pickeModal(
+      $store.scope(state: \.join, action: \.join),
+      dimOpacity: 0.28
+    ) { joinStore in
+      ClassJoinView(store: joinStore)
+    }
   }
 }
 
@@ -117,7 +124,7 @@ private extension ClassShareView {
     Button {
       send(.enterClassTapped)
     } label: {
-      Text("클래스로 이동하기")
+      Text("내 클래스로 이동하기")
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
   }

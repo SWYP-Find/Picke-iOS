@@ -5,12 +5,14 @@ import Foundation
 @Reducer
 public struct ClassJoinFeature {
   @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classMockRepository) private var classMockRepository
 
   public init() {}
 
   public enum Mode: Equatable {
     case code
     case nickname
+    case ownerName
   }
 
   @ObservableState
@@ -32,8 +34,8 @@ public struct ClassJoinFeature {
     }
 
     public var canJoin: Bool {
-      mode == .nickname && preview != nil && !nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-        .isEmpty && !isLoading
+      let hasName = !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      return (mode == .nickname || mode == .ownerName) && preview != nil && hasName && !isLoading
     }
   }
 
@@ -55,11 +57,13 @@ public struct ClassJoinFeature {
   public enum AsyncAction: Equatable {
     case find(String)
     case join(joinCode: String, nickname: String)
+    case nameOwner(roomID: Int, nickname: String)
   }
 
   public enum InnerAction: Equatable {
     case found(Result<ClassRoom, ClassError>)
     case joined(Result<ClassRoom, ClassError>, nickname: String)
+    case ownerNamed(Result<ClassRoom, ClassError>)
   }
 
   @CasePathable
@@ -67,11 +71,13 @@ public struct ClassJoinFeature {
     case dismiss
     case found(ClassRoom)
     case joined(ClassRoom, nickname: String)
+    case ownerNamed(ClassRoom)
   }
 
   nonisolated enum CancelID: Hashable {
     case find
     case join
+    case nameOwner
   }
 
   public var body: some Reducer<State, Action> {
@@ -116,7 +122,14 @@ private extension ClassJoinFeature {
     case .joinTapped:
       guard state.canJoin, let room = state.preview else { return .none }
       let nickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
-      return .send(.async(.join(joinCode: room.joinCode, nickname: nickname)))
+      switch state.mode {
+      case .nickname:
+        return .send(.async(.join(joinCode: room.joinCode, nickname: nickname)))
+      case .ownerName:
+        return .send(.async(.nameOwner(roomID: room.id, nickname: nickname)))
+      case .code:
+        return .none
+      }
     }
   }
 
@@ -145,6 +158,28 @@ private extension ClassJoinFeature {
         await send(.inner(.joined(result, nickname: nickname)))
       }
       .cancellable(id: CancelID.join, cancelInFlight: true)
+
+    case let .nameOwner(roomID, nickname):
+      state.isLoading = true
+      state.errorMessage = nil
+      return .run { [classMockRepository] send in
+        let result = await Result { () async throws -> ClassRoom in
+          guard let classMockRepository else { throw ClassError.unknown("이름을 저장할 수 없어요.") }
+          let memberID = try await classMockRepository.currentMemberID(roomID: roomID)
+          _ = try await classMockRepository.updateDisplayName(
+            roomID: roomID,
+            memberID: memberID,
+            currentMemberID: memberID,
+            name: nickname
+          )
+          let rooms = try await classMockRepository.fetchMyClasses()
+          guard let room = rooms.first(where: { $0.id == roomID }) else { throw ClassError.invalidCode }
+          return room
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.ownerNamed(result)))
+      }
+      .cancellable(id: CancelID.nameOwner, cancelInFlight: true)
     }
   }
 
@@ -158,7 +193,11 @@ private extension ClassJoinFeature {
       state.preview = nil
       return .send(.delegate(.joined(room, nickname: nickname)))
 
-    case let .found(.failure(error)), let .joined(.failure(error), _):
+    case let .ownerNamed(.success(room)):
+      state.preview = nil
+      return .send(.delegate(.ownerNamed(room)))
+
+    case let .found(.failure(error)), let .joined(.failure(error), _), let .ownerNamed(.failure(error)):
       state.errorMessage = error.message
       return .none
     }

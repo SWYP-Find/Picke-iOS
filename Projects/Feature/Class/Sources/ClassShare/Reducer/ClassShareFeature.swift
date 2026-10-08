@@ -9,11 +9,14 @@ import Foundation
 
 @Reducer
 public struct ClassShareFeature {
+  @Dependency(\.classMockRepository) private var classMockRepository
+
   public init() {}
 
   @ObservableState
   public struct State: Equatable {
     public var room: ClassRoom
+    @Presents public var join: ClassJoinFeature.State?
 
     public init(room: ClassRoom) {
       self.room = room
@@ -39,6 +42,7 @@ public struct ClassShareFeature {
 
   public enum Action: ViewAction {
     case view(View)
+    case join(PresentationAction<ClassJoinFeature.Action>)
     case delegate(DelegateAction)
   }
 
@@ -61,11 +65,29 @@ public struct ClassShareFeature {
         return .send(.delegate(.dismiss))
 
       case .view(.enterClassTapped):
-        return .send(.delegate(.enterClass(state.room)))
+        guard classMockRepository != nil else {
+          return .send(.delegate(.enterClass(state.room)))
+        }
+        state.join = .init(mode: .ownerName, preview: state.room)
+        return .none
+
+      case .join(.presented(.delegate(.dismiss))):
+        state.join = nil
+        return .none
+
+      case let .join(.presented(.delegate(.ownerNamed(room)))):
+        state.join = nil
+        return .send(.delegate(.enterClass(room)))
+
+      case .join:
+        return .none
 
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$join, action: \.join) {
+      ClassJoinFeature()
     }
   }
 }

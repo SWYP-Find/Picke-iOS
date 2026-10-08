@@ -75,6 +75,47 @@ struct ClassDetailTests {
   }
 
   @Test
+  func AI_목_배틀은_라이브_채팅으로_진입하지_않는다() async {
+    let original = ClassRoom.mocks[0]
+    let battle = ClassBattleSummary(
+      id: -1,
+      title: "AI 추천 질문",
+      summary: "목 콘텐츠",
+      philosopherA: "첫 번째 근거",
+      optionATitle: "찬성",
+      philosopherB: "두 번째 근거",
+      optionBTitle: "반대",
+      category: .philosophy,
+      level: .middle,
+      audioDuration: 0,
+      viewCount: 0
+    )
+    let room = ClassRoom(
+      id: original.id,
+      name: original.name,
+      joinCode: original.joinCode,
+      battle: battle,
+      deadline: original.deadline,
+      memberCount: original.memberCount,
+      role: original.role,
+      status: original.status,
+      allowsAnonymousOpinion: original.allowsAnonymousOpinion,
+      requiresComment: original.requiresComment
+    )
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.battleTapped)) {
+      $0.customAlert = .alert(
+        title: "배틀을 준비하고 있어요",
+        message: "이 클래스의 배틀은 아직 참여할 수 없어요."
+      )
+    }
+    await store.finish()
+  }
+
+  @Test
   func 결과보기를_누르면_현재_클래스를_리포트로_전달한다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {

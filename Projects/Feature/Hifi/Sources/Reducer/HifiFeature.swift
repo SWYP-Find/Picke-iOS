@@ -3,17 +3,16 @@
 //  Hifi
 //
 
-import Foundation
 import AdDomainInterface
-import PickeCoreLogger
-import SearchDomainInterface
-
+import BattleDomainInterface
 import ComposableArchitecture
+import Foundation
 import HifiInterface
 import HomeDomainInterface
 import NotificationDomainInterface
 import PickeAnalyticsInterface
-import BattleDomainInterface
+import PickeCoreLogger
+import SearchDomainInterface
 
 @Reducer
 public struct HifiFeature {
@@ -34,6 +33,7 @@ public struct HifiFeature {
       guard adIndex >= 0, !ads.isEmpty else { return nil }
       return ads[adIndex % ads.count]
     }
+
     /// 화면이 스켈레톤을 보일지 콘텐츠를 보일지 가르는 상태.
     public enum ViewState: Equatable {
       case loading
@@ -43,6 +43,8 @@ public struct HifiFeature {
     public var viewState: ViewState = .loaded
     public var nextOffset: Int?
     public var hasNext: Bool = false
+    public var loadedCategory: ExploreCategory?
+    public var loadedSort: ExploreSort?
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
     public var hasUnreadNotification: Bool = false
@@ -80,7 +82,12 @@ public struct HifiFeature {
   }
 
   public enum InnerAction: Equatable {
-    case searchResponse(Result<ExploreItemPage, BattleError>, reset: Bool)
+    case searchResponse(
+      Result<ExploreItemPage, BattleError>,
+      reset: Bool,
+      category: ExploreCategory,
+      sort: ExploreSort
+    )
     case unreadBadgeResponse(Bool)
     case adsResponse(Result<[FeedAd], BattleError>)
     case impressionResponse(code: String, itemID: Int, result: Result<Bool, BattleError>)
@@ -153,7 +160,10 @@ extension HifiFeature {
 
     case .reachedBottom:
       // 무한 스크롤: 다음 페이지가 있고 로딩 중이 아니면 추가 로드.
-      guard state.hasNext, state.viewState != .loading else { return .none }
+      guard state.hasNext,
+            state.viewState != .loading,
+            state.loadedCategory == state.selectedCategory,
+            state.loadedSort == state.selectedSort else { return .none }
       return .send(.async(.searchRequested(reset: false)))
 
     case let .serverAdClicked(network):
@@ -197,20 +207,35 @@ extension HifiFeature {
   ) -> Effect<Action> {
     switch action {
     case let .searchRequested(reset):
+      let selectedCategory = state.selectedCategory
+      let selectedSort = state.selectedSort
+      if !reset {
+        guard state.loadedCategory == selectedCategory,
+              state.loadedSort == selectedSort else { return .none }
+      }
       state.viewState = .loading
-      if reset {
+      if reset,
+         state.loadedCategory != selectedCategory || state.loadedSort != selectedSort
+      {
         state.exploreItems = []
         state.reportedAdCodesByItemID = [:]
+        state.nextOffset = nil
+        state.hasNext = false
       }
-      let category = state.selectedCategory.queryValue
-      let sort = state.selectedSort.queryValue
+      let category = selectedCategory.queryValue
+      let sort = selectedSort.queryValue
       let offset = reset ? 0 : (state.nextOffset ?? 0)
       return .run { [useCase = searchUseCase] send in
         let result = await Result {
           try await useCase.searchBattles(category: category, sort: sort, offset: offset, size: 20)
         }
         .mapError(BattleError.from)
-        return await send(.inner(.searchResponse(result, reset: reset)))
+        return await send(.inner(.searchResponse(
+          result,
+          reset: reset,
+          category: selectedCategory,
+          sort: selectedSort
+        )))
       }
       .cancellable(id: CancelID.search, cancelInFlight: true)
 
@@ -236,16 +261,22 @@ extension HifiFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
-    case let .searchResponse(result, reset):
+    case let .searchResponse(result, reset, category, sort):
+      guard state.selectedCategory == category,
+            state.selectedSort == sort else { return .none }
       state.viewState = .loaded
       switch result {
       case let .success(page):
         state.exploreItems = reset ? page.items : state.exploreItems + page.items
+        if reset {
+          state.reportedAdCodesByItemID = [:]
+        }
         state.nextOffset = page.nextOffset
         state.hasNext = page.hasNext
+        state.loadedCategory = category
+        state.loadedSort = sort
       case let .failure(error):
         PickeLogger.error("[HifiFeature] searchBattles failed: \(error.localizedDescription)", category: .ui)
-        if reset { state.exploreItems = [] }
       }
       return .none
 

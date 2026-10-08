@@ -97,6 +97,22 @@ public actor MockClassRepository: ClassInterface {
       throw ClassError.unknown("클래스 이름 또는 배틀이 올바르지 않습니다.")
     }
 
+    return makeClass(creation, battle: battle)
+  }
+
+  /// AI 질문 미리보기 전용. 라이브 ClassInterface의 생성 계약에는 포함하지 않는다.
+  public func createClass(_ creation: ClassCreation, battle: ClassBattleSummary) async throws -> ClassRoom {
+    guard !creation.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+          creation.battleId == battle.id,
+          battle.id < 0
+    else {
+      throw ClassError.unknown("클래스 이름 또는 배틀이 올바르지 않습니다.")
+    }
+
+    return makeClass(creation, battle: battle)
+  }
+
+  private func makeClass(_ creation: ClassCreation, battle: ClassBattleSummary) -> ClassRoom {
     let id = nextID
     nextID += 1
     let room = ClassRoom(
