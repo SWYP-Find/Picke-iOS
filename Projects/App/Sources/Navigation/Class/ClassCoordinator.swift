@@ -236,7 +236,15 @@ private extension ClassCoordinator {
       state.routes.push(.chat(.init(route: .preVote(battleId: battle.id))))
       return .none
 
-    case let .routeAction(_, action: .detail(.delegate(.openReport(room)))):
+    case let .routeAction(_, action: .detail(.delegate(.openClosedBattle(room)))):
+      state.routes.push(.closedBattle(.init(room: room)))
+      return .none
+
+    case .routeAction(_, action: .closedBattle(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .detail(.delegate(.openReport(room)))),
+         let .routeAction(_, action: .closedBattle(.delegate(.openReport(room)))):
       if room.role == .owner {
         #if DEBUG
           let dashboard: ClassOwnerDashboardFeature.State = room == ClassRoom.mocks[0]
@@ -380,6 +388,7 @@ extension ClassCoordinator {
     case detail(ClassDetailFeature)
     case members(ClassMemberFeature)
     case report(ClassReportFeature)
+    case closedBattle(ClassClosedBattleFeature)
     case ownerDashboard(ClassOwnerDashboardFeature)
     case ownerMemberDetail(ClassMemberDetailFeature)
     case ownerReplyDetail(ClassReplyDetailFeature)

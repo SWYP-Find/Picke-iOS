@@ -15,6 +15,7 @@ public struct ClassBattleSummary: Equatable, Identifiable, Sendable {
   public let level: ClassAudienceLevel
   public let audioDuration: Int
   public let viewCount: Int
+  public let commentCount: Int
 
   public init(
     id: Int,
@@ -30,7 +31,8 @@ public struct ClassBattleSummary: Equatable, Identifiable, Sendable {
     category: ClassCategory,
     level: ClassAudienceLevel,
     audioDuration: Int,
-    viewCount: Int
+    viewCount: Int,
+    commentCount: Int = 0
   ) {
     self.id = id
     self.title = title
@@ -46,6 +48,7 @@ public struct ClassBattleSummary: Equatable, Identifiable, Sendable {
     self.level = level
     self.audioDuration = audioDuration
     self.viewCount = viewCount
+    self.commentCount = commentCount
   }
 
   public var durationMinutes: Int {
@@ -58,7 +61,7 @@ public extension ClassBattleSummary {
     .init(
       id: 101,
       title: "촉법소년 연령을 낮춰야 할까?",
-      summary: "청소년 범죄와 보호의 균형을 이야기해요.",
+      summary: "날로 잔혹해지는 청소년 범죄, 당신은 강력한 처벌을 원하십니까, 아니면 기회와 교정을 원하십니까?",
       philosopherA: "엄격한 처벌",
       optionATitle: "낮춰야 한다",
       philosopherB: "회복적 보호",
@@ -66,7 +69,8 @@ public extension ClassBattleSummary {
       category: .society,
       level: .middle,
       audioDuration: 5 * 60,
-      viewCount: 726
+      viewCount: 726,
+      commentCount: 23
     ),
     .init(
       id: 102,

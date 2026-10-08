@@ -63,6 +63,7 @@ public struct ClassDetailFeature {
     case dismiss
     case openMembers(ClassRoom)
     case openBattle(ClassBattleSummary)
+    case openClosedBattle(ClassRoom)
     case openReport(ClassRoom)
     case deleted(Int)
   }
@@ -134,6 +135,9 @@ extension ClassDetailFeature {
     case .membersTapped:
       return .send(.delegate(.openMembers(state.room)))
     case .battleTapped:
+      if state.room.status == .closed {
+        return .send(.delegate(.openClosedBattle(state.room)))
+      }
       #if DEBUG
         if state.room.battle.id < 0
           || ClassBattleSummary.mocks.contains(where: { $0.id == state.room.battle.id })

@@ -51,6 +51,9 @@ public struct ClassCoordinatorView: View {
       case let .report(reportStore):
         ClassReportView(store: reportStore)
 
+      case let .closedBattle(closedBattleStore):
+        ClassClosedBattleView(store: closedBattleStore)
+
       case let .ownerDashboard(dashboardStore):
         ClassOwnerDashboardView(store: dashboardStore)
 

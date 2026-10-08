@@ -57,7 +57,7 @@ struct ClassDetailTests {
 
   @Test
   func 목_배틀을_누르면_준비_안내를_표시한다() async {
-    for room in ClassRoom.mocks {
+    for room in ClassRoom.mocks where room.status == .open {
       let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
         ClassDetailFeature()
       }
@@ -72,6 +72,31 @@ struct ClassDetailTests {
         $0.customAlert = nil
       }
     }
+  }
+
+  @Test
+  func 마감된_클래스는_라이브_배틀_대신_결과_진입_화면을_연다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.battleTapped))
+    await store.receive(\.delegate, .openClosedBattle(room))
+  }
+
+  @Test
+  func 마감된_운영자_배틀_카드도_결과_진입_화면을_연다() async {
+    let room = ClassRoom.mocks[2]
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.battleTapped))
+    await store.receive(\.delegate, .openClosedBattle(room))
+
+    await store.send(.view(.reportTapped))
+    await store.receive(\.delegate, .openReport(room))
   }
 
   @Test

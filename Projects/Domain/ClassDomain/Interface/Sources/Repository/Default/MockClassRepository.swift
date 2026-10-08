@@ -8,7 +8,7 @@ public actor MockClassRepository: ClassInterface {
   private var nextID: Int
 
   public init(
-    rooms: [ClassRoom] = ClassRoom.mocks,
+    rooms: [ClassRoom] = ClassRoom.mocks + [.mockClosedSociety],
     availableRooms: [ClassRoom] = [ClassRoom.mockJoinable]
   ) {
     let previewNames = ["김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은"]

@@ -195,17 +195,24 @@ private extension ClassDetailView {
   @ViewBuilder
   func actionButtons() -> some View {
     VStack(spacing: 12) {
-      Button { send(.battleTapped) } label: {
-        Text("배틀 참여")
-          .pretendardFont(.headingMedium)
-          .foregroundStyle(.primary500)
-          .frame(maxWidth: .infinity)
-          .frame(height: 52)
-          .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+      if store.room.status == .closed {
+        Button("결과 보기") {
+          send(store.room.role == .owner ? .reportTapped : .battleTapped)
+        }
+          .ctaButtonStyle(.primary, size: .large, height: 52)
+      } else {
+        Button { send(.battleTapped) } label: {
+          Text("배틀 참여")
+            .pretendardFont(.headingMedium)
+            .foregroundStyle(.primary500)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+        }
+        .buttonStyle(.plain)
+        Button("결과 보기") { send(.reportTapped) }
+          .ctaButtonStyle(.primary, size: .large, height: 52)
       }
-      .buttonStyle(.plain)
-      Button("결과 보기") { send(.reportTapped) }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
     }
   }
 

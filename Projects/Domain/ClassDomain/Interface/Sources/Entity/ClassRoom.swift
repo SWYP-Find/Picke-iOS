@@ -77,6 +77,19 @@ public extension ClassRoom {
     ),
   ]
 
+  static let mockClosedSociety = ClassRoom(
+    id: 5,
+    name: "1학년 3반 사회 토론",
+    joinCode: "PK3R5T",
+    battle: ClassBattleSummary.mocks[0],
+    deadline: Date(timeIntervalSince1970: 1_790_154_000),
+    memberCount: 32,
+    role: .member,
+    status: .closed,
+    allowsAnonymousOpinion: true,
+    requiresComment: true
+  )
+
   static let mockJoinable = ClassRoom(
     id: 4,
     name: "사회 토론 수업",

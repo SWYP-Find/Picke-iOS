@@ -69,6 +69,88 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 마감_배틀_결과_화면에서는_탭바를_숨긴다() {
+    var state = ClassCoordinator.State()
+    state.routes.push(.closedBattle(.init(room: .mockClosedSociety)))
+    #expect(!state.showsTabBar)
+  }
+
+  @Test
+  func 마감된_멤버_배틀은_결과_진입과_리포트로_연결된다() async {
+    let room = ClassRoom.mockClosedSociety
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openClosedBattle(room)))
+    )))
+    guard case .closedBattle? = store.state.routes.last?.screen else {
+      Issue.record("마감 배틀 결과 진입 화면이 열리지 않음")
+      return
+    }
+    #expect(!store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .closedBattle(.delegate(.openReport(room)))
+    )))
+    guard case .report? = store.state.routes.last?.screen else {
+      Issue.record("멤버 리포트로 이동하지 않음")
+      return
+    }
+  }
+
+  @Test
+  func 마감_배틀_화면의_뒤로가기는_클래스_상세로_돌아온다() async {
+    let room = ClassRoom.mockClosedSociety
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.closedBattle(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .closedBattle(.delegate(.dismiss))
+    )))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    guard case .detail? = store.state.routes.last?.screen else {
+      Issue.record("클래스 상세로 돌아오지 않음")
+      return
+    }
+  }
+
+  @Test
+  func 마감된_운영자_결과는_요약으로_직접_이동한다() async {
+    let room = ClassRoom.mocks[2]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openReport(room)))
+    )))
+    guard case .ownerDashboard? = store.state.routes.last?.screen else {
+      Issue.record("운영자 요약으로 이동하지 않음")
+      return
+    }
+  }
+
+  @Test
   func 공유_목_저장소의_멤버_제거를_목록과_상세와_멤버에_전달한다() async throws {
     let room = ClassRoom.mocks[0]
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
