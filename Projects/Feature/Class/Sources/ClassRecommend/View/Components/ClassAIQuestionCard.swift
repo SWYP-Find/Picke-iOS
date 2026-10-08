@@ -9,12 +9,20 @@ import SwiftUI
 struct ClassAIQuestionCard: View {
   let question: ClassAIQuestion
   let isSelected: Bool
-  let showsSelection: Bool
+  private let showsSelection: Bool
 
-  init(question: ClassAIQuestion, isSelected: Bool, showsSelection: Bool = true) {
+  init(question: ClassAIQuestion, isSelected: Bool) {
+    self.init(question: question, isSelected: isSelected, showsSelection: true)
+  }
+
+  private init(question: ClassAIQuestion, isSelected: Bool, showsSelection: Bool) {
     self.question = question
     self.isSelected = isSelected
     self.showsSelection = showsSelection
+  }
+
+  func selectionIndicatorHidden() -> Self {
+    Self(question: question, isSelected: isSelected, showsSelection: false)
   }
 
   var body: some View {

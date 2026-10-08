@@ -132,7 +132,8 @@ private extension ClassSettingView {
     VStack(alignment: .leading, spacing: 12) {
       sectionLabel("선택한 배틀")
       if let question = store.aiQuestion {
-        ClassSelectedAIQuestionCard(question: question)
+        ClassAIQuestionCard(question: question, isSelected: false)
+          .selectionIndicatorHidden()
       } else if let battle = store.battle {
         ClassSelectedBattleCard(battle: battle)
       }
