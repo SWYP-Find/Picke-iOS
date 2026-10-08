@@ -11,15 +11,11 @@ public struct ClassReportView: View {
 
   public init(store: StoreOf<ClassReportFeature>) {
     self.store = store
-    #if DEBUG
-      previewContent = [ClassRoom.mockJoinable, .mockClosedSociety].contains { previewRoom in
-        store.room.joinCode == previewRoom.joinCode
-          && store.room.name == previewRoom.name
-          && store.room.battle == previewRoom.battle
-      } ? .figma : nil
-    #else
-      previewContent = nil
-    #endif
+    previewContent = [ClassRoom.mockJoinable, .mockClosedSociety].contains { previewRoom in
+      store.room.joinCode == previewRoom.joinCode
+        && store.room.name == previewRoom.name
+        && store.room.battle == previewRoom.battle
+    } ? .figma : nil
   }
 
   #if DEBUG

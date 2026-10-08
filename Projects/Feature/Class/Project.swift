@@ -13,6 +13,7 @@ let project = Project.makeModule(
     .core(.coreUtility),
     .ui(.designKit),
     .ui(.sharedUI),
+    .domain(.battle, .interface),
     .domain(.classroom, .interface),
     .SPM.composableArchitecture,
   ],

@@ -7,6 +7,7 @@ import PickeSharedUI
 @Reducer
 public struct ClassDetailFeature {
   @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classMockRepository) private var classMockRepository
 
   public init() {}
 
@@ -62,7 +63,7 @@ public struct ClassDetailFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case openMembers(ClassRoom)
-    case openBattle(ClassBattleSummary)
+    case openBattle(ClassRoom)
     case openClosedBattle(ClassRoom)
     case openReport(ClassRoom)
     case deleted(Int)
@@ -138,18 +139,14 @@ extension ClassDetailFeature {
       if state.room.status == .closed {
         return .send(.delegate(.openClosedBattle(state.room)))
       }
-      #if DEBUG
-        if state.room.battle.id < 0
-          || ClassBattleSummary.mocks.contains(where: { $0.id == state.room.battle.id })
-        {
-          state.customAlert = .alert(
-            title: "배틀을 준비하고 있어요",
-            message: "이 클래스의 배틀은 아직 참여할 수 없어요."
-          )
-          return .none
-        }
-      #endif
-      return .send(.delegate(.openBattle(state.room.battle)))
+      if classMockRepository == nil {
+        state.customAlert = .alert(
+          title: "배틀을 준비하고 있어요",
+          message: "이 클래스의 배틀은 아직 참여할 수 없어요."
+        )
+        return .none
+      }
+      return .send(.delegate(.openBattle(state.room)))
     case .reportTapped:
       return .send(.delegate(.openReport(state.room)))
     case .managementTapped:

@@ -147,10 +147,20 @@ private extension ClassDetailView {
 
       Button { send(.battleTapped) } label: {
         HStack(spacing: 8) {
-          AsyncImage(url: store.room.battle.thumbnailURL) { image in
-            image.resizable().scaledToFill()
-          } placeholder: {
-            Color.beige600
+          Group {
+            if store.room.battle.thumbnailURL == nil,
+               store.room.battle.id == ClassBattleSummary.mocks[0].id
+            {
+              Image(asset: .classClosedBattle)
+                .resizable()
+                .scaledToFill()
+            } else {
+              AsyncImage(url: store.room.battle.thumbnailURL) { image in
+                image.resizable().scaledToFill()
+              } placeholder: {
+                Color.beige600
+              }
+            }
           }
           .frame(width: 76, height: 94)
           .clipShape(RoundedRectangle(cornerRadius: 2))
@@ -199,7 +209,7 @@ private extension ClassDetailView {
         Button("결과 보기") {
           send(store.room.role == .owner ? .reportTapped : .battleTapped)
         }
-          .ctaButtonStyle(.primary, size: .large, height: 52)
+        .ctaButtonStyle(.primary, size: .large, height: 52)
       } else {
         Button { send(.battleTapped) } label: {
           Text("배틀 참여")

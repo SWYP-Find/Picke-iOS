@@ -8,6 +8,20 @@ import Testing
 @MainActor
 struct ClassDetailTests {
   @Test
+  func 목_저장소가_있으면_배틀에_입장한다() async {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+    }
+
+    await store.send(.view(.battleTapped))
+    await store.receive(\.delegate, .openBattle(room))
+  }
+
+  @Test
   func 선생님은_마감일을_수정할_수_있다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
@@ -100,7 +114,7 @@ struct ClassDetailTests {
   }
 
   @Test
-  func AI_목_배틀은_라이브_채팅으로_진입하지_않는다() async {
+  func AI_목_배틀도_클래스_화면으로_진입한다() async {
     let original = ClassRoom.mocks[0]
     let battle = ClassBattleSummary(
       id: -1,
@@ -127,17 +141,15 @@ struct ClassDetailTests {
       allowsAnonymousOpinion: original.allowsAnonymousOpinion,
       requiresComment: original.requiresComment
     )
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
       ClassDetailFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
     }
 
-    await store.send(.view(.battleTapped)) {
-      $0.customAlert = .alert(
-        title: "배틀을 준비하고 있어요",
-        message: "이 클래스의 배틀은 아직 참여할 수 없어요."
-      )
-    }
-    await store.finish()
+    await store.send(.view(.battleTapped))
+    await store.receive(\.delegate, .openBattle(room))
   }
 
   @Test

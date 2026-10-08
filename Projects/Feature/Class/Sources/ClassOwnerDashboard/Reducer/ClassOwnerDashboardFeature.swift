@@ -52,61 +52,58 @@ public struct ClassOwnerDashboardFeature {
     public var searchText = ""
     public var members: [ClassOwnerMember] = []
     public var opinions: [ClassOwnerOpinion] = []
-    #if DEBUG
-      public var usesPreviewContent = false
-      public var previewMetrics: PreviewMetrics?
-    #endif
+    public var usesPreviewContent = false
+    public var previewMetrics: PreviewMetrics?
+    @Presents public var management: ClassModalFeature.State?
 
     public init(room: ClassRoom) {
       self.room = room
     }
 
-    #if DEBUG
-      public static func preview(room: ClassRoom, tab: ClassOwnerTab = .home) -> Self {
-        var state = Self(room: room)
-        state.selectedTab = tab
-        state.usesPreviewContent = true
-        state.previewMetrics = PreviewMetrics(commentAuthorCount: 24, optionAVoteCount: 18, optionBVoteCount: 10)
-        state.members = [
-          ClassOwnerMember(id: 1, name: "김민지", participationCount: 8, needsReview: true),
-          ClassOwnerMember(id: 2, name: "이서준", participationCount: 7),
-          ClassOwnerMember(id: 3, name: "박지우", participationCount: 6),
-          ClassOwnerMember(id: 4, name: "최유진", participationCount: 0),
-          ClassOwnerMember(id: 5, name: "정다은", participationCount: 0),
-          ClassOwnerMember(id: 6, name: "한도윤", participationCount: 0, needsReview: true),
-        ]
-        state.members += (7 ... 32).map { id in
-          ClassOwnerMember(id: id, name: "희망 \(id)", participationCount: id < 32 ? 1 : 0)
-        }
-        state.opinions = [
-          ClassOwnerOpinion(
-            id: 1,
-            author: "김민지",
-            text: "슬픔을 겉으로 드러내지 않는다고 해서 타인을 사랑하지 않는다고 판단할 수는 없다고 생각해요.",
-            replyCount: 23,
-            recommendationCount: 1340,
-            createdAt: Date(timeIntervalSince1970: 1_780_000_300)
-          ),
-          ClassOwnerOpinion(
-            id: 2,
-            author: "이서준",
-            text: "감정은 개인의 자유지만, 사회적 관계에서는 최소한의 공감 표현도 필요하다고 생각해요.",
-            replyCount: 12,
-            recommendationCount: 840,
-            createdAt: Date(timeIntervalSince1970: 1_780_000_200)
-          ),
-          ClassOwnerOpinion(
-            id: 3,
-            author: "박지우",
-            text: "교육과 보호도 함께 고려해야 한다고 생각합니다.",
-            replyCount: 4,
-            recommendationCount: 510,
-            createdAt: Date(timeIntervalSince1970: 1_780_000_100)
-          ),
-        ]
-        return state
+    public static func preview(room: ClassRoom, tab: ClassOwnerTab = .home) -> Self {
+      var state = Self(room: room)
+      state.selectedTab = tab
+      state.usesPreviewContent = true
+      state.previewMetrics = PreviewMetrics(commentAuthorCount: 24, optionAVoteCount: 18, optionBVoteCount: 10)
+      state.members = [
+        ClassOwnerMember(id: 1, name: "김민지", participationCount: 8, needsReview: true),
+        ClassOwnerMember(id: 2, name: "이서준", participationCount: 7),
+        ClassOwnerMember(id: 3, name: "박지우", participationCount: 6),
+        ClassOwnerMember(id: 4, name: "최유진", participationCount: 0),
+        ClassOwnerMember(id: 5, name: "정다은", participationCount: 0),
+        ClassOwnerMember(id: 6, name: "한도윤", participationCount: 0, needsReview: true),
+      ]
+      state.members += (7 ... 32).map { id in
+        ClassOwnerMember(id: id, name: "희망 \(id)", participationCount: id < 30 ? 1 : 0)
       }
-    #endif
+      state.opinions = [
+        ClassOwnerOpinion(
+          id: 1,
+          author: "김민지",
+          text: "슬픔을 겉으로 드러내지 않는다고 해서 타인을 사랑하지 않는다고 판단할 수는 없다고 생각해요.",
+          replyCount: 23,
+          recommendationCount: 1340,
+          createdAt: Date(timeIntervalSince1970: 1_780_000_300)
+        ),
+        ClassOwnerOpinion(
+          id: 2,
+          author: "이서준",
+          text: "감정은 개인의 자유지만, 사회적 관계에서는 최소한의 공감 표현도 필요하다고 생각해요.",
+          replyCount: 12,
+          recommendationCount: 840,
+          createdAt: Date(timeIntervalSince1970: 1_780_000_200)
+        ),
+        ClassOwnerOpinion(
+          id: 3,
+          author: "박지우",
+          text: "교육과 보호도 함께 고려해야 한다고 생각합니다.",
+          replyCount: 4,
+          recommendationCount: 510,
+          createdAt: Date(timeIntervalSince1970: 1_780_000_100)
+        ),
+      ]
+      return state
+    }
 
     public var searchedMembers: [ClassOwnerMember] {
       let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -198,10 +195,15 @@ public struct ClassOwnerDashboardFeature {
   public enum Action: ViewAction {
     case view(View)
     case delegate(DelegateAction)
+    case management(PresentationAction<ClassModalFeature.Action>)
   }
 
   public enum View: Equatable {
     case backTapped
+    case managementTapped
+    case managementDismissed
+    case managementEditTapped
+    case managementDeleteTapped
     case tabSelected(ClassOwnerTab)
     case myOpinionsTapped
     case opinionFilterSelected(ClassOwnerOpinionFilter)
@@ -215,6 +217,8 @@ public struct ClassOwnerDashboardFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case editClass
+    case deleteClass
     case openMemberDetail(ClassOwnerMember)
     case openReplyDetail(ClassOwnerOpinion)
     case openFeedback(ClassOwnerMember)
@@ -227,6 +231,17 @@ public struct ClassOwnerDashboardFeature {
         switch viewAction {
         case .backTapped:
           return .send(.delegate(.dismiss))
+        case .managementTapped:
+          guard state.room.role == .owner else { return .none }
+          state.management = .init(kind: .management)
+        case .managementDismissed:
+          state.management = nil
+        case .managementEditTapped:
+          state.management = nil
+          return .send(.delegate(.editClass))
+        case .managementDeleteTapped:
+          state.management = nil
+          return .send(.delegate(.deleteClass))
         case let .tabSelected(tab):
           state.selectedTab = tab
         case .myOpinionsTapped:
@@ -254,7 +269,12 @@ public struct ClassOwnerDashboardFeature {
         return .none
       case .delegate:
         return .none
+      case .management:
+        return .none
       }
+    }
+    .ifLet(\.$management, action: \.management) {
+      ClassModalFeature()
     }
   }
 }

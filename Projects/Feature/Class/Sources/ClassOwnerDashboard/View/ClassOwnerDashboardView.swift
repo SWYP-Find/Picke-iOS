@@ -2,6 +2,7 @@ import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassOwnerDashboardFeature.self)
@@ -16,8 +17,17 @@ public struct ClassOwnerDashboardView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name)
-        .foregroundStyle(.gray800)
+      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
+        if store.room.role == .owner {
+          Button { send(.managementTapped) } label: {
+            Image(systemName: "ellipsis")
+              .font(.system(size: 20))
+              .frame(width: 24, height: 24)
+          }
+          .accessibilityLabel("클래스 관리")
+        }
+      }
+      .foregroundStyle(.gray800)
 
       titleHeader()
       dashboardTabs()
@@ -29,6 +39,25 @@ public struct ClassOwnerDashboardView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .pickeModal($store.scope(state: \.management, action: \.management), dimOpacity: 0.28) { _ in
+      ZStack(alignment: .bottom) {
+        Color.clear
+          .ignoresSafeArea()
+          .contentShape(Rectangle())
+          .onTapGesture { send(.managementDismissed) }
+        ClassManagementSheet(
+          room: store.room,
+          onEdit: { send(.managementEditTapped) },
+          onDelete: { send(.managementDeleteTapped) }
+        )
+        .frame(maxWidth: .infinity)
+        .background(
+          UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+            .fill(.beige50)
+            .ignoresSafeArea(edges: .bottom)
+        )
+      }
+    }
   }
 }
 
@@ -291,11 +320,7 @@ private extension ClassOwnerDashboardView {
   }
 
   var reportPreviewContent: ClassReportPreviewContent? {
-    #if DEBUG
-      usesPreviewContent ? .figma : nil
-    #else
-      nil
-    #endif
+    usesPreviewContent ? .figma : nil
   }
 
   func reportChoice(_ label: String, value: String) -> some View {
@@ -335,19 +360,11 @@ private extension ClassOwnerDashboardView {
   }
 
   var usesPreviewContent: Bool {
-    #if DEBUG
-      store.usesPreviewContent
-    #else
-      false
-    #endif
+    store.usesPreviewContent
   }
 
   var previewMetrics: ClassOwnerDashboardFeature.State.PreviewMetrics? {
-    #if DEBUG
-      store.previewMetrics
-    #else
-      nil
-    #endif
+    store.previewMetrics
   }
 
   func animateChartsIfNeeded() {

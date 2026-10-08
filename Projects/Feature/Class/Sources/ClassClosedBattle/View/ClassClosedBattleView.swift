@@ -42,17 +42,13 @@ private extension ClassClosedBattleView {
   @ViewBuilder
   func artwork(height: CGFloat) -> some View {
     Group {
-      #if DEBUG
-        if store.room.id == ClassRoom.mockClosedSociety.id {
-          Image(asset: .classClosedBattle)
-            .resizable()
-            .scaledToFill()
-        } else {
-          remoteArtwork
-        }
-      #else
+      if store.room.id == ClassRoom.mockClosedSociety.id {
+        Image(asset: .classClosedBattle)
+          .resizable()
+          .scaledToFill()
+      } else {
         remoteArtwork
-      #endif
+      }
     }
     .frame(maxWidth: .infinity)
     .frame(height: height)
@@ -61,7 +57,7 @@ private extension ClassClosedBattleView {
       LinearGradient(
         stops: [
           .init(color: .clear, location: 0.52),
-          .init(color: .white, location: 1)
+          .init(color: .white, location: 1),
         ],
         startPoint: .top,
         endPoint: .bottom

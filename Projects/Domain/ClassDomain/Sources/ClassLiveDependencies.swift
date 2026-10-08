@@ -9,26 +9,16 @@ extension ClassUseCaseDependency: DependencyKey {
 
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
-    #if DEBUG
-      DebugClassRepository.shared
-    #else
-      ClassRepositoryImpl()
-    #endif
+    ClassMockRepositoryStorage.shared
   }
 }
 
 extension ClassMockRepositoryDependency: DependencyKey {
   public static var liveValue: MockClassRepository? {
-    #if DEBUG
-      DebugClassRepository.shared
-    #else
-      nil
-    #endif
+    ClassMockRepositoryStorage.shared
   }
 }
 
-#if DEBUG
-  private enum DebugClassRepository {
-    static let shared = MockClassRepository()
-  }
-#endif
+private enum ClassMockRepositoryStorage {
+  static let shared = MockClassRepository()
+}

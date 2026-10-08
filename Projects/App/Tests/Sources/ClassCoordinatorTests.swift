@@ -8,6 +8,171 @@ import Testing
 @MainActor
 struct ClassCoordinatorTests {
   @Test
+  func 클래스_배틀은_기존_채팅_경로로_진입한다() async {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let session = ClassMockChatSession()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.classMockRepository = repository
+      $0.classMockChatSession = session
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openBattle(room)))
+    )))
+    let battleID = -1_000_000 - room.id
+    await store.receive(\.inner, .mockBattleRegistered(roomID: room.id, battleID: battleID))
+
+    guard case let .chat(chat)? = store.state.routes.last?.screen,
+          case let .preVote(vote)? = chat.routes.last?.screen
+    else {
+      Issue.record("클래스 목 배틀이 기존 채팅 경로로 열리지 않음")
+      return
+    }
+    #expect(vote.battleId == battleID)
+  }
+
+  @Test
+  func AI_질문_클래스는_목_단일_투표_화면으로_진입한다() async throws {
+    let original = ClassRoom.mocks[0]
+    let setting = ClassSettingFeature.State(
+      aiQuestion: ClassAIQuestion.examples[0],
+      filter: .init(),
+      deadline: original.deadline
+    )
+    let battle = try #require(setting.aiBattle)
+    let room = ClassRoom(
+      id: original.id,
+      name: original.name,
+      joinCode: original.joinCode,
+      battle: battle,
+      deadline: original.deadline,
+      memberCount: original.memberCount,
+      role: original.role,
+      status: original.status,
+      allowsAnonymousOpinion: original.allowsAnonymousOpinion,
+      requiresComment: original.requiresComment
+    )
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let session = ClassMockChatSession()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.classMockRepository = repository
+      $0.classMockChatSession = session
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openBattle(room)))
+    )))
+    let battleID = -1_000_000 - room.id
+    await store.receive(\.inner, .mockBattleRegistered(roomID: room.id, battleID: battleID))
+
+    guard case let .aiVote(vote)? = store.state.routes.last?.screen else {
+      Issue.record("AI 질문 클래스가 단일 투표 화면으로 열리지 않음")
+      return
+    }
+    #expect(vote.battleID == battleID)
+    #expect(vote.room == room)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .aiVote(.delegate(.voteSubmitted(battleID: battleID)))
+    )))
+    guard case let .chat(chat)? = store.state.routes.last?.screen,
+          case let .comment(comment)? = chat.routes.last?.screen
+    else {
+      Issue.record("AI 단일 투표 후 댓글 화면으로 이어지지 않음")
+      return
+    }
+    #expect(comment.battleId == battleID)
+
+    let routeCount = store.state.routes.count
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .aiVote(.delegate(.voteSubmitted(battleID: battleID)))
+    )))
+    #expect(store.state.routes.count == routeCount)
+
+    let previousStats = try await session.fetchVoteStats(battleId: battleID)
+    _ = try await session.submitPreVote(battleId: battleID, optionId: 1)
+    let votedStats = try await session.fetchVoteStats(battleId: battleID)
+    #expect(votedStats.totalCount == previousStats.totalCount + 1)
+    #expect(votedStats.options[0].voteCount == previousStats.options[0].voteCount + 1)
+
+    _ = try await session.createPerspective(battleId: battleID, content: "반대 의견", optionId: 2)
+    let battleAfterOpinion = try await session.fetchBattle(battleId: battleID)
+    let statsAfterOpinion = try await session.fetchVoteStats(battleId: battleID)
+    #expect(battleAfterOpinion.userVoteStatus == .pro)
+    #expect(statsAfterOpinion.options[0].voteCount == votedStats.options[0].voteCount)
+    #expect(statsAfterOpinion.options[1].voteCount == votedStats.options[1].voteCount)
+  }
+
+  @Test
+  func 클래스_채팅은_클래스_목_DI에서_배틀을_읽는다() async {
+    let room = ClassRoom.mocks[0]
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    let store = TestStore(initialState: ClassCoordinator.ClassScreen.State.chat(
+      .init(route: .preVote(battleId: battleID))
+    )) {
+      ClassCoordinator.ClassScreen.body
+    } withDependencies: {
+      $0.classMockChatSession = session
+      $0.battleUseCase = MockBattleRepository()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.chat(.router(.routeAction(
+      id: 0,
+      action: .preVote(.async(.fetchBattleDetail))
+    ))))
+    await store.finish()
+
+    guard case let .chat(chat) = store.state,
+          case let .preVote(vote)? = chat.routes.last?.screen,
+          let detail = vote.battleDetail
+    else {
+      Issue.record("클래스 목 배틀 상세를 불러오지 못함")
+      return
+    }
+    #expect(detail.battleInfo.battleId == battleID)
+    #expect(detail.battleInfo.title == room.battle.title)
+  }
+
+  @Test
+  func AI_단일_투표는_클래스_목_DI에_결과를_저장한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    let store = TestStore(initialState: ClassCoordinator.ClassScreen.State.aiVote(
+      .init(room: room, battleID: battleID)
+    )) {
+      ClassCoordinator.ClassScreen.body
+    } withDependencies: {
+      $0.classMockChatSession = session
+    }
+    store.exhaustivity = .off
+
+    await store.send(.aiVote(.view(.optionTapped(1))))
+    await store.send(.aiVote(.view(.submitTapped)))
+    await store.finish()
+
+    let battle = try await session.fetchBattle(battleId: battleID)
+    #expect(battle.userVoteStatus == .pro)
+  }
+
+  @Test
   func 상세_관리_모달을_닫으면_탭바가_다시_보인다() {
     var state = ClassCoordinator.State()
     var detail = ClassDetailFeature.State(room: .mocks[0])
@@ -25,6 +190,33 @@ struct ClassCoordinatorTests {
     detail.customAlert = .alert(title: "확인", message: "안내")
     state.routes[screenAt: 1] = .detail(detail)
     #expect(!state.showsTabBar)
+  }
+
+  @Test
+  func 운영자_요약의_관리_메뉴에서_상세_수정으로_돌아간다() async {
+    let room = ClassRoom.mocks[0]
+    var dashboard = ClassOwnerDashboardFeature.State.preview(room: room)
+    dashboard.management = .init(kind: .management)
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.ownerDashboard(dashboard))
+    #expect(!state.showsTabBar)
+
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ownerDashboard(.delegate(.editClass))
+    )))
+    await store.finish()
+
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("클래스 상세로 돌아가지 않음")
+      return
+    }
+    #expect(detail.modal?.kind == .deadline)
   }
 
   @Test

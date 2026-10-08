@@ -3,15 +3,19 @@
 //  Picke
 //
 
+import AudioPlayerServiceInterface
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
 import Foundation
+import PickeAnalyticsInterface
+import PickeCoreUtility
 import TCAFlow
 
 @FlowCoordinator(screen: "ClassScreen", navigation: true)
 public struct ClassCoordinator {
   @Dependency(\.classMockRepository) private var classMockRepository
+  @Dependency(\.classMockChatSession) private var classMockChatSession
 
   public init() {}
 
@@ -33,7 +37,9 @@ public struct ClassCoordinator {
         return members.filter == nil && members.editName == nil && members.customAlert == nil
       case let .myClasses(myClasses)?:
         return myClasses.modal == nil && myClasses.customAlert == nil
-      case .ownerDashboard?, .report?:
+      case let .ownerDashboard(dashboard)?:
+        return dashboard.management == nil
+      case .report?:
         return true
       default:
         return false
@@ -62,6 +68,7 @@ public struct ClassCoordinator {
     case membersFailed(Int, String)
     case memberMutationCompleted(ClassRoom, [ClassMember])
     case memberMutationFailed(Int, String)
+    case mockBattleRegistered(roomID: Int, battleID: Int)
   }
 
   public enum NavigationAction: Equatable {}
@@ -232,9 +239,12 @@ private extension ClassCoordinator {
         }
       }
 
-    case let .routeAction(_, action: .detail(.delegate(.openBattle(battle)))):
-      state.routes.push(.chat(.init(route: .preVote(battleId: battle.id))))
-      return .none
+    case let .routeAction(_, action: .detail(.delegate(.openBattle(room)))):
+      guard classMockRepository != nil else { return .none }
+      return .run { [classMockChatSession] send in
+        let battleID = await classMockChatSession.register(room: room)
+        await send(.inner(.mockBattleRegistered(roomID: room.id, battleID: battleID)))
+      }
 
     case let .routeAction(_, action: .detail(.delegate(.openClosedBattle(room)))):
       state.routes.push(.closedBattle(.init(room: room)))
@@ -246,14 +256,10 @@ private extension ClassCoordinator {
     case let .routeAction(_, action: .detail(.delegate(.openReport(room)))),
          let .routeAction(_, action: .closedBattle(.delegate(.openReport(room)))):
       if room.role == .owner {
-        #if DEBUG
-          let dashboard: ClassOwnerDashboardFeature.State = room == ClassRoom.mocks[0]
-            ? .preview(room: room)
-            : .init(room: room)
-          state.routes.push(.ownerDashboard(dashboard))
-        #else
-          state.routes.push(.ownerDashboard(.init(room: room)))
-        #endif
+        let dashboard: ClassOwnerDashboardFeature.State = room == ClassRoom.mocks[0]
+          ? .preview(room: room)
+          : .init(room: room)
+        state.routes.push(.ownerDashboard(dashboard))
       } else {
         state.routes.push(.report(.init(room: room)))
       }
@@ -267,6 +273,12 @@ private extension ClassCoordinator {
          .routeAction(_, action: .ownerReplyDetail(.delegate(.dismiss))),
          .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
       return .send(.view(.backAction))
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.editClass))):
+      return returnToClassDetail(state: &state, action: .deadlineTapped)
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.deleteClass))):
+      return returnToClassDetail(state: &state, action: .deleteTapped)
 
     case let .routeAction(_, action: .ownerDashboard(.delegate(.openMemberDetail(member)))):
       guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
@@ -302,12 +314,39 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .chat(.delegate(.popToRoot))):
       return .send(.view(.backToRootAction))
 
+    case .routeAction(_, action: .aiVote(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(battleID)))):
+      guard case .aiVote? = state.routes.last?.screen else { return .none }
+      state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+      return .none
+
     case .routeAction(_, action: .detail(.delegate(.deleted))):
       return .send(.view(.backToRootAction))
 
     default:
       return .none
     }
+  }
+
+  func returnToClassDetail(
+    state: inout State,
+    action: ClassDetailFeature.View
+  ) -> Effect<Action> {
+    guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen,
+          let detailIndex = state.routes.lastIndex(where: {
+            if case let .detail(detail) = $0.screen {
+              return detail.room.id == dashboard.room.id
+            }
+            return false
+          })
+    else { return .none }
+
+    for _ in (detailIndex + 1) ..< state.routes.count {
+      state.routes.goBack()
+    }
+    return .send(.router(.routeAction(id: detailIndex, action: .detail(.view(action)))))
   }
 
   func handleViewAction(
@@ -330,6 +369,17 @@ private extension ClassCoordinator {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .mockBattleRegistered(roomID, battleID):
+      guard case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == roomID
+      else { return .none }
+      if detail.room.battle.id < 0 {
+        state.routes.push(.aiVote(.init(room: detail.room, battleID: battleID)))
+      } else {
+        state.routes.push(.chat(.init(route: .preVote(battleId: battleID))))
+      }
+      return .none
+
     case let .membersLoaded(room, members, currentMemberID):
       guard let index = state.routes.lastIndex(where: {
         if case let .members(memberState) = $0.screen {
@@ -393,7 +443,43 @@ extension ClassCoordinator {
     case ownerMemberDetail(ClassMemberDetailFeature)
     case ownerReplyDetail(ClassReplyDetailFeature)
     case ownerFeedback(ClassFeedbackComposeFeature)
+    case aiVote(ClassAIVoteFeature)
     case chat(ChatCoordinator)
+
+    public static var body: some ReducerOf<Self> {
+      @Dependency(\.classMockChatSession) var classMockChatSession
+      @Dependency(\.classMockAudioPlayer) var classMockAudioPlayer
+      Reduce { _, _ in .none }
+        .ifCaseLet(\.intro, action: \.intro) { ClassIntroFeature() }
+        .ifCaseLet(\.startMethod, action: \.startMethod) { ClassStartMethodFeature() }
+        .ifCaseLet(\.topic, action: \.topic) { ClassTopicFeature() }
+        .ifCaseLet(\.recommend, action: \.recommend) { ClassRecommendFeature() }
+        .ifCaseLet(\.setting, action: \.setting) { ClassSettingFeature() }
+        .ifCaseLet(\.share, action: \.share) { ClassShareFeature() }
+        .ifCaseLet(\.join, action: \.join) { ClassJoinFeature() }
+        .ifCaseLet(\.myClasses, action: \.myClasses) { MyClassFeature() }
+        .ifCaseLet(\.detail, action: \.detail) { ClassDetailFeature() }
+        .ifCaseLet(\.members, action: \.members) { ClassMemberFeature() }
+        .ifCaseLet(\.report, action: \.report) { ClassReportFeature() }
+        .ifCaseLet(\.closedBattle, action: \.closedBattle) { ClassClosedBattleFeature() }
+        .ifCaseLet(\.ownerDashboard, action: \.ownerDashboard) { ClassOwnerDashboardFeature() }
+        .ifCaseLet(\.ownerMemberDetail, action: \.ownerMemberDetail) { ClassMemberDetailFeature() }
+        .ifCaseLet(\.ownerReplyDetail, action: \.ownerReplyDetail) { ClassReplyDetailFeature() }
+        .ifCaseLet(\.ownerFeedback, action: \.ownerFeedback) { ClassFeedbackComposeFeature() }
+        .ifCaseLet(\.aiVote, action: \.aiVote) {
+          ClassAIVoteFeature()
+            .dependency(\.battleUseCase, classMockChatSession)
+        }
+        .ifCaseLet(\.chat, action: \.chat) {
+          ChatCoordinator()
+            .dependency(\.battleUseCase, classMockChatSession)
+            .dependency(\.perspectiveUseCase, classMockChatSession)
+            .dependency(\.commentUseCase, classMockChatSession)
+            .dependency(\.audioPlayer, classMockAudioPlayer)
+            .dependency(\.analyticsUseCase, .testValue)
+            .dependency(\.shareUseCase, .testValue)
+        }
+    }
   }
 }
 
