@@ -512,12 +512,15 @@ extension ChatRoomView {
         ),
       ]
     )
-    var state = ChatRoomFeature.State()
-    state.scenario = scenario
-    state.currentNodeId = scenario.startNodeId
-    state.visibleNodeIds = [scenario.startNodeId]
-    state.currentTime = 24
-    state.isPlaying = true
+    let state: ChatRoomFeature.State = {
+      var state = ChatRoomFeature.State()
+      state.scenario = scenario
+      state.currentNodeId = scenario.startNodeId
+      state.visibleNodeIds = [scenario.startNodeId]
+      state.currentTime = 24
+      state.isPlaying = true
+      return state
+    }()
     ChatRoomView(store: Store(initialState: state) { ChatRoomFeature() })
   }
 #endif
