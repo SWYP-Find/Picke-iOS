@@ -23,6 +23,7 @@ public extension Project {
     dependencies: [ProjectDescription.TargetDependency] = [],
     testDependencies: [ProjectDescription.TargetDependency] = [],
     resources: ProjectDescription.ResourceFileElements? = nil,
+    sourceFolderExclusions: [String] = [],
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
@@ -38,6 +39,9 @@ public extension Project {
     let interfaceTargetName = "\(name)Interface"
     let testingTargetName = "\(name)Testing"
     let demoTargetName = "\(name)Demo"
+    let sourceFolder: BuildableFolder = sourceFolderExclusions.isEmpty
+      ? "Sources"
+      : .folder("Sources", exceptions: .exceptions([.exception(excluded: sourceFolderExclusions)]))
 
     var targets: [Target] = []
 
@@ -62,7 +66,7 @@ public extension Project {
       bundleId: bundleId,
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
+      buildableFolders: resources != nil ? [sourceFolder, "Resources"] : [sourceFolder],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: (hasInterface ? [.target(name: interfaceTargetName)] : []) + dependencies,

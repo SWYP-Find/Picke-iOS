@@ -1,10 +1,8 @@
-import Foundation
-
 import DependencyPackagePlugin
 import DependencyPlugin
-import ProjectTemplatePlugin
-
+import Foundation
 import ProjectDescription
+import ProjectTemplatePlugin
 
 let project = Project.makeModule(
   name: "Class",
@@ -18,6 +16,7 @@ let project = Project.makeModule(
     .domain(.classroom, .interface),
     .SPM.composableArchitecture,
   ],
+  sourceFolderExclusions: [".omc", "ClassRecommend/View/.omc"],
   hasTests: true,
   hasInterface: true,
   interfaceDependencies: [
