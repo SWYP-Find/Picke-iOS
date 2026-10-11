@@ -1,3 +1,10 @@
+//
+//  ClassAIChatFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -5,8 +12,6 @@ import PickeSharedUI
 
 @Reducer
 public struct ClassAIChatFeature {
-  @Dependency(\.classAIChatUseCase) var chatUseCase
-
   public init() {}
 
   @ObservableState
@@ -21,6 +26,7 @@ public struct ClassAIChatFeature {
     public var isGenerating = false
     public var isCompleted = false
     public var isModelAvailable = true
+    public var canRetrySession = false
     public var errorMessage: String?
     public var hasStarted = false
     public var sessionRequestID: UUID?
@@ -28,22 +34,17 @@ public struct ClassAIChatFeature {
     public var pendingText: String?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
-    public init(room: ClassRoom, battleID: Int, selectedOptionID: Int, conversationID: UUID = UUID()) {
+    public init(
+      room: ClassRoom,
+      battleID: Int,
+      selectedOptionID: Int,
+      conversationID: UUID = UUID()
+    ) {
       self.room = room
       self.battleID = battleID
       self.selectedOptionID = selectedOptionID
       self.conversationID = conversationID
-      if room.battle.id == -1, selectedOptionID == 1 {
-        messages = [
-          .init(speaker: .opponent, text: "이건 기만입니다. 하늘 아래 모든 사물은 그에 걸맞은 완벽한 목적과 형상, 즉 '이데아'를 가지고 있습니다."),
-          .init(speaker: .opponent, text: "변기의 이데아는 '배설물을 처리하는 것'이지, 감상하는 것이 아닙니다."),
-          .init(speaker: .opponent, text: "사물의 본질을 왜곡하여 대중을 혼란에 빠뜨리는 것은 진리를 모독하는 행위입니다."),
-        ]
-      } else {
-        messages = [
-          .init(speaker: .opponent, text: "\(room.battle.title)라는 질문을 반대 입장에서 함께 생각해 볼까요?"),
-        ]
-      }
+      messages = []
     }
 
     public var selectedStanceTitle: String {
@@ -59,7 +60,7 @@ public struct ClassAIChatFeature {
     }
 
     public var quickReplies: [String] {
-      ["의미를 부여하는 건 인간이에요", "새로운 도구도 예술이 될 수 있어요", "AI는 결국 도구라고 봐요"]
+      ["저는 \(selectedStanceTitle)에 동의해요", "그 입장의 근거는 무엇인가요?", "다른 관점도 생각해 볼게요"]
     }
   }
 
@@ -73,6 +74,7 @@ public struct ClassAIChatFeature {
   @CasePathable
   public enum View: Equatable {
     case onAppear
+    case retryTapped
     case onDisappear
     case backTapped
     case draftChanged(String)
@@ -83,8 +85,8 @@ public struct ClassAIChatFeature {
 
   @CasePathable
   public enum InnerAction: Equatable {
-    case sessionReady(UUID)
-    case sessionFailed(UUID, String)
+    case sessionReady(UUID, [String])
+    case sessionFailed(UUID, String, Bool)
     case responseReceived(UUID, [String])
     case responseFailed(UUID, String)
   }
@@ -99,6 +101,8 @@ public struct ClassAIChatFeature {
     case session
     case response
   }
+
+  @Dependency(\.classAIChatUseCase) private var chatUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -115,6 +119,218 @@ public struct ClassAIChatFeature {
     }
     .ifLet(\.$customAlert, action: \.customAlert) {
       CustomConfirmAlert()
+    }
+  }
+}
+
+// MARK: - View Actions
+
+extension ClassAIChatFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .onAppear, .retryTapped:
+      guard !state.hasStarted, !state.isCompleted else { return .none }
+      let isRetry = state.canRetrySession
+      let needsOpening = state.messages.isEmpty
+      state.hasStarted = true
+      state.isGenerating = true
+      state.errorMessage = nil
+      state.isModelAvailable = true
+      state.canRetrySession = false
+      let requestID = UUID()
+      state.sessionRequestID = requestID
+      let id = state.conversationID
+      let opponent = state.opponentName
+      let context = ClassAIChatContext(
+        question: state.room.battle.title,
+        selectedStance: state.selectedStanceTitle,
+        opponentStance: state.selectedOptionID == 1
+          ? state.room.battle.optionBTitle : state.room.battle.optionATitle,
+        opponentPhilosopherName: opponent == "A 입장" || opponent == "B 입장" ? nil : opponent
+      )
+      return .run { send in
+        do {
+          if isRetry {
+            await chatUseCase.end(id)
+          }
+          try await chatUseCase.start(id, context)
+          if !needsOpening {
+            guard !Task.isCancelled else { return }
+            await send(.inner(.sessionReady(requestID, [])))
+            return
+          }
+          let opening = try await chatUseCase.respond(
+            id,
+            "토론을 시작합니다. 상대의 입장에서 제가 선택한 입장에 반박하는 짧은 첫 질문을 한국어로 해 주세요."
+          )
+          guard !Task.isCancelled else { return }
+          let bubbles = ClassAIChatMessageUseCase.bubbles(from: opening)
+          if bubbles.isEmpty {
+            await send(.inner(.sessionFailed(requestID, "첫 질문을 만들지 못했어요. 다시 시도해 주세요.", true)))
+          } else {
+            await send(.inner(.sessionReady(requestID, bubbles)))
+          }
+        } catch is CancellationError {
+          return
+        } catch {
+          guard !Task.isCancelled else { return }
+          let modelError = error as? ClassAIChatError
+          await send(.inner(.sessionFailed(
+            requestID,
+            error.localizedDescription,
+            modelError != .deviceNotEligible && modelError != .unsupportedLanguage
+              && modelError != .unavailable
+          )))
+        }
+      }
+      .cancellable(id: CancelID.session, cancelInFlight: true)
+
+    case .onDisappear:
+      let id = state.conversationID
+      state.conversationID = UUID()
+      state.hasStarted = false
+      state.canRetrySession = false
+      state.sessionRequestID = nil
+      state.responseRequestID = nil
+      state.isGenerating = false
+      if let pendingText = state.pendingText {
+        if state.messages.last?.speaker == .user {
+          state.messages.removeLast()
+        }
+        state.draft = pendingText
+        state.pendingText = nil
+      }
+      return .merge(
+        .cancel(id: CancelID.session),
+        .cancel(id: CancelID.response),
+        .run { _ in await chatUseCase.end(id) }
+      )
+
+    case .backTapped:
+      return .send(.delegate(.dismiss))
+
+    case let .draftChanged(text):
+      state.draft = text
+      state.errorMessage = nil
+      return .none
+
+    case let .quickReplyTapped(text):
+      guard !state.isGenerating, !state.isCompleted, state.isModelAvailable else { return .none }
+      state.draft = text
+      state.errorMessage = nil
+      return .none
+
+    case .sendTapped:
+      let text = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard state.hasStarted, !state.isGenerating, !state.isCompleted,
+            state.isModelAvailable, !text.isEmpty
+      else { return .none }
+      state.isGenerating = true
+      state.errorMessage = nil
+      state.pendingText = text
+      state.draft = ""
+      state.messages.append(.init(speaker: .user, text: text))
+      let requestID = UUID()
+      state.responseRequestID = requestID
+      let id = state.conversationID
+      return .run { send in
+        do {
+          let reply = try await chatUseCase.respond(id, text)
+          let bubbles = ClassAIChatMessageUseCase.bubbles(from: reply)
+          if bubbles.isEmpty {
+            await send(.inner(.responseFailed(requestID, "답변을 만들지 못했어요. 다시 시도해 주세요.")))
+          } else {
+            await send(.inner(.responseReceived(requestID, bubbles)))
+          }
+        } catch {
+          await send(.inner(.responseFailed(requestID, error.localizedDescription)))
+        }
+      }
+      .cancellable(id: CancelID.response, cancelInFlight: true)
+
+    case .finalVoteTapped:
+      guard state.isCompleted || !state.isModelAvailable || state.errorMessage != nil else { return .none }
+      state.customAlert = .finalVote()
+      return .none
+    }
+  }
+}
+
+// MARK: - Inner Actions
+
+extension ClassAIChatFeature {
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .sessionReady(requestID, bubbles):
+      guard state.sessionRequestID == requestID else { return .none }
+      state.sessionRequestID = nil
+      state.isGenerating = false
+      state.isModelAvailable = true
+      state.canRetrySession = false
+      state.messages.append(contentsOf: bubbles.map { .init(speaker: .opponent, text: $0) })
+      return .none
+
+    case let .sessionFailed(requestID, message, canRetry):
+      guard state.sessionRequestID == requestID else { return .none }
+      state.sessionRequestID = nil
+      state.isGenerating = false
+      state.isModelAvailable = false
+      state.canRetrySession = canRetry
+      state.hasStarted = false
+      state.errorMessage = message
+      return .none
+
+    case let .responseReceived(requestID, bubbles):
+      guard state.responseRequestID == requestID else { return .none }
+      state.responseRequestID = nil
+      state.isGenerating = false
+      state.pendingText = nil
+      state.messages.append(contentsOf: bubbles.map { .init(speaker: .opponent, text: $0) })
+      if state.round == 3 {
+        state.isCompleted = true
+        state.customAlert = .finalVote()
+      } else {
+        state.round += 1
+      }
+      return .none
+
+    case let .responseFailed(requestID, message):
+      guard state.responseRequestID == requestID else { return .none }
+      state.responseRequestID = nil
+      state.isGenerating = false
+      if state.messages.last?.speaker == .user {
+        state.messages.removeLast()
+      }
+      state.draft = state.pendingText ?? state.draft
+      state.pendingText = nil
+      state.errorMessage = message
+      return .none
+    }
+  }
+}
+
+// MARK: - Alert Actions
+
+extension ClassAIChatFeature {
+  private func handleCustomAlertAction(
+    state: inout State,
+    action: PresentationAction<CustomAlertAction>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.confirmTapped):
+      state.customAlert = nil
+      return .send(.delegate(.finalVote(battleID: state.battleID)))
+    case .presented(.cancelTapped), .dismiss:
+      state.customAlert = nil
+      return .none
+    case .presented:
+      return .none
     }
   }
 }

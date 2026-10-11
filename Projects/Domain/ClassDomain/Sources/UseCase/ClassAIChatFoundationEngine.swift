@@ -1,3 +1,10 @@
+//
+//  ClassAIChatFoundationEngine.swift
+//  ClassDomain
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import Foundation
 
@@ -13,7 +20,16 @@ import Foundation
 
     func start(id: UUID, context: ClassAIChatContext) throws {
       let model = SystemLanguageModel.default
-      guard case .available = model.availability else {
+      switch model.availability {
+      case .available:
+        break
+      case .unavailable(.deviceNotEligible):
+        throw ClassAIChatError.deviceNotEligible
+      case .unavailable(.appleIntelligenceNotEnabled):
+        throw ClassAIChatError.appleIntelligenceNotEnabled
+      case .unavailable(.modelNotReady):
+        throw ClassAIChatError.modelNotReady
+      @unknown default:
         throw ClassAIChatError.unavailable
       }
       guard model.supportsLocale(Locale(identifier: "ko_KR")) else {

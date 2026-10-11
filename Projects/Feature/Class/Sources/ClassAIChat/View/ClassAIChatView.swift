@@ -1,3 +1,10 @@
+//
+//  ClassAIChatView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
@@ -198,6 +205,11 @@ private extension ClassAIChatView {
   var composer: some View {
     VStack(spacing: 10) {
       if store.isCompleted || !store.isModelAvailable {
+        if store.canRetrySession {
+          Button("AI 토론 다시 시도하기") { send(.retryTapped) }
+            .ctaButtonStyle(.primary, size: .large, height: 52)
+            .padding(.horizontal, 16)
+        }
         Button("최종투표하기") { send(.finalVoteTapped) }
           .ctaButtonStyle(.primary, size: .large, height: 52)
           .padding(.horizontal, 16)

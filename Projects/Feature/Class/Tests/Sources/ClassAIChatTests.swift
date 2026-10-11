@@ -1,3 +1,10 @@
+//
+//  ClassAIChatTests.swift
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
@@ -21,12 +28,31 @@ struct ClassAIChatTests {
   private actor ResponseStub {
     private var attempts = 0
 
-    func respond() throws -> String {
+    func respond(_ text: String) throws -> String {
+      if text.contains("토론을 시작") {
+        return "처음부터 다시 생각해 보시겠어요?"
+      }
       attempts += 1
       if attempts == 1 {
         throw ClassAIChatError.alreadyResponding
       }
       return "다른 관점도 생각해 볼까요?"
+    }
+  }
+
+  private actor StartStub {
+    private var attempts = 0
+    private let firstError: ClassAIChatError
+
+    init(firstError: ClassAIChatError = .modelNotReady) {
+      self.firstError = firstError
+    }
+
+    func start() throws {
+      attempts += 1
+      if attempts == 1 {
+        throw firstError
+      }
     }
   }
 
@@ -76,15 +102,16 @@ struct ClassAIChatTests {
     )) {
       ClassAIChatFeature()
     } withDependencies: {
-      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, context in
-        await recorder.record(context)
-      })
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, context in await recorder.record(context) },
+        respond: { _, _ in "첫 질문입니다." }
+      )
     }
     store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
     let requestID = try #require(store.state.sessionRequestID)
-    await store.receive(\.inner, .sessionReady(requestID))
+    await store.receive(\.inner, .sessionReady(requestID, ["첫 질문입니다."]))
 
     let context = try #require(await recorder.value())
     #expect(context.question == room.battle.title)
@@ -120,6 +147,103 @@ struct ClassAIChatTests {
   }
 
   @Test
+  func 실제_대화는_고정_답변_없이_모델의_첫_질문으로_시작한다() async throws {
+    let store = TestStore(initialState: ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)) {
+      ClassAIChatFeature()
+    } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, _ in "당신이 택한 입장의 근거는 무엇인가요?" }
+      )
+    }
+    store.exhaustivity = .off
+    #expect(store.state.messages.isEmpty)
+    await store.send(.view(.onAppear))
+    let requestID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(requestID, ["당신이 택한 입장의 근거는 무엇인가요?"]))
+    #expect(store.state.messages.map(\.text) == ["당신이 택한 입장의 근거는 무엇인가요?"])
+    #expect(store.state.round == 1)
+  }
+
+  @Test
+  func 모델_준비_오류는_재시도로_복구한다() async throws {
+    let stub = StartStub()
+    let store = TestStore(initialState: ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)) {
+      ClassAIChatFeature()
+    } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in try await stub.start() },
+        respond: { _, _ in "첫 질문입니다." }
+      )
+    }
+    store.exhaustivity = .off
+    await store.send(.view(.onAppear))
+    let failedID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionFailed(failedID, ClassAIChatError.modelNotReady.localizedDescription, true))
+    #expect(store.state.canRetrySession)
+    await store.send(.view(.retryTapped))
+    let retryID = try #require(store.state.sessionRequestID)
+    #expect(retryID != failedID)
+    await store.receive(\.inner, .sessionReady(retryID, ["첫 질문입니다."]))
+    #expect(!store.state.canRetrySession)
+    #expect(store.state.messages.map(\.text) == ["첫 질문입니다."])
+  }
+
+  @Test
+  func Apple_Intelligence를_켠_뒤_재시도할_수_있다() async throws {
+    let stub = StartStub(firstError: .appleIntelligenceNotEnabled)
+    let store = TestStore(initialState: ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)) {
+      ClassAIChatFeature()
+    } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in try await stub.start() },
+        respond: { _, _ in "첫 질문입니다." }
+      )
+    }
+    store.exhaustivity = .off
+    await store.send(.view(.onAppear))
+    let failedID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionFailed(
+      failedID, ClassAIChatError.appleIntelligenceNotEnabled.localizedDescription, true
+    ))
+    #expect(store.state.canRetrySession)
+  }
+
+  @Test
+  func 다시_나타난_화면은_첫_질문을_중복하지_않는다() async throws {
+    let store = TestStore(initialState: ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)) {
+      ClassAIChatFeature()
+    } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, _ in "첫 질문입니다." }
+      )
+    }
+    store.exhaustivity = .off
+    await store.send(.view(.onAppear))
+    let firstID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(firstID, ["첫 질문입니다."]))
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    let secondID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(secondID, []))
+    #expect(store.state.messages.map(\.text) == ["첫 질문입니다."])
+  }
+
+  @Test
+  func 이전_세션의_첫_응답은_대화에_추가하지_않는다() async {
+    let staleID = UUID()
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.sessionRequestID = UUID()
+    let store = TestStore(initialState: state) { ClassAIChatFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.sessionReady(staleID, ["늦은 첫 질문"])))
+    #expect(store.state.messages.isEmpty)
+    #expect(store.state.round == 1)
+  }
+
+  @Test
   func 모델_응답을_최대_세_말풍선으로_나눈다() {
     #expect(ClassAIChatMessageUseCase.bubbles(from: "첫째. 둘째. 셋째. 넷째.") == [
       "첫째.", "둘째.", "셋째. 넷째.",
@@ -147,7 +271,7 @@ struct ClassAIChatTests {
 
     await store.send(.view(.onAppear))
     let sessionRequestID = try #require(store.state.sessionRequestID)
-    await store.receive(\.inner, .sessionReady(sessionRequestID))
+    await store.receive(\.inner, .sessionReady(sessionRequestID, ["첫 답변.", "두 번째 답변."]))
     for expectedRound in 1 ... 3 {
       await store.send(.view(.draftChanged("제 생각")))
       await store.send(.view(.sendTapped))
@@ -177,7 +301,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in },
-        respond: { _, _ in try await stub.respond() },
+        respond: { _, text in try await stub.respond(text) },
         end: { _ in }
       )
     }
@@ -185,7 +309,7 @@ struct ClassAIChatTests {
 
     await store.send(.view(.onAppear))
     let sessionRequestID = try #require(store.state.sessionRequestID)
-    await store.receive(\.inner, .sessionReady(sessionRequestID))
+    await store.receive(\.inner, .sessionReady(sessionRequestID, ["처음부터 다시 생각해 보시겠어요?"]))
     await store.send(.view(.draftChanged("제 생각")))
     await store.send(.view(.sendTapped))
     let failedRequestID = try #require(store.state.responseRequestID)
@@ -219,6 +343,7 @@ struct ClassAIChatTests {
     initialState.isGenerating = true
     initialState.responseRequestID = staleID
     initialState.pendingText = "취소된 문장"
+    initialState.messages.append(.init(speaker: .opponent, text: "선택한 입장의 근거는 무엇인가요?"))
     initialState.messages.append(.init(speaker: .user, text: "취소된 문장"))
     let store = TestStore(initialState: initialState) {
       ClassAIChatFeature()

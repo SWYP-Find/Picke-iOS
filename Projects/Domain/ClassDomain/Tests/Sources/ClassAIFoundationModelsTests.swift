@@ -1,3 +1,10 @@
+//
+//  ClassAIFoundationModelsTests.swift
+//  ClassDomainTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomain
 import ClassDomainInterface
 import Foundation
@@ -36,6 +43,8 @@ final class ClassAIFoundationModelsTests: XCTestCase {
       await client.end(conversationID)
       if let modelError = error as? ClassAIChatError,
          modelError == .unavailable || modelError == .unsupportedLanguage
+         || modelError == .deviceNotEligible || modelError == .appleIntelligenceNotEnabled
+         || modelError == .modelNotReady
       {
         throw XCTSkip("기기에서 한국어 Foundation Models를 사용할 수 없습니다: \(modelError.localizedDescription)")
       }
