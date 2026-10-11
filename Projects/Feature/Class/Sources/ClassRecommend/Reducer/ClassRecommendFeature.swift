@@ -2,6 +2,8 @@
 //  ClassRecommendFeature.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -9,8 +11,6 @@ import Foundation
 
 @Reducer
 public struct ClassRecommendFeature {
-  @Dependency(\.classUseCase) private var classUseCase
-
   public init() {}
 
   public enum Mode: Equatable {
@@ -36,7 +36,10 @@ public struct ClassRecommendFeature {
     public var isLoading = false
     public var loadFailed = false
 
-    public init(filter: ClassTopicFilter, mode: Mode = .existingContent) {
+    public init(
+      filter: ClassTopicFilter,
+      mode: Mode = .existingContent
+    ) {
       self.filter = filter
       self.mode = mode
     }
@@ -114,6 +117,8 @@ public struct ClassRecommendFeature {
     case fetch
   }
 
+  @Dependency(\.classUseCase) private var classUseCase
+
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
@@ -132,6 +137,8 @@ public struct ClassRecommendFeature {
     }
   }
 }
+
+// MARK: - Action Handlers
 
 extension ClassRecommendFeature {
   private func handleViewAction(

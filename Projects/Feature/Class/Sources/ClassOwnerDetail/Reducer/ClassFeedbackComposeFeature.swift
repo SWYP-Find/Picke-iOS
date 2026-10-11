@@ -1,3 +1,10 @@
+//
+//  ClassFeedbackComposeFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -14,7 +21,10 @@ public struct ClassFeedbackComposeFeature {
     public var feedback = ""
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
-    public init(room: ClassRoom, memberName: String) {
+    public init(
+      room: ClassRoom,
+      memberName: String
+    ) {
       self.room = room
       self.memberName = memberName
     }
@@ -46,30 +56,52 @@ public struct ClassFeedbackComposeFeature {
       switch action {
       case .binding:
         return .none
-      case .view(.backTapped), .view(.cancelTapped):
-        return .send(.delegate(.dismiss))
-      case .view(.submitTapped):
-        let feedback = state.feedback.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !feedback.isEmpty else { return .none }
-        state.customAlert = .alert(
-          title: "전송 준비 중",
-          message: "서버 연동 전이라 피드백을 전송할 수 없습니다.",
-          cancelTitle: ""
-        )
-        return .none
-      case .customAlert(.presented(.confirmTapped)),
-           .customAlert(.presented(.cancelTapped)),
-           .customAlert(.dismiss):
-        state.customAlert = nil
-        return .none
-      case .customAlert:
-        return .none
+      case let .view(viewAction):
+        return handleViewAction(state: &state, action: viewAction)
+      case let .customAlert(alertAction):
+        return handleCustomAlertAction(state: &state, action: alertAction)
       case .delegate:
         return .none
       }
     }
     .ifLet(\.$customAlert, action: \.customAlert) {
       CustomConfirmAlert()
+    }
+  }
+}
+
+// MARK: - Action Handlers
+
+extension ClassFeedbackComposeFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .backTapped, .cancelTapped:
+      return .send(.delegate(.dismiss))
+    case .submitTapped:
+      let feedback = state.feedback.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !feedback.isEmpty else { return .none }
+      state.customAlert = .alert(
+        title: "전송 준비 중",
+        message: "서버 연동 전이라 피드백을 전송할 수 없습니다.",
+        cancelTitle: ""
+      )
+      return .none
+    }
+  }
+
+  private func handleCustomAlertAction(
+    state: inout State,
+    action: PresentationAction<CustomAlertAction>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.confirmTapped), .presented(.cancelTapped), .dismiss:
+      state.customAlert = nil
+      return .none
+    case .presented:
+      return .none
     }
   }
 }

@@ -1,3 +1,10 @@
+//
+//  ClassMemberDetailFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 
@@ -83,18 +90,29 @@ public struct ClassMemberDetailFeature {
     Reduce { state, action in
       switch action {
       case let .view(viewAction):
-        switch viewAction {
-        case .backTapped:
-          return .send(.delegate(.dismiss))
-        case .commentTapped:
-          guard let opinion = state.activity?.commentOpinion else { return .none }
-          return .send(.delegate(.commentSelected(opinion)))
-        case .feedbackTapped:
-          return .send(.delegate(.feedbackSelected))
-        }
+        return handleViewAction(state: &state, action: viewAction)
       case .delegate:
         return .none
       }
+    }
+  }
+}
+
+// MARK: - Action Handlers
+
+extension ClassMemberDetailFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .backTapped:
+      return .send(.delegate(.dismiss))
+    case .commentTapped:
+      guard let opinion = state.activity?.commentOpinion else { return .none }
+      return .send(.delegate(.commentSelected(opinion)))
+    case .feedbackTapped:
+      return .send(.delegate(.feedbackSelected))
     }
   }
 }

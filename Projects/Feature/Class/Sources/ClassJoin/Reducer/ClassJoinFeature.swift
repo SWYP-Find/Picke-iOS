@@ -1,12 +1,16 @@
+//
+//  ClassJoinFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 
 @Reducer
 public struct ClassJoinFeature {
-  @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMockRepository) private var classMockRepository
-
   public init() {}
 
   public enum Mode: Equatable {
@@ -24,7 +28,10 @@ public struct ClassJoinFeature {
     public var isLoading = false
     public var errorMessage: String?
 
-    public init(mode: Mode = .code, preview: ClassRoom? = nil) {
+    public init(
+      mode: Mode = .code,
+      preview: ClassRoom? = nil
+    ) {
       self.mode = mode
       self.preview = preview
     }
@@ -82,6 +89,9 @@ public struct ClassJoinFeature {
     case nameOwner
   }
 
+  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classMockRepository) private var classMockRepository
+
   public var body: some Reducer<State, Action> {
     BindingReducer()
     Reduce { state, action in
@@ -111,8 +121,13 @@ public struct ClassJoinFeature {
   }
 }
 
-private extension ClassJoinFeature {
-  func handleViewAction(state: inout State, action: View) -> Effect<Action> {
+// MARK: - Action Handlers
+
+extension ClassJoinFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))
@@ -135,7 +150,10 @@ private extension ClassJoinFeature {
     }
   }
 
-  func handleAsyncAction(state: inout State, action: AsyncAction) -> Effect<Action> {
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
     switch action {
     case let .find(code):
       state.isLoading = true
@@ -185,7 +203,10 @@ private extension ClassJoinFeature {
     }
   }
 
-  func handleInnerAction(state: inout State, action: InnerAction) -> Effect<Action> {
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
     state.isLoading = false
     switch action {
     case let .found(.success(room)):

@@ -1,3 +1,10 @@
+//
+//  ClassSettingTests.swift
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
@@ -195,6 +202,18 @@ private struct FailingClassUseCase: ClassInterface {
   }
 
   func deleteClass(id _: Int) async throws {
+    fatalError("live use case called")
+  }
+
+  func leaveClass(id _: Int) async throws {
+    fatalError("live use case called")
+  }
+
+  func fetchReport(roomID _: Int) async throws -> ClassReport? {
+    fatalError("live use case called")
+  }
+
+  func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
     fatalError("live use case called")
   }
 }

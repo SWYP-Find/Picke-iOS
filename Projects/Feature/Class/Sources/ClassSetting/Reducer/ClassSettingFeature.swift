@@ -2,6 +2,8 @@
 //  ClassSettingFeature.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -10,9 +12,6 @@ import PickeSharedUI
 
 @Reducer
 public struct ClassSettingFeature {
-  @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMockRepository) private var classMockRepository
-
   public init() {}
 
   @ObservableState
@@ -177,6 +176,9 @@ public struct ClassSettingFeature {
     case create
   }
 
+  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classMockRepository) private var classMockRepository
+
   public var body: some Reducer<State, Action> {
     BindingReducer()
     Reduce { state, action in
@@ -184,22 +186,11 @@ public struct ClassSettingFeature {
       case .binding:
         return .none
 
-      case .unavailableNotice(.presented(.dismissTapped)):
-        state.unavailableNotice = nil
-        return .none
+      case let .unavailableNotice(noticeAction):
+        return handleUnavailableNoticeAction(state: &state, action: noticeAction)
 
-      case .unavailableNotice:
-        return .none
-
-      case .customAlert(.presented(.confirmTapped)),
-           .customAlert(.presented(.cancelTapped)),
-           .customAlert(.dismiss):
-        state.customAlert = nil
-        state.errorMessage = nil
-        return .none
-
-      case .customAlert:
-        return .none
+      case let .customAlert(alertAction):
+        return handleCustomAlertAction(state: &state, action: alertAction)
 
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
@@ -223,7 +214,36 @@ public struct ClassSettingFeature {
   }
 }
 
+// MARK: - Action Handlers
+
 extension ClassSettingFeature {
+  private func handleUnavailableNoticeAction(
+    state: inout State,
+    action: PresentationAction<ClassAIUnavailableNoticeFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.dismissTapped):
+      state.unavailableNotice = nil
+      return .none
+    case .dismiss:
+      return .none
+    }
+  }
+
+  private func handleCustomAlertAction(
+    state: inout State,
+    action: PresentationAction<CustomAlertAction>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.confirmTapped), .presented(.cancelTapped), .dismiss:
+      state.customAlert = nil
+      state.errorMessage = nil
+      return .none
+    case .presented:
+      return .none
+    }
+  }
+
   private func handleViewAction(
     state: inout State,
     action: View

@@ -1,3 +1,10 @@
+//
+//  ClassClosedBattleFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 
@@ -34,13 +41,27 @@ public struct ClassClosedBattleFeature {
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .view(.backTapped):
-        return .send(.delegate(.dismiss))
-      case .view(.resultTapped):
-        return .send(.delegate(.openReport(state.room)))
+      case let .view(viewAction):
+        return handleViewAction(state: &state, action: viewAction)
       case .delegate:
         return .none
       }
+    }
+  }
+}
+
+// MARK: - Action Handlers
+
+extension ClassClosedBattleFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .backTapped:
+      return .send(.delegate(.dismiss))
+    case .resultTapped:
+      return .send(.delegate(.openReport(state.room)))
     }
   }
 }

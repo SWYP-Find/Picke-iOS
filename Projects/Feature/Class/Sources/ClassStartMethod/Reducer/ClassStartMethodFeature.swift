@@ -2,6 +2,8 @@
 //  ClassStartMethodFeature.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ComposableArchitecture
 
@@ -44,25 +46,36 @@ public struct ClassStartMethodFeature {
     Reduce { state, action in
       switch action {
       case let .view(viewAction):
-        switch viewAction {
-        case .backTapped:
-          return .send(.delegate(.dismiss))
-
-        case let .methodTapped(method):
-          state.selectedMethod = method
-          return .none
-
-        case .continueTapped:
-          switch state.selectedMethod {
-          case .existingContent:
-            return .send(.delegate(.existingContentSelected))
-          case .ownTopic:
-            return .send(.delegate(.ownTopicSelected))
-          }
-        }
+        return handleViewAction(state: &state, action: viewAction)
 
       case .delegate:
         return .none
+      }
+    }
+  }
+}
+
+// MARK: - Action Handlers
+
+extension ClassStartMethodFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .backTapped:
+      return .send(.delegate(.dismiss))
+
+    case let .methodTapped(method):
+      state.selectedMethod = method
+      return .none
+
+    case .continueTapped:
+      switch state.selectedMethod {
+      case .existingContent:
+        return .send(.delegate(.existingContentSelected))
+      case .ownTopic:
+        return .send(.delegate(.ownTopicSelected))
       }
     }
   }

@@ -1,3 +1,10 @@
+//
+//  ClassJoinTests.swift
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
@@ -186,4 +193,14 @@ private struct StubClassUseCase: ClassInterface {
   }
 
   func deleteClass(id _: Int) async throws {}
+
+  func leaveClass(id _: Int) async throws {}
+
+  func fetchReport(roomID _: Int) async throws -> ClassReport? {
+    nil
+  }
+
+  func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
+    nil
+  }
 }

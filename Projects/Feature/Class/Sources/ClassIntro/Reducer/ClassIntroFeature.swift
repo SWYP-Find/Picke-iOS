@@ -2,6 +2,8 @@
 //  ClassIntroFeature.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -76,14 +78,8 @@ public struct ClassIntroFeature {
           action: presentationAction
         )
 
-      case .customAlert(.presented(.confirmTapped)),
-           .customAlert(.presented(.cancelTapped)),
-           .customAlert(.dismiss):
-        state.customAlert = nil
-        return .none
-
-      case .customAlert:
-        return .none
+      case let .customAlert(alertAction):
+        return handleCustomAlertAction(state: &state, action: alertAction)
 
       case let .inner(innerAction):
         return handleInnerAction(
@@ -104,7 +100,22 @@ public struct ClassIntroFeature {
   }
 }
 
+// MARK: - Action Handlers
+
 extension ClassIntroFeature {
+  private func handleCustomAlertAction(
+    state: inout State,
+    action: PresentationAction<CustomAlertAction>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.confirmTapped), .presented(.cancelTapped), .dismiss:
+      state.customAlert = nil
+      return .none
+    case .presented:
+      return .none
+    }
+  }
+
   private func handleViewAction(
     state: inout State,
     action: View

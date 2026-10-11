@@ -1,3 +1,10 @@
+//
+//  ClassDetailFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -6,9 +13,6 @@ import PickeSharedUI
 
 @Reducer
 public struct ClassDetailFeature {
-  @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMockRepository) private var classMockRepository
-
   public init() {}
 
   @ObservableState
@@ -83,6 +87,9 @@ public struct ClassDetailFeature {
     case deleted(Int, ClassError?)
   }
 
+  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classMockRepository) private var classMockRepository
+
   public var body: some Reducer<State, Action> {
     BindingReducer()
     Reduce { state, action in
@@ -95,25 +102,10 @@ public struct ClassDetailFeature {
         return handleAsyncAction(state: &state, action: asyncAction)
       case let .inner(innerAction):
         return handleInnerAction(state: &state, action: innerAction)
-      case .modal(.presented(.dismissTapped)), .modal(.dismiss):
-        state.modal = nil
-        return .none
-      case .modal:
-        return .none
+      case let .modal(modalAction):
+        return handleModalAction(state: &state, action: modalAction)
       case let .customAlert(alertAction):
-        switch alertAction {
-        case .presented(.confirmTapped):
-          let isDeleteConfirmation = state.customAlert?.style == .deleteConfirm
-          state.customAlert = nil
-          state.errorMessage = nil
-          return isDeleteConfirmation
-            ? handleViewAction(state: &state, action: .deleteConfirmed)
-            : .none
-        case .presented(.cancelTapped), .dismiss:
-          state.customAlert = nil
-          state.errorMessage = nil
-          return .none
-        }
+        return handleCustomAlertAction(state: &state, action: alertAction)
       case let .dataUpdated(room):
         state.room = room
         state.deadline = room.deadline
@@ -132,8 +124,43 @@ public struct ClassDetailFeature {
   }
 }
 
+// MARK: - Action Handlers
+
 extension ClassDetailFeature {
-  private func handleViewAction(state: inout State, action: View) -> Effect<Action> {
+  private func handleModalAction(
+    state: inout State,
+    action: PresentationAction<ClassModalFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.dismissTapped), .dismiss:
+      state.modal = nil
+      return .none
+    }
+  }
+
+  private func handleCustomAlertAction(
+    state: inout State,
+    action: PresentationAction<CustomAlertAction>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.confirmTapped):
+      let isDeleteConfirmation = state.customAlert?.style == .deleteConfirm
+      state.customAlert = nil
+      state.errorMessage = nil
+      return isDeleteConfirmation
+        ? handleViewAction(state: &state, action: .deleteConfirmed)
+        : .none
+    case .presented(.cancelTapped), .dismiss:
+      state.customAlert = nil
+      state.errorMessage = nil
+      return .none
+    }
+  }
+
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))

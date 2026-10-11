@@ -2,6 +2,8 @@
 //  ClassTopicFeature.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -64,6 +66,8 @@ public struct ClassTopicFeature {
     }
   }
 }
+
+// MARK: - Action Handlers
 
 extension ClassTopicFeature {
   private func handleViewAction(

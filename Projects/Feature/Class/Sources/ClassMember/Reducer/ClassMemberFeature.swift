@@ -1,3 +1,10 @@
+//
+//  ClassMemberFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -29,7 +36,11 @@ public struct ClassMemberFeature {
     @Presents public var editName: ClassMemberEditNameFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
-    public init(room: ClassRoom, members: [ClassMember] = [], currentMemberID: Int = 1) {
+    public init(
+      room: ClassRoom,
+      members: [ClassMember] = [],
+      currentMemberID: Int = 1
+    ) {
       self.room = room
       self.members = members
       self.currentMemberID = currentMemberID
@@ -94,35 +105,12 @@ public struct ClassMemberFeature {
         return .none
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
-      case .filter(.presented(.applyTapped)):
-        if let filter = state.filter {
-          state.appliedFilter = filter
-          state.hasAppliedSort = true
-        }
-        state.filter = nil
-        return .none
-      case .filter(.presented(.dismissTapped)), .filter(.dismiss):
-        state.filter = nil
-        return .none
-      case .filter:
-        return .none
-      case .editName(.presented(.dismissTapped)), .editName(.dismiss):
-        state.editName = nil
-        return .none
-      case .editName:
-        return .none
-      case .customAlert(.presented(.confirmTapped)):
-        let isRemovalConfirmation = state.customAlert?.style == .deleteConfirm
-        state.customAlert = nil
-        state.errorMessage = nil
-        return isRemovalConfirmation
-          ? handleViewAction(state: &state, action: .removeConfirmed)
-          : .none
-      case .customAlert(.presented(.cancelTapped)), .customAlert(.dismiss):
-        state.customAlert = nil
-        state.pendingRemovalID = nil
-        state.errorMessage = nil
-        return .none
+      case let .filter(filterAction):
+        return handleFilterAction(state: &state, action: filterAction)
+      case let .editName(editNameAction):
+        return handleEditNameAction(state: &state, action: editNameAction)
+      case let .customAlert(alertAction):
+        return handleCustomAlertAction(state: &state, action: alertAction)
       case let .membersLoaded(room, members, currentMemberID):
         state.room = room
         state.members = members
@@ -181,8 +169,66 @@ public struct ClassMemberFeature {
   }
 #endif
 
+// MARK: - Action Handlers
+
 extension ClassMemberFeature {
-  private func handleViewAction(state: inout State, action: View) -> Effect<Action> {
+  private func handleFilterAction(
+    state: inout State,
+    action: PresentationAction<ClassMemberFilterFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.applyTapped):
+      if let filter = state.filter {
+        state.appliedFilter = filter
+        state.hasAppliedSort = true
+      }
+      state.filter = nil
+      return .none
+    case .presented(.dismissTapped), .dismiss:
+      state.filter = nil
+      return .none
+    case .presented:
+      return .none
+    }
+  }
+
+  private func handleEditNameAction(
+    state: inout State,
+    action: PresentationAction<ClassMemberEditNameFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.dismissTapped), .dismiss:
+      state.editName = nil
+      return .none
+    case .presented:
+      return .none
+    }
+  }
+
+  private func handleCustomAlertAction(
+    state: inout State,
+    action: PresentationAction<CustomAlertAction>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.confirmTapped):
+      let isRemovalConfirmation = state.customAlert?.style == .deleteConfirm
+      state.customAlert = nil
+      state.errorMessage = nil
+      return isRemovalConfirmation
+        ? handleViewAction(state: &state, action: .removeConfirmed)
+        : .none
+    case .presented(.cancelTapped), .dismiss:
+      state.customAlert = nil
+      state.pendingRemovalID = nil
+      state.errorMessage = nil
+      return .none
+    }
+  }
+
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))

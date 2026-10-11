@@ -2,6 +2,8 @@
 //  ClassShareFeature.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -9,8 +11,6 @@ import Foundation
 
 @Reducer
 public struct ClassShareFeature {
-  @Dependency(\.classMockRepository) private var classMockRepository
-
   public init() {}
 
   @ObservableState
@@ -58,29 +58,16 @@ public struct ClassShareFeature {
     case enterClass(ClassRoom)
   }
 
+  @Dependency(\.classMockRepository) private var classMockRepository
+
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .view(.closeTapped):
-        return .send(.delegate(.dismiss))
+      case let .view(viewAction):
+        return handleViewAction(state: &state, action: viewAction)
 
-      case .view(.enterClassTapped):
-        guard classMockRepository != nil else {
-          return .send(.delegate(.enterClass(state.room)))
-        }
-        state.join = .init(mode: .ownerName, preview: state.room)
-        return .none
-
-      case .join(.presented(.delegate(.dismiss))):
-        state.join = nil
-        return .none
-
-      case let .join(.presented(.delegate(.ownerNamed(room)))):
-        state.join = nil
-        return .send(.delegate(.enterClass(room)))
-
-      case .join:
-        return .none
+      case let .join(joinAction):
+        return handleJoinAction(state: &state, action: joinAction)
 
       case .delegate:
         return .none
@@ -88,6 +75,45 @@ public struct ClassShareFeature {
     }
     .ifLet(\.$join, action: \.join) {
       ClassJoinFeature()
+    }
+  }
+}
+
+// MARK: - Action Handlers
+
+extension ClassShareFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .closeTapped:
+      return .send(.delegate(.dismiss))
+
+    case .enterClassTapped:
+      guard classMockRepository != nil else {
+        return .send(.delegate(.enterClass(state.room)))
+      }
+      state.join = .init(mode: .ownerName, preview: state.room)
+      return .none
+    }
+  }
+
+  private func handleJoinAction(
+    state: inout State,
+    action: PresentationAction<ClassJoinFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .presented(.delegate(.dismiss)):
+      state.join = nil
+      return .none
+
+    case let .presented(.delegate(.ownerNamed(room))):
+      state.join = nil
+      return .send(.delegate(.enterClass(room)))
+
+    case .presented, .dismiss:
+      return .none
     }
   }
 }
