@@ -12,6 +12,97 @@ import Testing
 
 struct ClassMembershipTests {
   @Test
+  func 참여_중복_이름은_공백을_제거해_거부하고_방_상태를_보존한다() async throws {
+    let room = ClassRoom.mockJoinable
+    let repository = MockClassRepository(rooms: [], availableRooms: [room])
+    let membersBefore = try await repository.fetchMembers(roomID: room.id)
+
+    do {
+      _ = try await repository.joinClass(joinCode: room.joinCode, nickname: " 참여자 2 ")
+      Issue.record("중복 이름으로 참여했습니다")
+    } catch {
+      #expect(error as? ClassError == .duplicateName)
+    }
+
+    #expect(try await repository.fetchMyClasses().isEmpty)
+    #expect(try await repository.fetchClass(joinCode: room.joinCode) == room)
+    #expect(try await repository.fetchMembers(roomID: room.id) == membersBefore)
+    do {
+      _ = try await repository.currentMemberID(roomID: room.id)
+      Issue.record("거부된 참여자 ID가 생성됐습니다")
+    } catch {
+      #expect(error as? ClassError == .invalidCode)
+    }
+
+    let joined = try await repository.joinClass(joinCode: room.joinCode, nickname: " 새 참여자 ")
+    #expect(joined.memberCount == membersBefore.count + 1)
+    #expect(try await repository.fetchMembers(roomID: room.id).last?.name == "새 참여자")
+  }
+
+  @Test
+  func 다른_방의_같은_이름은_참여에_사용할_수_있다() async throws {
+    let ownerRoom = ClassRoom.mocks[0]
+    let joinable = ClassRoom.mockJoinable
+    let repository = MockClassRepository(rooms: [ownerRoom], availableRooms: [joinable])
+
+    let joined = try await repository.joinClass(joinCode: joinable.joinCode, nickname: " 김선생 ")
+
+    #expect(joined.id == joinable.id)
+    #expect(try await repository.fetchMembers(roomID: joinable.id).last?.name == "김선생")
+    #expect(try await repository.fetchMembers(roomID: ownerRoom.id).first?.name == "김선생")
+  }
+
+  @Test
+  func 이름_변경은_다른_회원의_이름을_거부하고_본인_이름은_허용한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let membersBefore = try await repository.fetchMembers(roomID: room.id)
+
+    do {
+      _ = try await repository.updateDisplayName(
+        roomID: room.id,
+        memberID: 1,
+        currentMemberID: 1,
+        name: " 공은지 "
+      )
+      Issue.record("다른 회원의 이름으로 변경했습니다")
+    } catch {
+      #expect(error as? ClassError == .duplicateName)
+    }
+    #expect(try await repository.fetchMembers(roomID: room.id) == membersBefore)
+
+    let unchanged = try await repository.updateDisplayName(
+      roomID: room.id,
+      memberID: 1,
+      currentMemberID: 1,
+      name: " 김선생 "
+    )
+    #expect(unchanged == membersBefore[0])
+    let renamed = try await repository.updateDisplayName(
+      roomID: room.id,
+      memberID: 1,
+      currentMemberID: 1,
+      name: "새 이름"
+    )
+    #expect(renamed.name == "새 이름")
+  }
+
+  @Test
+  func 종료된_방은_이름이_중복돼도_종료_오류를_반환한다() async throws {
+    let room = ClassRoom.mockClosedSociety
+    let repository = MockClassRepository(rooms: [], availableRooms: [room])
+
+    do {
+      _ = try await repository.joinClass(joinCode: room.joinCode, nickname: "운영자")
+      Issue.record("종료된 방에 참여했습니다")
+    } catch {
+      #expect(error as? ClassError == .closed)
+    }
+    #expect(try await repository.fetchMembers(roomID: room.id).count == room.memberCount)
+    #expect(try await repository.fetchMyClasses().isEmpty)
+  }
+
+  @Test
   func 탈퇴는_현재_회원과_개인_리포트만_제거하고_다른_방과_공유_대시보드를_보존한다() async throws {
     let ownerRoom = ClassRoom.mocks[0]
     let memberRoom = ClassRoom.mockClosedSociety

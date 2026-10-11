@@ -11,6 +11,7 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
   case invalidCode
   case closed
   case alreadyJoined
+  case duplicateName
   case network(String)
   case unknown(String)
 
@@ -23,6 +24,7 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
     case .invalidCode: "참여 코드를 다시 확인해 주세요."
     case .closed: "종료된 클래스입니다."
     case .alreadyJoined: "이미 참여한 클래스입니다."
+    case .duplicateName: "이미 사용 중인 이름이에요."
     case let .network(message), let .unknown(message): message
     }
   }

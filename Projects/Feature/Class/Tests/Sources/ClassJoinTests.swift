@@ -114,6 +114,115 @@ struct ClassJoinTests {
   }
 
   @Test
+  func 이름은_공백을_제외한_문자_기준_12자까지_참여할_수_있다() async {
+    let room = ClassRoom.mockJoinable
+    let store = TestStore(initialState: ClassJoinFeature.State(mode: .nickname, preview: room)) {
+      ClassJoinFeature()
+    }
+    let twelveCharacters = String(repeating: "가", count: 11) + "👩🏽‍💻"
+
+    await store.send(.binding(.set(\.nickname, "  \(twelveCharacters)  "))) {
+      $0.nickname = "  \(twelveCharacters)  "
+    }
+    #expect(store.state.nicknameCharacterCount == 12)
+    #expect(store.state.canJoin)
+    #expect(store.state.nicknameValidationMessage == nil)
+
+    await store.send(.binding(.set(\.nickname, twelveCharacters + "나"))) {
+      $0.nickname = twelveCharacters + "나"
+    }
+    #expect(store.state.nicknameCharacterCount == 13)
+    #expect(!store.state.canJoin)
+    #expect(store.state.nicknameValidationMessage != nil)
+    #expect(store.state.nickname == twelveCharacters + "나")
+
+    await store.send(.binding(.set(\.nickname, " \n "))) {
+      $0.nickname = " \n "
+    }
+    #expect(store.state.nicknameCharacterCount == 0)
+    #expect(!store.state.canJoin)
+    await store.send(.view(.joinTapped))
+  }
+
+  @Test
+  func 이름을_편집하면_서버와_이름_오류를_지우고_긴_이름은_로컬_오류를_우선한다() async {
+    let room = ClassRoom.mockJoinable
+    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    state.nickname = String(repeating: "가", count: 13)
+    state.errorMessage = "이전 서버 오류"
+    state.nicknameErrorMessage = ClassError.duplicateName.message
+    let store = TestStore(initialState: state) { ClassJoinFeature() }
+
+    #expect(store.state.nicknameValidationMessage == "이름은 12자 이내로 입력해 주세요.")
+    #expect(store.state.nicknameErrorMessage == ClassError.duplicateName.message)
+    #expect(!store.state.canJoin)
+
+    await store.send(.binding(.set(\.nickname, "민지"))) {
+      $0.nickname = "민지"
+      $0.errorMessage = nil
+      $0.nicknameErrorMessage = nil
+    }
+    #expect(store.state.nicknameCharacterCount == 2)
+    #expect(store.state.nicknameValidationMessage == nil)
+    #expect(store.state.canJoin)
+  }
+
+  @Test
+  func 중복된_이름만_이름_오류로_표시하고_일반_서버_오류는_별도로_표시한다() async {
+    let room = ClassRoom.mockJoinable
+    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    state.nickname = "민지"
+    let duplicateStore = TestStore(initialState: state) { ClassJoinFeature() }
+
+    await duplicateStore.send(.inner(.joined(.failure(.duplicateName), nickname: "민지"))) {
+      $0.nicknameErrorMessage = ClassError.duplicateName.message
+    }
+    #expect(duplicateStore.state.nicknameValidationMessage == ClassError.duplicateName.message)
+    #expect(duplicateStore.state.errorMessage == nil)
+
+    let ownerStore = TestStore(initialState: ClassJoinFeature.State(mode: .ownerName, preview: room)) {
+      ClassJoinFeature()
+    }
+    await ownerStore.send(.inner(.ownerNamed(.failure(.duplicateName)))) {
+      $0.nicknameErrorMessage = ClassError.duplicateName.message
+    }
+    #expect(ownerStore.state.errorMessage == nil)
+
+    let generalStore = TestStore(initialState: state) { ClassJoinFeature() }
+    await generalStore.send(.inner(.joined(.failure(.closed), nickname: "민지"))) {
+      $0.errorMessage = ClassError.closed.message
+    }
+    #expect(generalStore.state.nicknameErrorMessage == nil)
+    #expect(generalStore.state.nicknameValidationMessage == nil)
+  }
+
+  @Test
+  func 이름_요청을_시작할_때_두_오류를_초기화한다() async {
+    let room = ClassRoom.mockJoinable
+    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    state.nickname = "민지"
+    state.errorMessage = "이전 서버 오류"
+    state.nicknameErrorMessage = ClassError.duplicateName.message
+    let store = TestStore(initialState: state) {
+      ClassJoinFeature()
+    } withDependencies: {
+      $0.classUseCase = StubClassUseCase(joinClass: { _, _ in room })
+    }
+
+    await store.send(.view(.joinTapped))
+    await store.receive(\.async, .join(joinCode: room.joinCode, nickname: "민지")) {
+      $0.isLoading = true
+      $0.errorMessage = nil
+      $0.nicknameErrorMessage = nil
+    }
+    await store.receive(\.inner, .joined(.success(room), nickname: "민지")) {
+      $0.isLoading = false
+      $0.preview = nil
+    }
+    await store.receive(\.delegate, .joined(room, nickname: "민지"))
+  }
+
+  @Test
   func 잘못된_코드_조회는_오류를_상태에_저장한다() async {
     let store = TestStore(initialState: ClassJoinFeature.State()) {
       ClassJoinFeature()

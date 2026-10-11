@@ -156,7 +156,7 @@ private extension ClassReportView {
 
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("AI 피드백")
-        reportCard(padding: 0, spacing: 0, minHeight: store.report != nil ? 350 : 0) {
+        reportCard(padding: 0, horizontalPadding: 0, spacing: 0, minHeight: store.report != nil ? 350 : 0) {
           if store.report != nil {
             aiFeedbackSummary()
           } else {
@@ -181,7 +181,7 @@ private extension ClassReportView {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+        .pickeCard(.beige100, border: .beige600, radius: 2)
       }
 
       if !store.showsSummaryLayout {
@@ -530,13 +530,14 @@ private extension ClassReportView {
   @ViewBuilder
   func reportCard(
     padding: CGFloat = 12,
+    horizontalPadding: CGFloat = 16,
     spacing: CGFloat = 12,
     minHeight: CGFloat = 0,
     @ViewBuilder content: () -> some View
   ) -> some View {
     VStack(alignment: .leading, spacing: spacing, content: content)
       .padding(.vertical, padding)
-      .padding(.horizontal, 16)
+      .padding(.horizontal, horizontalPadding)
       .frame(maxWidth: .infinity, alignment: .leading)
       .frame(minHeight: minHeight, alignment: .top)
       .background(.beige50, in: RoundedRectangle(cornerRadius: 2))

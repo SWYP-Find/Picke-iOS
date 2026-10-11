@@ -95,6 +95,9 @@ public actor MockClassRepository: ClassInterface {
     else {
       throw ClassError.unknown("본인 이름만 수정할 수 있습니다.")
     }
+    guard !members.contains(where: { $0.id != memberID && $0.name == trimmed }) else {
+      throw ClassError.duplicateName
+    }
     let updated = ClassMember(id: memberID, name: trimmed, isOwner: members[index].isOwner)
     members[index] = updated
     membersByRoom[roomID] = members
@@ -205,7 +208,8 @@ public actor MockClassRepository: ClassInterface {
   }
 
   public func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
-    guard !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+    let trimmed = nickname.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else {
       throw ClassError.unknown("이름을 입력해주세요.")
     }
     guard !rooms.contains(where: { $0.joinCode == joinCode }) else {
@@ -218,8 +222,11 @@ public actor MockClassRepository: ClassInterface {
     let room = availableRooms[index]
     guard room.status == .open else { throw ClassError.closed }
     var members = membersByRoom[room.id] ?? []
+    guard !members.contains(where: { $0.name == trimmed }) else {
+      throw ClassError.duplicateName
+    }
     let memberID = nextMemberIDs[room.id] ?? ((members.map(\.id).max() ?? 0) + 1)
-    members.append(ClassMember(id: memberID, name: nickname.trimmingCharacters(in: .whitespacesAndNewlines)))
+    members.append(ClassMember(id: memberID, name: trimmed))
     let joined = ClassRoom(
       id: room.id,
       name: room.name,

@@ -21,12 +21,15 @@ public struct ClassJoinFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public static let nicknameLimit = 12
+
     public var mode: Mode
     public var joinCode = ""
     public var nickname = ""
     public var preview: ClassRoom?
     public var isLoading = false
     public var errorMessage: String?
+    public var nicknameErrorMessage: String?
 
     public init(
       mode: Mode = .code,
@@ -40,9 +43,22 @@ public struct ClassJoinFeature {
       mode == .code && joinCode.count == 6 && !isLoading
     }
 
+    public var nicknameCharacterCount: Int {
+      nickname.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+
+    public var nicknameValidationMessage: String? {
+      if nicknameCharacterCount > Self.nicknameLimit {
+        return "이름은 12자 이내로 입력해 주세요."
+      }
+      return nicknameErrorMessage
+    }
+
     public var canJoin: Bool {
-      let hasName = !nickname.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      return (mode == .nickname || mode == .ownerName) && preview != nil && hasName && !isLoading
+      (mode == .nickname || mode == .ownerName)
+        && preview != nil
+        && (1 ... Self.nicknameLimit).contains(nicknameCharacterCount)
+        && !isLoading
     }
   }
 
@@ -103,6 +119,7 @@ public struct ClassJoinFeature {
             .prefix(6)
         )
         state.errorMessage = nil
+        state.nicknameErrorMessage = nil
         return .none
 
       case let .view(viewAction):
@@ -158,6 +175,7 @@ extension ClassJoinFeature {
     case let .find(code):
       state.isLoading = true
       state.errorMessage = nil
+      state.nicknameErrorMessage = nil
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.fetchClass(joinCode: code)
@@ -170,6 +188,7 @@ extension ClassJoinFeature {
     case let .join(code, nickname):
       state.isLoading = true
       state.errorMessage = nil
+      state.nicknameErrorMessage = nil
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.joinClass(joinCode: code, nickname: nickname)
@@ -182,6 +201,7 @@ extension ClassJoinFeature {
     case let .nameOwner(roomID, nickname):
       state.isLoading = true
       state.errorMessage = nil
+      state.nicknameErrorMessage = nil
       return .run { [classMockRepository] send in
         let result = await Result { () async throws -> ClassRoom in
           guard let classMockRepository else { throw ClassError.unknown("이름을 저장할 수 없어요.") }
@@ -219,6 +239,10 @@ extension ClassJoinFeature {
     case let .ownerNamed(.success(room)):
       state.preview = nil
       return .send(.delegate(.ownerNamed(room)))
+
+    case .joined(.failure(.duplicateName), _), .ownerNamed(.failure(.duplicateName)):
+      state.nicknameErrorMessage = ClassError.duplicateName.message
+      return .none
 
     case let .found(.failure(error)), let .joined(.failure(error), _), let .ownerNamed(.failure(error)):
       state.errorMessage = error.message

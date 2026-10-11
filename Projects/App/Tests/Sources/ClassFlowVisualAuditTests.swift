@@ -190,6 +190,134 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureClassJoinOverlays() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture Class join overlays")
+    }
+    let room = ClassRoom.mockJoinable
+    let repository = MockClassRepository(rooms: [], availableRooms: [room])
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func save(
+      _ name: String,
+      view: AnyView,
+      ready: @escaping @MainActor () -> Bool,
+      viewport: CGSize? = nil,
+      focusTextField: Bool = false
+    ) async throws {
+      let (image, _) = try await capture(
+        view,
+        ready: ready,
+        includeScrollBottom: false,
+        viewport: viewport,
+        focusTextField: focusTextField
+      )
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+
+    let valid = Store(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature().dependency(\.classUseCase, repository)
+    }
+    valid.send(.view(.joinTapped))
+    valid.send(.join(.presented(.binding(.set(\.joinCode, room.joinCode)))))
+    try await save(
+      "join-valid-code-overlay",
+      view: AnyView(ClassIntroView(store: valid)),
+      ready: { valid.join?.joinCode == room.joinCode && valid.join?.canFindClass == true }
+    )
+    valid.send(.join(.presented(.view(.findTapped))))
+    try await save(
+      "join-valid-name-overlay",
+      view: AnyView(ClassIntroView(store: valid)),
+      ready: { valid.join?.mode == .nickname && valid.join?.preview?.id == room.id }
+    )
+
+    let invalid = Store(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature().dependency(\.classUseCase, repository)
+    }
+    invalid.send(.view(.joinTapped))
+    invalid.send(.join(.presented(.binding(.set(\.joinCode, "BAD123")))))
+    invalid.send(.join(.presented(.view(.findTapped))))
+    try await save(
+      "join-invalid-code-overlay",
+      view: AnyView(ClassIntroView(store: invalid)),
+      ready: { invalid.join?.errorMessage == ClassError.invalidCode.message && invalid.join?.isLoading == false }
+    )
+
+    let duplicate = Store(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature().dependency(\.classUseCase, repository)
+    }
+    duplicate.send(.view(.joinTapped))
+    duplicate.send(.join(.presented(.binding(.set(\.joinCode, room.joinCode)))))
+    duplicate.send(.join(.presented(.view(.findTapped))))
+    for _ in 0 ..< 50 where duplicate.join?.mode != .nickname {
+      try await Task.sleep(for: .milliseconds(100))
+    }
+    guard duplicate.join?.mode == .nickname else { throw CaptureError.contentNotReady }
+    duplicate.send(.join(.presented(.binding(.set(\.nickname, "운영자")))))
+    duplicate.send(.join(.presented(.view(.joinTapped))))
+    try await save(
+      "join-duplicate-name-overlay",
+      view: AnyView(ClassIntroView(store: duplicate)),
+      ready: {
+        duplicate.join?.nicknameErrorMessage == ClassError.duplicateName.message
+          && duplicate.join?.isLoading == false
+      }
+    )
+    duplicate.send(.join(.presented(.binding(.set(\.nickname, "1234567890123")))))
+    try await save(
+      "join-name-overlength-overlay",
+      view: AnyView(ClassIntroView(store: duplicate)),
+      ready: {
+        duplicate.join?.nicknameCharacterCount == 13
+          && duplicate.join?.nicknameErrorMessage == nil
+          && duplicate.join?.nicknameValidationMessage != nil
+          && duplicate.join?.canJoin == false
+      }
+    )
+
+    let owner = ClassRoom.mocks[0]
+    let ownerRepository = MockClassRepository(rooms: [owner], availableRooms: [])
+    let ownerStore = Store(initialState: ClassShareFeature.State(room: owner)) {
+      ClassShareFeature().dependency(\.classMockRepository, ownerRepository)
+    }
+    ownerStore.send(.view(.enterClassTapped))
+    ownerStore.send(.join(.presented(.binding(.set(\.nickname, "김선생")))))
+    try await save(
+      "join-owner-name-overlay",
+      view: AnyView(ClassShareView(store: ownerStore)),
+      ready: { ownerStore.join?.mode == .ownerName && ownerStore.join?.canJoin == true }
+    )
+
+    let compact = Store(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature().dependency(\.classUseCase, repository)
+    }
+    compact.send(.view(.joinTapped))
+    compact.send(.join(.presented(.binding(.set(\.joinCode, room.joinCode)))))
+    try await save(
+      "join-valid-code-overlay-keyboard-attempt",
+      view: AnyView(ClassIntroView(store: compact)),
+      ready: { compact.join?.canFindClass == true },
+      focusTextField: true
+    )
+
+    // Resized host on the current simulator, not a native 375x667 device screenshot.
+    try await save(
+      "join-valid-code-overlay-resized-375x667",
+      view: AnyView(ClassIntroView(store: compact)),
+      ready: { compact.join?.canFindClass == true },
+      viewport: CGSize(width: 375, height: 667)
+    )
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")
@@ -289,13 +417,15 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   private func capture(
     _ view: AnyView,
     ready: (@MainActor () -> Bool)?,
-    includeScrollBottom: Bool
+    includeScrollBottom: Bool,
+    viewport: CGSize? = nil,
+    focusTextField: Bool = false
   ) async throws -> (UIImage, UIImage?) {
     let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
     let window = UIWindow(windowScene: scene)
     let host = UIHostingController(rootView: view)
     window.rootViewController = host
-    window.frame = scene.coordinateSpace.bounds
+    window.frame = CGRect(origin: .zero, size: viewport ?? scene.coordinateSpace.bounds.size)
     window.makeKeyAndVisible()
     defer { window.isHidden = true }
     host.view.frame = window.bounds
@@ -314,6 +444,13 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         throw CaptureError.contentNotReady
       }
     }
+    if focusTextField {
+      let textField = firstTextField(in: host.view)
+      XCTAssertNotNil(textField, "Join overlay did not expose a native text field")
+      _ = textField?.becomeFirstResponder()
+      try await Task.sleep(for: .milliseconds(400))
+      XCTAssertTrue(textField?.isFirstResponder == true, "Join code field did not take native focus")
+    }
     // The report charts animate for 0.8 seconds after their data arrives.
     try await Task.sleep(for: includeScrollBottom ? .milliseconds(800) : .milliseconds(400))
     try await Task.sleep(for: .milliseconds(17))
@@ -323,6 +460,13 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
     let image = renderer.image { _ in
       window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+      if focusTextField {
+        for overlay in scene.windows where overlay !== window && !overlay.isHidden
+          && overlay.windowLevel > window.windowLevel
+        {
+          overlay.drawHierarchy(in: overlay.convert(overlay.bounds, to: window), afterScreenUpdates: true)
+        }
+      }
     }
     var bottomImage: UIImage?
     if includeScrollBottom {
@@ -359,6 +503,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       }
     }
     return (image, bottomImage)
+  }
+
+  @MainActor
+  private func firstTextField(in view: UIView) -> UITextField? {
+    if let field = view as? UITextField {
+      return field
+    }
+    return view.subviews.lazy.compactMap(firstTextField(in:)).first
   }
 
   @MainActor
@@ -402,6 +554,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     aiChatAlert.customAlert = .finalVote()
     let session = ClassMockChatSession()
     let battleID = await session.register(room: member)
+    let preVoteSession = ClassMockChatSession()
+    let preVoteBattleID = await preVoteSession.register(room: member)
     let battleAPI: any BattleInterface = session
     _ = try await battleAPI.createPerspective(
       battleId: battleID,
@@ -469,24 +623,33 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       )
     }
 
-    func chatFrame(_ number: Int, _ title: String, _ slug: String, _ state: ChatCoordinator.State) -> Frame {
+    func chatFrame(
+      _ number: Int,
+      _ title: String,
+      _ slug: String,
+      _ state: ChatCoordinator.State,
+      session frameSession: ClassMockChatSession,
+      battleID frameBattleID: Int
+    ) -> Frame {
       let store = Store(initialState: state) {
         ChatCoordinator()
-          .dependency(\.battleUseCase, session)
-          .dependency(\.perspectiveUseCase, session)
-          .dependency(\.commentUseCase, session)
+          .dependency(\.battleUseCase, frameSession)
+          .dependency(\.perspectiveUseCase, frameSession)
+          .dependency(\.commentUseCase, frameSession)
           .dependency(\.audioPlayer, ClassMockAudioPlayer())
           .dependency(\.analyticsUseCase, .testValue)
           .dependency(\.shareUseCase, .testValue)
       }
       let ready: @MainActor () -> Bool = {
-        switch store.routes.last?.screen {
-        case let .preVote(value)?:
-          return value.battle != nil && !value.detailLoadFailed
-        case let .chatRoom(value)?:
+        switch (number, store.routes.last?.screen) {
+        case let (16, .preVote(value)?) where value.voteMode == .post:
+          return value.battle != nil && !value.detailLoadFailed && !value.isCheckingParticipation
+        case let (18, .preVote(value)?) where value.voteMode == .pre:
+          return value.battle != nil && !value.detailLoadFailed && !value.isCheckingParticipation
+        case let (17, .chatRoom(value)?):
           return value.scenario != nil && !value.scenarioLoadFailed
-        case let .comment(value)?:
-          return !value.title.isEmpty
+        case let (15, .comment(value)?):
+          return !value.title.isEmpty && !value.isLoadingComments && !value.isLoadingStats
         default:
           return false
         }
@@ -496,7 +659,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         title: title,
         slug: slug,
         detail: "seeded member battle; async mock load",
-        view: AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [battleID: member])),
+        view: AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [frameBattleID: member])),
         ready: ready
       )
     }
@@ -633,10 +796,24 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           currentMemberID: 2
         )))
       ),
-      chatFrame(15, "댓글", "comment", .init(commentBattleId: battleID)),
-      chatFrame(16, "최종 투표", "final-vote", .init(route: .finalVote(battleId: battleID))),
-      chatFrame(17, "청취와 대화", "chat-room", chatRoom),
-      chatFrame(18, "사전 투표", "pre-vote", .init(battleId: battleID)),
+      chatFrame(15, "댓글", "comment", .init(commentBattleId: battleID), session: session, battleID: battleID),
+      chatFrame(
+        16,
+        "최종 투표",
+        "final-vote",
+        .init(route: .finalVote(battleId: battleID)),
+        session: session,
+        battleID: battleID
+      ),
+      chatFrame(17, "청취와 대화", "chat-room", chatRoom, session: session, battleID: battleID),
+      chatFrame(
+        18,
+        "사전 투표",
+        "pre-vote",
+        .init(battleId: preVoteBattleID),
+        session: preVoteSession,
+        battleID: preVoteBattleID
+      ),
       loadedClassFrame(
         19,
         "멤버 개인 리포트",

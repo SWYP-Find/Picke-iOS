@@ -38,6 +38,7 @@ public struct ClassIntroView: View {
       .padding(.horizontal, 16)
       .padding(.bottom, 16)
     }
+    .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
     .background(backgroundImage())
     .toolbar(.hidden, for: .navigationBar)
     .pickeModal(
