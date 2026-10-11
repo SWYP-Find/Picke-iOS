@@ -37,7 +37,7 @@ struct ClassShareTests {
       requiresComment: room.requiresComment
     )
     #expect(ClassShareFeature.State(room: noDeadline).deadlineText == nil)
-    #expect(ClassShareFeature.State(room: room).deadlineText != nil)
+    #expect(ClassShareFeature.State(room: room).deadlineText?.hasPrefix("참여 마감 · ") == true)
   }
 
   @Test

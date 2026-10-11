@@ -79,4 +79,6 @@ public enum ImageAsset: String {
   case classMemberFox
   case classMemberHamster
   case classMemberRaccoon
+  case classPickeBattleGuide
+  case classCustomBattleGuide
 }

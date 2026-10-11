@@ -670,6 +670,128 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testPresentClassShareForInteractiveAudit() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_SHARE_INTERACTIVE_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_SHARE_INTERACTIVE_AUDIT=1 for a manual copy check")
+    }
+    let room = ClassRoom.mocks[0]
+    let store = Store(initialState: ClassShareFeature.State(room: room)) {
+      ClassShareFeature()
+    }
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    window.rootViewController = UIHostingController(rootView: ClassShareView(store: store))
+    window.frame = scene.coordinateSpace.bounds
+    window.makeKeyAndVisible()
+    defer { window.isHidden = true }
+    // Do not read or restore another app's clipboard. The simulator keeps the test code.
+    let baseline = UIPasteboard.general.changeCount
+    var copied = false
+    for _ in 0 ..< 1200 {
+      if UIPasteboard.general.changeCount > baseline {
+        copied = UIPasteboard.general.string == room.joinCode
+        break
+      }
+      try await Task.sleep(for: .milliseconds(100))
+    }
+    XCTAssertTrue(copied, "Class share copy was not observed")
+  }
+
+  @MainActor
+  func testCaptureClassShareControls() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture share controls")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    for viewport in [CGSize(width: 402, height: 874), CGSize(width: 375, height: 667)] {
+      let store = Store(initialState: ClassShareFeature.State(room: ClassRoom.mocks[0])) {
+        ClassShareFeature()
+      }
+      let name = "share-controls-\(Int(viewport.width))"
+      let (image, _) = try await capture(
+        AnyView(ClassShareView(store: store)),
+        ready: nil,
+        includeScrollBottom: false,
+        viewport: viewport
+      )
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      let text = try recognizedAuditText(in: image, name: name)
+      XCTAssertTrue(text.contains("멤버들에게공유해주세요"))
+      XCTAssertTrue(text.contains("클래스로이동하기"))
+    }
+  }
+
+  @MainActor
+  func testCaptureClassStartGuides() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture start guides")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    // The compact host checks layout; it is not a native 375pt device capture.
+    for viewport in [CGSize(width: 402, height: 874), CGSize(width: 375, height: 667)] {
+      for kind in [ClassStartGuideKind.pickeBattle, .customBattle] {
+        let store = Store(initialState: ClassStartMethodFeature.State()) {
+          ClassStartMethodFeature()
+        }
+        store.send(.view(.guideTapped(kind)))
+        let slug = kind == .pickeBattle ? "picke" : "custom"
+        let name = "start-guide-\(slug)-\(Int(viewport.width))"
+        let (image, _) = try await capture(
+          AnyView(ClassStartMethodView(store: store)),
+          ready: { store.guide?.kind == kind },
+          includeScrollBottom: false,
+          viewport: viewport
+        )
+        try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+        let attachment = XCTAttachment(image: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let text = try recognizedAuditText(in: image, name: name)
+        XCTAssertTrue(text.contains("이용가이드"))
+        XCTAssertTrue(text.contains("확인했어요"))
+        XCTAssertTrue(text.contains(kind == .pickeBattle ? "준비된콘텐츠와오디오로바로토론해요" : "우리만의주제로AI와토론해요"))
+        XCTAssertEqual(store.selectedMethod, .existingContent)
+        store.send(.guide(.presented(.dismissTapped)))
+        XCTAssertNil(store.guide)
+      }
+
+      let store = Store(initialState: ClassStartMethodFeature.State()) {
+        ClassStartMethodFeature()
+      }
+      let name = "start-method-guides-\(Int(viewport.width))"
+      let (image, _) = try await capture(
+        AnyView(ClassStartMethodView(store: store)),
+        ready: nil,
+        includeScrollBottom: false,
+        viewport: viewport
+      )
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")

@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassStartMethodFeature.self)
@@ -32,12 +33,14 @@ public struct ClassStartMethodView: View {
         VStack(spacing: 16) {
           methodCard(
             .existingContent,
+            guide: .pickeBattle,
             badge: "TTS 포함",
             title: "Pické 배틀로 클래스 만들기",
             description: "기존 배틀 콘텐츠를 골라 클래스를 만들어요"
           )
           methodCard(
             .ownTopic,
+            guide: .customBattle,
             badge: "AI 채팅",
             title: "커스텀 배틀로 클래스 만들기",
             description: "원하는 주제로 직접 배틀을 만들어보세요"
@@ -57,10 +60,19 @@ public struct ClassStartMethodView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .accessibilityHidden(store.guide != nil)
+    .allowsHitTesting(store.guide == nil)
+    .pickeModal(
+      $store.scope(state: \.guide, action: \.guide),
+      dimOpacity: 0.28
+    ) { guideStore in
+      ClassStartGuideView(store: guideStore)
+    }
   }
 }
 
 private extension ClassStartMethodView {
+  @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text("어떤 방식으로\n클래스를 만들까요?")
@@ -77,6 +89,7 @@ private extension ClassStartMethodView {
 
   func methodCard(
     _ method: ClassStartMethodFeature.Method,
+    guide: ClassStartGuideKind,
     badge: String,
     title: String,
     description: String
@@ -86,12 +99,7 @@ private extension ClassStartMethodView {
     return Button { send(.methodTapped(method)) } label: {
       HStack(alignment: .center, spacing: 12) {
         VStack(alignment: .leading, spacing: 8) {
-          Text(badge)
-            .pretendardFont(.labelSmall)
-            .foregroundStyle(.primary500)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 4)
-            .background(.primary50, in: Capsule())
+          methodBadge(badge, guide: guide)
 
           Text(title)
             .pretendardFont(.headingMedium)
@@ -114,5 +122,46 @@ private extension ClassStartMethodView {
       .pickeCard(.beige50, border: selected ? .primary500 : .beige600, radius: 0)
     }
     .buttonStyle(.plain)
+    .overlayPreferenceValue(ClassStartInfoAnchorPreferenceKey.self) { anchors in
+      GeometryReader { geometry in
+        if let anchor = anchors[guide] {
+          let icon = geometry[anchor]
+          Button { send(.guideTapped(guide)) } label: {
+            Image(systemName: "info.circle")
+              .resizable()
+              .scaledToFit()
+              .frame(width: 14, height: 14)
+              .foregroundStyle(.primary500)
+              .frame(width: 44, height: 44, alignment: .bottomLeading)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(guide == .pickeBattle ? "Pické 배틀 이용 가이드" : "커스텀 배틀 이용 가이드")
+          .position(x: icon.minX + 22, y: icon.maxY - 22)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  func methodBadge(
+    _ title: String,
+    guide: ClassStartGuideKind
+  ) -> some View {
+    HStack(spacing: 4) {
+      Text(title)
+      Image(systemName: "info.circle")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 14, height: 14)
+        .opacity(0)
+        .accessibilityHidden(true)
+        .anchorPreference(key: ClassStartInfoAnchorPreferenceKey.self, value: .bounds) { [guide: $0] }
+    }
+    .pretendardFont(.labelSmall)
+    .foregroundStyle(.primary500)
+    .padding(.horizontal, 9)
+    .padding(.vertical, 4)
+    .background(.primary50, in: Capsule())
   }
 }

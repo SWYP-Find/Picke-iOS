@@ -19,12 +19,14 @@ public struct ClassStartMethodFeature {
   @ObservableState
   public struct State: Equatable {
     public var selectedMethod: Method = .existingContent
+    @Presents public var guide: ClassStartGuideFeature.State?
 
     public init() {}
   }
 
   public enum Action: ViewAction {
     case view(View)
+    case guide(PresentationAction<ClassStartGuideFeature.Action>)
     case delegate(DelegateAction)
   }
 
@@ -32,6 +34,7 @@ public struct ClassStartMethodFeature {
   public enum View {
     case backTapped
     case methodTapped(Method)
+    case guideTapped(ClassStartGuideKind)
     case continueTapped
   }
 
@@ -48,9 +51,19 @@ public struct ClassStartMethodFeature {
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
 
+      case .guide(.presented(.dismissTapped)), .guide(.dismiss):
+        state.guide = nil
+        return .none
+
+      case .guide:
+        return .none
+
       case .delegate:
         return .none
       }
+    }
+    .ifLet(\.$guide, action: \.guide) {
+      ClassStartGuideFeature()
     }
   }
 }
@@ -64,13 +77,24 @@ extension ClassStartMethodFeature {
   ) -> Effect<Action> {
     switch action {
     case .backTapped:
+      if state.guide != nil {
+        state.guide = nil
+        return .none
+      }
       return .send(.delegate(.dismiss))
 
     case let .methodTapped(method):
+      guard state.guide == nil else { return .none }
       state.selectedMethod = method
       return .none
 
+    case let .guideTapped(kind):
+      guard state.guide == nil else { return .none }
+      state.guide = .showing(kind)
+      return .none
+
     case .continueTapped:
+      guard state.guide == nil else { return .none }
       switch state.selectedMethod {
       case .existingContent:
         return .send(.delegate(.existingContentSelected))

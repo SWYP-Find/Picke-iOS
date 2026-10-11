@@ -25,7 +25,7 @@ public struct ClassShareFeature {
     /// 마감일을 끈 클래스는 `.distantFuture` 로 만들어지므로 표시하지 않는다.
     public var deadlineText: String? {
       guard room.deadline != .distantFuture else { return nil }
-      return "참여 마감  \(Self.deadlineFormatter.string(from: room.deadline))"
+      return "참여 마감 · \(Self.deadlineFormatter.string(from: room.deadline))"
     }
 
     public var shareMessage: String {
