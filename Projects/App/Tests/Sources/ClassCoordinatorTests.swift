@@ -691,6 +691,166 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 클래스_댓글의_리포트는_상세를_보존하고_뒤로가면_탭바를_보인다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var detail = ClassDetailFeature.State(room: room)
+    detail.errorMessage = "보존할 상세 상태"
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(detail))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case let .detail(preservedDetail) = store.state.routes[1].screen,
+          case let .report(report)? = store.state.routes.last?.screen
+    else {
+      Issue.record("댓글 리포트가 기존 상세 위에 열리지 않음")
+      return
+    }
+    #expect(preservedDetail == detail)
+    #expect(report.room == room)
+    #expect(!store.state.showsTabBar)
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    await store.send(.router(.routeAction(id: 2, action: .report(.delegate(.dismiss)))))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    #expect(store.state.routes.count == 2)
+    guard case let .detail(returnedDetail)? = store.state.routes.last?.screen else {
+      Issue.record("리포트 뒤로가기 후 상세로 돌아오지 않음")
+      return
+    }
+    #expect(returnedDetail == detail)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func AI_댓글의_리포트는_투표와_AI_채팅_경로를_걷어내고_상세로_돌아온다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.aiVote(.init(room: room, battleID: battleID)))
+    state.routes.push(.aiChat(.init(room: room, battleID: battleID, selectedOptionID: 1)))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case .detail = store.state.routes[1].screen,
+          case let .report(report)? = store.state.routes.last?.screen
+    else {
+      Issue.record("AI 경로를 정리한 뒤 리포트가 상세 위에 열리지 않음")
+      return
+    }
+    #expect(report.room == room)
+    await store.send(.view(.backAction))
+    #expect(store.state.routes.count == 2)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 완료된_AI_투표의_댓글_리포트도_상세로_돌아온다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.aiVote(.init(room: room, battleID: battleID)))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case .report? = store.state.routes.last?.screen else {
+      Issue.record("완료된 AI 투표의 댓글 리포트가 열리지 않음")
+      return
+    }
+    await store.send(.view(.backAction))
+    #expect(store.state.routes.count == 2)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 운영자_댓글의_리포트는_운영자_대시보드로_열린다() async {
+    let room = ClassRoom.mocks[0]
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case let .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
+      Issue.record("운영자 댓글이 운영자 대시보드로 연결되지 않음")
+      return
+    }
+    #expect(dashboard.room == room)
+    await store.send(.view(.backAction))
+    #expect(store.state.routes.count == 2)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 댓글_리포트는_다른_배틀이나_유효하지_않은_경로에서_열리지_않는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var valid = ClassCoordinator.State()
+    valid.routes.push(.detail(.init(room: room)))
+    valid.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    valid.chatRoomsByBattleID[battleID] = room
+
+    await assertChatReportNoOp(valid, battleID: battleID + 1)
+
+    var missingRoom = valid
+    missingRoom.chatRoomsByBattleID.removeAll()
+    await assertChatReportNoOp(missingRoom, battleID: battleID)
+
+    var mismatchedComment = valid
+    mismatchedComment.routes[screenAt: 2] = .chat(.init(route: .comment(battleId: battleID + 1)))
+    await assertChatReportNoOp(mismatchedComment, battleID: battleID)
+
+    var missingDetail = ClassCoordinator.State()
+    missingDetail.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    missingDetail.chatRoomsByBattleID[battleID] = room
+    await assertChatReportNoOp(missingDetail, battleID: battleID)
+
+    var nonComment = valid
+    nonComment.routes[screenAt: 2] = .aiVote(.init(room: room, battleID: battleID))
+    await assertChatReportNoOp(nonComment, battleID: battleID)
+
+    var nestedReply = valid
+    var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
+    chat.routes.push(.commentReply(.init(perspectiveId: 1)))
+    nestedReply.routes[screenAt: 2] = .chat(chat)
+    await assertChatReportNoOp(nestedReply, battleID: battleID)
+  }
+
+  private func assertChatReportNoOp(
+    _ state: ClassCoordinator.State,
+    battleID: Int
+  ) async {
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes == state.routes)
+    #expect(store.state.chatRoomsByBattleID == state.chatRoomsByBattleID)
+  }
+
+  @Test
   func 마감된_멤버_배틀은_결과_진입과_리포트로_연결된다() async {
     let room = ClassRoom.mockClosedSociety
     var state = ClassCoordinator.State()

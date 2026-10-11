@@ -15,11 +15,276 @@ import PickeCoreUtility
 import SwiftUI
 import TCAFlow
 import UIKit
+import Vision
 import XCTest
 
 /// Run explicitly with PICKE_CLASS_VISUAL_AUDIT=1. These images are evidence for
 /// manual Figma comparison, not snapshot assertions or proof of design parity.
 final class ClassFlowVisualAuditTests: XCTestCase {
+  @MainActor
+  func testClassCommentReportFlow() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify mounted report navigation")
+    }
+    for isAI in [false, true] {
+      let original = ClassRoom.mockJoinable
+      let battle: ClassBattleSummary = if isAI {
+        try XCTUnwrap(ClassSettingFeature.State(
+          aiQuestion: ClassAIQuestion.examples[0], filter: .init(), deadline: original.deadline
+        ).aiBattle)
+      } else {
+        original.battle
+      }
+      let room = ClassRoom(
+        id: original.id, name: original.name, joinCode: original.joinCode, battle: battle,
+        deadline: original.deadline, memberCount: original.memberCount, role: .member,
+        status: original.status, allowsAnonymousOpinion: original.allowsAnonymousOpinion,
+        requiresComment: original.requiresComment
+      )
+      let session = ClassMockChatSession()
+      let battleID = await session.register(room: room)
+      let repository = MockClassRepository(
+        rooms: [room], availableRooms: [], reports: [room.id: MockClassReport.figma]
+      )
+      var state = ClassCoordinator.State()
+      state.routes.push(.detail(.init(room: room)))
+      if isAI {
+        state.routes.push(.aiVote(.init(room: room, battleID: battleID)))
+        state.routes.push(.aiChat(.init(room: room, battleID: battleID, selectedOptionID: 1)))
+      }
+      state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+      state.chatRoomsByBattleID[battleID] = room
+      let store = Store(initialState: state) {
+        ClassCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+          .dependency(\.classMockChatSession, session)
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+          .dependency(\.battleUseCase, session)
+          .dependency(\.perspectiveUseCase, session)
+          .dependency(\.commentUseCase, session)
+          .dependency(\.classAIChatUseCase, MockClassAIChatUseCase())
+          .dependency(\.analyticsUseCase, .testValue)
+          .dependency(\.shareUseCase, .testValue)
+      }
+      let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+      let window = UIWindow(windowScene: scene)
+      let host = UIHostingController(rootView: ClassCoordinatorView(store: store))
+      window.rootViewController = host
+      window.frame = scene.coordinateSpace.bounds
+      window.makeKeyAndVisible()
+      defer { window.isHidden = true }
+      try await waitForClassAudit("loaded comment") {
+        guard case let .chat(chat)? = store.routes.last?.screen,
+              case let .comment(comment)? = chat.routes.last?.screen else { return false }
+        return !comment.title.isEmpty && !comment.isLoadingStats && !comment.isLoadingComments
+      }
+      XCTAssertFalse(store.showsTabBar)
+      let commentImage = try await saveClassAudit(
+        window: window,
+        name: isAI ? "report-before-ai" : "report-before-regular"
+      )
+      let commentText = try recognizedAuditText(
+        in: commentImage,
+        name: isAI ? "report-before-ai" : "report-before-regular"
+      )
+      XCTAssertFalse(containsReportHeadings(commentText), "Comment must not satisfy the report pixel check")
+      store.send(.view(.chatReportTapped(battleID: battleID)))
+      do {
+        try await waitForClassAudit("loaded report after route replacement") {
+          guard case let .report(report)? = store.routes.last?.screen else { return false }
+          return report.hasLoaded && !report.isLoading && !report.loadFailed
+        }
+      } catch {
+        let routeDescription = if case let .report(report)? = store.routes.last?.screen {
+          "report loaded=\(report.hasLoaded), loading=\(report.isLoading), failed=\(report.loadFailed)"
+        } else {
+          "last route is not report"
+        }
+        let attachment = XCTAttachment(string: "isAI=\(isAI); \(routeDescription)")
+        attachment.name = "report-flow-state"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        try await saveClassAudit(window: window, name: isAI ? "report-flow-failed-ai" : "report-flow-failed-regular")
+        throw error
+      }
+      XCTAssertEqual(store.routes.count, 3)
+      XCTAssertFalse(store.showsTabBar)
+      let reportName = isAI ? "comment-to-report-ai" : "comment-to-report-regular"
+      let reportImage = try await saveClassAudit(window: window, name: reportName)
+      let reportText = try recognizedAuditText(in: reportImage, name: reportName)
+      XCTAssertTrue(containsReportHeadings(reportText), "Report headings missing from rendered pixels: \(reportText)")
+      store.send(.router(.routeAction(id: 2, action: .report(.view(.backTapped)))))
+      try await waitForClassAudit("original detail after report back") {
+        guard case let .detail(detail)? = store.routes.last?.screen else { return false }
+        return store.routes.count == 2 && detail.room.id == room.id && store.showsTabBar
+      }
+      let detailName = isAI ? "report-back-detail-ai" : "report-back-detail-regular"
+      let detailImage = try await saveClassAudit(window: window, name: detailName)
+      let detailText = try recognizedAuditText(in: detailImage, name: detailName)
+      XCTAssertTrue(detailText.contains("클래스상세"), "Detail title missing from rendered pixels: \(detailText)")
+      XCTAssertTrue(detailText.contains("이번클래스배틀"), "Detail battle section missing: \(detailText)")
+      XCTAssertFalse(containsReportHeadings(detailText), "Report must no longer be displayed after back")
+    }
+  }
+
+  @MainActor
+  func testClassReportLayoutFooters() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify report layout footers")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    for layout in [ClassReportLayout.summary, .tabbed] {
+      let fixture = MockClassReport.figma
+      var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+      state.report = ClassReport(
+        texts: fixture.texts,
+        myOpinions: fixture.myOpinions,
+        initialVoteLeading: fixture.initialVoteLeading,
+        finalVoteLeading: fixture.finalVoteLeading,
+        layout: layout
+      )
+      state.hasLoaded = true
+      state.selectedTab = .summary
+      let store = Store(initialState: state) { ClassReportFeature() }
+      let (_, bottomImage) = try await capture(
+        AnyView(ClassReportView(store: store)),
+        ready: nil,
+        includeScrollBottom: true,
+        viewport: CGSize(width: 402, height: 640)
+      )
+      let image = try XCTUnwrap(bottomImage)
+      let name = layout == .summary ? "report-summary-footer" : "report-tabbed-footer"
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      let text = try recognizedAuditText(in: image, name: name)
+
+      if layout == .summary {
+        XCTAssertTrue(text.contains("다음생각한걸음"), "In-card next step missing: \(text)")
+        XCTAssertTrue(text.contains("내가남긴의견"), "Summary bottom was not captured: \(text)")
+        XCTAssertFalse(text.contains("다음생각해보기"), "Duplicate footer remains: \(text)")
+      } else {
+        XCTAssertTrue(text.contains("다음생각해보기"), "Legacy next step missing: \(text)")
+        XCTAssertTrue(text.contains("참여기록"), "Tabbed page links missing: \(text)")
+        XCTAssertTrue(text.contains("클래스결과"), "Tabbed page links missing: \(text)")
+        XCTAssertTrue(text.contains("피드백"), "Tabbed page links missing: \(text)")
+      }
+    }
+  }
+
+  @MainActor
+  func testClassCommentLongEditPresentation() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify comment editing")
+    }
+    let room = ClassRoom.mockJoinable
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    let longText = (1 ... 5).map { "\($0)번째 의견입니다. 서로 다른 입장의 근거를 함께 살펴보고 싶어요." }.joined(separator: "\n")
+    let battleAPI: any BattleInterface = session
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.createPerspective(battleId: battleID, content: longText, optionId: 1)
+    let store = Store(initialState: CommentFeature.State(battleId: battleID)) {
+      CommentFeature()
+        .dependency(\.battleUseCase, session)
+        .dependency(\.perspectiveUseCase, session)
+        .dependency(\.commentUseCase, session)
+        .dependency(\.analyticsUseCase, .testValue)
+    }
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    let host = UIHostingController(rootView: ClassCommentView(store: store, onOpenReport: { _ in }))
+    window.rootViewController = host
+    window.frame = scene.coordinateSpace.bounds
+    window.makeKeyAndVisible()
+    defer { window.isHidden = true }
+    try await waitForClassAudit("my loaded comment") {
+      !store.isLoadingComments && store.comments.contains { $0.isMine }
+    }
+    store.send(.binding(.set(\.commentText, "작성 중인 의견")))
+    XCTAssertTrue(store.isSendEnabled)
+    try await saveClassAudit(window: window, name: "comment-draft")
+    let comment = try XCTUnwrap(store.comments.first { $0.isMine })
+    store.send(.view(.commentMenu(id: comment.id, action: .edit)))
+    XCTAssertEqual(store.commentText, longText)
+    XCTAssertNotNil(store.editingPerspectiveId)
+    XCTAssertTrue(store.isSendEnabled)
+    try await saveClassAudit(window: window, name: "comment-edit-five-lines")
+    store.send(.view(.composeDismissed))
+    XCTAssertEqual(store.commentText, "")
+    XCTAssertNil(store.editingPerspectiveId)
+    XCTAssertFalse(store.isSendEnabled)
+    try await saveClassAudit(window: window, name: "comment-edit-cancelled")
+  }
+
+  @MainActor
+  private func waitForClassAudit(_ description: String, until predicate: () -> Bool) async throws {
+    for _ in 0 ..< 100 {
+      if predicate() {
+        return
+      }
+      try await Task.sleep(for: .milliseconds(50))
+    }
+    XCTFail("Class audit did not reach: \(description)")
+    throw CaptureError.contentNotReady
+  }
+
+  private func containsReportHeadings(_ text: String) -> Bool {
+    // Vision can read the capital I in AI as a lowercase l.
+    text.contains("내투표결과")
+      && (text.contains("AI피드백") || text.contains("Al피드백"))
+  }
+
+  @MainActor
+  private func recognizedAuditText(in image: UIImage, name: String) throws -> String {
+    let request = VNRecognizeTextRequest()
+    request.recognitionLevel = .accurate
+    let languages = try request.supportedRecognitionLanguages()
+    XCTAssertTrue(languages.contains("ko-KR"), "Korean OCR is required for this visual audit")
+    request.recognitionLanguages = ["ko-KR", "en-US"]
+    let cgImage = try XCTUnwrap(image.cgImage)
+    try VNImageRequestHandler(cgImage: cgImage).perform([request])
+    let rawText = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+    let attachment = XCTAttachment(string: rawText)
+    attachment.name = name + "-recognized-text"
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try rawText.write(to: directory.appendingPathComponent(name + ".txt"), atomically: true, encoding: .utf8)
+    return rawText.filter { !$0.isWhitespace }
+  }
+
+  @MainActor
+  @discardableResult
+  private func saveClassAudit(window: UIWindow, name: String) async throws -> UIImage {
+    try await Task.sleep(for: .milliseconds(500))
+    window.layoutIfNeeded()
+    CATransaction.flush()
+    let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+      window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    return image
+  }
+
   @MainActor
   func testClassFinalVoteSharePresentation() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
@@ -254,7 +519,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       }
     }
     let (image, _) = try await capture(
-      AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [battleID: room])),
+      AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [battleID: room], onOpenReport: { _ in })),
       ready: {
         guard case let .comment(value)? = store.routes.last?.screen else { return false }
         return !value.title.isEmpty && !value.isLoadingComments && !value.isLoadingStats
@@ -746,7 +1011,11 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         title: title,
         slug: slug,
         detail: "seeded member battle; async mock load",
-        view: AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [frameBattleID: member])),
+        view: AnyView(ClassChatCoordinatorView(
+          store: store,
+          roomsByBattleID: [frameBattleID: member],
+          onOpenReport: { _ in }
+        )),
         ready: ready
       )
     }

@@ -16,13 +16,16 @@ import TCAFlow
 struct ClassChatCoordinatorView: View {
   @Bindable private var store: StoreOf<ChatCoordinator>
   private let roomsByBattleID: [Int: ClassRoom]
+  private let onOpenReport: (Int) -> Void
 
   init(
     store: StoreOf<ChatCoordinator>,
-    roomsByBattleID: [Int: ClassRoom]
+    roomsByBattleID: [Int: ClassRoom],
+    onOpenReport: @escaping (Int) -> Void
   ) {
     self.store = store
     self.roomsByBattleID = roomsByBattleID
+    self.onOpenReport = onOpenReport
   }
 
   var body: some View {
@@ -38,8 +41,10 @@ struct ClassChatCoordinatorView: View {
         case let .chatRoom(chatStore):
           ChatRoomView(store: chatStore)
         case let .comment(commentStore):
-          ClassCommentView(store: commentStore) {
-            store.send(.delegate(.dismiss))
+          if roomsByBattleID[commentStore.battleId] != nil {
+            ClassCommentView(store: commentStore, onOpenReport: onOpenReport)
+          } else {
+            missingClassView
           }
         case let .commentReply(replyStore):
           CommentReplyView(store: replyStore)

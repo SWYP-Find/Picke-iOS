@@ -85,6 +85,11 @@ struct ClassMembershipTests {
       name: "새 이름"
     )
     #expect(renamed.name == "새 이름")
+    #expect(membersBefore[0].avatar == .lion)
+    #expect(renamed.id == membersBefore[0].id)
+    #expect(renamed.isOwner == membersBefore[0].isOwner)
+    #expect(renamed.avatar == membersBefore[0].avatar)
+    #expect(try await repository.fetchMembers(roomID: room.id).first == renamed)
   }
 
   @Test

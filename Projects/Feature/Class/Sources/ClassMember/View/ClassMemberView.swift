@@ -103,8 +103,8 @@ private extension ClassMemberView {
 
   @ViewBuilder
   func memberRow(_ member: ClassMember) -> some View {
-    HStack(spacing: 12) {
-      PickeAvatarView(imageURL: nil, fallback: member.name, size: 36)
+    HStack(spacing: 8) {
+      memberAvatar(member)
 
       Text(member.name)
         .pretendardFont(family: .Medium, size: 16)
@@ -139,6 +139,20 @@ private extension ClassMemberView {
     }
     .frame(height: 68)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
+  }
+
+  @ViewBuilder
+  func memberAvatar(_ member: ClassMember) -> some View {
+    if let avatar = member.avatar {
+      Image(asset: avatar.imageAsset)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 36, height: 36)
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    } else {
+      PickeAvatarView(imageURL: nil, fallback: member.name, size: 36)
+    }
   }
 
   @ViewBuilder

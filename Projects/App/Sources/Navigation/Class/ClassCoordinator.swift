@@ -61,6 +61,7 @@ public struct ClassCoordinator {
   public enum View {
     case backAction
     case backToRootAction
+    case chatReportTapped(battleID: Int)
   }
 
   public enum AsyncAction: Equatable {}
@@ -444,6 +445,27 @@ private extension ClassCoordinator {
       state.routes.goBackToRoot()
       state.chatRoomsByBattleID.removeAll()
       return .none
+
+    case let .chatReportTapped(battleID):
+      guard case let .chat(chat)? = state.routes.last?.screen,
+            case let .comment(comment)? = chat.routes.last?.screen,
+            comment.battleId == battleID,
+            let room = state.chatRoomsByBattleID[battleID],
+            let detailIndex = state.routes.dropLast().lastIndex(where: {
+              if case let .detail(detail) = $0.screen {
+                return detail.room.id == room.id
+              }
+              return false
+            })
+      else { return .none }
+
+      while state.routes.count > detailIndex + 2 {
+        state.routes.goBack()
+      }
+      state.routes[screenAt: detailIndex + 1] = room.role == .owner
+        ? .ownerDashboard(.init(room: room))
+        : .report(.init(room: room))
+      return .none
     }
   }
 
@@ -484,6 +506,7 @@ private extension ClassCoordinator {
             detail.room.id == roomID
       else { return .none }
       state.chatRoomsByBattleID[battleID] = detail.room
+      // Keep this detail beneath both direct and AI chat routes so report can return here.
       if detail.room.battle.id < 0 {
         state.routes.push(.aiVote(.init(room: detail.room, battleID: battleID)))
       } else {

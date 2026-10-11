@@ -16,16 +16,16 @@ import SwiftUI
 @ViewAction(for: CommentFeature.self)
 struct ClassCommentView: View {
   @Bindable var store: StoreOf<CommentFeature>
-  private let onClose: () -> Void
+  private let onOpenReport: (Int) -> Void
   @FocusState private var isCommentFocused: Bool
   @State private var hasAnimatedVoteProgress = false
 
   init(
     store: StoreOf<CommentFeature>,
-    onClose: @escaping () -> Void
+    onOpenReport: @escaping (Int) -> Void
   ) {
     self.store = store
-    self.onClose = onClose
+    self.onOpenReport = onOpenReport
   }
 
   var body: some View {
@@ -141,16 +141,27 @@ struct ClassCommentView: View {
 private extension ClassCommentView {
   @ViewBuilder
   func navigationBar() -> some View {
-    PickeNavigationBar(
-      onBack: { send(.backButtonTapped) },
-      centerTitle: store.title
-    ) {
-      Button(action: onClose) {
-        Image(systemName: "xmark")
-          .font(.system(size: 18, weight: .semibold))
-          .frame(width: 24, height: 24)
+    PickeNavigationBar {
+      Button { onOpenReport(store.battleId) } label: {
+        HStack(spacing: 4) {
+          Image(systemName: "doc.text")
+            .font(.system(size: 14, weight: .regular))
+          Text("리포트")
+            .pretendardFont(.labelSmall)
+        }
+        .foregroundStyle(.primary500)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("리포트")
+    }
+    .overlay {
+      Text(store.title)
+        .pretendardFont(.headingMedium)
+        .kerning(-0.4)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .padding(.horizontal, 72)
+        .allowsHitTesting(false)
     }
     .foregroundStyle(.cardBaseTextTitle)
   }
@@ -518,13 +529,30 @@ private extension ClassCommentView {
         .background(.surfaceBeigeStrong)
       }
 
-      PickeCommentInputBar(
-        text: $store.commentText,
-        focus: $isCommentFocused,
-        placeholder: "댓글을 입력해주세요",
-        isSendEnabled: store.isSendEnabled,
-        onSend: { send(.sendTapped) }
-      )
+      HStack(spacing: 8) {
+        TextField("내 생각을 입력해보세요", text: $store.commentText, axis: .vertical)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.gray400)
+          .lineLimit(1 ... 2)
+          .focused($isCommentFocused)
+          .frame(maxWidth: .infinity)
+
+        Button { send(.sendTapped) } label: {
+          Image(systemName: "paperplane.fill")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(.iconGrayInverse)
+            .frame(width: 36, height: 36)
+            .background(
+              store.isSendEnabled ? .buttonIconBackgroundDefault : .buttonIconBackgroundDisabled,
+              in: Circle()
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(!store.isSendEnabled)
+      }
+      .pickeTextField(height: 52)
+      .padding(.horizontal, 16)
+      .background(.surfaceBeigeStrong)
     }
   }
 }

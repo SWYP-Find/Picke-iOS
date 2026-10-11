@@ -66,7 +66,9 @@ public struct ClassCoordinatorView: View {
         ClassFeedbackComposeView(store: feedbackStore)
 
       case let .chat(chatStore):
-        ClassChatCoordinatorView(store: chatStore, roomsByBattleID: store.chatRoomsByBattleID)
+        ClassChatCoordinatorView(store: chatStore, roomsByBattleID: store.chatRoomsByBattleID) { battleID in
+          store.send(.view(.chatReportTapped(battleID: battleID)))
+        }
 
       case let .aiVote(voteStore):
         ClassAIVoteView(store: voteStore)

@@ -169,22 +169,22 @@ private extension ClassReportView {
         }
       }
 
-      VStack(alignment: .leading, spacing: 12) {
-        sectionHeading("다음 생각 해보기")
-        VStack(alignment: .leading, spacing: 12) {
-          Text(store.report != nil ? reportText(.nextQuestion) : store.room.battle.title)
-            .pretendardFont(family: .SemiBold, size: 18)
-            .foregroundStyle(.gray800)
-          Text(store.report != nil ? reportText(.nextHint) : "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray300)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .pickeCard(.beige100, border: .beige600, radius: 2)
-      }
-
       if !store.showsSummaryLayout {
+        VStack(alignment: .leading, spacing: 12) {
+          sectionHeading("다음 생각 해보기")
+          VStack(alignment: .leading, spacing: 12) {
+            Text(store.report != nil ? reportText(.nextQuestion) : store.room.battle.title)
+              .pretendardFont(family: .SemiBold, size: 18)
+              .foregroundStyle(.gray800)
+            Text(store.report != nil ? reportText(.nextHint) : "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray300)
+          }
+          .padding(16)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .pickeCard(.beige100, border: .beige600, radius: 2)
+        }
+
         HStack(spacing: 8) {
           reportPageLink("참여 기록", tab: .participation)
           reportPageLink("클래스 결과", tab: .classResult)

@@ -24,6 +24,9 @@ public actor MockClassRepository: ClassInterface {
     dashboards: [Int: ClassOwnerDashboardData]? = nil
   ) {
     let previewNames = ["김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은"]
+    let previewAvatars: [Int: ClassMemberAvatar] = [
+      1: .lion, 2: .koala, 3: .bear, 4: .penguin, 5: .dog, 7: .alpaca,
+    ]
     let initialRooms = rooms + availableRooms
     let initialIDs = Set(initialRooms.map(\.id))
     self.rooms = rooms
@@ -41,7 +44,12 @@ public actor MockClassRepository: ClassInterface {
           let name = room.id == ClassRoom.mocks[0].id && id <= previewNames.count
             ? previewNames[id - 1]
             : (id == 1 ? "운영자" : "참여자 \(id)")
-          return ClassMember(id: id, name: name, isOwner: id == 1)
+          return ClassMember(
+            id: id,
+            name: name,
+            isOwner: id == 1,
+            avatar: room.id == ClassRoom.mocks[0].id ? previewAvatars[id] : nil
+          )
         })
       }
     )
@@ -98,7 +106,12 @@ public actor MockClassRepository: ClassInterface {
     guard !members.contains(where: { $0.id != memberID && $0.name == trimmed }) else {
       throw ClassError.duplicateName
     }
-    let updated = ClassMember(id: memberID, name: trimmed, isOwner: members[index].isOwner)
+    let updated = ClassMember(
+      id: memberID,
+      name: trimmed,
+      isOwner: members[index].isOwner,
+      avatar: members[index].avatar
+    )
     members[index] = updated
     membersByRoom[roomID] = members
     if let dashboard = dashboards[roomID] {
