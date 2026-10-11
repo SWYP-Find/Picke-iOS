@@ -1,3 +1,10 @@
+//
+//  ClassManagementSheet.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import PickeDesignKit
 import SwiftUI
@@ -6,6 +13,19 @@ struct ClassManagementSheet: View {
   let room: ClassRoom
   let onEdit: () -> Void
   let onDelete: () -> Void
+  let onLeave: (() -> Void)?
+
+  init(
+    room: ClassRoom,
+    onEdit: @escaping () -> Void,
+    onDelete: @escaping () -> Void,
+    onLeave: (() -> Void)? = nil
+  ) {
+    self.room = room
+    self.onEdit = onEdit
+    self.onDelete = onDelete
+    self.onLeave = onLeave
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 20) {
@@ -20,14 +40,23 @@ struct ClassManagementSheet: View {
         .foregroundStyle(.gray800)
 
       VStack(spacing: 0) {
-        row("클래스 정보 수정", detail: "클래스명, 기본 정보를 수정해요.", icon: "pencil", action: onEdit)
-        Rectangle().fill(.beige600).frame(height: 1)
+        if room.role == .owner {
+          row("클래스 정보 수정", detail: "클래스명, 기본 정보를 수정해요.", icon: "pencil", action: onEdit)
+          Rectangle().fill(.beige600).frame(height: 1)
+        }
         ShareLink(item: "[Picke] '\(room.name)' 클래스 참여 코드: \(room.joinCode)") {
           rowContent("참여 코드 공유", detail: "클래스 참여 코드를 공유해요.", icon: "arrow.up.right")
         }
         .buttonStyle(.plain)
         Rectangle().fill(.beige600).frame(height: 1)
-        row("클래스 삭제", detail: "삭제 후에는 복구할 수 없어요.", icon: "trash", action: onDelete)
+        if room.role == .owner {
+          row("클래스 삭제", detail: "삭제 후에는 복구할 수 없어요.", icon: "trash", action: onDelete)
+        } else if let onLeave {
+          row("클래스 나가기", detail: "나간 후에는 데이터를 복구할 수 없어요.", icon: "rectangle.portrait.and.arrow.right", action: onLeave)
+        }
+      }
+      .overlay(alignment: .top) {
+        Rectangle().fill(.beige600).frame(height: 1)
       }
     }
     .padding(.top, 12)

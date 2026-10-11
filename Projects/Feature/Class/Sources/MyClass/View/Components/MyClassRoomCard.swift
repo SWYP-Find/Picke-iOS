@@ -2,6 +2,8 @@
 //  MyClassRoomCard.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import PickeDesignKit
@@ -30,17 +32,15 @@ struct MyClassRoomCard: View {
     }
     .buttonStyle(.plain)
     .overlay(alignment: .topTrailing) {
-      if room.role == .owner {
-        Button(action: onManage) {
-          Image(systemName: "ellipsis")
-            .font(.pretendardFontFamily(family: .Bold, size: 14))
-            .foregroundStyle(.gray900)
-            .frame(width: 24, height: 24)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("클래스 관리")
-        .padding(12)
+      Button(action: onManage) {
+        Image(systemName: "ellipsis")
+          .font(.pretendardFontFamily(family: .Bold, size: 14))
+          .foregroundStyle(.gray900)
+          .frame(width: 24, height: 24)
       }
+      .buttonStyle(.plain)
+      .accessibilityLabel("클래스 관리")
+      .padding(12)
     }
   }
 }
@@ -78,11 +78,13 @@ private extension MyClassRoomCard {
         .pretendardFont(.headingMedium)
         .foregroundStyle(.gray500)
         .lineLimit(1)
+        .frame(minHeight: 24, alignment: .leading)
 
       Text(room.battle.title)
         .pretendardFont(.regular13)
         .foregroundStyle(.gray300)
         .lineLimit(1)
+        .frame(minHeight: 18, alignment: .leading)
     }
   }
 
@@ -111,6 +113,7 @@ private extension MyClassRoomCard {
         viewLabel
       }
     }
+    .frame(minHeight: 18)
     .padding(.top, 12)
     .overlay(alignment: .top) {
       Rectangle()

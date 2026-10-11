@@ -1,3 +1,10 @@
+//
+//  MyClassView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
@@ -45,7 +52,8 @@ public struct MyClassView: View {
           ClassManagementSheet(
             room: room,
             onEdit: { send(.editClassTapped) },
-            onDelete: { send(.deleteTapped) }
+            onDelete: { send(.deleteTapped) },
+            onLeave: { send(.leaveTapped) }
           )
           .frame(maxWidth: .infinity)
           .background(
