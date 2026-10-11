@@ -1,3 +1,10 @@
+//
+//  ClassMockChatSession.swift
+//  Picke
+//
+//  Created by Picke on 10/11/26.
+//
+
 import BattleDomainInterface
 import ClassDomainInterface
 import CommentDomainInterface
@@ -27,9 +34,13 @@ actor ClassMockChatSession: @preconcurrency BattleInterface, @preconcurrency Per
   private var closedBattleArtworkURL: URL?
 
   private func thumbnailURL(for battle: ClassBattleSummary) async -> URL? {
-    if let thumbnailURL = battle.thumbnailURL { return thumbnailURL }
+    if let thumbnailURL = battle.thumbnailURL {
+      return thumbnailURL
+    }
     guard battle.id == 101, battle.title == "촉법소년 연령을 낮춰야 할까?" else { return nil }
-    if let closedBattleArtworkURL { return closedBattleArtworkURL }
+    if let closedBattleArtworkURL {
+      return closedBattleArtworkURL
+    }
 
     let imageData = await MainActor.run { PickeDesignKitAsset.classClosedBattle.image.pngData() }
     guard let imageData else { return nil }
@@ -61,6 +72,12 @@ actor ClassMockChatSession: @preconcurrency BattleInterface, @preconcurrency Per
           let postVoteOptionID = value.postVoteOptionID
     else { return false }
     return preVoteOptionID != postVoteOptionID
+  }
+
+  func clear(roomID: Int) {
+    let battleID = -1_000_000 - roomID
+    entries[battleID] = nil
+    UserDefaults.standard.removeObject(forKey: "picke.chatRoom.hasFinishedListening.\(battleID)")
   }
 
   private func entry(for battleID: Int) throws -> Entry {

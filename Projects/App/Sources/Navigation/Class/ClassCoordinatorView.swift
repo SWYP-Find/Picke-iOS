@@ -2,6 +2,8 @@
 //  ClassCoordinatorView.swift
 //  Picke
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ComposableArchitecture
 import FeatureAssembly
@@ -36,9 +38,6 @@ public struct ClassCoordinatorView: View {
       case let .share(shareStore):
         ClassShareView(store: shareStore)
 
-      case let .join(joinStore):
-        ClassJoinView(store: joinStore)
-
       case let .myClasses(myClassesStore):
         MyClassView(store: myClassesStore)
 
@@ -67,7 +66,7 @@ public struct ClassCoordinatorView: View {
         ClassFeedbackComposeView(store: feedbackStore)
 
       case let .chat(chatStore):
-        ChatCoordinatorView(store: chatStore)
+        ClassChatCoordinatorView(store: chatStore, roomsByBattleID: store.chatRoomsByBattleID)
 
       case let .aiVote(voteStore):
         ClassAIVoteView(store: voteStore)

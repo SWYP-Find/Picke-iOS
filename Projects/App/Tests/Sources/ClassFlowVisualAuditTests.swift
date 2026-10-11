@@ -1,3 +1,10 @@
+//
+//  ClassFlowVisualAuditTests.swift
+//  PickeTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 import AudioPlayerServiceInterface
 import ComposableArchitecture
 import DomainAssembly
@@ -20,9 +27,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
     let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
     let window = UIWindow(windowScene: scene)
-    let repository = MockClassRepository()
+    let memberAudit = ProcessInfo.processInfo.environment["PICKE_CLASS_MEMBER_AUDIT"] == "1"
+    let repository = memberAudit ? MockClassRepository(rooms: memberRooms, availableRooms: []) : MockClassRepository()
     let session = ClassMockChatSession()
-    let store = Store(initialState: MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)) {
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    if memberAudit {
+      state.classState.routes.push(.myClasses(.init()))
+    }
+    let store = Store(initialState: state) {
       MainTabCoordinator()
         .dependency(\.classUseCase, repository)
         .dependency(\.classMockRepository, repository)
@@ -34,6 +46,147 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     window.makeKeyAndVisible()
     defer { window.isHidden = true }
     try await Task.sleep(for: .seconds(180))
+  }
+
+  @MainActor
+  func testCaptureMemberManagementFlow() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture member management")
+    }
+    let rooms = memberRooms
+    let repository = MockClassRepository(rooms: rooms, availableRooms: [])
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    state.classState.routes.push(.myClasses(.init()))
+    let store = withDependencies {
+      $0.context = .test
+      $0.uuid = .incrementing
+    } operation: {
+      Store(initialState: state) {
+        MainTabCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+          .dependency(\.classMockChatSession, ClassMockChatSession())
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+      }
+    }
+    let routeID = state.classState.routes.count - 1
+    func send(_ action: MyClassFeature.Action) {
+      // Presentation effects live until dismissal; wait for the expected state below.
+      store.send(.classroom(.router(.routeAction(id: routeID, action: .myClasses(action)))))
+    }
+    func waitFor(_ description: String, until predicate: (MyClassFeature.State) -> Bool) async throws {
+      for _ in 0 ..< 100 {
+        if case let .myClasses(list)? = store.classState.routes.last?.screen, predicate(list) {
+          return
+        }
+        try await Task.sleep(for: .milliseconds(50))
+      }
+      XCTFail("Member management did not reach: \(description)")
+      throw CaptureError.contentNotReady
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassMemberVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    let host = UIHostingController(rootView: MainTabView(store: store))
+    window.rootViewController = host
+    window.frame = scene.coordinateSpace.bounds
+    window.makeKeyAndVisible()
+    defer { window.isHidden = true }
+    func save(_ name: String) async throws {
+      try await Task.sleep(for: .milliseconds(400))
+      host.view.layoutIfNeeded()
+      CATransaction.flush()
+      let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+        window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+      }
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+    send(.view(.onAppear))
+    try await waitFor("loaded member list") { !$0.isLoading && $0.rooms.map(\.id) == rooms.map(\.id) }
+    try await save("01-member-list")
+    send(.view(.managementTapped(rooms[0].id)))
+    try await waitFor("management sheet") { $0.modal != nil && $0.selectedRoomID == rooms[0].id }
+    XCTAssertFalse(store.classState.showsTabBar)
+    try await save("02-member-management")
+    send(.view(.leaveTapped))
+    try await waitFor("leave confirmation") { $0.modal == nil && $0.customAlert != nil }
+    XCTAssertFalse(store.classState.showsTabBar)
+    try await save("03-member-leave-confirm")
+    send(.customAlert(.presented(.cancelTapped)))
+    try await waitFor("cancelled leave") { $0.customAlert == nil && $0.pendingConfirmation == nil }
+    XCTAssertTrue(store.classState.showsTabBar)
+    let roomsAfterCancel = try await repository.fetchMyClasses()
+    XCTAssertEqual(roomsAfterCancel.count, 3)
+    send(.view(.managementTapped(rooms[0].id)))
+    send(.view(.leaveTapped))
+    send(.customAlert(.presented(.confirmTapped)))
+    try await waitFor("completed leave cleanup") {
+      !$0.isLeaving && $0.rooms.map(\.id) == rooms.dropFirst().map(\.id)
+    }
+    XCTAssertTrue(store.classState.showsTabBar)
+    let remaining = try await repository.fetchMyClasses()
+    XCTAssertEqual(remaining.map(\.id), rooms.dropFirst().map(\.id))
+    try await save("04-member-left")
+  }
+
+  private var memberRooms: [ClassRoom] {
+    ClassRoom.mocks.map { room in
+      ClassRoom(
+        id: room.id, name: room.name, joinCode: room.joinCode, battle: room.battle,
+        deadline: Date(timeIntervalSince1970: 1_790_154_000),
+        memberCount: room.memberCount, role: .member, status: room.status,
+        allowsAnonymousOpinion: room.allowsAnonymousOpinion, requiresComment: room.requiresComment
+      )
+    }
+  }
+
+  @MainActor
+  func testCaptureEmptyClassComments() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture empty comments")
+    }
+    let room = ClassRoom.mockJoinable
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    let store = withDependencies {
+      $0.context = .test
+    } operation: {
+      Store(initialState: ChatCoordinator.State(route: .comment(battleId: battleID))) {
+        ChatCoordinator()
+          .dependency(\.battleUseCase, session)
+          .dependency(\.perspectiveUseCase, session)
+          .dependency(\.commentUseCase, session)
+          .dependency(\.analyticsUseCase, .testValue)
+      }
+    }
+    let (image, _) = try await capture(
+      AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [battleID: room])),
+      ready: {
+        guard case let .comment(value)? = store.routes.last?.screen else { return false }
+        return !value.title.isEmpty && !value.isLoadingComments && !value.isLoadingStats
+      },
+      includeScrollBottom: false
+    )
+    guard case let .comment(value)? = store.routes.last?.screen else {
+      return XCTFail("Expected the Class comment route")
+    }
+    XCTAssertTrue(value.comments.isEmpty)
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent("15-comments-empty.png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = "15-comments-empty"
+    attachment.lifetime = .keepAlways
+    add(attachment)
   }
 
   @MainActor
@@ -52,10 +205,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
     let frames = try await withDependencies {
       $0.context = .test
+      $0.uuid = .incrementing
     } operation: {
       try await makeFrames()
     }
     var records: [Record] = []
+    var imageCount = 0
     for frame in frames {
       guard let view = frame.view else {
         records.append(.init(
@@ -68,13 +223,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         ))
         continue
       }
-      let (image, bottomImage, contentReady) = try await capture(
+      let (image, bottomImage) = try await capture(
         view,
         ready: frame.ready,
         includeScrollBottom: [19, 23, 25].contains(frame.number)
       )
       let name = String(format: "%02d", frame.number) + "-" + frame.slug + ".png"
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name))
+      imageCount += 1
       let attachment = XCTAttachment(image: image)
       attachment.name = name
       attachment.lifetime = .keepAlways
@@ -82,6 +238,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       if let bottomImage {
         let bottomName = String(format: "%02d", frame.number) + "-" + frame.slug + "-bottom.png"
         try XCTUnwrap(bottomImage.pngData()).write(to: directory.appendingPathComponent(bottomName))
+        imageCount += 1
         let bottomAttachment = XCTAttachment(image: bottomImage)
         bottomAttachment.name = bottomName
         bottomAttachment.lifetime = .keepAlways
@@ -90,9 +247,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       records.append(.init(
         number: frame.number,
         title: frame.title,
-        status: contentReady
-          ? "captured; visual comparison pending"
-          : "captured; async content did not finish loading",
+        status: "captured; visual comparison pending",
         detail: frame.detail,
         width: image.cgImage?.width,
         height: image.cgImage?.height
@@ -102,6 +257,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     let manifest = try JSONEncoder().encode(records)
     try manifest.write(to: directory.appendingPathComponent("manifest.json"))
     XCTAssertEqual(records.count, 28)
+    XCTAssertEqual(records.filter { $0.status == "captured; visual comparison pending" }.count, 28)
+    XCTAssertEqual(imageCount, 31)
   }
 
   private struct Frame {
@@ -122,18 +279,25 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     let height: Int?
   }
 
+  private enum CaptureError: Error {
+    case contentNotReady
+    case scrollDidNotReachBottom
+    case duplicateBottomCapture
+  }
+
   @MainActor
   private func capture(
     _ view: AnyView,
     ready: (@MainActor () -> Bool)?,
     includeScrollBottom: Bool
-  ) async throws -> (UIImage, UIImage?, Bool) {
+  ) async throws -> (UIImage, UIImage?) {
     let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
     let window = UIWindow(windowScene: scene)
     let host = UIHostingController(rootView: view)
     window.rootViewController = host
     window.frame = scene.coordinateSpace.bounds
     window.makeKeyAndVisible()
+    defer { window.isHidden = true }
     host.view.frame = window.bounds
     host.view.setNeedsLayout()
     host.view.layoutIfNeeded()
@@ -145,9 +309,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         }
         try await Task.sleep(for: .milliseconds(100))
       }
+      guard ready() else {
+        XCTFail("Async content did not finish loading before capture")
+        throw CaptureError.contentNotReady
+      }
     }
-    // Allow the first SwiftUI layout and the shared alert's 0.3s transition to settle.
-    try await Task.sleep(for: .milliseconds(400))
+    // The report charts animate for 0.8 seconds after their data arrives.
+    try await Task.sleep(for: includeScrollBottom ? .milliseconds(800) : .milliseconds(400))
+    try await Task.sleep(for: .milliseconds(17))
     host.view.layoutIfNeeded()
     CATransaction.flush()
 
@@ -157,30 +326,53 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
     var bottomImage: UIImage?
     if includeScrollBottom {
-      let scrollView = try XCTUnwrap(verticalScrollViews(in: host.view).max {
+      let scrollView = try XCTUnwrap(verticalScrollViews(in: host.view, window: window).max {
         $0.bounds.height < $1.bounds.height
-      }, "Expected report content to have a vertical scroll view")
+      }, "Expected visible report content to have a vertical scroll view")
+      let bottomOffset = max(
+        -scrollView.adjustedContentInset.top,
+        scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
+      )
+      guard bottomOffset > scrollView.contentOffset.y + 1 else {
+        XCTFail("Report scroll view has no uncaptured content below the current viewport")
+        throw CaptureError.scrollDidNotReachBottom
+      }
       scrollView.setContentOffset(CGPoint(
         x: scrollView.contentOffset.x,
-        y: scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
+        y: bottomOffset
       ), animated: false)
       try await Task.sleep(for: .milliseconds(100))
       host.view.layoutIfNeeded()
+      guard abs(scrollView.contentOffset.y - bottomOffset) <= 1 else {
+        XCTFail("Report scroll view did not reach its bottom offset")
+        throw CaptureError.scrollDidNotReachBottom
+      }
+      CATransaction.flush()
       bottomImage = renderer.image { _ in
         window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
       }
+      let topPixels = try XCTUnwrap(image.cgImage?.dataProvider?.data) as Data
+      let bottomPixels = try XCTUnwrap(bottomImage?.cgImage?.dataProvider?.data) as Data
+      guard topPixels != bottomPixels else {
+        XCTFail("Report bottom capture is identical to its top capture")
+        throw CaptureError.duplicateBottomCapture
+      }
     }
-    window.isHidden = true
-    return (image, bottomImage, ready?() ?? true)
+    return (image, bottomImage)
   }
 
   @MainActor
-  private func verticalScrollViews(in view: UIView) -> [UIScrollView] {
-    let candidates = view.subviews.flatMap { verticalScrollViews(in: $0) }
+  private func verticalScrollViews(in view: UIView, window: UIWindow) -> [UIScrollView] {
+    guard !view.isHidden, view.alpha > 0.01 else { return [] }
+    let candidates = view.subviews.flatMap { verticalScrollViews(in: $0, window: window) }
     guard let scrollView = view as? UIScrollView,
-          !scrollView.isHidden,
+          scrollView.window === window,
           scrollView.bounds.height > 0,
           scrollView.contentSize.height > scrollView.bounds.height + 1 else { return candidates }
+    let visibleFrame = scrollView.convert(scrollView.bounds, to: window).intersection(window.bounds)
+    guard !visibleFrame.isNull, !visibleFrame.isEmpty,
+          let hitView = window.hitTest(CGPoint(x: visibleFrame.midX, y: visibleFrame.midY), with: nil),
+          hitView === scrollView || hitView.isDescendant(of: scrollView) else { return candidates }
     return [scrollView] + candidates
   }
 
@@ -210,16 +402,24 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     aiChatAlert.customAlert = .finalVote()
     let session = ClassMockChatSession()
     let battleID = await session.register(room: member)
-    let previewRepository = MockClassRepository()
+    let battleAPI: any BattleInterface = session
+    _ = try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "감정을 드러내는 방식은 사람마다 다를 수 있다고 생각합니다.",
+      optionId: 1
+    )
+    let previewRepository = MockClassRepository(
+      rooms: ClassRoom.mocks + [member, .mockClosedSociety],
+      availableRooms: []
+    )
     let ownerMembers = try await previewRepository.fetchMembers(roomID: owner.id)
     let memberMembers = try await previewRepository.fetchMembers(roomID: member.id)
 
     func classTab(_ screen: ClassCoordinator.ClassScreen.State) -> AnyView {
-      let repository: MockClassRepository
-      if case let .myClasses(list) = screen {
-        repository = MockClassRepository(rooms: list.rooms, availableRooms: [])
+      let repository: MockClassRepository = if case let .myClasses(list) = screen {
+        MockClassRepository(rooms: list.rooms, availableRooms: [])
       } else {
-        repository = previewRepository
+        previewRepository
       }
       var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
       state.classState.routes.push(screen)
@@ -230,6 +430,43 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.classMockChatSession, session)
           .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
       }))
+    }
+
+    func loadedClassFrame(
+      _ number: Int,
+      _ title: String,
+      _ slug: String,
+      _ detail: String,
+      _ screen: ClassCoordinator.ClassScreen.State
+    ) -> Frame {
+      var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+      state.classState.routes.push(screen)
+      let store = Store(initialState: state) {
+        MainTabCoordinator()
+          .dependency(\.classUseCase, previewRepository)
+          .dependency(\.classMockRepository, previewRepository)
+          .dependency(\.classMockChatSession, session)
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+      }
+      let ready: @MainActor () -> Bool = {
+        switch store.classState.routes.last?.screen {
+        case let .report(value)?:
+          return value.hasLoaded && !value.isLoading && !value.loadFailed && value.report != nil
+        case let .ownerDashboard(value)?:
+          return value.hasLoaded && !value.isLoading && !value.loadFailed
+            && value.report != nil && value.metrics != nil
+        default:
+          return false
+        }
+      }
+      return Frame(
+        number: number,
+        title: title,
+        slug: slug,
+        detail: detail,
+        view: AnyView(MainTabView(store: store)),
+        ready: ready
+      )
     }
 
     func chatFrame(_ number: Int, _ title: String, _ slug: String, _ state: ChatCoordinator.State) -> Frame {
@@ -245,9 +482,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       let ready: @MainActor () -> Bool = {
         switch store.routes.last?.screen {
         case let .preVote(value)?:
-          return value.battle != nil || value.detailLoadFailed
+          return value.battle != nil && !value.detailLoadFailed
         case let .chatRoom(value)?:
-          return value.scenario != nil || value.scenarioLoadFailed
+          return value.scenario != nil && !value.scenarioLoadFailed
         case let .comment(value)?:
           return !value.title.isEmpty
         default:
@@ -259,7 +496,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         title: title,
         slug: slug,
         detail: "seeded member battle; async mock load",
-        view: AnyView(ChatCoordinatorView(store: store)),
+        view: AnyView(ClassChatCoordinatorView(store: store, roomsByBattleID: [battleID: member])),
         ready: ready
       )
     }
@@ -276,7 +513,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     var ownerList = MyClassFeature.State()
     ownerList.rooms = ClassRoom.mocks
     var memberList = MyClassFeature.State()
-    memberList.rooms = [member, .mockClosedSociety]
+    memberList.rooms = memberRooms
+    var ownerReport = ClassOwnerDashboardFeature.State(room: owner, instanceID: UUID())
+    ownerReport.selectedTab = .report
 
     func frame(_ number: Int, _ title: String, _ slug: String, _ detail: String, _ view: AnyView?) -> Frame {
       Frame(number: number, title: title, slug: slug, detail: detail, view: view, ready: nil)
@@ -373,7 +612,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         12,
         "멤버 내 클래스",
         "member-classes",
-        "two member rooms",
+        "Figma fixture: two open and one closed member room",
         classTab(.myClasses(memberList))
       ),
       frame(
@@ -398,12 +637,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       chatFrame(16, "최종 투표", "final-vote", .init(route: .finalVote(battleId: battleID))),
       chatFrame(17, "청취와 대화", "chat-room", chatRoom),
       chatFrame(18, "사전 투표", "pre-vote", .init(battleId: battleID)),
-      frame(
+      loadedClassFrame(
         19,
         "멤버 개인 리포트",
         "member-report",
         "member room summary tab",
-        classTab(.report(.init(room: member)))
+        .report(.init(room: member))
       ),
       frame(
         20,
@@ -428,12 +667,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         "open owner room",
         classTab(.detail(.init(room: owner)))
       ),
-      frame(
+      loadedClassFrame(
         23,
         "운영자 클래스 요약",
         "owner-dashboard",
-        "preview home metrics",
-        classTab(.ownerDashboard(.preview(room: owner)))
+        "loaded home metrics",
+        .ownerDashboard(.init(room: owner))
       ),
       frame(
         24,
@@ -446,12 +685,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           currentMemberID: 1
         )))
       ),
-      frame(
+      loadedClassFrame(
         25,
         "운영자 내 리포트",
         "owner-report",
-        "preview report metrics",
-        classTab(.ownerDashboard(.preview(room: owner, tab: .report)))
+        "loaded report metrics",
+        .ownerDashboard(ownerReport)
       ),
       frame(
         26,

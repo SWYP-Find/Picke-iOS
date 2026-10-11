@@ -2,6 +2,8 @@
 //  ClassCoordinator.swift
 //  Picke
 //
+//  Created by Picke on 10/11/26.
+//
 
 import AudioPlayerServiceInterface
 import ComposableArchitecture
@@ -24,6 +26,10 @@ public struct ClassCoordinator {
     public var routes: [Route<ClassScreen.State>]
     public var usesAIQuestions = false
     public var completedAIBattles: [Int: Bool] = [:]
+    public var chatRoomsByBattleID: [Int: ClassRoom] = [:]
+    var pendingJoinID: UUID?
+    var reportInstanceIDs: Set<UUID> = []
+    var dashboardInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
@@ -35,7 +41,7 @@ public struct ClassCoordinator {
       case let .detail(detail)?:
         return detail.modal == nil && detail.customAlert == nil
       case let .myClasses(myClasses)?:
-        return myClasses.modal == nil && myClasses.customAlert == nil
+        return myClasses.modal == nil && myClasses.customAlert == nil && !myClasses.isLeaving
       default:
         return false
       }
@@ -65,6 +71,8 @@ public struct ClassCoordinator {
     case memberMutationFailed(Int, String)
     case mockBattleRegistered(roomID: Int, battleID: Int)
     case completedAIVoteResolved(battleID: Int, isMindChanged: Bool)
+    case membershipSessionCleared(routeID: Int, roomID: Int)
+    case joinedSessionCleared(UUID, ClassRoom)
   }
 
   public enum NavigationAction: Equatable {}
@@ -73,28 +81,59 @@ public struct ClassCoordinator {
     state: inout State,
     action: Action
   ) -> Effect<Action> {
-    switch action {
+    let effect: Effect<Action> = switch action {
     case let .router(routeAction):
-      return routerAction(state: &state, action: routeAction)
+      routerAction(state: &state, action: routeAction)
     case let .view(viewAction):
-      return handleViewAction(state: &state, action: viewAction)
+      handleViewAction(state: &state, action: viewAction)
     case let .inner(innerAction):
-      return handleInnerAction(state: &state, action: innerAction)
+      handleInnerAction(state: &state, action: innerAction)
     case .async, .navigation:
-      return .none
+      .none
     }
+    if state.routes.count == 1 {
+      state.chatRoomsByBattleID.removeAll()
+    }
+    return .merge(effect, cancelRemovedReportLoads(state: &state))
   }
 }
 
 private extension ClassCoordinator {
+  func cancelRemovedReportLoads(state: inout State) -> Effect<Action> {
+    let reportIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .report(report) = route.screen else { return nil }
+      return report.instanceID
+    })
+    let dashboardIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ownerDashboard(dashboard) = route.screen else { return nil }
+      return dashboard.instanceID
+    })
+    // TCAFlow applies interactive route updates before handleRoute is called.
+    // Keep instance IDs across actions so a removed route's work can be cancelled.
+    let cancelledReports = state.reportInstanceIDs.subtracting(reportIDs)
+    let cancelledDashboards = state.dashboardInstanceIDs.subtracting(dashboardIDs)
+    state.reportInstanceIDs = reportIDs
+    state.dashboardInstanceIDs = dashboardIDs
+    return .merge(
+      cancelledReports.map { .cancel(id: ClassReportFeature.CancelID.load($0)) }
+        + cancelledDashboards.map { .cancel(id: ClassOwnerDashboardFeature.CancelID.load($0)) }
+    )
+  }
+
   func routerAction(
     state: inout State,
     action: IndexedRouterActionOf<ClassScreen>
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(_, action: .intro(.delegate(.joined(room, nickname: _)))):
-      state.routes.push(.detail(.init(room: room)))
-      return .none
+      let requestID = UUID()
+      state.pendingJoinID = requestID
+      state.completedAIBattles[-1_000_000 - room.id] = nil
+      state.chatRoomsByBattleID[-1_000_000 - room.id] = nil
+      return .run { [classMockChatSession] send in
+        await classMockChatSession.clear(roomID: room.id)
+        await send(.inner(.joinedSessionCleared(requestID, room)))
+      }
 
     case .routeAction(_, action: .intro(.delegate(.myClasses))):
       state.routes.push(.myClasses(.init()))
@@ -150,19 +189,26 @@ private extension ClassCoordinator {
 
     case let .routeAction(_, action: .share(.delegate(.enterClass(room)))):
       state.routes.goBackToRoot()
+      state.chatRoomsByBattleID.removeAll()
       state.routes.push(.detail(.init(room: room)))
       return .none
 
-    case .routeAction(_, action: .join(.delegate(.dismiss))),
-         .routeAction(_, action: .myClasses(.delegate(.dismiss))),
+    case .routeAction(_, action: .myClasses(.delegate(.dismiss))),
          .routeAction(_, action: .detail(.delegate(.dismiss))),
          .routeAction(_, action: .members(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case let .routeAction(_, action: .join(.delegate(.joined(room, nickname: _)))),
-         let .routeAction(_, action: .myClasses(.delegate(.openRoom(room)))):
+    case let .routeAction(_, action: .myClasses(.delegate(.openRoom(room)))):
       state.routes.push(.detail(.init(room: room)))
       return .none
+
+    case let .routeAction(routeID, action: .myClasses(.delegate(.left(roomID)))):
+      state.completedAIBattles[-1_000_000 - roomID] = nil
+      state.chatRoomsByBattleID[-1_000_000 - roomID] = nil
+      return .run { [classMockChatSession] send in
+        await classMockChatSession.clear(roomID: roomID)
+        await send(.inner(.membershipSessionCleared(routeID: routeID, roomID: roomID)))
+      }
 
     case let .routeAction(_, action: .myClasses(.delegate(.openInformation(room)))):
       var detail = ClassDetailFeature.State(room: room)
@@ -252,14 +298,7 @@ private extension ClassCoordinator {
     case let .routeAction(_, action: .detail(.delegate(.openReport(room)))),
          let .routeAction(_, action: .closedBattle(.delegate(.openReport(room)))):
       if room.role == .owner {
-        let previewRoom = ClassRoom.mocks[0]
-        let showsPreview = room.id == previewRoom.id
-          && room.joinCode == previewRoom.joinCode
-          && room.battle == previewRoom.battle
-        let dashboard: ClassOwnerDashboardFeature.State = showsPreview
-          ? .preview(room: room)
-          : .init(room: room)
-        state.routes.push(.ownerDashboard(dashboard))
+        state.routes.push(.ownerDashboard(.init(room: room)))
       } else {
         state.routes.push(.report(.init(room: room)))
       }
@@ -403,6 +442,7 @@ private extension ClassCoordinator {
 
     case .backToRootAction:
       state.routes.goBackToRoot()
+      state.chatRoomsByBattleID.removeAll()
       return .none
     }
   }
@@ -412,6 +452,23 @@ private extension ClassCoordinator {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .joinedSessionCleared(requestID, room):
+      guard state.pendingJoinID == requestID else { return .none }
+      state.pendingJoinID = nil
+      guard case .intro? = state.routes.last?.screen else { return .none }
+      state.routes.push(.detail(.init(room: room)))
+      return .none
+
+    case let .membershipSessionCleared(routeID, roomID):
+      guard state.routes.indices.contains(routeID),
+            case let .myClasses(list) = state.routes[routeID].screen,
+            list.isLeaving, list.leavingRoomID == roomID
+      else { return .none }
+      return .send(.router(.routeAction(
+        id: routeID,
+        action: .myClasses(.inner(.leaveCleanupCompleted(roomID)))
+      )))
+
     case let .completedAIVoteResolved(battleID, isMindChanged):
       guard case let .aiVote(vote)? = state.routes.last?.screen,
             vote.battleID == battleID
@@ -426,6 +483,7 @@ private extension ClassCoordinator {
       guard case let .detail(detail)? = state.routes.last?.screen,
             detail.room.id == roomID
       else { return .none }
+      state.chatRoomsByBattleID[battleID] = detail.room
       if detail.room.battle.id < 0 {
         state.routes.push(.aiVote(.init(room: detail.room, battleID: battleID)))
       } else {
@@ -455,6 +513,9 @@ private extension ClassCoordinator {
       return .send(.router(.routeAction(id: index, action: .members(.dataFailed(message)))))
 
     case let .memberMutationCompleted(room, members):
+      for (battleID, context) in state.chatRoomsByBattleID where context.id == room.id {
+        state.chatRoomsByBattleID[battleID] = room
+      }
       var updates: [Effect<Action>] = []
       for (index, route) in state.routes.enumerated() {
         switch route.screen {
@@ -486,7 +547,6 @@ extension ClassCoordinator {
     case recommend(ClassRecommendFeature)
     case setting(ClassSettingFeature)
     case share(ClassShareFeature)
-    case join(ClassJoinFeature)
     case myClasses(MyClassFeature)
     case detail(ClassDetailFeature)
     case members(ClassMemberFeature)
