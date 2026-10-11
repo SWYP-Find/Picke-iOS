@@ -1,3 +1,10 @@
+//
+//  ClassOwnerDashboardFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -8,18 +15,6 @@ public struct ClassOwnerDashboardFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public struct PreviewMetrics: Equatable {
-      public let commentAuthorCount: Int
-      public let optionAVoteCount: Int
-      public let optionBVoteCount: Int
-
-      public init(commentAuthorCount: Int, optionAVoteCount: Int, optionBVoteCount: Int) {
-        self.commentAuthorCount = commentAuthorCount
-        self.optionAVoteCount = optionAVoteCount
-        self.optionBVoteCount = optionBVoteCount
-      }
-    }
-
     public enum MemberViewState: Equatable {
       case unavailable
       case noSearchResults
@@ -44,6 +39,7 @@ public struct ClassOwnerDashboardFeature {
     }
 
     public let room: ClassRoom
+    public let instanceID: UUID
     public var selectedTab: ClassOwnerTab = .home
     public var showsMyOpinions = false
     public var opinionFilter: ClassOwnerOpinionFilter = .popular
@@ -52,57 +48,22 @@ public struct ClassOwnerDashboardFeature {
     public var searchText = ""
     public var members: [ClassOwnerMember] = []
     public var opinions: [ClassOwnerOpinion] = []
-    public var usesPreviewContent = false
-    public var previewMetrics: PreviewMetrics?
+    public var insight: String?
+    public var report: ClassReport?
+    public var metrics: ClassParticipationMetrics?
+    public var hasLoaded = false
+    public var isLoading = false
+    public var loadFailed = false
+    public var requestID: UUID?
     @Presents public var management: ClassModalFeature.State?
 
-    public init(room: ClassRoom) {
+    public init(
+      room: ClassRoom,
+      instanceID: UUID? = nil
+    ) {
+      @Dependency(\.uuid) var uuid
       self.room = room
-    }
-
-    public static func preview(room: ClassRoom, tab: ClassOwnerTab = .home) -> Self {
-      var state = Self(room: room)
-      state.selectedTab = tab
-      state.usesPreviewContent = true
-      state.previewMetrics = PreviewMetrics(commentAuthorCount: 24, optionAVoteCount: 18, optionBVoteCount: 10)
-      state.members = [
-        ClassOwnerMember(id: 1, name: "김민지", participationCount: 8, needsReview: true),
-        ClassOwnerMember(id: 2, name: "이서준", participationCount: 7),
-        ClassOwnerMember(id: 3, name: "박지우", participationCount: 6),
-        ClassOwnerMember(id: 4, name: "최유진", participationCount: 0),
-        ClassOwnerMember(id: 5, name: "정다은", participationCount: 0),
-        ClassOwnerMember(id: 6, name: "한도윤", participationCount: 0, needsReview: true),
-      ]
-      state.members += (7 ... 32).map { id in
-        ClassOwnerMember(id: id, name: "희망 \(id)", participationCount: id < 32 ? 1 : 0)
-      }
-      state.opinions = [
-        ClassOwnerOpinion(
-          id: 1,
-          author: "김민지",
-          text: "슬픔을 겉으로 드러내지 않는다고 해서 타인을 사랑하지 않는다고 판단할 수는 없다고 생각해요.",
-          replyCount: 23,
-          recommendationCount: 1340,
-          createdAt: Date(timeIntervalSince1970: 1_780_000_300)
-        ),
-        ClassOwnerOpinion(
-          id: 2,
-          author: "이서준",
-          text: "감정은 개인의 자유지만, 사회적 관계에서는 최소한의 공감 표현도 필요하다고 생각해요.",
-          replyCount: 12,
-          recommendationCount: 840,
-          createdAt: Date(timeIntervalSince1970: 1_780_000_200)
-        ),
-        ClassOwnerOpinion(
-          id: 3,
-          author: "박지우",
-          text: "교육과 보호도 함께 고려해야 한다고 생각합니다.",
-          replyCount: 4,
-          recommendationCount: 510,
-          createdAt: Date(timeIntervalSince1970: 1_780_000_100)
-        ),
-      ]
-      return state
+      self.instanceID = instanceID ?? uuid()
     }
 
     public var searchedMembers: [ClassOwnerMember] {
@@ -194,12 +155,16 @@ public struct ClassOwnerDashboardFeature {
 
   public enum Action: ViewAction {
     case view(View)
+    case async(AsyncAction)
+    case inner(InnerAction)
     case delegate(DelegateAction)
     case management(PresentationAction<ClassModalFeature.Action>)
   }
 
   @CasePathable
   public enum View: Equatable {
+    case onAppear
+    case retryTapped
     case backTapped
     case managementTapped
     case managementDismissed
@@ -216,6 +181,20 @@ public struct ClassOwnerDashboardFeature {
     case feedbackTapped(Int)
   }
 
+  @CasePathable
+  public enum AsyncAction: Equatable {
+    case fetchDashboard
+  }
+
+  @CasePathable
+  public enum InnerAction: Equatable {
+    case dashboardResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassOwnerDashboardData?, ClassError>)
+  }
+
+  public enum CancelID: Hashable, Sendable {
+    case load(UUID)
+  }
+
   public enum DelegateAction: Equatable {
     case dismiss
     case editClass
@@ -225,57 +204,141 @@ public struct ClassOwnerDashboardFeature {
     case openFeedback(ClassOwnerMember)
   }
 
+  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.uuid) private var uuid
+
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
       case let .view(viewAction):
-        switch viewAction {
-        case .backTapped:
-          return .send(.delegate(.dismiss))
-        case .managementTapped:
-          guard state.room.role == .owner else { return .none }
-          state.management = .init(kind: .management)
-        case .managementDismissed:
-          state.management = nil
-        case .managementEditTapped:
-          state.management = nil
-          return .send(.delegate(.editClass))
-        case .managementDeleteTapped:
-          state.management = nil
-          return .send(.delegate(.deleteClass))
-        case let .tabSelected(tab):
-          state.selectedTab = tab
-        case .myOpinionsTapped:
-          state.showsMyOpinions.toggle()
-        case let .opinionFilterSelected(filter):
-          guard state.canSortOpinions(filter) else { return .none }
-          state.opinionFilter = filter
-        case let .memberSortSelected(sort):
-          state.memberSort = sort
-        case let .memberFilterSelected(filter):
-          guard !state.members.isEmpty || filter == .all else { return .none }
-          state.memberFilter = filter
-        case let .searchTextChanged(text):
-          state.searchText = text
-        case let .memberTapped(id):
-          guard let member = state.members.first(where: { $0.id == id }) else { return .none }
-          return .send(.delegate(.openMemberDetail(member)))
-        case let .opinionTapped(id):
-          guard let opinion = state.opinions.first(where: { $0.id == id }) else { return .none }
-          return .send(.delegate(.openReplyDetail(opinion)))
-        case let .feedbackTapped(id):
-          guard let member = state.members.first(where: { $0.id == id }) else { return .none }
-          return .send(.delegate(.openFeedback(member)))
-        }
-        return .none
-      case .delegate:
-        return .none
-      case .management:
+        return handleViewAction(state: &state, action: viewAction)
+      case let .async(asyncAction):
+        return handleAsyncAction(state: &state, action: asyncAction)
+      case let .inner(innerAction):
+        return handleInnerAction(state: &state, action: innerAction)
+      case .delegate, .management:
         return .none
       }
     }
     .ifLet(\.$management, action: \.management) {
       ClassModalFeature()
+    }
+  }
+}
+
+// MARK: - Action Handlers
+
+extension ClassOwnerDashboardFeature {
+  private func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .onAppear:
+      guard !state.hasLoaded, !state.isLoading else { return .none }
+      return .send(.async(.fetchDashboard))
+    case .retryTapped:
+      return .send(.async(.fetchDashboard))
+    case .backTapped:
+      state.requestID = nil
+      state.isLoading = false
+      return .merge(
+        .cancel(id: CancelID.load(state.instanceID)),
+        .send(.delegate(.dismiss))
+      )
+    case .managementTapped:
+      guard state.room.role == .owner else { return .none }
+      state.management = .init(kind: .management)
+    case .managementDismissed:
+      state.management = nil
+    case .managementEditTapped:
+      state.management = nil
+      return .send(.delegate(.editClass))
+    case .managementDeleteTapped:
+      state.management = nil
+      return .send(.delegate(.deleteClass))
+    case let .tabSelected(tab):
+      state.selectedTab = tab
+    case .myOpinionsTapped:
+      state.showsMyOpinions.toggle()
+    case let .opinionFilterSelected(filter):
+      guard state.canSortOpinions(filter) else { return .none }
+      state.opinionFilter = filter
+    case let .memberSortSelected(sort):
+      state.memberSort = sort
+    case let .memberFilterSelected(filter):
+      guard !state.members.isEmpty || filter == .all else { return .none }
+      state.memberFilter = filter
+    case let .searchTextChanged(text):
+      state.searchText = text
+    case let .memberTapped(id):
+      guard let member = state.members.first(where: { $0.id == id }) else { return .none }
+      return .send(.delegate(.openMemberDetail(member)))
+    case let .opinionTapped(id):
+      guard let opinion = state.opinions.first(where: { $0.id == id }) else { return .none }
+      return .send(.delegate(.openReplyDetail(opinion)))
+    case let .feedbackTapped(id):
+      guard let member = state.members.first(where: { $0.id == id }) else { return .none }
+      return .send(.delegate(.openFeedback(member)))
+    }
+    return .none
+  }
+
+  private func handleAsyncAction(
+    state: inout State,
+    action: AsyncAction
+  ) -> Effect<Action> {
+    switch action {
+    case .fetchDashboard:
+      let requestID = uuid()
+      state.requestID = requestID
+      state.isLoading = true
+      state.loadFailed = false
+      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        let result = await Result {
+          try await classUseCase.fetchOwnerDashboard(roomID: roomID)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.dashboardResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result
+        )))
+      }
+      .cancellable(id: CancelID.load(state.instanceID), cancelInFlight: true)
+    }
+  }
+
+  private func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .dashboardResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.requestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.requestID = nil
+      state.hasLoaded = true
+      state.isLoading = false
+      switch result {
+      case let .success(dashboard):
+        state.members = dashboard?.members ?? []
+        state.opinions = dashboard?.opinions ?? []
+        state.insight = dashboard?.insight
+        state.report = dashboard?.report
+        state.metrics = dashboard?.metrics
+        state.loadFailed = false
+      case .failure:
+        state.members = []
+        state.opinions = []
+        state.insight = nil
+        state.report = nil
+        state.metrics = nil
+        state.loadFailed = true
+      }
+      return .none
     }
   }
 }

@@ -1,3 +1,10 @@
+//
+//  ClassOwnerDashboardView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -17,28 +24,25 @@ public struct ClassOwnerDashboardView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
-        if store.room.role == .owner {
-          Button { send(.managementTapped) } label: {
-            Image(systemName: "ellipsis")
-              .font(.system(size: 20))
-              .frame(width: 24, height: 24)
-          }
-          .accessibilityLabel("클래스 관리")
-        }
-      }
-      .foregroundStyle(.gray800)
-
+      navigationBar()
       titleHeader()
       dashboardTabs()
-      TabView(selection: $store.selectedTab.sending(\.view.tabSelected)) {
-        ScrollView { homePage().padding(16) }.tag(ClassOwnerTab.home)
-        ScrollView { reportPage().padding(16) }.tag(ClassOwnerTab.report)
+      if store.isLoading || !store.hasLoaded {
+        MyClassSkeletonView()
+      } else if store.loadFailed {
+        PickeRetryErrorView(message: "클래스 현황을 불러오지 못했어요") { send(.retryTapped) }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else {
+        TabView(selection: $store.selectedTab.sending(\.view.tabSelected)) {
+          ScrollView { homePage().padding(16) }.tag(ClassOwnerTab.home)
+          ScrollView { reportPage().padding(16) }.tag(ClassOwnerTab.report)
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
       }
-      .tabViewStyle(.page(indexDisplayMode: .never))
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .onAppear { send(.onAppear) }
     .pickeModal($store.scope(state: \.management, action: \.management), dimOpacity: 0.28) { _ in
       ZStack(alignment: .bottom) {
         Color.clear
@@ -63,10 +67,33 @@ public struct ClassOwnerDashboardView: View {
 
 private extension ClassOwnerDashboardView {
   @ViewBuilder
+  func navigationBar() -> some View {
+    PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
+      switch store.selectedTab {
+      case .home:
+        Button { send(.backTapped) } label: {
+          Image(systemName: "xmark")
+            .font(.system(size: 20, weight: .light))
+            .frame(width: 24, height: 24)
+        }
+        .accessibilityLabel("닫기")
+      case .report:
+        Button { send(.managementTapped) } label: {
+          Image(systemName: "ellipsis")
+            .font(.system(size: 20))
+            .frame(width: 24, height: 24)
+        }
+        .accessibilityLabel("클래스 관리")
+      }
+    }
+    .foregroundStyle(.gray800)
+  }
+
+  @ViewBuilder
   func titleHeader() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
-        Text(store.room.status == .closed || reportPreviewContent != nil ? "마감" : "진행 중")
+        Text(store.room.status == .closed ? "마감" : "진행 중")
           .pickeBadge(.filled, size: .tag)
         Text("#\(store.room.battle.categoryDisplayTitle)")
           .pickeBadge(.filled, size: .tag)
@@ -115,10 +142,10 @@ private extension ClassOwnerDashboardView {
   @ViewBuilder
   func homePage() -> some View {
     VStack(alignment: .leading, spacing: 24) {
-      if let content = reportPreviewContent {
+      if let insight = store.insight {
         VStack(alignment: .leading, spacing: 8) {
           ClassAIInsightHeading(title: "AI 인사이트")
-          Text(content[.aiSummaryDetail])
+          Text(insight)
             .pretendardFont(.regular13)
         }
         .foregroundStyle(.primary500)
@@ -132,7 +159,7 @@ private extension ClassOwnerDashboardView {
         }
       }
       dashboardSection("클래스 참여 현황") {
-        if let metrics = previewMetrics {
+        if let metrics = store.metrics {
           let total = store.members.count
           let participated = store.members.filter { $0.participationCount > 0 }.count
           VStack(spacing: 12) {
@@ -163,7 +190,7 @@ private extension ClassOwnerDashboardView {
         }
       }
       dashboardSection("입장 분포") {
-        if let metrics = previewMetrics {
+        if let metrics = store.metrics {
           let total = metrics.optionAVoteCount + metrics.optionBVoteCount
           let optionAShare = ratio(metrics.optionAVoteCount, of: total)
           HStack(spacing: 20) {
@@ -225,7 +252,7 @@ private extension ClassOwnerDashboardView {
   func reportPage() -> some View {
     VStack(alignment: .leading, spacing: 24) {
       dashboardSection("내 투표 결과") {
-        if let content = reportPreviewContent {
+        if let content = store.report {
           VStack(spacing: 16) {
             HStack(spacing: 8) {
               reportChoice("사전 선택", value: content[.initialChoice])
@@ -257,7 +284,7 @@ private extension ClassOwnerDashboardView {
       }
 
       dashboardSection("AI 피드백") {
-        if let content = reportPreviewContent {
+        if let content = store.report {
           VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
               ClassAIInsightHeading(title: content[.aiSummaryTitle])
@@ -305,10 +332,10 @@ private extension ClassOwnerDashboardView {
 
       dashboardSection("다음 생각 해보기") {
         VStack(alignment: .leading, spacing: 12) {
-          Text(reportPreviewContent?[.nextQuestion] ?? store.room.battle.title)
+          Text(store.report?[.nextQuestion] ?? store.room.battle.title)
             .pretendardFont(family: .SemiBold, size: 18)
             .foregroundStyle(.gray800)
-          Text(reportPreviewContent?[.nextHint] ?? "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
+          Text(store.report?[.nextHint] ?? "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
             .pretendardFont(.regular13)
             .foregroundStyle(.gray500)
         }
@@ -317,10 +344,6 @@ private extension ClassOwnerDashboardView {
         .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
       }
     }
-  }
-
-  var reportPreviewContent: ClassReportPreviewContent? {
-    usesPreviewContent ? .figma : nil
   }
 
   func reportChoice(_ label: String, value: String) -> some View {
@@ -357,14 +380,6 @@ private extension ClassOwnerDashboardView {
       content()
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
-  var usesPreviewContent: Bool {
-    store.usesPreviewContent
-  }
-
-  var previewMetrics: ClassOwnerDashboardFeature.State.PreviewMetrics? {
-    store.previewMetrics
   }
 
   func animateChartsIfNeeded() {
@@ -463,12 +478,8 @@ private extension ClassOwnerDashboardView {
           Rectangle().fill(.beige600).frame(height: 1)
         }
         VStack(alignment: .leading, spacing: 8) {
-          Text(index == 0 ? "많이 나온 의견" : "다른 관점")
-            .pretendardFont(.semiBold13)
-            .foregroundStyle(.primary500)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+          Text(index == 0 ? "BEST 댓글" : "HOT 댓글")
+            .pickeBadge(.filled)
           Text("“\(opinion.text)”")
             .pretendardFont(.regular13)
             .foregroundStyle(.gray700)
@@ -502,13 +513,18 @@ private struct ClassDistributionSegment: Shape {
 
 #if DEBUG
   #Preview("운영자 대시보드 · 요약") {
-    ClassOwnerDashboardView(store: Store(initialState: .preview(room: ClassRoom.mocks[0])) {
+    ClassOwnerDashboardView(store: Store(initialState: .init(room: ClassRoom.mocks[0])) {
       ClassOwnerDashboardFeature()
     })
   }
 
   #Preview("운영자 대시보드 · 내 리포트") {
-    ClassOwnerDashboardView(store: Store(initialState: .preview(room: ClassRoom.mocks[0], tab: .report)) {
+    let state = {
+      var state = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0])
+      state.selectedTab = .report
+      return state
+    }()
+    ClassOwnerDashboardView(store: Store(initialState: state) {
       ClassOwnerDashboardFeature()
     })
   }

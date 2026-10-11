@@ -1,36 +1,27 @@
+//
+//  ClassReportView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeCoreUtility
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassReportFeature.self)
 public struct ClassReportView: View {
   @Bindable public var store: StoreOf<ClassReportFeature>
-  private let previewContent: ClassReportPreviewContent?
 
   public init(store: StoreOf<ClassReportFeature>) {
     self.store = store
-    previewContent = [ClassRoom.mockJoinable, .mockClosedSociety].contains { previewRoom in
-      store.room.joinCode == previewRoom.joinCode
-        && store.room.name == previewRoom.name
-        && store.room.battle == previewRoom.battle
-    } ? .figma : nil
   }
 
-  #if DEBUG
-    init(store: StoreOf<ClassReportFeature>, previewContent: ClassReportPreviewContent) {
-      self.store = store
-      self.previewContent = previewContent
-    }
-  #endif
-
-  private var showsFigmaPreview: Bool {
-    previewContent != nil
-  }
-
-  private func previewText(_ key: ClassReportPreviewContent.Key) -> String {
-    previewContent?[key] ?? ""
+  private func reportText(_ key: ClassReport.Key) -> String {
+    store.report?[key] ?? ""
   }
 
   public var body: some View {
@@ -47,10 +38,18 @@ public struct ClassReportView: View {
 
       reportTitle()
         .padding(.top, 16)
-      reportPages()
+      if store.loadFailed {
+        PickeRetryErrorView(message: "리포트를 불러오지 못했어요") { send(.retryTapped) }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      } else if store.isLoading || !store.hasLoaded {
+        MyClassSkeletonView()
+      } else {
+        reportPages()
+      }
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .onAppear { send(.onAppear) }
   }
 }
 
@@ -59,7 +58,7 @@ private extension ClassReportView {
   func reportTitle() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
-        Text(store.room.status == .closed || showsFigmaPreview ? "마감" : "진행 중")
+        Text(store.room.status == .closed ? "마감" : "진행 중")
           .pickeBadge(.filled, size: .tag)
         Text("#\(store.room.battle.categoryDisplayTitle)").pickeBadge(.filled, size: .tag)
       }
@@ -100,7 +99,7 @@ private extension ClassReportView {
 
   @ViewBuilder
   func reportPages() -> some View {
-    if showsFigmaPreview {
+    if store.showsSummaryLayout {
       reportPage(for: .summary)
     } else {
       TabView(selection: $store.selectedTab.sending(\.view.tabSelected)) {
@@ -150,15 +149,15 @@ private extension ClassReportView {
     VStack(alignment: .leading, spacing: 24) {
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("내 투표 결과")
-        reportCard(minHeight: showsFigmaPreview ? 136 : 0) {
+        reportCard(minHeight: store.report != nil ? 136 : 0) {
           voteAndActivitySummary()
         }
       }
 
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("AI 피드백")
-        reportCard(padding: 0, spacing: 0, minHeight: showsFigmaPreview ? 350 : 0) {
-          if showsFigmaPreview {
+        reportCard(padding: 0, spacing: 0, minHeight: store.report != nil ? 350 : 0) {
+          if store.report != nil {
             aiFeedbackSummary()
           } else {
             unavailableReport(
@@ -173,10 +172,10 @@ private extension ClassReportView {
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("다음 생각 해보기")
         VStack(alignment: .leading, spacing: 12) {
-          Text(showsFigmaPreview ? previewText(.nextQuestion) : store.room.battle.title)
+          Text(store.report != nil ? reportText(.nextQuestion) : store.room.battle.title)
             .pretendardFont(family: .SemiBold, size: 18)
             .foregroundStyle(.gray800)
-          Text(showsFigmaPreview ? previewText(.nextHint) : "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
+          Text(store.report != nil ? reportText(.nextHint) : "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
             .pretendardFont(.regular13)
             .foregroundStyle(.gray300)
         }
@@ -185,7 +184,7 @@ private extension ClassReportView {
         .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
       }
 
-      if !showsFigmaPreview {
+      if !store.showsSummaryLayout {
         HStack(spacing: 8) {
           reportPageLink("참여 기록", tab: .participation)
           reportPageLink("클래스 결과", tab: .classResult)
@@ -205,22 +204,22 @@ private extension ClassReportView {
 
   @ViewBuilder
   func participationContent() -> some View {
-    reportCard(minHeight: showsFigmaPreview ? 204 : 0) {
+    reportCard(minHeight: store.report != nil ? 204 : 0) {
       cardHeading("내 투표 결과")
       voteAndActivitySummary()
     }
-    reportCard(padding: 16, spacing: 8, minHeight: showsFigmaPreview ? 177 : 0) {
+    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 177 : 0) {
       cardHeading("내 댓글")
-      if showsFigmaPreview {
+      if store.report != nil {
         HStack {
-          Text(previewText(.commentStance)).pickeBadge(.filled, size: .tag)
+          Text(reportText(.commentStance)).pickeBadge(.filled, size: .tag)
           Spacer()
-          Text(previewText(.commentDate)).pretendardFont(family: .Regular, size: 12).foregroundStyle(.gray300)
+          Text(reportText(.commentDate)).pretendardFont(family: .Regular, size: 12).foregroundStyle(.gray300)
         }
-        Text(previewText(.commentBody))
+        Text(reportText(.commentBody))
           .pretendardFont(.regular13)
           .foregroundStyle(.gray700)
-        reactions(likes: previewText(.commentLikes), replies: previewText(.commentReplies))
+        reactions(likes: reportText(.commentLikes), replies: reportText(.commentReplies))
       } else {
         unavailableReport(
           title: "댓글 데이터를 불러올 수 없어요",
@@ -228,25 +227,25 @@ private extension ClassReportView {
         )
       }
     }
-    reportCard(padding: 16, spacing: 8, minHeight: showsFigmaPreview ? 225 : 0) {
+    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 225 : 0) {
       cardHeading("내 대댓글")
-      if showsFigmaPreview {
-        Text(previewText(.replyAuthor))
+      if store.report != nil {
+        Text(reportText(.replyAuthor))
           .pretendardFont(.semiBold13)
           .foregroundStyle(.gray800)
-        Text(previewText(.replyParent))
+        Text(reportText(.replyParent))
           .pretendardFont(.regular13)
           .foregroundStyle(.gray700)
         Rectangle().fill(.beige600).frame(height: 1)
         Text("내 대댓글").pretendardFont(.semiBold13).foregroundStyle(.gray800)
-        Text(previewText(.replyBody))
+        Text(reportText(.replyBody))
           .pretendardFont(.regular13)
           .foregroundStyle(.gray700)
         HStack {
-          Text(previewText(.replyDate))
+          Text(reportText(.replyDate))
           Spacer()
           Image(systemName: "heart")
-          Text(previewText(.replyLikes))
+          Text(reportText(.replyLikes))
         }
         .pretendardFont(family: .Regular, size: 12)
         .foregroundStyle(.gray300)
@@ -261,20 +260,20 @@ private extension ClassReportView {
 
   @ViewBuilder
   func classResultContent() -> some View {
-    reportCard(minHeight: showsFigmaPreview ? 243 : 0) {
+    reportCard(minHeight: store.report != nil ? 243 : 0) {
       cardHeading("우리 클래스 참여 현황")
       HStack {
-        Text(showsFigmaPreview ? previewText(.participantTitle) : "클래스 멤버")
+        Text(store.report != nil ? reportText(.participantTitle) : "클래스 멤버")
           .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
         Spacer()
-        Text(showsFigmaPreview ? previewText(.participantCount) : "\(store.room.memberCount)명")
+        Text(store.report != nil ? reportText(.participantCount) : "\(store.room.memberCount)명")
           .pretendardFont(.semiBold15)
           .foregroundStyle(.gray800)
       }
-      if showsFigmaPreview {
-        voteDistribution(title: "사전 투표 결과", leading: previewContent?.initialVoteLeading ?? 0)
-        voteDistribution(title: "사후 투표 결과", leading: previewContent?.finalVoteLeading ?? 0)
+      if store.report != nil {
+        voteDistribution(title: "사전 투표 결과", leading: store.report?.initialVoteLeading ?? 0)
+        voteDistribution(title: "사후 투표 결과", leading: store.report?.finalVoteLeading ?? 0)
       } else {
         unavailableReport(
           title: "투표 분포를 집계할 수 없어요",
@@ -282,10 +281,10 @@ private extension ClassReportView {
         )
       }
     }
-    reportCard(padding: 16, spacing: 8, minHeight: showsFigmaPreview ? 120 : 0) {
+    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 120 : 0) {
       cardHeading("클래스 결과 요약")
-      if showsFigmaPreview {
-        Text(previewText(.classSummary))
+      if store.report != nil {
+        Text(reportText(.classSummary))
           .pretendardFont(.regular13)
           .foregroundStyle(.gray700)
       } else {
@@ -297,16 +296,16 @@ private extension ClassReportView {
           .foregroundStyle(.gray300)
       }
     }
-    reportCard(padding: 16, spacing: 8, minHeight: showsFigmaPreview ? 142 : 0) {
+    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 142 : 0) {
       cardHeading("BEST 댓글")
-      if showsFigmaPreview {
-        Text(previewText(.bestAuthor))
+      if store.report != nil {
+        Text(reportText(.bestAuthor))
           .pretendardFont(.semiBold13)
           .foregroundStyle(.gray800)
-        Text(previewText(.bestBody))
+        Text(reportText(.bestBody))
           .pretendardFont(.regular13)
           .foregroundStyle(.gray700)
-        reactions(likes: previewText(.bestLikes), replies: previewText(.bestReplies))
+        reactions(likes: reportText(.bestLikes), replies: reportText(.bestReplies))
       } else {
         unavailableReport(
           title: "BEST 댓글 데이터를 불러올 수 없어요",
@@ -318,12 +317,12 @@ private extension ClassReportView {
 
   @ViewBuilder
   func feedbackContent() -> some View {
-    reportCard(minHeight: showsFigmaPreview ? 361 : 0) {
+    reportCard(minHeight: store.report != nil ? 361 : 0) {
       cardHeading("AI 피드백")
-      if showsFigmaPreview {
-        feedbackPoint(previewText(.feedbackTitle1), detail: previewText(.feedbackDetail1))
-        feedbackPoint(previewText(.feedbackTitle2), detail: previewText(.feedbackDetail2))
-        feedbackPoint(previewText(.feedbackTitle3), detail: previewText(.feedbackDetail3))
+      if store.report != nil {
+        feedbackPoint(reportText(.feedbackTitle1), detail: reportText(.feedbackDetail1))
+        feedbackPoint(reportText(.feedbackTitle2), detail: reportText(.feedbackDetail2))
+        feedbackPoint(reportText(.feedbackTitle3), detail: reportText(.feedbackDetail3))
         Text("분석에 사용한 내 대댓글 보기")
           .pretendardFont(.semiBold13)
           .foregroundStyle(.primary500)
@@ -334,25 +333,25 @@ private extension ClassReportView {
         )
       }
     }
-    reportCard(padding: 16, spacing: 8, minHeight: showsFigmaPreview ? 138 : 0) {
+    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 138 : 0) {
       cardHeading("다음 생각 해보기")
-      Text(showsFigmaPreview ? previewText(.nextQuestion) : store.room.battle.title)
+      Text(store.report != nil ? reportText(.nextQuestion) : store.room.battle.title)
         .pretendardFont(family: .SemiBold, size: 18)
         .foregroundStyle(.gray700)
-      Text(showsFigmaPreview ? previewText(.nextHint) : "두 선택지를 비교하며 내 생각을 정리해 보세요.")
+      Text(store.report != nil ? reportText(.nextHint) : "두 선택지를 비교하며 내 생각을 정리해 보세요.")
         .pretendardFont(.regular13)
         .foregroundStyle(.gray300)
     }
-    reportCard(padding: 16, spacing: 8, minHeight: showsFigmaPreview ? 142 : 0) {
+    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 142 : 0) {
       cardHeading("선생님 피드백")
-      if showsFigmaPreview {
-        Text(previewText(.teacherFeedback))
+      if store.report != nil {
+        Text(reportText(.teacherFeedback))
           .pretendardFont(.regular13)
           .foregroundStyle(.gray700)
         HStack {
-          Text(previewText(.teacherName))
+          Text(reportText(.teacherName))
           Spacer()
-          Text(previewText(.teacherDate))
+          Text(reportText(.teacherDate))
         }
         .pretendardFont(family: .Regular, size: 12)
         .foregroundStyle(.gray300)
@@ -377,7 +376,7 @@ private extension ClassReportView {
     VStack(alignment: .leading, spacing: 0) {
       VStack(alignment: .leading, spacing: 8) {
         ClassAIInsightHeading(title: "내 판단의 기준")
-        Text(previewText(.aiSummaryDetail))
+        Text(reportText(.aiSummaryDetail))
           .pretendardFont(.regular13)
       }
       .foregroundStyle(.primary500)
@@ -388,22 +387,22 @@ private extension ClassReportView {
       VStack(alignment: .leading, spacing: 16) {
         insightPoint(
           "이번에 잘한 점",
-          detail: previewText(.feedbackDetail1)
+          detail: reportText(.feedbackDetail1)
         )
         Rectangle().fill(.beige600).frame(height: 1)
         insightPoint(
           "한 가지 더 살펴볼 점",
-          detail: previewText(.feedbackDetail2)
+          detail: reportText(.feedbackDetail2)
         )
         Rectangle().fill(.beige600).frame(height: 1)
         insightPoint(
           "다음 생각 한 걸음",
-          detail: previewText(.feedbackDetail3)
+          detail: reportText(.feedbackDetail3)
         )
         Rectangle().fill(.beige600).frame(height: 1)
         Button { send(.myOpinionsTapped) } label: {
           HStack {
-            Text("내가 남긴 의견 \(previewContent?.myOpinions.count ?? 0)개 보기")
+            Text("내가 남긴 의견 \(store.report?.myOpinions.count ?? 0)개 보기")
             Spacer()
             Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
           }
@@ -412,7 +411,7 @@ private extension ClassReportView {
         }
         .buttonStyle(.plain)
         if store.showsMyOpinions {
-          ForEach(previewContent?.myOpinions ?? [], id: \.self) { opinion in
+          ForEach(store.report?.myOpinions ?? [], id: \.self) { opinion in
             Text(opinion)
               .pretendardFont(.regular13)
               .foregroundStyle(.gray700)
@@ -439,9 +438,9 @@ private extension ClassReportView {
 
   @ViewBuilder
   func voteAndActivitySummary() -> some View {
-    if showsFigmaPreview {
+    if store.report != nil {
       HStack(spacing: 8) {
-        voteChoice("사전 선택", value: previewText(.initialChoice))
+        voteChoice("사전 선택", value: reportText(.initialChoice))
         VStack(spacing: 4) {
           Text("입장 변경")
             .pretendardFont(family: .SemiBold, size: 12)
@@ -450,17 +449,17 @@ private extension ClassReportView {
             .padding(.vertical, 4)
             .background(.primary500, in: Capsule())
         }
-        voteChoice("사후 선택", value: previewText(.finalChoice))
+        voteChoice("사후 선택", value: reportText(.finalChoice))
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 12)
       .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
       HStack(spacing: 0) {
-        activityCount(previewText(.commentCount), label: "댓글")
+        activityCount(reportText(.commentCount), label: "댓글")
         Rectangle().fill(.beige600).frame(width: 1, height: 36)
-        activityCount(previewText(.replyCount), label: "대댓글")
+        activityCount(reportText(.replyCount), label: "대댓글")
         Rectangle().fill(.beige600).frame(width: 1, height: 36)
-        activityCount(previewText(.receivedLikeCount), label: "받은 추천")
+        activityCount(reportText(.receivedLikeCount), label: "받은 추천")
       }
       .padding(.vertical, 4)
     } else {
@@ -496,12 +495,12 @@ private extension ClassReportView {
     .foregroundStyle(.gray300)
   }
 
-  func voteDistribution(title: String, leading: CGFloat) -> some View {
+  func voteDistribution(title: String, leading: Double) -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text(title).pretendardFont(.regular13).foregroundStyle(.gray700)
       GeometryReader { geometry in
         HStack(spacing: 0) {
-          Rectangle().fill(Color.primary500).frame(width: geometry.size.width * leading)
+          Rectangle().fill(Color.primary500).frame(width: geometry.size.width * CGFloat(leading))
           Rectangle().fill(Color.gray300)
         }
       }
@@ -616,22 +615,38 @@ private extension ClassReportView {
     )
     var state = ClassReportFeature.State(room: completedRoom)
     state.selectedTab = tab
-    return Store(initialState: state) { ClassReportFeature() }
+    let fixture = MockClassReport.figma
+    let report = ClassReport(
+      texts: fixture.texts,
+      myOpinions: fixture.myOpinions,
+      initialVoteLeading: fixture.initialVoteLeading,
+      finalVoteLeading: fixture.finalVoteLeading,
+      layout: tab == .summary ? .summary : .tabbed
+    )
+    let repository = MockClassRepository(
+      rooms: [completedRoom],
+      availableRooms: [],
+      reports: [completedRoom.id: report]
+    )
+    return Store(initialState: state) {
+      ClassReportFeature()
+        .dependency(\.classUseCase, repository)
+    }
   }
 
   #Preview("리포트 · 요약") {
-    ClassReportView(store: figmaReportStore(tab: .summary), previewContent: .figma)
+    ClassReportView(store: figmaReportStore(tab: .summary))
   }
 
   #Preview("리포트 · 내 참여") {
-    ClassReportView(store: figmaReportStore(tab: .participation), previewContent: .figma)
+    ClassReportView(store: figmaReportStore(tab: .participation))
   }
 
   #Preview("리포트 · 클래스 결과") {
-    ClassReportView(store: figmaReportStore(tab: .classResult), previewContent: .figma)
+    ClassReportView(store: figmaReportStore(tab: .classResult))
   }
 
   #Preview("리포트 · 피드백") {
-    ClassReportView(store: figmaReportStore(tab: .feedback), previewContent: .figma)
+    ClassReportView(store: figmaReportStore(tab: .feedback))
   }
 #endif
