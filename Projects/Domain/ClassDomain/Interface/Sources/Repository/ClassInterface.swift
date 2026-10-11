@@ -1,3 +1,10 @@
+//
+//  ClassInterface.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ComposableArchitecture
 import Foundation
 
@@ -9,6 +16,9 @@ public protocol ClassInterface: Sendable {
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom
   func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom
   func deleteClass(id: Int) async throws
+  func leaveClass(id: Int) async throws
+  func fetchReport(roomID: Int) async throws -> ClassReport?
+  func fetchOwnerDashboard(roomID: Int) async throws -> ClassOwnerDashboardData?
 }
 
 public enum ClassRepositoryDependency: TestDependencyKey {

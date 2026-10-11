@@ -1,3 +1,10 @@
+//
+//  MockClassRepository.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 public actor MockClassRepository: ClassInterface {
@@ -5,15 +12,29 @@ public actor MockClassRepository: ClassInterface {
   private var availableRooms: [ClassRoom]
   private var membersByRoom: [Int: [ClassMember]]
   private var currentMemberIDs: [Int: Int]
+  private var nextMemberIDs: [Int: Int]
+  private var reports: [Int: ClassReport]
+  private var dashboards: [Int: ClassOwnerDashboardData]
   private var nextID: Int
 
   public init(
     rooms: [ClassRoom] = ClassRoom.mocks + [.mockClosedSociety],
-    availableRooms: [ClassRoom] = [ClassRoom.mockJoinable]
+    availableRooms: [ClassRoom] = [ClassRoom.mockJoinable],
+    reports: [Int: ClassReport]? = nil,
+    dashboards: [Int: ClassOwnerDashboardData]? = nil
   ) {
     let previewNames = ["김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은"]
+    let initialRooms = rooms + availableRooms
+    let initialIDs = Set(initialRooms.map(\.id))
     self.rooms = rooms
     self.availableRooms = availableRooms
+    self.reports = (reports ?? Dictionary(uniqueKeysWithValues: rooms.compactMap { room in
+      room == .mockJoinable || room == .mockClosedSociety
+        ? (room.id, MockClassReport.figma) : nil
+    })).filter { initialIDs.contains($0.key) }
+    self.dashboards = (dashboards ?? Dictionary(uniqueKeysWithValues: initialRooms.compactMap { room in
+      room == ClassRoom.mocks[0] ? (room.id, MockClassOwnerDashboard.figma) : nil
+    })).filter { initialIDs.contains($0.key) }
     membersByRoom = Dictionary(
       uniqueKeysWithValues: (rooms + availableRooms).map { room in
         (room.id, (1 ... max(1, room.memberCount)).map { id in
@@ -25,6 +46,7 @@ public actor MockClassRepository: ClassInterface {
       }
     )
     currentMemberIDs = Dictionary(uniqueKeysWithValues: rooms.map { ($0.id, $0.role == .owner ? 1 : 2) })
+    nextMemberIDs = Dictionary(uniqueKeysWithValues: initialRooms.map { ($0.id, max(1, $0.memberCount) + 1) })
     nextID = (rooms + availableRooms).map(\.id).max().map { $0 + 1 } ?? 1
   }
 
@@ -50,6 +72,9 @@ public actor MockClassRepository: ClassInterface {
 
     members.remove(at: memberIndex)
     membersByRoom[roomID] = members
+    if let dashboard = dashboards[roomID] {
+      replaceDashboardMembers(roomID: roomID, with: dashboard.members.filter { $0.id != memberID })
+    }
     rooms[roomIndex] = rooms[roomIndex].withMemberCount(members.count)
     return rooms[roomIndex]
   }
@@ -73,11 +98,46 @@ public actor MockClassRepository: ClassInterface {
     let updated = ClassMember(id: memberID, name: trimmed, isOwner: members[index].isOwner)
     members[index] = updated
     membersByRoom[roomID] = members
+    if let dashboard = dashboards[roomID] {
+      replaceDashboardMembers(roomID: roomID, with: dashboard.members.map { member in
+        guard member.id == memberID else { return member }
+        return ClassOwnerMember(
+          id: member.id,
+          name: trimmed,
+          participationCount: member.participationCount,
+          needsReview: member.needsReview
+        )
+      })
+    }
     return updated
+  }
+
+  private func replaceDashboardMembers(roomID: Int, with members: [ClassOwnerMember]) {
+    guard let dashboard = dashboards[roomID] else { return }
+    dashboards[roomID] = ClassOwnerDashboardData(
+      members: members,
+      opinions: dashboard.opinions,
+      report: dashboard.report,
+      metrics: dashboard.metrics,
+      insight: dashboard.insight
+    )
   }
 
   public func fetchMyClasses() async throws -> [ClassRoom] {
     rooms
+  }
+
+  public func fetchReport(roomID: Int) async throws -> ClassReport? {
+    guard rooms.contains(where: { $0.id == roomID }) else { throw ClassError.invalidCode }
+    return reports[roomID]
+  }
+
+  public func fetchOwnerDashboard(roomID: Int) async throws -> ClassOwnerDashboardData? {
+    guard let room = rooms.first(where: { $0.id == roomID }) else { throw ClassError.invalidCode }
+    guard room.role == .owner else {
+      throw ClassError.unknown("클래스 관리자만 대시보드를 볼 수 있습니다.")
+    }
+    return dashboards[roomID]
   }
 
   public func fetchRecommendedBattles(filter: ClassTopicFilter) async throws -> [ClassBattleSummary] {
@@ -129,8 +189,11 @@ public actor MockClassRepository: ClassInterface {
       ownerParticipates: creation.ownerParticipates
     )
     rooms.append(room)
+    reports[id] = nil
+    dashboards[id] = nil
     membersByRoom[id] = [ClassMember(id: 1, name: "운영자", isOwner: true)]
     currentMemberIDs[id] = 1
+    nextMemberIDs[id] = 2
     return room
   }
 
@@ -155,7 +218,7 @@ public actor MockClassRepository: ClassInterface {
     let room = availableRooms[index]
     guard room.status == .open else { throw ClassError.closed }
     var members = membersByRoom[room.id] ?? []
-    let memberID = (members.map(\.id).max() ?? 0) + 1
+    let memberID = nextMemberIDs[room.id] ?? ((members.map(\.id).max() ?? 0) + 1)
     members.append(ClassMember(id: memberID, name: nickname.trimmingCharacters(in: .whitespacesAndNewlines)))
     let joined = ClassRoom(
       id: room.id,
@@ -174,6 +237,7 @@ public actor MockClassRepository: ClassInterface {
     availableRooms.remove(at: index)
     membersByRoom[room.id] = members
     currentMemberIDs[room.id] = memberID
+    nextMemberIDs[room.id] = memberID + 1
     return joined
   }
 
@@ -210,8 +274,36 @@ public actor MockClassRepository: ClassInterface {
       throw ClassError.unknown("클래스 관리자만 삭제할 수 있습니다.")
     }
     rooms.remove(at: index)
+    reports[id] = nil
+    dashboards[id] = nil
     membersByRoom[id] = nil
     currentMemberIDs[id] = nil
+    nextMemberIDs[id] = nil
+  }
+
+  public func leaveClass(id: Int) async throws {
+    guard let roomIndex = rooms.firstIndex(where: { $0.id == id }) else {
+      throw ClassError.invalidCode
+    }
+    let room = rooms[roomIndex]
+    guard room.role == .member else {
+      throw ClassError.unknown("클래스 참여자만 나갈 수 있습니다.")
+    }
+    guard let memberID = currentMemberIDs[id],
+          var members = membersByRoom[id],
+          let memberIndex = members.firstIndex(where: { $0.id == memberID && !$0.isOwner })
+    else {
+      throw ClassError.invalidCode
+    }
+
+    members.remove(at: memberIndex)
+    rooms.remove(at: roomIndex)
+    membersByRoom[id] = members
+    currentMemberIDs[id] = nil
+    // This room-keyed report is the current mock user's personal snapshot.
+    reports[id] = nil
+    availableRooms.removeAll { $0.id == id }
+    availableRooms.append(room.withMemberCount(members.count))
   }
 }
 

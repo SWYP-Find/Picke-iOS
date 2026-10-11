@@ -1,3 +1,10 @@
+//
+//  ClassRepositoryImpl.swift
+//  ClassDomain
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import Foundation
 
@@ -31,6 +38,18 @@ public struct ClassRepositoryImpl: ClassInterface {
   }
 
   public func deleteClass(id _: Int) async throws {
+    throw ClassError.network(Self.unavailableMessage)
+  }
+
+  public func leaveClass(id _: Int) async throws {
+    throw ClassError.network(Self.unavailableMessage)
+  }
+
+  public func fetchReport(roomID _: Int) async throws -> ClassReport? {
+    throw ClassError.network(Self.unavailableMessage)
+  }
+
+  public func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
     throw ClassError.network(Self.unavailableMessage)
   }
 }
