@@ -31,6 +31,7 @@ private extension ClassSelectedBattleCard {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
         Text("#\(battle.categoryDisplayTitle)")
+          .frame(minHeight: 17)
           .pickeBadge(.filled, size: .tag)
 
         Spacer(minLength: 0)
@@ -43,17 +44,20 @@ private extension ClassSelectedBattleCard {
         }
         .foregroundStyle(.gray300)
       }
+      .frame(minHeight: 22)
 
       VStack(alignment: .leading, spacing: 4) {
         Text(battle.title)
           .pretendardFont(.headingSmall)
           .foregroundStyle(.gray500)
           .lineLimit(1)
+          .frame(minHeight: 18, alignment: .leading)
 
         Text(battle.summary)
           .pretendardFont(.labelSmall)
           .foregroundStyle(.gray300)
           .lineLimit(1)
+          .frame(minHeight: 17, alignment: .leading)
       }
     }
   }

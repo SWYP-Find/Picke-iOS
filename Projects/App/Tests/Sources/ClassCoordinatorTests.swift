@@ -163,6 +163,229 @@ struct ClassCoordinatorTests {
       return
     }
     #expect(vote.battleId == battleID)
+    #expect(vote.showsResultsForExistingParticipation)
+  }
+
+  @Test
+  func 클래스_기참여자는_사전투표_화면에_남아_선택없이_결과를_보고_재투표하지_않는다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let perspective = try #require(try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "기참여 의견",
+      optionId: 1
+    ))
+    let beforeStats = try await battleAPI.fetchVoteStats(battleId: battleID)
+    var state = PreVoteFeature.State(battleId: battleID)
+    state.showsResultsForExistingParticipation = true
+    state.selectedOptionId = 2
+    let store = TestStore(initialState: state) { PreVoteFeature() } withDependencies: {
+      $0.battleUseCase = session
+    }
+
+    await store.send(.inner(.myPerspectiveResponse(.success(perspective)))) {
+      $0.myPerspective = perspective
+      $0.selectedOptionId = nil
+    }
+    #expect(store.state.selectedOptionId == nil)
+    #expect(store.state.isShowingParticipationResult)
+    #expect(store.state.primaryButtonTitle == "결과 보기")
+    #expect(store.state.isPrimaryButtonEnabled)
+    await store.send(.view(.optionTapped(optionId: 2)))
+    #expect(store.state.selectedOptionId == nil)
+    await store.send(.view(.primaryButtonTapped))
+    await store.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
+    let afterStats = try await battleAPI.fetchVoteStats(battleId: battleID)
+    #expect(afterStats.options == beforeStats.options)
+    #expect(afterStats.totalCount == beforeStats.totalCount)
+    #expect(try await battleAPI.fetchBattle(battleId: battleID).userVoteStatus == .pro)
+  }
+
+  @Test
+  func 완료_상세는_의견이_없어도_결과_버튼을_표시한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    let fetched = try await battleAPI.fetchBattle(battleId: battleID)
+    for step in [BattleStep.completed, .finished] {
+      let detail = BattleDetail(
+        battleInfo: fetched.battleInfo,
+        description: fetched.description,
+        shareUrl: fetched.shareUrl,
+        userVoteStatus: fetched.userVoteStatus,
+        currentStep: step,
+        categoryTags: fetched.categoryTags,
+        philosopherTags: fetched.philosopherTags,
+        valueTags: fetched.valueTags
+      )
+      for detailFirst in [false, true] {
+        var state = PreVoteFeature.State(battleId: battleID)
+        state.showsResultsForExistingParticipation = true
+        let store = TestStore(initialState: state) { PreVoteFeature() }
+        store.exhaustivity = .off
+
+        if detailFirst {
+          await store.send(.inner(.battleDetailResponse(.success(detail))))
+          #expect(store.state.isShowingParticipationResult)
+          await store.send(.inner(.myPerspectiveResponse(.success(nil))))
+        } else {
+          await store.send(.inner(.myPerspectiveResponse(.success(nil))))
+          #expect(!store.state.isShowingParticipationResult)
+          await store.send(.inner(.battleDetailResponse(.success(detail))))
+        }
+        #expect(store.state.isShowingParticipationResult)
+        #expect(store.state.isPrimaryButtonEnabled)
+        await store.send(.view(.optionTapped(optionId: 1)))
+        #expect(store.state.selectedOptionId == nil)
+        await store.send(.view(.primaryButtonTapped))
+        await store.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
+        #expect(try await battleAPI.fetchBattle(battleId: battleID).userVoteStatus == .pro)
+      }
+    }
+  }
+
+  @Test
+  func 클래스_미참여_사전과_청취_단계는_결과_버튼으로_전환하지_않는다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    let preVoteDetail = try await battleAPI.fetchBattle(battleId: battleID)
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let listeningDetail = try await battleAPI.fetchBattle(battleId: battleID)
+    #expect(preVoteDetail.currentStep == .preVote)
+    #expect(listeningDetail.currentStep == .listening)
+
+    for detail in [preVoteDetail, listeningDetail] {
+      var state = PreVoteFeature.State(battleId: battleID)
+      state.showsResultsForExistingParticipation = true
+      let store = TestStore(initialState: state) { PreVoteFeature() }
+      store.exhaustivity = .off
+      await store.send(.inner(.battleDetailResponse(.success(detail))))
+      await store.send(.inner(.myPerspectiveResponse(.success(nil))))
+      #expect(!store.state.isShowingParticipationResult)
+      #expect(store.state.primaryButtonTitle == "사전 투표하기")
+      #expect(!store.state.isPrimaryButtonEnabled)
+      await store.send(.view(.optionTapped(optionId: 2)))
+      #expect(store.state.selectedOptionId == 2)
+      #expect(store.state.isPrimaryButtonEnabled)
+    }
+  }
+
+  @Test
+  func 관점이_먼저_도착하고_상세가_실패해도_재시도로_결과_화면을_복구한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let perspective = try #require(try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "재시도 의견",
+      optionId: 1
+    ))
+    let detail = try await battleAPI.fetchBattle(battleId: battleID)
+    var state = PreVoteFeature.State(battleId: battleID)
+    state.showsResultsForExistingParticipation = true
+    let store = TestStore(initialState: state) { PreVoteFeature() } withDependencies: {
+      $0.battleUseCase = session
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myPerspectiveResponse(.success(perspective))))
+    await store.send(.inner(.battleDetailResponse(.failure(.noData))))
+    #expect(store.state.detailLoadFailed)
+    #expect(store.state.battle == nil)
+    await store.send(.view(.retryTapped))
+    await store.receive(\.async, .fetchBattleDetail)
+    await store.receive(\.inner, .battleDetailResponse(.success(detail)))
+    #expect(!store.state.detailLoadFailed)
+    #expect(store.state.battle != nil)
+    #expect(store.state.isShowingParticipationResult)
+  }
+
+  @Test
+  func 일반_사전투표는_기참여시_기존처럼_자동직행하고_사후투표는_기존_선택을_요구한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let perspective = try #require(try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "의견",
+      optionId: 1
+    ))
+    let preStore = TestStore(initialState: PreVoteFeature.State(battleId: battleID)) { PreVoteFeature() }
+    preStore.exhaustivity = .off
+    await preStore.send(.inner(.myPerspectiveResponse(.success(perspective))))
+    await preStore.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
+    #expect(!preStore.state.isShowingParticipationResult)
+
+    var postState = PreVoteFeature.State(battleId: battleID, voteMode: .post)
+    postState.showsResultsForExistingParticipation = true
+    postState.myPerspective = perspective
+    let postStore = TestStore(initialState: postState) { PreVoteFeature() }
+    postStore.exhaustivity = .off
+    #expect(postStore.state.primaryButtonTitle == "최종 투표하기")
+    #expect(!postStore.state.isPrimaryButtonEnabled)
+    await postStore.send(.view(.optionTapped(optionId: 2)))
+    #expect(postStore.state.selectedOptionId == 2)
+    #expect(postStore.state.isPrimaryButtonEnabled)
+  }
+
+  @Test
+  func 기참여_결과_버튼은_댓글_루트로_교체하고_뒤로가기는_클래스_상세로_돌아간다() async {
+    let room = ClassRoom.mocks[0]
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    var chat = ChatCoordinator.State(route: .preVote(battleId: battleID))
+    var vote = PreVoteFeature.State(battleId: battleID)
+    vote.showsResultsForExistingParticipation = true
+    chat.routes[screenAt: 0] = .preVote(vote)
+    state.routes.push(.chat(chat))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .chat(.router(.routeAction(
+        id: 0,
+        action: .preVote(.delegate(.alreadyFinalVoted(battleId: battleID)))
+      )))
+    )))
+    guard case let .chat(resultChat)? = store.state.routes.last?.screen,
+          resultChat.routes.count == 1,
+          case let .comment(comment)? = resultChat.routes.first?.screen
+    else {
+      Issue.record("기참여 결과 버튼이 댓글 루트로 교체되지 않음")
+      return
+    }
+    #expect(comment.battleId == battleID)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .chat(.router(.routeAction(id: 0, action: .comment(.delegate(.dismiss)))))
+    )))
+    await store.receive {
+      if case .router(.routeAction(id: 2, action: .chat(.delegate(.dismiss)))) = $0 {
+        return true
+      }
+      return false
+    }
+    await store.receive {
+      if case .view(.backAction) = $0 {
+        return true
+      }
+      return false
+    }
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("댓글 뒤로가기가 클래스 상세로 돌아가지 않음")
+      return
+    }
+    #expect(detail.room.id == room.id)
   }
 
   @Test

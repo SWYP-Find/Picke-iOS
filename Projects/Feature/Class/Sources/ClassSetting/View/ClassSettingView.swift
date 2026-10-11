@@ -33,13 +33,14 @@ public struct ClassSettingView: View {
           Text(store.heading)
             .pretendardFont(.semiBold24)
             .lineSpacing(2.4)
-            .foregroundStyle(.gray500)
+            .foregroundStyle(.gray800)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minHeight: 62, alignment: .leading)
 
           nameSection()
           deadlineSection()
           contentSection()
-          commentToggle
-          ownerParticipationToggle
+          participationSection()
         }
         .padding(16)
       }
@@ -100,6 +101,8 @@ private extension ClassSettingView {
           Text(store.deadlineDescription)
             .pretendardFont(.bodySmall)
             .foregroundStyle(.gray300)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minHeight: 18, alignment: .leading)
         }
       }
       .toggleStyle(.picke)
@@ -149,6 +152,14 @@ private extension ClassSettingView {
     }
   }
 
+  @ViewBuilder
+  func participationSection() -> some View {
+    VStack(alignment: .leading, spacing: 20) {
+      commentToggle
+      ownerParticipationToggle
+    }
+  }
+
   var commentToggle: some View {
     Toggle(isOn: $store.requiresComment) {
       VStack(alignment: .leading, spacing: 2) {
@@ -156,6 +167,8 @@ private extension ClassSettingView {
         Text(store.commentDescription)
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 18, alignment: .leading)
       }
     }
     .toggleStyle(.picke)
@@ -168,6 +181,8 @@ private extension ClassSettingView {
         Text(store.ownerParticipationDescription)
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 18, alignment: .leading)
       }
     }
     .toggleStyle(.picke)
@@ -177,6 +192,7 @@ private extension ClassSettingView {
     Text(title)
       .pretendardFont(.semiBold15)
       .foregroundStyle(.gray800)
+      .frame(minHeight: 23, alignment: .leading)
   }
 
   var createButton: some View {

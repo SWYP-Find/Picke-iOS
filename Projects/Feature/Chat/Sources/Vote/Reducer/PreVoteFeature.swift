@@ -5,13 +5,12 @@
 //  Created by Picke on 5/16/26.
 //
 
-import Foundation
-import PickeCoreLogger
-
 import BattleDomainInterface
 import ComposableArchitecture
+import Foundation
 import PerspectiveDomainInterface
 import PickeAnalyticsInterface
+import PickeCoreLogger
 import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
@@ -47,16 +46,29 @@ public struct PreVoteFeature {
     public var battleId: Int = 0
     public var voteMode: VoteMode = .pre
     public var myPerspective: BattlePerspective?
+    /// 클래스의 기존 콘텐츠에서 기참여 결과 화면을 보여줄 때만 설정한다.
+    public var showsResultsForExistingParticipation: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
+    public var isShowingParticipationResult: Bool {
+      showsResultsForExistingParticipation && voteMode == .pre && (
+        myPerspective != nil ||
+          battleDetail?.currentStep == .completed ||
+          battleDetail?.currentStep == .finished
+      )
+    }
+
     public var isPrimaryButtonEnabled: Bool {
-      selectedOptionId != nil && !isSubmitting
+      (isShowingParticipationResult || selectedOptionId != nil) && !isSubmitting
     }
 
     public var primaryButtonTitle: String {
+      if isShowingParticipationResult {
+        return "결과 보기"
+      }
       switch voteMode {
-      case .pre: "사전 투표하기"
-      case .post: "최종 투표하기"
+      case .pre: return "사전 투표하기"
+      case .post: return "최종 투표하기"
       }
     }
 
@@ -181,9 +193,7 @@ extension PreVoteFeature {
         effects.append(.send(.async(.fetchBattleDetail)))
       }
       // 사전(pre) 진입 시에만 내 참여(perspective) 여부를 조회한다.
-      // 이미 참여했으면 "다시 투표" 알럿 → 삭제 후 재투표.
-      // 최종(post) 진입은 사전 참여가 이미 전제이므로 이 알럿이 뜨면 안 되고,
-      // 알럿 presentation 이 공유 시트(.sheet) presentation 을 막는 문제도 생긴다.
+      // 일반 배틀은 기참여 시 관점 화면으로 직행한다. 클래스 기존 콘텐츠는 결과 화면을 유지한다.
       if state.voteMode == .pre, state.myPerspective == nil {
         // 기참여면 관점 화면으로 직행하므로, 확인이 끝날 때까지 사전투표 UI 노출을 막는다.
         state.isCheckingParticipation = true
@@ -205,10 +215,14 @@ extension PreVoteFeature {
       return .send(.async(.prepareShare(shareContent(state: state, snapshot: snapshot))))
 
     case let .optionTapped(optionId):
+      guard !state.isShowingParticipationResult else { return .none }
       state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
       return .none
 
     case .primaryButtonTapped:
+      if state.isShowingParticipationResult {
+        return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
+      }
       guard let optionId = state.selectedOptionId else { return .none }
       switch state.voteMode {
       case .pre:
@@ -229,8 +243,12 @@ extension PreVoteFeature {
     let url = PickeShareURL.battle(id: state.battleId, serverShareUrl: detail?.shareUrl)
     let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
     let summary = {
-      if let description = detail?.description, !description.isEmpty { return description }
-      if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty { return infoSummary }
+      if let description = detail?.description, !description.isEmpty {
+        return description
+      }
+      if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty {
+        return infoSummary
+      }
       return battle?.summary ?? ""
     }()
     let hashtags: [String] = {
@@ -367,7 +385,11 @@ extension PreVoteFeature {
       case let .success(perspective):
         state.myPerspective = perspective
         if perspective != nil {
-          // 이미 참여한 배틀 — 팝업 없이 관점(댓글) 화면으로 바로 직행.
+          if state.showsResultsForExistingParticipation, state.voteMode == .pre {
+            state.selectedOptionId = nil
+            return .none
+          }
+          // 일반 배틀은 기존대로 관점(댓글) 화면으로 바로 직행.
           return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
         }
       case let .failure(error):

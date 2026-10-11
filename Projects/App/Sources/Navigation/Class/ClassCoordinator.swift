@@ -510,7 +510,11 @@ private extension ClassCoordinator {
       if detail.room.battle.id < 0 {
         state.routes.push(.aiVote(.init(room: detail.room, battleID: battleID)))
       } else {
-        state.routes.push(.chat(.init(route: .preVote(battleId: battleID))))
+        var chat = ChatCoordinator.State(route: .preVote(battleId: battleID))
+        var preVote = PreVoteFeature.State(battleId: battleID)
+        preVote.showsResultsForExistingParticipation = true
+        chat.routes[screenAt: 0] = .preVote(preVote)
+        state.routes.push(.chat(chat))
       }
       return .none
 

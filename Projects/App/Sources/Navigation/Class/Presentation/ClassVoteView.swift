@@ -91,7 +91,11 @@ private extension ClassVoteView {
   @ViewBuilder
   func loadedContent(_ battle: PreVoteBattle) -> some View {
     GeometryReader { geometry in
-      let artworkHeight = max(360, geometry.size.height * 0.62 + geometry.safeAreaInsets.top)
+      let isParticipationResult = store.isShowingParticipationResult
+      let artworkHeight = max(
+        360,
+        geometry.size.height * 0.62 + geometry.safeAreaInsets.top
+      )
 
       ZStack(alignment: .top) {
         artwork(battle, width: geometry.size.width, height: artworkHeight)
@@ -102,7 +106,10 @@ private extension ClassVoteView {
             Color.clear.frame(height: max(0, artworkHeight - 110))
             voteContent(battle)
           }
-          .frame(minHeight: geometry.size.height - 98, alignment: .top)
+          .frame(
+            minHeight: geometry.size.height - 98,
+            alignment: isParticipationResult ? .bottom : .top
+          )
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
           actionFooter()
@@ -184,7 +191,9 @@ private extension ClassVoteView {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.bottom, 26)
 
-      optionSection(battle)
+      if !store.isShowingParticipationResult {
+        optionSection(battle)
+      }
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 22)

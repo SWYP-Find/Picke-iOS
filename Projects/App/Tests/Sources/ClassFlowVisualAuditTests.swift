@@ -792,6 +792,143 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureClassSettingLineBoxes() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture setting line boxes")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let room = ClassRoom.mocks[0]
+    let standard = ClassSettingFeature.State(battle: room.battle, deadline: room.deadline)
+    var longName = standard
+    longName.name = "함께 생각을 나누는 2학년 3반 토론 클래스"
+    longName.isDeadlineEnabled = false
+    let ai = ClassSettingFeature.State(
+      aiQuestion: ClassAIQuestion.examples[0],
+      filter: ClassTopicFilter(categories: [.philosophy]),
+      deadline: room.deadline
+    )
+    // The 375 host is a layout check, not a native compact-device screenshot.
+    // The AI variant is regression evidence; its exact Figma reference is pending.
+    let cases: [(String, ClassSettingFeature.State, CGSize)] = [
+      ("setting-lineboxes-402", standard, CGSize(width: 402, height: 874)),
+      ("setting-lineboxes-375", standard, CGSize(width: 375, height: 667)),
+      ("setting-long-name-deadline-off", longName, CGSize(width: 402, height: 874)),
+      ("setting-ai-regression", ai, CGSize(width: 402, height: 874)),
+    ]
+    for (name, state, viewport) in cases {
+      let store = Store(initialState: state) { ClassSettingFeature() }
+      let (image, bottomImage) = try await capture(
+        AnyView(ClassSettingView(store: store)),
+        ready: nil,
+        includeScrollBottom: name.hasPrefix("setting-lineboxes-"),
+        viewport: viewport
+      )
+      for (suffix, captured) in [("", image), ("-bottom", bottomImage)].compactMap({ suffix, value in
+        value.map { (suffix, $0) }
+      }) {
+        let imageName = name + suffix
+        try XCTUnwrap(captured.pngData()).write(to: directory.appendingPathComponent(imageName + ".png"))
+        let attachment = XCTAttachment(image: captured)
+        attachment.name = imageName
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let text = try recognizedAuditText(in: captured, name: imageName)
+        XCTAssertTrue(text.contains("클래스설정"))
+        XCTAssertTrue(text.contains("클래스만들기"))
+      }
+    }
+  }
+
+  @MainActor
+  func testClassParticipatedVotePresentationAndBack() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify participated vote navigation")
+    }
+    // 375pt is a resized host, not a native device. Both variants use the same
+    // mounted coordinator for summary -> result/comment -> original Class detail.
+    for viewport in [CGSize(width: 375, height: 812), CGSize(width: 402, height: 874)] {
+      let room = ClassRoom.mockJoinable
+      let session = ClassMockChatSession()
+      let battleID = await session.register(room: room)
+      let battleAPI: any BattleInterface = session
+      _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+      _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+      // Deliberately no perspective: final-voted participants still see results.
+      let repository = MockClassRepository(rooms: [room], availableRooms: [])
+      var preVote = PreVoteFeature.State(battleId: battleID)
+      preVote.showsResultsForExistingParticipation = true
+      var chat = ChatCoordinator.State(route: .preVote(battleId: battleID))
+      chat.routes[screenAt: 0] = .preVote(preVote)
+      var state = ClassCoordinator.State()
+      state.routes.push(.detail(.init(room: room)))
+      state.routes.push(.chat(chat))
+      state.chatRoomsByBattleID[battleID] = room
+      let store = Store(initialState: state) {
+        ClassCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+          .dependency(\.classMockChatSession, session)
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+          .dependency(\.battleUseCase, session)
+          .dependency(\.perspectiveUseCase, session)
+          .dependency(\.commentUseCase, session)
+          .dependency(\.analyticsUseCase, .testValue)
+          .dependency(\.shareUseCase, .testValue)
+      }
+      let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+      let window = UIWindow(windowScene: scene)
+      let host = UIHostingController(rootView: ClassCoordinatorView(store: store))
+      window.rootViewController = host
+      window.frame = CGRect(origin: .zero, size: viewport)
+      window.makeKeyAndVisible()
+      defer { window.isHidden = true }
+      try await waitForClassAudit("participated summary without a perspective") {
+        guard case let .chat(chat)? = store.routes.last?.screen,
+              case let .preVote(vote)? = chat.routes.first?.screen else { return false }
+        return vote.isShowingParticipationResult && vote.battle != nil && !vote.isCheckingParticipation
+      }
+      let name = "participated-vote-\(Int(viewport.width))"
+      let image = try await saveClassAudit(window: window, name: name)
+      let text = try recognizedAuditText(in: image, name: name)
+      XCTAssertTrue(text.contains("결과보기"), "Result CTA is missing: \(text)")
+      XCTAssertFalse(text.contains("사전투표하기"))
+      XCTAssertFalse(text.contains("VS"), "Completed summary must omit the option row")
+      XCTAssertFalse(store.showsTabBar)
+      store.send(.router(.routeAction(id: 2, action: .chat(.router(.routeAction(
+        id: 0, action: .preVote(.view(.primaryButtonTapped))
+      ))))))
+      try await waitForClassAudit("result comment replaces summary root") {
+        guard case let .chat(chat)? = store.routes.last?.screen,
+              case let .comment(comment)? = chat.routes.first?.screen else { return false }
+        return chat.routes.count == 1 && comment.battleId == battleID
+          && !comment.title.isEmpty && !comment.isLoadingStats && !comment.isLoadingComments
+      }
+      let resultName = "participated-result-\(Int(viewport.width))"
+      let resultImage = try await saveClassAudit(window: window, name: resultName)
+      let resultText = try recognizedAuditText(in: resultImage, name: resultName)
+      XCTAssertTrue(resultText.contains("리포트"), "Class comment/report entry is missing: \(resultText)")
+      XCTAssertFalse(resultText.contains("결과보기"))
+      store.send(.router(.routeAction(id: 2, action: .chat(.router(.routeAction(
+        id: 0, action: .comment(.view(.backButtonTapped))
+      ))))))
+      try await waitForClassAudit("same Class detail after result back") {
+        guard case let .detail(detail)? = store.routes.last?.screen else { return false }
+        return store.routes.count == 2 && detail.room.id == room.id && store.showsTabBar
+      }
+      let backName = "participated-back-detail-\(Int(viewport.width))"
+      let backImage = try await saveClassAudit(window: window, name: backName)
+      let backText = try recognizedAuditText(in: backImage, name: backName)
+      XCTAssertTrue(backText.contains("클래스상세"))
+    }
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")
