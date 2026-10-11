@@ -172,6 +172,89 @@ struct ClassMemberTests {
   }
 
   @Test
+  func 참가자_기본_목록은_본인과_운영자를_앞에_두고_나머지_순서를_유지한다() {
+    let members = [
+      ClassMember(id: 3, name: "권동현"),
+      ClassMember(id: 1, name: "김선생", isOwner: true),
+      ClassMember(id: 4, name: "김민지"),
+      ClassMember(id: 2, name: "공은지"),
+    ]
+    let state = ClassMemberFeature.State(
+      room: .mockJoinable,
+      members: members,
+      currentMemberID: 2
+    )
+
+    #expect(state.visibleMembers.map(\.id) == [2, 1, 3, 4])
+    #expect(state.visibleMembers.count == members.count)
+  }
+
+  @Test
+  func 참가자_검색은_찾은_행만_정렬하고_없는_본인이나_운영자를_추가하지_않는다() {
+    var state = ClassMemberFeature.State(
+      room: .mockJoinable,
+      members: [
+        ClassMember(id: 1, name: "김선생", isOwner: true),
+        ClassMember(id: 3, name: "김민지"),
+        ClassMember(id: 2, name: "공은지"),
+      ],
+      currentMemberID: 2
+    )
+
+    state.searchText = "김"
+    #expect(state.visibleMembers.map(\.id) == [1, 3])
+    state.searchText = "공"
+    #expect(state.visibleMembers.map(\.id) == [2])
+  }
+
+  @Test
+  func 운영자_기본_순서와_참가자의_명시적_이름순은_유지된다() {
+    let members = [
+      ClassMember(id: 3, name: "가나다"),
+      ClassMember(id: 1, name: "마바사", isOwner: true),
+      ClassMember(id: 2, name: "하하하"),
+    ]
+    let owner = ClassMemberFeature.State(room: ClassRoom.mocks[0], members: members)
+    #expect(owner.visibleMembers.map(\.id) == [3, 1, 2])
+
+    var participant = ClassMemberFeature.State(room: .mockJoinable, members: members, currentMemberID: 2)
+    #expect(participant.visibleMembers.map(\.id) == [2, 1, 3])
+    participant.hasAppliedSort = true
+    #expect(participant.visibleMembers.map(\.id) == [3, 1, 2])
+    participant.appliedFilter.sort = .comments
+    #expect(participant.visibleMembers.map(\.id) == [2, 1, 3])
+  }
+
+  @Test
+  func 본인이_운영자로_표시되어도_같은_ID가_두_번_나오지_않는다() {
+    let members = [
+      ClassMember(id: 3, name: "다른 참여자"),
+      ClassMember(id: 2, name: "본인 운영자", isOwner: true),
+      ClassMember(id: 4, name: "또 다른 참여자"),
+    ]
+    let state = ClassMemberFeature.State(room: .mockJoinable, members: members, currentMemberID: 2)
+
+    #expect(state.visibleMembers.map(\.id) == [2, 3, 4])
+  }
+
+  @Test
+  func 참가자_목_아바타는_운영자_프레임과_독립된_원본을_사용한다() {
+    let owner = MockClassRepository.figmaOwnerMembers
+    let participant = MockClassRepository.figmaParticipantMembers
+
+    #expect(participant.map(\.id) == owner.map(\.id))
+    #expect(participant.map(\.name) == owner.map(\.name))
+    #expect(participant[0].avatar == .lion)
+    #expect(participant[1].avatar == .koala)
+    #expect(participant[2].avatar == .bear)
+    #expect(participant[6].avatar == .alpaca)
+    #expect(owner[0].avatar == nil)
+    #expect(owner[1].avatar == nil)
+    #expect(owner[2].avatar == nil)
+    #expect(owner[6].avatar == nil)
+  }
+
+  @Test
   func 멤버_필터를_열고_선택한_조건을_적용한다() async {
     let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
       ClassMemberFeature()

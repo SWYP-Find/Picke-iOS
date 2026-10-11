@@ -919,7 +919,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       availableRooms: []
     )
     let ownerMembers = try await previewRepository.fetchMembers(roomID: owner.id)
-    let memberMembers = try await previewRepository.fetchMembers(roomID: member.id)
 
     func classTab(_ screen: ClassCoordinator.ClassScreen.State) -> AnyView {
       let repository: MockClassRepository = if case let .myClasses(list) = screen {
@@ -1145,10 +1144,10 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         14,
         "멤버 목록",
         "member-list",
-        "member room with mock members",
+        "Figma participant member avatar fixture",
         classTab(.members(.init(
           room: member,
-          members: memberMembers,
+          members: MockClassRepository.figmaParticipantMembers,
           currentMemberID: 2
         )))
       ),

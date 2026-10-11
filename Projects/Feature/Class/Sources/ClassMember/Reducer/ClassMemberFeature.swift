@@ -52,15 +52,24 @@ public struct ClassMemberFeature {
         ? members
         : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
 
-      guard hasAppliedSort else { return filteredMembers }
-      switch appliedFilter.sort {
-      case .name:
+      if hasAppliedSort, appliedFilter.sort == .name {
         return filteredMembers.sorted {
           $0.name.localizedStandardCompare($1.name) == .orderedAscending
         }
-      case .comments, .replies, .recommendations:
-        return filteredMembers
       }
+
+      guard room.role == .member else { return filteredMembers }
+      let current = filteredMembers.first { $0.id == currentMemberID }
+      let owner = filteredMembers.first { $0.isOwner && $0.id != currentMemberID }
+      let remaining = filteredMembers.filter { $0.id != current?.id && $0.id != owner?.id }
+      var prioritized: [ClassMember] = []
+      if let current {
+        prioritized.append(current)
+      }
+      if let owner {
+        prioritized.append(owner)
+      }
+      return prioritized + remaining
     }
 
     public var viewState: ViewState {
@@ -152,18 +161,10 @@ public struct ClassMemberFeature {
     static func preview(room: ClassRoom) -> Self {
       Self(
         room: room,
-        members: [
-          ClassMember(id: 1, name: "김선생", isOwner: true),
-          ClassMember(id: 2, name: "공은지"),
-          ClassMember(id: 3, name: "권동현"),
-          ClassMember(id: 4, name: "김민지"),
-          ClassMember(id: 5, name: "천다올"),
-          ClassMember(id: 6, name: "유시영"),
-          ClassMember(id: 7, name: "주천수"),
-          ClassMember(id: 8, name: "김예은"),
-          ClassMember(id: 9, name: "서원지"),
-          ClassMember(id: 10, name: "현준혁"),
-        ]
+        members: room.role == .owner
+          ? MockClassRepository.figmaOwnerMembers
+          : MockClassRepository.figmaParticipantMembers,
+        currentMemberID: room.role == .owner ? 1 : 2
       )
     }
   }

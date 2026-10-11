@@ -215,9 +215,41 @@ struct ClassDomainTests {
   func 기본_클래스_멤버는_디자인의_표시_이름으로_시작한다() async throws {
     let members = try await MockClassRepository().fetchMembers(roomID: ClassRoom.mocks[0].id)
 
-    #expect(members.prefix(8).map(\.name) == [
-      "김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은",
+    #expect(members.prefix(10).map(\.name) == [
+      "김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은", "서원지", "현준혁",
     ])
+    let avatars: [ClassMemberAvatar?] = [
+      nil, nil, nil, .penguin, .dog, .sloth, nil, .fox, .hamster, .raccoon,
+    ]
+    #expect(members.prefix(10).map(\.avatar) == avatars)
+  }
+
+  @Test
+  func 주입한_멤버는_인원수와_다음_ID에_반영되고_알_수_없는_방은_무시한다() async throws {
+    let room = ClassRoom.mockJoinable
+    let repository = MockClassRepository(
+      rooms: [],
+      availableRooms: [room],
+      members: [
+        room.id: [
+          ClassMember(id: 1, name: "운영자", isOwner: true),
+          ClassMember(id: 37, name: "기존 참여자"),
+        ],
+        999: [ClassMember(id: 1, name: "무관한 방", isOwner: true)],
+      ]
+    )
+
+    #expect(try await repository.fetchClass(joinCode: room.joinCode).memberCount == 2)
+    let joined = try await repository.joinClass(joinCode: room.joinCode, nickname: "새 참여자")
+    #expect(joined.memberCount == 3)
+    #expect(try await repository.currentMemberID(roomID: room.id) == 38)
+    #expect(try await repository.fetchMembers(roomID: room.id).map(\.id) == [1, 37, 38])
+    do {
+      _ = try await repository.fetchMembers(roomID: 999)
+      Issue.record("알 수 없는 방의 멤버를 반환했습니다")
+    } catch {
+      #expect(error as? ClassError == .invalidCode)
+    }
   }
 
   @Test

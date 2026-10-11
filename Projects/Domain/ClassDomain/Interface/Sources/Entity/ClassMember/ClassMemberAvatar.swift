@@ -12,4 +12,8 @@ public enum ClassMemberAvatar: String, CaseIterable, Equatable, Sendable {
   case penguin
   case dog
   case alpaca
+  case sloth
+  case fox
+  case hamster
+  case raccoon
 }

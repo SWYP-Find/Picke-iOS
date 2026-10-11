@@ -8,6 +8,35 @@
 import Foundation
 
 public actor MockClassRepository: ClassInterface {
+  public static let figmaOwnerMembers: [ClassMember] = [
+    ClassMember(id: 1, name: "김선생", isOwner: true),
+    ClassMember(id: 2, name: "공은지"),
+    ClassMember(id: 3, name: "권동현"),
+    ClassMember(id: 4, name: "김민지", avatar: .penguin),
+    ClassMember(id: 5, name: "천다올", avatar: .dog),
+    ClassMember(id: 6, name: "유시영", avatar: .sloth),
+    ClassMember(id: 7, name: "주천수"),
+    ClassMember(id: 8, name: "김예은", avatar: .fox),
+    ClassMember(id: 9, name: "서원지", avatar: .hamster),
+    ClassMember(id: 10, name: "현준혁", avatar: .raccoon),
+  ]
+
+  public static let figmaParticipantMembers: [ClassMember] = figmaOwnerMembers.map { member in
+    let avatar: ClassMemberAvatar? = switch member.id {
+    case 1: .lion
+    case 2: .koala
+    case 3: .bear
+    case 7: .alpaca
+    default: member.avatar
+    }
+    return ClassMember(
+      id: member.id,
+      name: member.name,
+      isOwner: member.isOwner,
+      avatar: avatar
+    )
+  }
+
   private var rooms: [ClassRoom]
   private var availableRooms: [ClassRoom]
   private var membersByRoom: [Int: [ClassMember]]
@@ -21,16 +50,32 @@ public actor MockClassRepository: ClassInterface {
     rooms: [ClassRoom] = ClassRoom.mocks + [.mockClosedSociety],
     availableRooms: [ClassRoom] = [ClassRoom.mockJoinable],
     reports: [Int: ClassReport]? = nil,
-    dashboards: [Int: ClassOwnerDashboardData]? = nil
+    dashboards: [Int: ClassOwnerDashboardData]? = nil,
+    members: [Int: [ClassMember]]? = nil
   ) {
-    let previewNames = ["김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은"]
-    let previewAvatars: [Int: ClassMemberAvatar] = [
-      1: .lion, 2: .koala, 3: .bear, 4: .penguin, 5: .dog, 7: .alpaca,
-    ]
     let initialRooms = rooms + availableRooms
     let initialIDs = Set(initialRooms.map(\.id))
-    self.rooms = rooms
-    self.availableRooms = availableRooms
+    let memberLists = Dictionary(
+      uniqueKeysWithValues: initialRooms.map { room in
+        let defaultMembers = (1 ... max(1, room.memberCount)).map { id in
+          if room.id == ClassRoom.mocks[0].id,
+             let figmaMember = Self.figmaOwnerMembers.first(where: { $0.id == id })
+          {
+            return figmaMember
+          }
+          return ClassMember(id: id, name: id == 1 ? "운영자" : "참여자 \(id)", isOwner: id == 1)
+        }
+        return (room.id, members?[room.id] ?? defaultMembers)
+      }
+    )
+    self.rooms = rooms.map { room in
+      guard members?[room.id] != nil else { return room }
+      return room.withMemberCount(memberLists[room.id]?.count ?? 0)
+    }
+    self.availableRooms = availableRooms.map { room in
+      guard members?[room.id] != nil else { return room }
+      return room.withMemberCount(memberLists[room.id]?.count ?? 0)
+    }
     self.reports = (reports ?? Dictionary(uniqueKeysWithValues: rooms.compactMap { room in
       room == .mockJoinable || room == .mockClosedSociety
         ? (room.id, MockClassReport.figma) : nil
@@ -38,23 +83,18 @@ public actor MockClassRepository: ClassInterface {
     self.dashboards = (dashboards ?? Dictionary(uniqueKeysWithValues: initialRooms.compactMap { room in
       room == ClassRoom.mocks[0] ? (room.id, MockClassOwnerDashboard.figma) : nil
     })).filter { initialIDs.contains($0.key) }
-    membersByRoom = Dictionary(
-      uniqueKeysWithValues: (rooms + availableRooms).map { room in
-        (room.id, (1 ... max(1, room.memberCount)).map { id in
-          let name = room.id == ClassRoom.mocks[0].id && id <= previewNames.count
-            ? previewNames[id - 1]
-            : (id == 1 ? "운영자" : "참여자 \(id)")
-          return ClassMember(
-            id: id,
-            name: name,
-            isOwner: id == 1,
-            avatar: room.id == ClassRoom.mocks[0].id ? previewAvatars[id] : nil
-          )
-        })
-      }
-    )
-    currentMemberIDs = Dictionary(uniqueKeysWithValues: rooms.map { ($0.id, $0.role == .owner ? 1 : 2) })
-    nextMemberIDs = Dictionary(uniqueKeysWithValues: initialRooms.map { ($0.id, max(1, $0.memberCount) + 1) })
+    membersByRoom = memberLists
+    currentMemberIDs = Dictionary(uniqueKeysWithValues: rooms.map { room in
+      let currentID = room.role == .owner
+        ? 1
+        : (memberLists[room.id]?.first(where: { $0.id == 2 })?.id
+          ?? memberLists[room.id]?.first(where: { !$0.isOwner })?.id
+          ?? 2)
+      return (room.id, currentID)
+    })
+    nextMemberIDs = Dictionary(uniqueKeysWithValues: initialRooms.map { room in
+      (room.id, (memberLists[room.id]?.map(\.id).max() ?? 0) + 1)
+    })
     nextID = (rooms + availableRooms).map(\.id).max().map { $0 + 1 } ?? 1
   }
 

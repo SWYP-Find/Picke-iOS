@@ -104,11 +104,14 @@ private extension ClassMemberView {
   @ViewBuilder
   func memberRow(_ member: ClassMember) -> some View {
     HStack(spacing: 8) {
-      memberAvatar(member)
+      if let avatar = member.avatar {
+        memberAvatar(avatar)
+      }
 
       Text(member.name)
         .pretendardFont(family: .Medium, size: 16)
         .foregroundStyle(.gray800)
+        .lineLimit(1)
 
       if member.id == store.currentMemberID {
         Button { send(.editNameTapped(member.id)) } label: {
@@ -122,12 +125,9 @@ private extension ClassMemberView {
       Spacer(minLength: 0)
 
       if member.isOwner {
-        Text("운영자")
-          .pretendardFont(family: .SemiBold, size: 12)
-          .foregroundStyle(.primary500)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
-          .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+        memberTag("운영자")
+      } else if member.id == store.currentMemberID {
+        memberTag("나")
       } else if store.room.role == .owner, member.id != store.currentMemberID {
         Button { send(.removeTapped(member.id)) } label: {
           Image(systemName: "minus.circle.fill")
@@ -137,22 +137,26 @@ private extension ClassMemberView {
         .accessibilityLabel("\(member.name) 내보내기")
       }
     }
-    .frame(height: 68)
+    .frame(height: member.avatar == nil ? 56 : 68)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
   }
 
-  @ViewBuilder
-  func memberAvatar(_ member: ClassMember) -> some View {
-    if let avatar = member.avatar {
-      Image(asset: avatar.imageAsset)
-        .resizable()
-        .scaledToFit()
-        .frame(width: 36, height: 36)
-        .clipShape(Circle())
-        .accessibilityHidden(true)
-    } else {
-      PickeAvatarView(imageURL: nil, fallback: member.name, size: 36)
-    }
+  func memberAvatar(_ avatar: ClassMemberAvatar) -> some View {
+    Image(asset: avatar.imageAsset)
+      .resizable()
+      .scaledToFit()
+      .frame(width: 36, height: 36)
+      .clipShape(Circle())
+      .accessibilityHidden(true)
+  }
+
+  func memberTag(_ title: String) -> some View {
+    Text(title)
+      .pretendardFont(family: .SemiBold, size: 12)
+      .foregroundStyle(.primary500)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
   }
 
   @ViewBuilder

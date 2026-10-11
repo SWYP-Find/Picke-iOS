@@ -17,6 +17,10 @@ extension ClassMemberAvatar {
     case .penguin: return .classMemberPenguin
     case .dog: return .classMemberDog
     case .alpaca: return .classMemberAlpaca
+    case .sloth: return .classMemberSloth
+    case .fox: return .classMemberFox
+    case .hamster: return .classMemberHamster
+    case .raccoon: return .classMemberRaccoon
     }
   }
 }
