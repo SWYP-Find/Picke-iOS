@@ -21,6 +21,93 @@ import XCTest
 /// manual Figma comparison, not snapshot assertions or proof of design parity.
 final class ClassFlowVisualAuditTests: XCTestCase {
   @MainActor
+  func testClassFinalVoteSharePresentation() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify Class share presentation")
+    }
+    let room = ClassRoom.mockJoinable
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    let store = Store(initialState: PreVoteFeature.State(battleId: battleID, voteMode: .post)) {
+      PreVoteFeature()
+        .dependency(\.battleUseCase, session)
+        .dependency(\.perspectiveUseCase, session)
+        .dependency(\.shareUseCase, .testValue)
+        .dependency(\.analyticsUseCase, .testValue)
+    }
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    let host = UIHostingController(rootView: ClassVoteView(store: store, room: room))
+    window.rootViewController = host
+    window.frame = scene.coordinateSpace.bounds
+    window.makeKeyAndVisible()
+    defer { window.isHidden = true }
+
+    func waitFor(_ description: String, until predicate: () -> Bool) async throws {
+      for _ in 0 ..< 100 {
+        if predicate() {
+          return
+        }
+        try await Task.sleep(for: .milliseconds(50))
+      }
+      XCTFail("Class share did not reach: \(description)")
+      throw CaptureError.contentNotReady
+    }
+    func activityController(in controller: UIViewController) -> UIActivityViewController? {
+      if let activity = controller as? UIActivityViewController {
+        return activity
+      }
+      if let presented = controller.presentedViewController,
+         let activity = activityController(in: presented)
+      {
+        return activity
+      }
+      return controller.children.lazy.compactMap { activityController(in: $0) }.first
+    }
+
+    try await waitFor("loaded final vote") {
+      store.battle != nil && !store.detailLoadFailed && store.viewState == .loaded
+    }
+    store.send(.view(.shareTapped))
+    try await waitFor("share sheet") {
+      store.shareSnapshotRequest == nil && store.shareItem != nil
+        && activityController(in: host)?.view.window != nil
+    }
+    let shareID = try XCTUnwrap(store.shareItem?.id)
+    // A nil-reset observation must not create a second item and re-present the sheet.
+    for _ in 0 ..< 10 {
+      try await Task.sleep(for: .milliseconds(50))
+      XCTAssertEqual(store.shareItem?.id, shareID)
+    }
+    let shareController = try XCTUnwrap(activityController(in: host))
+    let shareWindow = try XCTUnwrap(shareController.view.window)
+    shareWindow.layoutIfNeeded()
+    let image = UIGraphicsImageRenderer(bounds: shareWindow.bounds).image { _ in
+      shareWindow.drawHierarchy(in: shareWindow.bounds, afterScreenUpdates: true)
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent("final-vote-share-sheet.png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = "final-vote-share-sheet"
+    attachment.lifetime = .keepAlways
+    add(attachment)
+
+    store.send(.binding(.set(\.shareItem, nil)))
+    try await waitFor("dismissed share sheet") {
+      store.shareItem == nil && host.presentedViewController == nil
+    }
+    try await Task.sleep(for: .milliseconds(500))
+    XCTAssertNil(store.shareItem)
+    XCTAssertNil(store.shareSnapshotRequest)
+    XCTAssertNil(host.presentedViewController)
+    XCTAssertEqual(store.voteMode, .post)
+    XCTAssertNotNil(store.battle)
+  }
+
+  @MainActor
   func testPresentClassTabForInteractiveAudit() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_INTERACTIVE_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_INTERACTIVE_AUDIT=1 for a manual Class tab session")

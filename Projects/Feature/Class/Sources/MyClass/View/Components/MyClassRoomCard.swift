@@ -108,10 +108,6 @@ private extension MyClassRoomCard {
       }
 
       Spacer(minLength: 0)
-
-      if room.role == .owner {
-        viewLabel
-      }
     }
     .frame(minHeight: 18)
     .padding(.top, 12)
@@ -136,17 +132,6 @@ private extension MyClassRoomCard {
         .lineLimit(1)
     }
     .foregroundStyle(.gray300)
-  }
-
-  var viewLabel: some View {
-    HStack(spacing: 4) {
-      Text("보기")
-        .pretendardFont(family: .Bold, size: 12)
-      Image(systemName: "chevron.right")
-        .font(.pretendardFontFamily(family: .Bold, size: 9))
-        .frame(width: 12, height: 12)
-    }
-    .foregroundStyle(.primary500)
   }
 
   /// 마감일을 끈 클래스(`.distantFuture`)는 표시하지 않는다.

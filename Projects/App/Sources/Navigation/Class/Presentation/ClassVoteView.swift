@@ -41,27 +41,44 @@ struct ClassVoteView: View {
     .navigationBarHidden(true)
     .hidesSystemBars()
     .onAppear { send(.onAppear) }
+    .onChange(of: store.shareSnapshotRequest) { _, request in
+      guard request != nil else { return }
+      send(.shareSnapshotRendered(nil))
+    }
+    .sheet(item: $store.shareItem) { item in
+      ShareSheet(items: item.items)
+        .presentationDetents([.fraction(0.5)])
+        .toolbar(.hidden, for: .navigationBar)
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 }
 
 private extension ClassVoteView {
-  var isPostVote: Bool { store.voteMode == .post }
-  var screenBackground: Color { isPostVote ? .black : .beige50 }
+  var isPostVote: Bool {
+    store.voteMode == .post
+  }
+
+  var screenBackground: Color {
+    isPostVote ? .black : .beige50
+  }
 
   @ViewBuilder
   func loadErrorContent() -> some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backButtonTapped) }, centerTitle: room.name)
+      PickeNavigationBar(onBack: { send(.backButtonTapped) }, centerTitle: isPostVote ? nil : room.name)
+        .foregroundStyle(.neutral800)
       PickeRetryErrorView(message: "배틀을 불러오지 못했어요") { send(.retryTapped) }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.beige50.ignoresSafeArea())
   }
 
   @ViewBuilder
   func loadingContent() -> some View {
     VStack(alignment: .leading, spacing: 18) {
-      PickeNavigationBar(onBack: { send(.backButtonTapped) }, centerTitle: room.name)
+      PickeNavigationBar(onBack: { send(.backButtonTapped) }, centerTitle: isPostVote ? nil : room.name)
+        .foregroundStyle(isPostVote ? .beige50 : .neutral800)
       SkeletonView(.round(cornerRadius: 6)).frame(height: 300)
       SkeletonView(.round(cornerRadius: 6)).frame(width: 190, height: 28)
       SkeletonView(.round(cornerRadius: 6)).frame(height: 52)
@@ -100,8 +117,18 @@ private extension ClassVoteView {
   func navigationBar() -> some View {
     PickeNavigationBar(
       onBack: { send(.backButtonTapped) },
-      centerTitle: room.name
-    )
+      centerTitle: isPostVote ? nil : room.name
+    ) {
+      if isPostVote {
+        Button { send(.shareTapped) } label: {
+          Image(systemName: "square.and.arrow.up")
+            .font(.system(size: 24, weight: .regular))
+            .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("공유하기")
+      }
+    }
     .foregroundStyle(.beige50)
   }
 
@@ -225,7 +252,7 @@ private extension ClassVoteView {
         .ctaButtonStyle(.primary, size: .large, height: 52)
         .disabled(!store.isPrimaryButtonEnabled)
 
-      if room.deadline != .distantFuture {
+      if !isPostVote, room.deadline != .distantFuture {
         Label(room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지", systemImage: "clock")
           .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
