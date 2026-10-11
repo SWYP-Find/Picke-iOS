@@ -2,6 +2,7 @@
 //  Project+App.swift
 //  ProjectTemplatePlugin
 //
+//  Created by Picke on 10/11/26.
 //  app 모듈 타입의 Project 구성.
 //
 

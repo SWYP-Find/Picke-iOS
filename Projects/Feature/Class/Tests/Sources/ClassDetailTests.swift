@@ -1,3 +1,10 @@
+//
+//  ClassDetailTests.swift
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture

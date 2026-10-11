@@ -2,7 +2,7 @@
 //  HifiHeaderView.swift
 //  Hifi
 //
-//  Created by Wonji Suh  on 6/4/26.
+//  Created by Picke on 6/4/26.
 //
 
 import SwiftUI

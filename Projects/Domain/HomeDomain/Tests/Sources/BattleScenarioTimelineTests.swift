@@ -1,3 +1,10 @@
+//
+//  BattleScenarioTimelineTests.swift
+//  HomeDomainTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 import HomeDomainInterface
 import Testing
 

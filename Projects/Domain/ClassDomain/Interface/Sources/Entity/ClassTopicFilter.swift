@@ -1,3 +1,10 @@
+//
+//  ClassTopicFilter.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 public struct ClassTopicFilter: Equatable, Sendable {
   public var keyword: String
   public var level: ClassAudienceLevel

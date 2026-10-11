@@ -2,6 +2,8 @@
 //  ClassRecommendSkeletonView.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import PickeDesignKit
 import SwiftUI

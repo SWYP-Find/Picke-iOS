@@ -1,3 +1,10 @@
+//
+//  FeedAd.swift
+//  AdDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 public struct FeedAd: Equatable, Sendable, Identifiable {

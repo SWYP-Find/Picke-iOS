@@ -1,8 +1,10 @@
 //
 //  CustomConfirmationPopupView+Content.swift
-//  DesignSystem
+//  PickeSharedUI
 //
+//  Created by Picke on 10/11/26.
 //  팝업 종류별 컨텐츠 뷰 구성
+//
 
 import PickeDesignKit
 import SwiftUI

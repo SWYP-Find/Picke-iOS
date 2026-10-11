@@ -1,3 +1,10 @@
+//
+//  ClassCategory.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 public enum ClassCategory: String, CaseIterable, Equatable, Sendable {
   case philosophy
   case society

@@ -1,8 +1,8 @@
 //
 //  AppleLoginRepositoryImpl.swift
-//  Repository
+//  AuthDomain
 //
-//  Created by Wonji Suh  on 12/26/25.
+//  Created by Picke on 12/26/25.
 //
 
 

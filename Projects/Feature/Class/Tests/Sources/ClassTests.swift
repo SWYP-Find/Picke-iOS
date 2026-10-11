@@ -1,6 +1,8 @@
 //
 //  ClassTests.swift
-//  Feature.ClassTests
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
 //
 
 @testable import Class

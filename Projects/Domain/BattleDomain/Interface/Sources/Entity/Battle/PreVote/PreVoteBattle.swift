@@ -1,8 +1,8 @@
 //
 //  PreVoteBattle.swift
-//  Entity
+//  BattleDomainInterface
 //
-//  Created by Wonji Suh on 5/17/26.
+//  Created by Picke on 5/17/26.
 //
 
 import Foundation

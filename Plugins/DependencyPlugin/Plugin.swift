@@ -1,8 +1,8 @@
 //
 //  Plugin.swift
-//  Plugins
+//  DependencyPlugin
 //
-//  Created by 서원지 on 2/21/24.
+//  Created by Picke on 2/21/24.
 //
 
 import ProjectDescription

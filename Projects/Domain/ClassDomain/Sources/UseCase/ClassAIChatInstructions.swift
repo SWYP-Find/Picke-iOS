@@ -1,3 +1,10 @@
+//
+//  ClassAIChatInstructions.swift
+//  ClassDomain
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 
 enum ClassAIChatInstructions {

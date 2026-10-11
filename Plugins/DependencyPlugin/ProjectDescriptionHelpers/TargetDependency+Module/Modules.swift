@@ -1,7 +1,8 @@
 //
 //  Modules.swift
-//  Plugins
+//  DependencyPlugin
 //
+//  Created by Picke on 10/11/26.
 //  레이어별 모듈 카탈로그(단일 출처).
 //  모듈 추가 = case 한 줄. rawValue 가 실제 타깃명이자 디렉토리명이라 오타로 깨지지 않는다.
 //

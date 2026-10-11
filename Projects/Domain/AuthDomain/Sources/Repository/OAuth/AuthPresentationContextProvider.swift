@@ -2,7 +2,7 @@
 //  AuthPresentationContextProvider.swift
 //  AuthDomain
 //
-//  Created by Wonji Suh  on 5/14/26.
+//  Created by Picke on 5/14/26.
 //
 
 import AuthenticationServices

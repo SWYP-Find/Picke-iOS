@@ -1,6 +1,8 @@
 //
 //  BattleDomainTests.swift
-//  Domain.BattleDomainTests
+//  BattleDomainTests
+//
+//  Created by Picke on 10/11/26.
 //
 
 @testable import BattleDomain

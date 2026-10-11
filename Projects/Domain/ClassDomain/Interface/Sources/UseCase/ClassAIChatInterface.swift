@@ -1,3 +1,10 @@
+//
+//  ClassAIChatInterface.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ComposableArchitecture
 import Foundation
 

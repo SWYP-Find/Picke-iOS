@@ -2,7 +2,7 @@
 //  MockPerspectiveRepository.swift
 //  PerspectiveDomainInterface
 //
-//  Created by Wonji Suh  on 6/3/26.
+//  Created by Picke on 6/3/26.
 //
 
 import BattleDomainInterface

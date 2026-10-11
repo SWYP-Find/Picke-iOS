@@ -1,3 +1,10 @@
+//
+//  ClassAIChatContext.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 public struct ClassAIChatContext: Equatable, Sendable {
   public let question: String
   public let selectedStance: String

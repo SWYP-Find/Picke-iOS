@@ -2,6 +2,8 @@
 //  PickeAnalyticsConfiguration.swift
 //  PickeAnalytics
 //
+//  Created by Picke on 10/11/26.
+//
 
 /// 관측 SDK 기동 진입점. 순서에 의미가 있다.
 ///

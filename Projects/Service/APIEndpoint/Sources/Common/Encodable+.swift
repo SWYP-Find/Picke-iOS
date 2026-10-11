@@ -1,8 +1,8 @@
 //
 //  Encodable+.swift
-//  Service
+//  APIEndpoint
 //
-//  Created by Wonji Suh  on 3/12/26.
+//  Created by Picke on 3/12/26.
 //
 
 import Foundation

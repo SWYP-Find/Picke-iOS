@@ -2,7 +2,7 @@
 //  PickeTests.swift
 //  PickeTests
 //
-//  Created by TuistTool.
+//  Created by Picke on 10/11/26.
 //
 
 import XCTest

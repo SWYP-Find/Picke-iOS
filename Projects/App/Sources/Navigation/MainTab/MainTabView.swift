@@ -2,7 +2,7 @@
 //  MainTabView.swift
 //  Picke
 //
-//  Created by Codex on 7/11/26.
+//  Created by Picke on 7/11/26.
 //
 
 import ComposableArchitecture

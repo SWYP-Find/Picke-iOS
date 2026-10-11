@@ -1,8 +1,8 @@
 //
 //  UIColor+.swift
-//  DDDAttendance
+//  PickeCoreUI
 //
-//  Created by 서원지 on 6/6/24.
+//  Created by Picke on 6/6/24.
 //
 
 import UIKit

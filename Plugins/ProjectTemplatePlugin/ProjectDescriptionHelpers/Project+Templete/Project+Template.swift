@@ -2,6 +2,7 @@
 //  Project+Template.swift
 //  ProjectTemplatePlugin
 //
+//  Created by Picke on 10/11/26.
 //  모듈 하나를 구성하는 단일 진입점.
 //  Interface·Testing·Demo·Tests 는 플래그로 켠다 — buildableFolders 는 폴더가 없으면
 //  generate 가 깨지므로, 해당 폴더를 실제로 둔 모듈만 켠다.

@@ -1,8 +1,8 @@
 //
 //  ChatRoomFeature.swift
-//  Home
+//  Chat
 //
-//  Created by Wonji Suh on 5/19/26.
+//  Created by Picke on 5/19/26.
 //
 
 import Foundation

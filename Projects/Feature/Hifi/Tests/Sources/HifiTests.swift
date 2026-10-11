@@ -1,3 +1,10 @@
+//
+//  HifiTests.swift
+//  HifiTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Testing
 import ComposableArchitecture
 import AdDomainInterface

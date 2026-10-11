@@ -1,3 +1,10 @@
+//
+//  ClassAIChatDependencyTests.swift
+//  ClassDomainTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomain
 import ClassDomainInterface
 import ComposableArchitecture

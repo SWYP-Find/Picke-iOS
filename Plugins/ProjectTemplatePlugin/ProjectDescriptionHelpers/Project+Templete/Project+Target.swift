@@ -2,6 +2,7 @@
 //  Project+Target.swift
 //  ProjectTemplatePlugin
 //
+//  Created by Picke on 10/11/26.
 //  모듈 타입이 공유하는 Target 구성 helper.
 //
 

@@ -1,8 +1,8 @@
 //
 //  Image+.swift
-//  DesignSystem
+//  PickeCoreUI
 //
-//  Created by 서원지 on 7/13/24.
+//  Created by Picke on 7/13/24.
 //
 
 import UIKit
