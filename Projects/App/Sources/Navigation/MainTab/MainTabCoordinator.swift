@@ -138,8 +138,7 @@ public struct MainTabCoordinator {
         return .none
 
       case let .tabReselected(tab):
-        resetSelectedTabRoute(state: &state, tab: tab)
-        return .none
+        return resetSelectedTabRoute(state: &state, tab: tab)
 
       case .quickBattle(.router(.routeAction(_, action: .battle(.delegate(.backToHome))))):
         state.selectedTab = state.previousTab
@@ -197,7 +196,7 @@ private extension MainTabCoordinator {
   func resetSelectedTabRoute(
     state: inout State,
     tab: Int
-  ) {
+  ) -> Effect<Action> {
     switch Tab(rawValue: tab) {
     case .home:
       state.homeState.routes.goBackToRoot()
@@ -206,11 +205,12 @@ private extension MainTabCoordinator {
     case .quickBattle:
       state.quickBattleState.routes.goBackToRoot()
     case .classroom:
-      state.classState.routes.goBackToRoot()
+      return .send(.classroom(.view(.backToRootAction)))
     case .myPage:
       state.myPageState.routes.goBackToRoot()
     case .none:
       break
     }
+    return .none
   }
 }

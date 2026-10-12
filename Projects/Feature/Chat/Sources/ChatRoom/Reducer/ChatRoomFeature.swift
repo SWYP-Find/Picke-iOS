@@ -5,18 +5,17 @@
 //  Created by Picke on 5/19/26.
 //
 
-import Foundation
-import PickeCoreLogger
-
+import AudioPlayerServiceInterface
 import BattleDomainInterface
 import ChatInterface
 import ComposableArchitecture
+import Foundation
 import HomeDomainInterface
+import PickeAnalyticsInterface
+import PickeCoreLogger
+import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
-import PickeCoreUtility
-import PickeAnalyticsInterface
-import AudioPlayerServiceInterface
 
 @Reducer
 public struct ChatRoomFeature {
@@ -24,6 +23,7 @@ public struct ChatRoomFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public let instanceID = UUID()
     public var bundle: ChatRoomBundle = .mock
     public var scenario: BattleScenario?
     public var isPlaying: Bool = false
@@ -61,13 +61,17 @@ public struct ChatRoomFeature {
     public var pendingSeekTime: TimeInterval?
 
     public var totalDuration: TimeInterval {
-      if playerDuration > 0 { return playerDuration }
+      if playerDuration > 0 {
+        return playerDuration
+      }
       guard let scenario else { return bundle.totalDuration }
       let nodesTotal = scenario.nodes.reduce(0) { $0 + $1.audioDuration }
       return nodesTotal > 0 ? TimeInterval(nodesTotal) : bundle.totalDuration
     }
 
-    public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
+    public var battleTitle: String {
+      scenario?.title ?? bundle.battleTitle
+    }
 
     public var messages: [ChatMessage] {
       // scenario 가 nil(미로드/로드 실패)이면 목업을 노출하지 않는다.
@@ -88,11 +92,15 @@ public struct ChatRoomFeature {
 
     public var audioUrl: String? {
       guard let scenario else { return nil }
-      if let url = scenario.audios[scenario.recommendedPathKey.rawValue] { return url }
+      if let url = scenario.audios[scenario.recommendedPathKey.rawValue] {
+        return url
+      }
       return scenario.audios.values.first
     }
 
-    public var canScrub: Bool { hasFinishedListening }
+    public var canScrub: Bool {
+      hasFinishedListening
+    }
 
     public var currentNode: ScenarioNode? {
       guard let scenario else { return nil }
@@ -119,7 +127,9 @@ public struct ChatRoomFeature {
       return Int(nodeStartTime(for: confirmedSelection.selectedNodeId) * 1000)
     }
 
-    public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
+    public var isConfirmEnabled: Bool {
+      selectedOptionLabel != nil
+    }
 
     public init(battleId: Int = 0) {
       self.battleId = battleId
@@ -191,9 +201,10 @@ public struct ChatRoomFeature {
     case customAlert(PresentationAction<CustomAlertAction>)
   }
 
-  nonisolated enum CancelID: Hashable {
+  public nonisolated enum CancelID: Hashable, Sendable {
     case fetchScenario
-    case audioObserver
+    case audioObserver(UUID)
+    case sharedAudioObserver
     case audioErrorDismiss
   }
 
@@ -242,15 +253,18 @@ extension ChatRoomFeature {
     case .onDisappear:
       state.isPlaying = false
       return .merge(
-        .cancel(id: CancelID.audioObserver),
+        .cancel(id: CancelID.audioObserver(state.instanceID)),
         .run { [player = audioPlayer] _ in await player.pause() }
       )
 
     case .backButtonTapped:
-      return .run { [player = audioPlayer] send in
-        await player.pause()
-        await send(.delegate(.dismiss))
-      }
+      return .concatenate(
+        .cancel(id: CancelID.audioObserver(state.instanceID)),
+        .run { [player = audioPlayer] send in
+          await player.pause()
+          await send(.delegate(.dismiss))
+        }
+      )
 
     case .refreshTapped:
       state.currentTime = 0
@@ -275,7 +289,11 @@ extension ChatRoomFeature {
       state.isPlaying.toggle()
       let playing = state.isPlaying
       return .run { [player = audioPlayer] _ in
-        if playing { await player.play() } else { await player.pause() }
+        if playing {
+          await player.play()
+        } else {
+          await player.pause()
+        }
       }
 
     case .seekBackwardTapped:
@@ -392,10 +410,12 @@ extension ChatRoomFeature {
     case .subscribePlayer:
       return .run { [player = audioPlayer] send in
         for await time in player.currentTimes() {
+          guard !Task.isCancelled else { return }
           await send(.inner(.playerTimeUpdated(time)))
         }
       }
-      .cancellable(id: CancelID.audioObserver, cancelInFlight: true)
+      .cancellable(id: CancelID.audioObserver(state.instanceID), cancelInFlight: true)
+      .cancellable(id: CancelID.sharedAudioObserver, cancelInFlight: true)
     }
   }
 
@@ -427,7 +447,10 @@ extension ChatRoomFeature {
         return .none
       case let .failure(error):
         state.scenarioLoadFailed = true
-        PickeLogger.error("[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)", category: .ui)
+        PickeLogger.error(
+          "[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)",
+          category: .ui
+        )
         return .none
       }
 

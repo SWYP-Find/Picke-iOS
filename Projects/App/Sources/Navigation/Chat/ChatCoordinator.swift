@@ -5,17 +5,16 @@
 //  Created by Picke on 10/11/26.
 //
 
-import Foundation
-import PickeCoreLogger
-
+import AudioPlayerServiceInterface
 import ChatInterface
 import CommentDomainInterface
 import ComposableArchitecture
 import FeatureAssembly
-import PickeDesignKit
+import Foundation
+import PickeCoreLogger
 import PickeCoreUtility
+import PickeDesignKit
 import TCAFlow
-import AudioPlayerServiceInterface
 
 @FlowCoordinator(screen: "ChatScreen", navigation: true)
 public struct ChatCoordinator {
@@ -26,6 +25,14 @@ public struct ChatCoordinator {
   @ObservableState
   public struct State: Equatable {
     public var routes: [Route<ChatScreen.State>]
+    var observedChatRoomInstanceIDs: Set<UUID> = []
+
+    var activeChatRoomInstanceIDs: Set<UUID> {
+      Set(routes.compactMap { route in
+        guard case let .chatRoom(chatRoom) = route.screen else { return nil }
+        return chatRoom.instanceID
+      })
+    }
 
     public init(battleId: Int = 0) {
       routes = [.root(.preVote(.init(battleId: battleId)), embedInNavigationView: true)]
@@ -92,7 +99,7 @@ public struct ChatCoordinator {
     state: inout State,
     action: Action
   ) -> Effect<Action> {
-    switch action {
+    let effect: Effect<Action> = switch action {
     case let .router(routeAction):
       routerAction(state: &state, action: routeAction)
     case let .view(viewAction):
@@ -102,10 +109,19 @@ public struct ChatCoordinator {
     case let .delegate(delegateAction):
       handleDelegateAction(state: &state, action: delegateAction)
     }
+    return .merge(effect, cancelRemovedChatObservers(state: &state))
   }
 }
 
 extension ChatCoordinator {
+  private func cancelRemovedChatObservers(state: inout State) -> Effect<Action> {
+    let currentIDs = state.activeChatRoomInstanceIDs
+    // Interactive route updates have already removed the child before handleRoute runs.
+    let removedIDs = state.observedChatRoomInstanceIDs.subtracting(currentIDs)
+    state.observedChatRoomInstanceIDs = currentIDs
+    return .merge(removedIDs.map { .cancel(id: ChatRoomFeature.CancelID.audioObserver($0)) })
+  }
+
   private func routerAction(
     state: inout State,
     action: IndexedRouterActionOf<ChatScreen>
@@ -209,7 +225,9 @@ extension ChatCoordinator {
       // 인터랙티브 pop 은 ChatRoom 의 onDisappear 이펙트가 teardown 시 취소되어 음성이 계속 나므로
       // 코디네이터 레벨에서 확실히 정지시킨다. (idle player 의 pause 는 no-op 이라 안전)
       let hasChatRoom = newRoutes.contains { route in
-        if case .chatRoom = route.screen { return true }
+        if case .chatRoom = route.screen {
+          return true
+        }
         return false
       }
       if !hasChatRoom {

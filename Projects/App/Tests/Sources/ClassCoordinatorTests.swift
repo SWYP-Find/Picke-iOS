@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import AudioPlayerServiceInterface
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
@@ -1406,6 +1407,314 @@ struct ClassCoordinatorTests {
       return
     }
     #expect(report.report == MockClassReport.figma)
+  }
+}
+
+@MainActor
+struct ChatPlayerLifecycleTests {
+  private enum ClassExit: CaseIterable, Sendable {
+    case back
+    case root
+    case interactivePop
+    case replaceWithAIChat
+    case replaceWithRecommend
+  }
+
+  @Test(arguments: ClassExit.allCases)
+  private func 클래스_채팅_경로가_제거되면_재생시간_구독이_끝난다(exit: ClassExit) async {
+    let room = ClassRoom.mocks[0]
+    let player = ControlledClassAudioPlayer()
+    var chat = ChatCoordinator.State(battleId: 101)
+    chat.routes.push(.chatRoom(.init(battleId: 101)))
+    guard case let .chatRoom(chatRoom)? = chat.routes.last?.screen else {
+      Issue.record("채팅방 경로를 만들지 못했습니다")
+      return
+    }
+    let instanceID = chatRoom.instanceID
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.chat(chat))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.router(.routeAction(id: 2, action: .chat(.router(.routeAction(
+      id: 1,
+      action: .chatRoom(.async(.subscribePlayer))
+    )))))) {
+      $0.chatRoomInstanceIDs = [instanceID]
+      $0.routes[screenAt: 2] = .chat({
+        var updated = chat
+        updated.observedChatRoomInstanceIDs = [instanceID]
+        return updated
+      }())
+    }
+    #expect(await player.waitForSubscriptions(1))
+    #expect(await player.yield(1.25, to: 0))
+    await store.receive {
+      if case .router(.routeAction(id: 2, action: .chat(.router(.routeAction(
+        id: 1,
+        action: .chatRoom(.inner(.playerTimeUpdated(1.25)))
+      ))))) = $0 {
+        return true
+      }
+      return false
+    } assert: {
+      guard case var .chat(updatedChat) = $0.routes[2].screen,
+            case var .chatRoom(updatedRoom) = updatedChat.routes[1].screen
+      else { return }
+      updatedRoom.currentTime = 1.25
+      updatedChat.routes[screenAt: 1] = .chatRoom(updatedRoom)
+      $0.routes[screenAt: 2] = .chat(updatedChat)
+    }
+
+    switch exit {
+    case .back:
+      await store.send(.view(.backAction)) {
+        $0.routes.goBack()
+        $0.chatRoomInstanceIDs = []
+      }
+    case .root:
+      await store.send(.view(.backToRootAction)) {
+        $0.routes.goBackToRoot()
+        $0.chatRoomInstanceIDs = []
+      }
+    case .interactivePop:
+      await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+        $0.routes = Array($0.routes.dropLast())
+        $0.chatRoomInstanceIDs = []
+      }
+    case .replaceWithAIChat, .replaceWithRecommend:
+      var routes = store.state.routes
+      if exit == .replaceWithAIChat {
+        routes[screenAt: 2] = .aiChat(.init(room: room, battleID: 101, selectedOptionID: 1))
+      } else {
+        routes[screenAt: 2] = .recommend(.init(filter: .init(), mode: .aiQuestions))
+      }
+      await store.send(.router(.updateRoutes(routes))) {
+        $0.routes = routes
+        $0.chatRoomInstanceIDs = []
+      }
+    }
+    #expect(await player.waitForTerminations(1))
+    #expect(await player.isTerminated(0))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 클래스_안의_채팅방만_닫아도_구독이_끝난다() async {
+    let player = ControlledClassAudioPlayer()
+    var chat = ChatCoordinator.State(battleId: 104)
+    chat.routes.push(.chatRoom(.init(battleId: 104)))
+    guard case let .chatRoom(room)? = chat.routes.last?.screen else {
+      Issue.record("채팅방 경로를 만들지 못했습니다")
+      return
+    }
+    var state = ClassCoordinator.State()
+    state.routes.push(.chat(chat))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await store.send(.router(.routeAction(id: 1, action: .chat(.router(.routeAction(
+      id: 1,
+      action: .chatRoom(.async(.subscribePlayer))
+    )))))) {
+      $0.chatRoomInstanceIDs = [room.instanceID]
+      var updated = chat
+      updated.observedChatRoomInstanceIDs = [room.instanceID]
+      $0.routes[screenAt: 1] = .chat(updated)
+    }
+    #expect(await player.waitForSubscriptions(1))
+    await store.send(.router(.routeAction(id: 1, action: .chat(.view(.backAction))))) {
+      $0.chatRoomInstanceIDs = []
+      guard case var .chat(updated) = $0.routes[1].screen else { return }
+      updated.routes.goBack()
+      updated.observedChatRoomInstanceIDs = []
+      $0.routes[screenAt: 1] = .chat(updated)
+    }
+    #expect(await player.waitForTerminations(1))
+    #expect(await player.isTerminated(0))
+    #expect(store.state.routes.count == 2)
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 채팅_코디네이터의_내부_뒤로가기와_스와이프도_구독을_끝낸다() async {
+    for interactive in [false, true] {
+      let player = ControlledClassAudioPlayer()
+      var state = ChatCoordinator.State(battleId: 102)
+      state.routes.push(.chatRoom(.init(battleId: 102)))
+      guard case let .chatRoom(room)? = state.routes.last?.screen else {
+        Issue.record("채팅방 경로를 만들지 못했습니다")
+        return
+      }
+      let store = TestStore(initialState: state) { ChatCoordinator() } withDependencies: {
+        $0.audioPlayer = player
+      }
+      await store.send(.router(.routeAction(id: 1, action: .chatRoom(.async(.subscribePlayer))))) {
+        $0.observedChatRoomInstanceIDs = [room.instanceID]
+      }
+      #expect(await player.waitForSubscriptions(1))
+      if interactive {
+        await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+          $0.routes = Array($0.routes.dropLast())
+          $0.observedChatRoomInstanceIDs = []
+        }
+      } else {
+        await store.send(.view(.backAction)) {
+          $0.routes.goBack()
+          $0.observedChatRoomInstanceIDs = []
+        }
+      }
+      #expect(await player.waitForTerminations(1))
+      #expect(await player.isTerminated(0))
+      await store.finish(timeout: .seconds(1))
+    }
+  }
+
+  @Test
+  func 새_채팅방_구독은_이전_구독만_대체하고_이전_경로_정리는_새_구독을_보존한다() async {
+    let player = ControlledClassAudioPlayer()
+    var state = ChatCoordinator.State(battleId: 103)
+    state.routes.push(.chatRoom(.init(battleId: 103)))
+    state.routes.push(.chatRoom(.init(battleId: 103)))
+    guard case let .chatRoom(first) = state.routes[1].screen,
+          case let .chatRoom(second) = state.routes[2].screen
+    else {
+      Issue.record("서로 다른 채팅방 인스턴스를 만들지 못했습니다")
+      return
+    }
+    #expect(first.instanceID != second.instanceID)
+    let store = TestStore(initialState: state) { ChatCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await store.send(.router(.routeAction(id: 1, action: .chatRoom(.async(.subscribePlayer))))) {
+      $0.observedChatRoomInstanceIDs = [first.instanceID, second.instanceID]
+    }
+    #expect(await player.waitForSubscriptions(1))
+    await store.send(.router(.routeAction(id: 2, action: .chatRoom(.async(.subscribePlayer)))))
+    #expect(await player.waitForSubscriptions(2))
+    #expect(await player.waitForTerminations(1))
+    #expect(await player.isTerminated(0))
+    var survivingRoutes = store.state.routes
+    survivingRoutes[screenAt: 1] = .preVote(.init(battleId: 103))
+    await store.send(.router(.updateRoutes(survivingRoutes))) {
+      $0.routes = survivingRoutes
+      $0.observedChatRoomInstanceIDs = [second.instanceID]
+    }
+    #expect(await player.yield(2.0, to: 1))
+    await store.receive {
+      if case .router(.routeAction(id: 2, action: .chatRoom(.inner(.playerTimeUpdated(2.0))))) = $0 {
+        return true
+      }
+      return false
+    } assert: {
+      guard case var .chatRoom(room) = $0.routes[2].screen else { return }
+      room.currentTime = 2.0
+      $0.routes[screenAt: 2] = .chatRoom(room)
+    }
+    await store.send(.view(.backToRootAction)) {
+      $0.routes.goBackToRoot()
+      $0.observedChatRoomInstanceIDs = []
+    }
+    #expect(await player.waitForTerminations(2))
+    #expect(await player.isTerminated(1))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 클래스_탭_재선택은_클래스_루트_액션으로_전달된다() async {
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    state.classState.routes.push(.detail(.init(room: ClassRoom.mocks[0])))
+    let store = TestStore(initialState: state) { MainTabCoordinator() }
+    await store.send(.tabReselected(MainTabCoordinator.Tab.classroom.rawValue))
+    await store.receive {
+      if case .classroom(.view(.backToRootAction)) = $0 {
+        return true
+      }
+      return false
+    } assert: {
+      $0.classState.routes.goBackToRoot()
+    }
+    await store.finish(timeout: .seconds(1))
+  }
+}
+
+private actor ControlledClassAudioPlayer: AudioPlayerInterface {
+  private var continuations: [UUID: AsyncStream<TimeInterval>.Continuation] = [:]
+  private var subscriptionIDs: [UUID] = []
+  private var terminatedIDs: Set<UUID> = []
+
+  nonisolated func currentTimes() -> AsyncStream<TimeInterval> {
+    AsyncStream { continuation in
+      let id = UUID()
+      continuation.onTermination = { @Sendable _ in Task { await self.terminate(id) } }
+      Task { await self.subscribe(id, continuation: continuation) }
+    }
+  }
+
+  func load(url _: URL) async -> Bool {
+    true
+  }
+
+  func play() async {}
+  func pause() async {}
+  func seek(to _: TimeInterval) async {}
+  func duration() async -> TimeInterval {
+    0
+  }
+
+  func waitForSubscriptions(_ count: Int) async -> Bool {
+    for _ in 0 ..< 100 {
+      if subscriptionIDs.count >= count {
+        return true
+      }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+
+  func waitForTerminations(_ count: Int) async -> Bool {
+    for _ in 0 ..< 100 {
+      if terminatedIDs.count >= count {
+        return true
+      }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+
+  func yield(_ time: TimeInterval, to index: Int) -> Bool {
+    guard subscriptionIDs.indices.contains(index),
+          let continuation = continuations[subscriptionIDs[index]]
+    else { return false }
+    if case .enqueued = continuation.yield(time) {
+      return true
+    }
+    return false
+  }
+
+  func isTerminated(_ index: Int) -> Bool {
+    guard subscriptionIDs.indices.contains(index),
+          let continuation = continuations[subscriptionIDs[index]],
+          terminatedIDs.contains(subscriptionIDs[index])
+    else { return false }
+    if case .terminated = continuation.yield(-1) {
+      return true
+    }
+    return false
+  }
+
+  private func subscribe(
+    _ id: UUID,
+    continuation: AsyncStream<TimeInterval>.Continuation
+  ) {
+    subscriptionIDs.append(id)
+    continuations[id] = continuation
+  }
+
+  private func terminate(_ id: UUID) {
+    terminatedIDs.insert(id)
   }
 }
 

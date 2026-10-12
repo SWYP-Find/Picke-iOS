@@ -30,6 +30,7 @@ public struct ClassCoordinator {
     var pendingJoinID: UUID?
     var reportInstanceIDs: Set<UUID> = []
     var dashboardInstanceIDs: Set<UUID> = []
+    var chatRoomInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
@@ -95,11 +96,25 @@ public struct ClassCoordinator {
     if state.routes.count == 1 {
       state.chatRoomsByBattleID.removeAll()
     }
-    return .merge(effect, cancelRemovedReportLoads(state: &state))
+    return .merge(
+      effect,
+      cancelRemovedReportLoads(state: &state),
+      cancelRemovedChatObservers(state: &state)
+    )
   }
 }
 
 private extension ClassCoordinator {
+  func cancelRemovedChatObservers(state: inout State) -> Effect<Action> {
+    let currentIDs = Set(state.routes.flatMap { route -> Set<UUID> in
+      guard case let .chat(chat) = route.screen else { return [] }
+      return chat.activeChatRoomInstanceIDs
+    })
+    let removedIDs = state.chatRoomInstanceIDs.subtracting(currentIDs)
+    state.chatRoomInstanceIDs = currentIDs
+    return .merge(removedIDs.map { .cancel(id: ChatRoomFeature.CancelID.audioObserver($0)) })
+  }
+
   func cancelRemovedReportLoads(state: inout State) -> Effect<Action> {
     let reportIDs = Set(state.routes.compactMap { route -> UUID? in
       guard case let .report(report) = route.screen else { return nil }
