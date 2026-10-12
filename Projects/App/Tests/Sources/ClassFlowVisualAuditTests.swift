@@ -852,8 +852,15 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
     // 375pt is a resized host, not a native device. Both variants use the same
     // mounted coordinator for summary -> result/comment -> original Class detail.
-    for viewport in [CGSize(width: 375, height: 812), CGSize(width: 402, height: 874)] {
-      let room = ClassRoom.mockJoinable
+    let scenarios: [(String, CGSize, Bool)] = [
+      ("375", CGSize(width: 375, height: 812), false),
+      ("402", CGSize(width: 402, height: 874), false),
+      ("375-compact", CGSize(width: 375, height: 667), false),
+      ("375-compact-long", CGSize(width: 375, height: 667), true),
+      ("402-long", CGSize(width: 402, height: 874), true),
+    ]
+    for (suffix, viewport, longContent) in scenarios {
+      let room = participatedAuditRoom(longContent: longContent)
       let session = ClassMockChatSession()
       let battleID = await session.register(room: room)
       let battleAPI: any BattleInterface = session
@@ -893,13 +900,46 @@ final class ClassFlowVisualAuditTests: XCTestCase {
               case let .preVote(vote)? = chat.routes.first?.screen else { return false }
         return vote.isShowingParticipationResult && vote.battle != nil && !vote.isCheckingParticipation
       }
-      let name = "participated-vote-\(Int(viewport.width))"
+      let name = "participated-vote-\(suffix)"
       let image = try await saveClassAudit(window: window, name: name)
       let text = try recognizedAuditText(in: image, name: name)
       XCTAssertTrue(text.contains("결과보기"), "Result CTA is missing: \(text)")
       XCTAssertFalse(text.contains("사전투표하기"))
       XCTAssertFalse(text.contains("VS"), "Completed summary must omit the option row")
       XCTAssertFalse(store.showsTabBar)
+      if longContent {
+        XCTAssertTrue(text.contains("긴제목검증"))
+        try assertParticipatedHeaderSeparation(image: image, roomName: room.name)
+        let scrollCandidates = verticalScrollViews(in: host.view, window: window)
+        if scrollCandidates.isEmpty {
+          print("Participated scroll diagnostics: \(scrollDiagnostics(in: host.view, window: window))")
+        }
+        let scrollView = try XCTUnwrap(scrollCandidates.max {
+          $0.bounds.height < $1.bounds.height
+        }, "Long participated content must expose a scrollable region")
+        let bottomOffset = scrollView.contentSize.height - scrollView.bounds.height
+          + scrollView.adjustedContentInset.bottom
+        XCTAssertGreaterThan(bottomOffset, scrollView.contentOffset.y + 1)
+        scrollView.setContentOffset(
+          CGPoint(x: scrollView.contentOffset.x, y: bottomOffset),
+          animated: false
+        )
+        let bottomName = name + "-bottom"
+        let bottomImage = try await saveClassAudit(window: window, name: bottomName)
+        let bottomText = try recognizedAuditText(in: bottomImage, name: bottomName)
+        XCTAssertEqual(scrollView.contentOffset.y, bottomOffset, accuracy: 1)
+        XCTAssertTrue(bottomText.contains("여기까지읽었습니다"), "Final summary text was clipped: \(bottomText)")
+        XCTAssertTrue(bottomText.contains("결과보기"), "The fixed CTA must remain visible while scrolling")
+      } else if viewport.height >= 812 {
+        let scrollView = try XCTUnwrap(verticalScrollViews(
+          in: host.view,
+          window: window,
+          requiresOverflow: false
+        ).max { $0.bounds.height < $1.bounds.height }, "Expected the participated summary scroll view")
+        let overflow = scrollView.contentSize.height + scrollView.adjustedContentInset.top
+          + scrollView.adjustedContentInset.bottom - scrollView.bounds.height
+        XCTAssertLessThanOrEqual(overflow, 1, "Standard summary must fit above its fixed footer")
+      }
       store.send(.router(.routeAction(id: 2, action: .chat(.router(.routeAction(
         id: 0, action: .preVote(.view(.primaryButtonTapped))
       ))))))
@@ -909,7 +949,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         return chat.routes.count == 1 && comment.battleId == battleID
           && !comment.title.isEmpty && !comment.isLoadingStats && !comment.isLoadingComments
       }
-      let resultName = "participated-result-\(Int(viewport.width))"
+      let resultName = "participated-result-\(suffix)"
       let resultImage = try await saveClassAudit(window: window, name: resultName)
       let resultText = try recognizedAuditText(in: resultImage, name: resultName)
       XCTAssertTrue(resultText.contains("리포트"), "Class comment/report entry is missing: \(resultText)")
@@ -921,7 +961,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         guard case let .detail(detail)? = store.routes.last?.screen else { return false }
         return store.routes.count == 2 && detail.room.id == room.id && store.showsTabBar
       }
-      let backName = "participated-back-detail-\(Int(viewport.width))"
+      let backName = "participated-back-detail-\(suffix)"
       let backImage = try await saveClassAudit(window: window, name: backName)
       let backText = try recognizedAuditText(in: backImage, name: backName)
       XCTAssertTrue(backText.contains("클래스상세"))
@@ -1125,18 +1165,100 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
-  private func verticalScrollViews(in view: UIView, window: UIWindow) -> [UIScrollView] {
+  private func verticalScrollViews(
+    in view: UIView,
+    window: UIWindow,
+    requiresOverflow: Bool = true
+  ) -> [UIScrollView] {
     guard !view.isHidden, view.alpha > 0.01 else { return [] }
-    let candidates = view.subviews.flatMap { verticalScrollViews(in: $0, window: window) }
+    let candidates = view.subviews.flatMap {
+      verticalScrollViews(in: $0, window: window, requiresOverflow: requiresOverflow)
+    }
     guard let scrollView = view as? UIScrollView,
           scrollView.window === window,
           scrollView.bounds.height > 0,
-          scrollView.contentSize.height > scrollView.bounds.height + 1 else { return candidates }
+          !requiresOverflow || scrollView.contentSize.height + scrollView.adjustedContentInset.top
+          + scrollView.adjustedContentInset.bottom > scrollView.bounds.height + 1
+    else { return candidates }
     let visibleFrame = scrollView.convert(scrollView.bounds, to: window).intersection(window.bounds)
     guard !visibleFrame.isNull, !visibleFrame.isEmpty,
           let hitView = window.hitTest(CGPoint(x: visibleFrame.midX, y: visibleFrame.midY), with: nil),
           hitView === scrollView || hitView.isDescendant(of: scrollView) else { return candidates }
     return [scrollView] + candidates
+  }
+
+  private func scrollDiagnostics(
+    in view: UIView,
+    window: UIWindow
+  ) -> [String] {
+    let nested = view.subviews.flatMap { scrollDiagnostics(in: $0, window: window) }
+    guard let scroll = view as? UIScrollView else { return nested }
+    let visible = scroll.convert(scroll.bounds, to: window).intersection(window.bounds)
+    let hit = window.hitTest(CGPoint(x: visible.midX, y: visible.midY), with: nil)
+    return [
+      "\(type(of: scroll)) bounds=\(scroll.bounds) content=\(scroll.contentSize) hidden=\(scroll.isHidden) alpha=\(scroll.alpha) window=\(scroll.window === window) visible=\(visible) hit=\(String(describing: hit)) descendant=\(hit?.isDescendant(of: scroll) ?? false)",
+    ] +
+      nested
+  }
+
+  private func participatedAuditRoom(longContent: Bool) -> ClassRoom {
+    let room = ClassRoom.mockJoinable
+    guard longContent else { return room }
+    let source = room.battle
+    let battle = ClassBattleSummary(
+      id: source.id,
+      title: "긴 제목 검증 " + Array(repeating: source.title, count: 3).joined(separator: " "),
+      summary: Array(repeating: source.summary, count: 20).joined(separator: " ") + " 여기까지 읽었습니다.",
+      thumbnailURL: source.thumbnailURL,
+      philosopherA: source.philosopherA,
+      optionATitle: source.optionATitle,
+      optionADescription: source.optionADescription,
+      philosopherAImageURL: source.philosopherAImageURL,
+      philosopherB: source.philosopherB,
+      optionBTitle: source.optionBTitle,
+      optionBDescription: source.optionBDescription,
+      philosopherBImageURL: source.philosopherBImageURL,
+      category: source.category,
+      categoryDisplayTitle: source.categoryDisplayTitle,
+      level: source.level,
+      audioDuration: source.audioDuration,
+      viewCount: source.viewCount,
+      commentCount: source.commentCount
+    )
+    return ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates
+    )
+  }
+
+  private func assertParticipatedHeaderSeparation(
+    image: UIImage,
+    roomName: String
+  ) throws {
+    let request = VNRecognizeTextRequest()
+    request.recognitionLevel = .accurate
+    request.recognitionLanguages = ["ko-KR", "en-US"]
+    let handler = try VNImageRequestHandler(cgImage: XCTUnwrap(image.cgImage))
+    try handler.perform([request])
+    let observations = request.results ?? []
+    let header = try XCTUnwrap(observations.first {
+      $0.topCandidates(1).first?.string.filter { !$0.isWhitespace }
+        .contains(roomName.filter { !$0.isWhitespace }) == true
+    }, "The fixed Class header must remain visible")
+    let title = try XCTUnwrap(observations.first {
+      $0.topCandidates(1).first?.string.filter { !$0.isWhitespace }.contains("긴제목검증") == true
+    }, "The long title must remain visible below the header")
+    XCTAssertLessThan(title.boundingBox.maxY, header.boundingBox.minY,
+                      "Navigation title and body title must occupy separate lines")
   }
 
   @MainActor

@@ -90,34 +90,65 @@ private extension ClassVoteView {
 
   @ViewBuilder
   func loadedContent(_ battle: PreVoteBattle) -> some View {
+    if store.isShowingParticipationResult {
+      participationResultContent(battle)
+    } else {
+      GeometryReader { geometry in
+        let artworkHeight = max(360, geometry.size.height * 0.62 + geometry.safeAreaInsets.top)
+
+        ZStack(alignment: .top) {
+          artwork(battle, width: geometry.size.width, height: artworkHeight)
+            .offset(y: -geometry.safeAreaInsets.top)
+
+          ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+              Color.clear.frame(height: max(0, artworkHeight - 110))
+              voteContent(battle)
+            }
+            .frame(minHeight: geometry.size.height - 98, alignment: .top)
+          }
+          .safeAreaInset(edge: .bottom, spacing: 0) {
+            actionFooter()
+          }
+
+          navigationBar()
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  func participationResultContent(_ battle: PreVoteBattle) -> some View {
     GeometryReader { geometry in
-      let isParticipationResult = store.isShowingParticipationResult
-      let artworkHeight = max(
-        360,
-        geometry.size.height * 0.62 + geometry.safeAreaInsets.top
-      )
+      let artworkHeight = geometry.size.width * 512 / 375
 
       ZStack(alignment: .top) {
-        artwork(battle, width: geometry.size.width, height: artworkHeight)
-          .offset(y: -geometry.safeAreaInsets.top)
+        artwork(
+          battle,
+          width: geometry.size.width,
+          height: artworkHeight,
+          isParticipationResult: true
+        )
+        .offset(y: -geometry.safeAreaInsets.top)
 
-        ScrollView(showsIndicators: false) {
-          VStack(alignment: .leading, spacing: 0) {
-            Color.clear.frame(height: max(0, artworkHeight - 110))
-            voteContent(battle)
+        GeometryReader { viewport in
+          ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+              Spacer(minLength: 0)
+              participationResultBody(battle)
+            }
+            .frame(minHeight: viewport.size.height, alignment: .bottom)
           }
-          .frame(
-            minHeight: geometry.size.height - 98,
-            alignment: isParticipationResult ? .bottom : .top
-          )
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-          actionFooter()
-        }
+        .padding(.top, 54) // 48pt navigation bar + 6pt clearance.
 
         navigationBar()
       }
     }
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      actionFooter()
+    }
+    .background(.white)
   }
 
   @ViewBuilder
@@ -143,7 +174,8 @@ private extension ClassVoteView {
   func artwork(
     _ battle: PreVoteBattle,
     width: CGFloat,
-    height: CGFloat
+    height: CGFloat,
+    isParticipationResult: Bool = false
   ) -> some View {
     Group {
       if let imageURL = battle.backgroundImageURL, let url = URL(string: imageURL) {
@@ -154,17 +186,28 @@ private extension ClassVoteView {
     }
     .frame(width: width, height: height)
     .clipped()
-    .overlay(.black.opacity(0.35))
+    .overlay(.black.opacity(isParticipationResult ? 0.4 : 0.35))
     .overlay {
-      LinearGradient(
-        stops: [
-          .init(color: .clear, location: 0.42),
-          .init(color: screenBackground.opacity(0.72), location: 0.82),
-          .init(color: screenBackground, location: 1),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
+      if isParticipationResult {
+        LinearGradient(
+          stops: [
+            .init(color: .white.opacity(0), location: 285.5 / 512),
+            .init(color: .white, location: 501.5 / 512),
+          ],
+          startPoint: .top,
+          endPoint: .bottom
+        )
+      } else {
+        LinearGradient(
+          stops: [
+            .init(color: .clear, location: 0.42),
+            .init(color: screenBackground.opacity(0.72), location: 0.82),
+            .init(color: screenBackground, location: 1),
+          ],
+          startPoint: .top,
+          endPoint: .bottom
+        )
+      }
     }
     .accessibilityHidden(true)
   }
@@ -191,13 +234,53 @@ private extension ClassVoteView {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.bottom, 26)
 
-      if !store.isShowingParticipationResult {
-        optionSection(battle)
-      }
+      optionSection(battle)
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 22)
     .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  @ViewBuilder
+  func participationResultBody(_ battle: PreVoteBattle) -> some View {
+    let titleLineHeight = UIFont.pretendardFontFamily(family: .Bold, size: 24).lineHeight
+    let summaryLineHeight = UIFont.pretendardFontFamily(family: .Regular, size: 13).lineHeight
+
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: 9) {
+        ForEach(battle.tags, id: \.self) { tag in
+          Text(tag).pickeBadge(.filled, size: .tag)
+        }
+      }
+      .frame(minHeight: 25, alignment: .leading)
+      .padding(.bottom, 20)
+
+      Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
+        .pretendardFont(.bold24)
+        .tracking(-0.6)
+        .lineSpacing(max(0, 34 - titleLineHeight))
+        .padding(.vertical, max(0, (34 - titleLineHeight) / 2))
+        .foregroundStyle(.neutral500)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.bottom, 12)
+
+      Text(battle.summary)
+        .pretendardFont(.regular13)
+        .lineSpacing(max(0, 18 - summaryLineHeight))
+        .padding(.vertical, max(0, (18 - summaryLineHeight) / 2))
+        .foregroundStyle(.neutral400)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(.horizontal, 16)
+    .padding(.bottom, 28)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background {
+      Color.white.overlay(alignment: .top) {
+        LinearGradient(colors: [.clear, .white], startPoint: .top, endPoint: .bottom)
+          .frame(height: 27)
+          .offset(y: -27)
+      }
+    }
   }
 
   @ViewBuilder
@@ -266,10 +349,11 @@ private extension ClassVoteView {
           .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
           .frame(maxWidth: .infinity)
+          .frame(minHeight: store.isShowingParticipationResult ? 18 : 0)
       }
     }
     .padding(.horizontal, 16)
-    .padding(.bottom, 16)
-    .background(screenBackground)
+    .padding(.bottom, store.isShowingParticipationResult ? 6 : 16)
+    .background(store.isShowingParticipationResult ? Color.white : screenBackground)
   }
 }

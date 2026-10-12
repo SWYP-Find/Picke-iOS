@@ -36,7 +36,7 @@ public struct PreVoteFeature {
     }
 
     public var viewState: ViewState = .loaded
-    /// 기참여(관점 직행) 여부 확인 중 — 완료 전까지 사전투표 UI 대신 스켈레톤을 유지한다.
+    /// 참여 확인 중에는 일반 배틀의 자동 직행이나 클래스 기존 콘텐츠의 결과 요약이 결정될 때까지 스켈레톤을 유지한다.
     public var isCheckingParticipation: Bool = false
     /// 배틀 상세(사전투표) 로드(디코딩/네트워크) 실패 여부. true 면 무한 스켈레톤 대신 오류+재시도 UI 를 노출한다.
     public var detailLoadFailed: Bool = false
@@ -195,7 +195,7 @@ extension PreVoteFeature {
       // 사전(pre) 진입 시에만 내 참여(perspective) 여부를 조회한다.
       // 일반 배틀은 기참여 시 관점 화면으로 직행한다. 클래스 기존 콘텐츠는 결과 화면을 유지한다.
       if state.voteMode == .pre, state.myPerspective == nil {
-        // 기참여면 관점 화면으로 직행하므로, 확인이 끝날 때까지 사전투표 UI 노출을 막는다.
+        // 일반 배틀은 기참여 시 관점으로 직행하고 클래스 기존 콘텐츠는 결과 요약을 보여주므로, 확인 전에는 투표 UI를 숨긴다.
         state.isCheckingParticipation = true
         effects.append(.send(.async(.fetchMyPerspective)))
       }
