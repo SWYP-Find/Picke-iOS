@@ -22,6 +22,46 @@ struct ClassRecommendTests {
   }
 
   @Test
+  func 주제를_첫_조건으로_표시하고_중복된_철학_칩도_유지한다() {
+    let state = ClassRecommendFeature.State(
+      filter: .init(keyword: "  철학 \n", level: .middle, categories: [.philosophy, .society])
+    )
+
+    #expect(state.conditionTitles == ["철학", "중등", "철학", "사회"])
+  }
+
+  @Test
+  func 추천_문구는_모드별_원본을_사용하고_선택_버튼은_같은_문구를_쓴다() {
+    let existing = ClassRecommendFeature.State(filter: .init())
+    let ai = ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)
+
+    #expect(existing.introTitle == "주제에 어울리는\n배틀을 찾았어요")
+    #expect(existing.introDescription == "미리 듣고 클래스에 사용할 배틀을 골라보세요")
+    #expect(ai.introTitle == "AI가 주제에 어울리는\n질문을 만들었어요")
+    #expect(ai.introDescription == "모임에서 나눌 질문을 골라 자유롭게 수정해보세요.")
+    #expect(existing.selectButtonTitle == "배틀 선택하기")
+    #expect(ai.selectButtonTitle == "배틀 선택하기")
+  }
+
+  @Test
+  func 조건_수정은_닫고_다시_추천은_질문을_회전하며_선택을_해제한다() async {
+    let editStore = TestStore(initialState: ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)) {
+      ClassRecommendFeature()
+    }
+    await editStore.send(.view(.editConditionTapped))
+    await editStore.receive(\.delegate, .dismiss)
+
+    var state = ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)
+    state.questions = ClassAIQuestion.examples
+    state.selectedQuestionId = ClassAIQuestion.examples.first?.id
+    let recommendStore = TestStore(initialState: state) { ClassRecommendFeature() }
+    await recommendStore.send(.view(.recommendAgainTapped)) {
+      $0.questions = Array(ClassAIQuestion.examples.dropFirst()) + ClassAIQuestion.examples.prefix(1)
+      $0.selectedQuestionId = nil
+    }
+  }
+
+  @Test
   func 화면이_뜨면_조건에_맞는_추천_배틀을_불러온다() async {
     let store = TestStore(initialState: ClassRecommendFeature.State(filter: .init(level: .middle))) {
       ClassRecommendFeature()

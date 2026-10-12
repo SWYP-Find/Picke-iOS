@@ -50,47 +50,70 @@ private extension ClassRecommendView {
   func introSection() -> some View {
     VStack(alignment: .leading, spacing: 20) {
       VStack(alignment: .leading, spacing: 6) {
-        Text(store.mode == .aiQuestions ? "AI가 주제에 어울리는\n질문을 만들었어요" : "주제에 어울리는\n배틀을 찾았어요")
+        Text(store.introTitle)
           .pretendardFont(.semiBold24)
           .lineSpacing(2.4)
           .foregroundStyle(.gray800)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 62, alignment: .topLeading)
 
-        Text(store.mode == .aiQuestions ? "모임에서 나눌 질문을 골라 자유롭게 수정해보세요." : "미리 듣고 클래스에 사용할 배틀을 골라보세요.")
+        Text(store.introDescription)
           .pretendardFont(.medium15)
           .foregroundStyle(.gray300)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 23, alignment: .leading)
       }
 
       conditionRow()
     }
-    .padding(16)
+    .padding(.horizontal, 16)
+    .padding(.top, 16)
+    .padding(.bottom, store.mode == .aiQuestions ? 16 : 0)
   }
 
   @ViewBuilder
   func conditionRow() -> some View {
-    HStack(spacing: 8) {
+    HStack(spacing: 12) {
       Text("선택한 조건")
         .pretendardFont(.medium13)
         .foregroundStyle(.gray300)
 
       ScrollView(.horizontal) {
         HStack(spacing: 6) {
-          ForEach(store.conditionTitles, id: \.self) {
-            Text($0).pickePill()
+          ForEach(Array(store.conditionTitles.enumerated()), id: \.offset) { item in
+            Text(item.element)
+              .frame(minHeight: 17)
+              .pickePill()
           }
         }
+        .padding(.trailing, 60)
       }
       .scrollIndicators(.hidden)
-
-      Spacer(minLength: 0)
-
+    }
+    .frame(height: 36)
+    .overlay(alignment: .trailing) {
+      LinearGradient(
+        colors: [.beige200.opacity(0), .beige200],
+        startPoint: .leading,
+        endPoint: .trailing
+      )
+      .frame(width: 60, height: 32)
+      .allowsHitTesting(false)
+    }
+    .overlay(alignment: .trailing) {
       Button {
         send(.editConditionTapped)
       } label: {
-        Text("조건 수정")
-          .pretendardFont(.semiBold13)
-          .foregroundStyle(.primary500)
+        Image(asset: .classConditionReset)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 20, height: 20)
+          .frame(width: 36, height: 36)
+          .background(.beige50, in: Circle())
+          .overlay(Circle().strokeBorder(.primary100, lineWidth: 1))
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("조건 수정")
     }
   }
 
@@ -127,6 +150,7 @@ private extension ClassRecommendView {
           .buttonStyle(.plain)
         }
       }
+      .frame(minHeight: 20)
 
       if store.mode == .aiQuestions {
         ForEach(store.questions) { question in
@@ -161,7 +185,8 @@ private extension ClassRecommendView {
       .allowsHitTesting(false)
 
       selectButton
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
         .background(.beige200)
     }
   }
@@ -170,7 +195,7 @@ private extension ClassRecommendView {
     Button {
       send(.selectTapped)
     } label: {
-      Text(store.mode == .aiQuestions ? "질문 선택하기" : "배틀 선택하기")
+      Text(store.selectButtonTitle)
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(!store.canSelect)

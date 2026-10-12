@@ -244,12 +244,21 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
-  private func recognizedAuditText(in image: UIImage, name: String) throws -> String {
+  private func recognizedAuditText(
+    in image: UIImage,
+    name: String,
+    usesLanguageCorrection: Bool = true,
+    regionOfInterest: CGRect? = nil
+  ) throws -> String {
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = .accurate
     let languages = try request.supportedRecognitionLanguages()
     XCTAssertTrue(languages.contains("ko-KR"), "Korean OCR is required for this visual audit")
     request.recognitionLanguages = ["ko-KR", "en-US"]
+    request.usesLanguageCorrection = usesLanguageCorrection
+    if let regionOfInterest {
+      request.regionOfInterest = regionOfInterest
+    }
     let cgImage = try XCTUnwrap(image.cgImage)
     try VNImageRequestHandler(cgImage: cgImage).perform([request])
     let rawText = (request.results ?? []).compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
@@ -966,6 +975,141 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       let backText = try recognizedAuditText(in: backImage, name: backName)
       XCTAssertTrue(backText.contains("클래스상세"))
     }
+  }
+
+  @MainActor
+  func testClassRecommendLayout() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify recommendation layout")
+    }
+    // Local fixture: the shared Class/AI-setting filter below stays unchanged.
+    let topic = "AI와 인간 사이의 윤리와 사상에 대해서"
+    let scenarios: [(String, ClassRecommendFeature.Mode, CGSize, String)] = [
+      ("ai-402", .aiQuestions, CGSize(width: 402, height: 874), topic),
+      ("ai-375", .aiQuestions, CGSize(width: 375, height: 812), topic),
+      ("existing-402", .existingContent, CGSize(width: 402, height: 874), topic),
+      ("existing-375", .existingContent, CGSize(width: 375, height: 812), topic),
+      ("ai-no-topic-402", .aiQuestions, CGSize(width: 402, height: 874), ""),
+    ]
+    for (suffix, mode, viewport, keyword) in scenarios {
+      var state = ClassRecommendFeature.State(
+        filter: .init(keyword: keyword, level: .middle, categories: [.philosophy, .society]),
+        mode: mode
+      )
+      state.questions = Array(ClassAIQuestion.examples.prefix(3))
+      state.battles = ClassBattleSummary.mocks.filter { $0.level == .middle && $0.category == .philosophy }
+      let store = Store(initialState: state) { ClassRecommendFeature() }
+      let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+      let window = UIWindow(windowScene: scene)
+      let host = UIHostingController(rootView: ClassRecommendView(store: store))
+      window.rootViewController = host
+      window.frame = CGRect(origin: .zero, size: viewport)
+      window.makeKeyAndVisible()
+      defer { window.isHidden = true }
+      let name = "recommend-" + suffix
+      let initialImage = try await saveClassAudit(window: window, name: name + "-unselected")
+      let initialText = try recognizedAuditText(
+        in: initialImage,
+        name: name + "-unselected"
+      )
+      XCTAssertFalse(store.canSelect)
+      try assertRecommendCTA(in: initialImage, name: name + "-unselected")
+      XCTAssertTrue(initialText.contains("선택한조건"))
+      XCTAssertEqual(store.conditionTitles.count, keyword.isEmpty ? 3 : 4)
+      if !keyword.isEmpty {
+        XCTAssertTrue(initialText.contains("AI와인간사이의윤리와사상에대해서"))
+      }
+
+      if mode == .aiQuestions {
+        try store.send(.view(.questionTapped(XCTUnwrap(state.questions.first).id)))
+      } else {
+        try store.send(.view(.battleTapped(XCTUnwrap(state.battles.first).id)))
+      }
+      XCTAssertTrue(store.canSelect)
+      let selectedImage = try await saveClassAudit(window: window, name: name + "-selected")
+      XCTAssertNotEqual(initialImage.pngData(), selectedImage.pngData(), "Selection must visibly update card and CTA")
+      guard !keyword.isEmpty else { continue }
+
+      let chips = try XCTUnwrap(horizontalClassAuditScrollViews(in: host.view, window: window).first)
+      let chipFrame = chips.convert(chips.bounds, to: window).intersection(window.bounds)
+      let readableChipFrame = CGRect(
+        x: chipFrame.minX,
+        y: chipFrame.minY,
+        width: chipFrame.width - 60,
+        height: chipFrame.height
+      )
+      XCTAssertGreaterThan(readableChipFrame.width, 0)
+      let chipRegion = CGRect(
+        x: readableChipFrame.minX / window.bounds.width,
+        y: 1 - readableChipFrame.maxY / window.bounds.height,
+        width: readableChipFrame.width / window.bounds.width,
+        height: readableChipFrame.height / window.bounds.height
+      )
+      let initialChipText = try recognizedAuditText(
+        in: initialImage,
+        name: name + "-first-chip-region",
+        regionOfInterest: chipRegion
+      )
+      XCTAssertFalse(initialChipText.contains("사회"), "The last chip must be outside the initial visible strip")
+      let trailingOffset = chips.contentSize.width - chips.bounds.width + chips.adjustedContentInset.right
+      XCTAssertGreaterThan(trailingOffset, chips.contentOffset.x + 1)
+      chips.setContentOffset(CGPoint(x: trailingOffset, y: chips.contentOffset.y), animated: false)
+      let chipImage = try await saveClassAudit(window: window, name: name + "-last-chip")
+      let chipText = try recognizedAuditText(
+        in: chipImage,
+        name: name + "-last-chip-region",
+        regionOfInterest: chipRegion
+      )
+      XCTAssertEqual(chips.contentOffset.x, trailingOffset, accuracy: 1)
+      XCTAssertTrue(chipText.contains("사회"), "Last condition should scroll clear of the reset overlay")
+
+      let list = try XCTUnwrap(verticalScrollViews(in: host.view, window: window).max {
+        $0.bounds.height < $1.bounds.height
+      })
+      let bottomOffset = list.contentSize.height - list.bounds.height + list.adjustedContentInset.bottom
+      list.setContentOffset(CGPoint(x: list.contentOffset.x, y: bottomOffset), animated: false)
+      let bottomImage = try await saveClassAudit(window: window, name: name + "-last-card")
+      let bottomText = try recognizedAuditText(
+        in: bottomImage,
+        name: name + "-last-card"
+      )
+      let finalTitle = try XCTUnwrap(mode == .aiQuestions ? state.questions.last?.title : state.battles.last?.title)
+      XCTAssertEqual(list.contentOffset.y, bottomOffset, accuracy: 1)
+      XCTAssertTrue(bottomText.contains(String(finalTitle.filter { !$0.isWhitespace }.prefix(8))),
+                    "Last card should be readable above CTA: \(bottomText)")
+      try assertRecommendCTA(in: bottomImage, name: name + "-last-card")
+    }
+  }
+
+  @MainActor
+  private func assertRecommendCTA(
+    in image: UIImage,
+    name: String
+  ) throws {
+    // Read the fixed footer independently: whole-page language correction can
+    // replace the rendered domain word "배틀" with the more common "배를".
+    let text = try recognizedAuditText(
+      in: image,
+      name: name + "-cta",
+      usesLanguageCorrection: false,
+      regionOfInterest: CGRect(x: 0, y: 0, width: 1, height: 0.2)
+    )
+    XCTAssertTrue(text.contains("배틀선택하기"), "Missing fixed CTA in bottom 20%: \(text)")
+  }
+
+  @MainActor
+  private func horizontalClassAuditScrollViews(
+    in view: UIView,
+    window: UIWindow
+  ) -> [UIScrollView] {
+    guard !view.isHidden, view.alpha > 0.01 else { return [] }
+    let nested = view.subviews.flatMap { horizontalClassAuditScrollViews(in: $0, window: window) }
+    guard let scroll = view as? UIScrollView,
+          scroll.window === window,
+          scroll.bounds.height > 0,
+          scroll.contentSize.width + scroll.adjustedContentInset.left + scroll.adjustedContentInset.right
+          > scroll.bounds.width + 1 else { return nested }
+    return [scroll] + nested
   }
 
   @MainActor

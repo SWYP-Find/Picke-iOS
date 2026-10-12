@@ -45,7 +45,22 @@ public struct ClassRecommendFeature {
     }
 
     public var conditionTitles: [String] {
-      [filter.level.title] + filter.categories.map(\.title)
+      let keyword = filter.keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+      return (keyword.isEmpty ? [] : [keyword]) + [filter.level.title] + filter.categories.map(\.title)
+    }
+
+    public var introTitle: String {
+      mode == .aiQuestions ? "AI가 주제에 어울리는\n질문을 만들었어요" : "주제에 어울리는\n배틀을 찾았어요"
+    }
+
+    public var introDescription: String {
+      mode == .aiQuestions
+        ? "모임에서 나눌 질문을 골라 자유롭게 수정해보세요."
+        : "미리 듣고 클래스에 사용할 배틀을 골라보세요"
+    }
+
+    public var selectButtonTitle: String {
+      "배틀 선택하기"
     }
 
     public var resultTitle: String {

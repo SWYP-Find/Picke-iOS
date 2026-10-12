@@ -65,6 +65,7 @@ public enum ImageAsset: String {
   // MARK: - 클래스
 
   case classAIVoteArtwork
+  case classConditionReset
   case classIntroBackground
   case classClosedBattle
   case classJoin
