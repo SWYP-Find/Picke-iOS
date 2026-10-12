@@ -6,9 +6,12 @@
 //
 
 import AudioPlayerServiceInterface
+import BattleDomainInterface
 import ComposableArchitecture
+import ConcurrencyExtras
 import DomainAssembly
 import FeatureAssembly
+import HomeDomainInterface
 @testable import Picke
 import PickeAnalyticsInterface
 import PickeCoreUtility
@@ -290,17 +293,32 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-    func saveState(_ name: String, view: AnyView, expectedText: String?) async throws {
-      let (image, _) = try await capture(view, ready: nil, includeScrollBottom: false,
+    func saveState(
+      _ name: String,
+      view: AnyView,
+      expectedText: String?,
+      additionalExpectedText: [String] = [],
+      excludedText: [String] = [],
+      ready: (@MainActor () -> Bool)? = nil
+    ) async throws {
+      let (image, _) = try await capture(view, ready: ready, includeScrollBottom: false,
                                          viewport: CGSize(width: 402, height: 874))
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
       let attachment = XCTAttachment(image: image)
       attachment.name = name + " (seeded load state)"
       attachment.lifetime = .keepAlways
       add(attachment)
-      if let expectedText {
+      if expectedText != nil || !additionalExpectedText.isEmpty || !excludedText.isEmpty {
         let text = try recognizedAuditText(in: image, name: name)
-        XCTAssertTrue(text.contains(expectedText), "Expected load-state message in pixels: \(text)")
+        if let expectedText {
+          XCTAssertTrue(text.contains(expectedText), "Expected load-state message in pixels: \(text)")
+        }
+        for expected in additionalExpectedText {
+          XCTAssertTrue(text.contains(expected), "Expected vote control in load-state pixels: \(text)")
+        }
+        for excluded in excludedText {
+          XCTAssertFalse(text.contains(excluded), "Unexpected vote option in load-state pixels: \(text)")
+        }
       }
     }
 
@@ -324,17 +342,79 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       ClassMemberFeature()
     })), expectedText: "아직참여한멤버가없어요")
 
-    var vote = ClassAIVoteFeature.State(room: room, battleID: 1001, instanceID: UUID())
-    vote.viewState = .loading
-    XCTAssertEqual(vote.viewState, .loading)
-    try await saveState("ai-vote-loading", view: AnyView(ClassAIVoteView(store: Store(initialState: vote) {
+    let voteRoom = room
+    let battleID = 1001
+    let requestID = UUID()
+    let suspended = AsyncStream<Never>.makeStream()
+    let loadingUseCase = VoteCaptureBattleUseCase { _ in
+      for await _ in suspended.stream {}
+      throw CancellationError()
+    }
+    let loadingStore = Store(initialState: ClassAIVoteFeature.State(
+      room: voteRoom,
+      battleID: battleID,
+      instanceID: UUID()
+    )) {
       ClassAIVoteFeature()
-    })), expectedText: nil)
-    vote.viewState = .error
-    XCTAssertEqual(vote.viewState, .error)
-    try await saveState("ai-vote-error", view: AnyView(ClassAIVoteView(store: Store(initialState: vote) {
+        .dependency(\.battleUseCase, loadingUseCase)
+        .dependency(\.uuid, .constant(requestID))
+    }
+    defer {
+      loadingStore.send(.view(.backTapped))
+      suspended.continuation.finish()
+    }
+    XCTAssertEqual(loadingStore.viewState, .loading)
+    try await saveState(
+      "ai-vote-loading",
+      view: AnyView(ClassAIVoteView(store: loadingStore)),
+      expectedText: "투표하기",
+      excludedText: [voteRoom.battle.optionATitle, voteRoom.battle.optionBTitle].map {
+        $0.filter { !$0.isWhitespace }
+      },
+      ready: {
+        loadingStore.viewState == .loading && loadingStore.loadRequestID == requestID
+          && !loadingStore.canSubmit
+          && loadingUseCase.fetchCalls.value.count == 1
+          && loadingUseCase.fetchCalls.value.battleID == battleID
+      }
+    )
+    XCTAssertEqual(loadingStore.viewState, .loading)
+    XCTAssertEqual(loadingStore.loadRequestID, requestID)
+    XCTAssertEqual(loadingUseCase.fetchCalls.value.count, 1)
+    XCTAssertEqual(loadingUseCase.fetchCalls.value.battleID, battleID)
+    XCTAssertFalse(loadingStore.canSubmit)
+
+    let errorUseCase = VoteCaptureBattleUseCase { _ in
+      throw NSError(domain: "VoteCapture", code: 1)
+    }
+    let errorStore = Store(initialState: ClassAIVoteFeature.State(
+      room: voteRoom,
+      battleID: battleID,
+      instanceID: UUID()
+    )) {
       ClassAIVoteFeature()
-    })), expectedText: nil)
+        .dependency(\.battleUseCase, errorUseCase)
+        .dependency(\.uuid, .constant(requestID))
+    }
+    XCTAssertEqual(errorStore.viewState, .loading)
+    try await saveState(
+      "ai-vote-error",
+      view: AnyView(ClassAIVoteView(store: errorStore)),
+      expectedText: "투표상태를불러오지못했어요",
+      additionalExpectedText: ["다시시도"],
+      ready: {
+        errorStore.viewState == .error && errorStore.loadRequestID == nil
+          && !errorStore.canSubmit
+          && errorStore.errorMessage == "투표 상태를 불러오지 못했어요. 다시 시도해 주세요."
+          && errorUseCase.fetchCalls.value.count == 1
+          && errorUseCase.fetchCalls.value.battleID == battleID
+      }
+    )
+    XCTAssertEqual(errorStore.viewState, .error)
+    XCTAssertNil(errorStore.loadRequestID)
+    XCTAssertEqual(errorUseCase.fetchCalls.value.count, 1)
+    XCTAssertEqual(errorUseCase.fetchCalls.value.battleID, battleID)
+    XCTAssertFalse(errorStore.canSubmit)
   }
 
   @MainActor
@@ -2102,5 +2182,78 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         }))
       ),
     ]
+  }
+}
+
+private struct VoteCaptureBattleUseCase: BattleInterface {
+  let fetchCalls = LockIsolated((count: 0, battleID: Int?.none))
+  let fetch: @Sendable (Int) async throws -> BattleDetail
+  private let fallback = MockBattleRepository()
+
+  func fetchBattle(battleId: Int) async throws -> BattleDetail {
+    fetchCalls.withValue { $0 = (count: $0.count + 1, battleID: battleId) }
+    return try await fetch(battleId)
+  }
+
+  func fetchTodayBattles() async throws -> TodayBattlePage {
+    try await fallback.fetchTodayBattles()
+  }
+
+  func submitPreVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult {
+    try await fallback.submitPreVote(battleId: battleId, optionId: optionId)
+  }
+
+  func submitPostVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult {
+    try await fallback.submitPostVote(battleId: battleId, optionId: optionId)
+  }
+
+  func fetchScenario(battleId: Int) async throws -> BattleScenario {
+    try await fallback.fetchScenario(battleId: battleId)
+  }
+
+  func fetchVoteStats(battleId: Int) async throws -> BattleVoteStats {
+    try await fallback.fetchVoteStats(battleId: battleId)
+  }
+
+  func fetchPerspectives(
+    battleId: Int,
+    cursor: String?,
+    size: Int?,
+    optionId: Int?,
+    sort: BattlePerspectiveSort?
+  ) async throws -> BattlePerspectivePage {
+    try await fallback.fetchPerspectives(
+      battleId: battleId,
+      cursor: cursor,
+      size: size,
+      optionId: optionId,
+      sort: sort
+    )
+  }
+
+  func createPerspective(
+    battleId: Int,
+    content: String,
+    optionId: Int?
+  ) async throws -> BattlePerspective? {
+    try await fallback.createPerspective(battleId: battleId, content: content, optionId: optionId)
+  }
+
+  func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective? {
+    try await fallback.fetchMyPerspective(battleId: battleId)
+  }
+
+  func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage {
+    try await fallback.fetchRecommendedBattles(battleId: battleId)
+  }
+
+  func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal {
+    try await fallback.proposeBattle(draft)
   }
 }
