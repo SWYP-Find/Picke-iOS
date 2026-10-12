@@ -69,11 +69,9 @@ private extension ClassSettingView {
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 4) {
         sectionLabel("클래스 명")
-        if store.showsNameRequiredIndicator {
-          Text("*")
-            .pretendardFont(.semiBold15)
-            .foregroundStyle(.primary500)
-        }
+        Text("*")
+          .pretendardFont(.semiBold15)
+          .foregroundStyle(.primary500)
       }
 
       TextField(

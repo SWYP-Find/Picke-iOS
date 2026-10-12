@@ -823,19 +823,20 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       deadline: room.deadline
     )
     // The 375 host is a layout check, not a native compact-device screenshot.
-    // The AI variant is regression evidence; its exact Figma reference is pending.
+    // AI copy is compared with the 1x Figma reference at node 12772:36100.
     let cases: [(String, ClassSettingFeature.State, CGSize)] = [
       ("setting-lineboxes-402", standard, CGSize(width: 402, height: 874)),
       ("setting-lineboxes-375", standard, CGSize(width: 375, height: 667)),
       ("setting-long-name-deadline-off", longName, CGSize(width: 402, height: 874)),
-      ("setting-ai-regression", ai, CGSize(width: 402, height: 874)),
+      ("setting-ai-402", ai, CGSize(width: 402, height: 874)),
+      ("setting-ai-375", ai, CGSize(width: 375, height: 667)),
     ]
     for (name, state, viewport) in cases {
       let store = Store(initialState: state) { ClassSettingFeature() }
       let (image, bottomImage) = try await capture(
         AnyView(ClassSettingView(store: store)),
         ready: nil,
-        includeScrollBottom: name.hasPrefix("setting-lineboxes-"),
+        includeScrollBottom: name.hasPrefix("setting-lineboxes-") || name.hasPrefix("setting-ai-"),
         viewport: viewport
       )
       for (suffix, captured) in [("", image), ("-bottom", bottomImage)].compactMap({ suffix, value in
@@ -850,6 +851,17 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         let text = try recognizedAuditText(in: captured, name: imageName)
         XCTAssertTrue(text.contains("클래스설정"))
         XCTAssertTrue(text.contains("클래스만들기"))
+        if name.hasPrefix("setting-ai-") {
+          if suffix.isEmpty {
+            XCTAssertTrue(text.contains("거의다왔어요!"))
+            XCTAssertTrue(text.contains("클래스정보를입력해주세요"))
+          } else {
+            XCTAssertTrue(text.contains("댓글달기필수"))
+            XCTAssertTrue(text.contains("멤버의생각을댓글로확인해요"))
+            XCTAssertTrue(text.contains("나도참여하기"))
+            XCTAssertFalse(text.contains("운영자참여"))
+          }
+        }
       }
     }
   }
