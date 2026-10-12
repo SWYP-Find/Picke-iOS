@@ -26,6 +26,7 @@ public struct ClassAIChatFeature {
     public var draft = ""
     public var isGenerating = false
     public var isCompleted = false
+    public var isTerminal = false
     public var isModelAvailable = true
     public var canRetrySession = false
     public var errorMessage: String?
@@ -33,6 +34,7 @@ public struct ClassAIChatFeature {
     public var sessionRequestID: UUID?
     public var responseRequestID: UUID?
     public var pendingText: String?
+    public var blockedInput: String?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(
@@ -88,8 +90,9 @@ public struct ClassAIChatFeature {
     }
 
     public var canSend: Bool {
-      hasStarted && !isGenerating && !isCompleted && isModelAvailable
-        && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      let trimmedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+      return hasStarted && !isGenerating && !isCompleted && isModelAvailable
+        && !trimmedDraft.isEmpty && trimmedDraft != blockedInput
     }
   }
 
@@ -115,9 +118,9 @@ public struct ClassAIChatFeature {
   @CasePathable
   public enum InnerAction: Equatable {
     case sessionReady(UUID, [String])
-    case sessionFailed(UUID, String, Bool)
+    case sessionFailed(UUID, ClassAIChatError)
     case responseReceived(UUID, [String])
-    case responseFailed(UUID, String)
+    case responseFailed(UUID, ClassAIChatError)
   }
 
   @CasePathable
@@ -161,24 +164,35 @@ extension ClassAIChatFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear, .retryTapped:
-      guard !state.hasStarted, !state.isCompleted else { return .none }
+      guard !state.hasStarted, !state.isCompleted, !state.isTerminal else { return .none }
+      if action == .onAppear, state.messages.isEmpty, state.errorMessage != nil {
+        return .none
+      }
+      if action == .retryTapped, !state.canRetrySession {
+        return .none
+      }
       let isRetry = state.canRetrySession
       let needsOpening = state.messages.isEmpty
       state.hasStarted = true
       state.isGenerating = true
-      state.errorMessage = nil
+      if state.blockedInput == nil {
+        state.errorMessage = nil
+      }
       state.isModelAvailable = true
       state.canRetrySession = false
       let requestID = UUID()
       state.sessionRequestID = requestID
       let id = state.conversationID
       let opponent = state.opponentName
+      let priorMessages = state.pendingText != nil && state.messages.last?.speaker == .user
+        ? Array(state.messages.dropLast()) : state.messages
       let context = ClassAIChatContext(
         question: state.room.battle.title,
         selectedStance: state.selectedStanceTitle,
         opponentStance: state.selectedOptionID == 1
           ? state.room.battle.optionBTitle : state.room.battle.optionATitle,
-        opponentPhilosopherName: opponent == "A 입장" || opponent == "B 입장" ? nil : opponent
+        opponentPhilosopherName: opponent == "A 입장" || opponent == "B 입장" ? nil : opponent,
+        priorMessages: priorMessages
       )
       return .run { send in
         do {
@@ -199,7 +213,7 @@ extension ClassAIChatFeature {
           guard !Task.isCancelled else { return }
           let bubbles = ClassAIChatMessageUseCase.bubbles(from: opening)
           if bubbles.isEmpty {
-            await send(.inner(.sessionFailed(requestID, "첫 질문을 만들지 못했어요. 다시 시도해 주세요.", true)))
+            await send(.inner(.sessionFailed(requestID, .emptyResponse)))
           } else {
             await send(.inner(.sessionReady(requestID, bubbles)))
           }
@@ -207,13 +221,7 @@ extension ClassAIChatFeature {
           return
         } catch {
           guard !Task.isCancelled else { return }
-          let modelError = error as? ClassAIChatError
-          await send(.inner(.sessionFailed(
-            requestID,
-            error.localizedDescription,
-            modelError != .deviceNotEligible && modelError != .unsupportedLanguage
-              && modelError != .unavailable
-          )))
+          await send(.inner(.sessionFailed(requestID, error as? ClassAIChatError ?? .unexpectedFailure)))
         }
       }
       .cancellable(id: CancelID.session, cancelInFlight: true)
@@ -222,7 +230,6 @@ extension ClassAIChatFeature {
       let id = state.conversationID
       state.conversationID = UUID()
       state.hasStarted = false
-      state.canRetrySession = false
       state.sessionRequestID = nil
       state.responseRequestID = nil
       state.isGenerating = false
@@ -243,19 +250,30 @@ extension ClassAIChatFeature {
       return .send(.delegate(.dismiss))
 
     case let .draftChanged(text):
+      guard text != state.draft else { return .none }
       state.draft = text
-      state.errorMessage = nil
+      if text.trimmingCharacters(in: .whitespacesAndNewlines) != state.blockedInput {
+        state.blockedInput = nil
+        state.errorMessage = nil
+      }
       return .none
 
     case let .quickReplyTapped(text):
       guard !state.isGenerating, !state.isCompleted, state.isModelAvailable else { return .none }
       state.draft = text
-      state.errorMessage = nil
+      if text.trimmingCharacters(in: .whitespacesAndNewlines) != state.blockedInput {
+        state.blockedInput = nil
+        state.errorMessage = nil
+      }
       return .none
 
     case .sendTapped:
       guard state.canSend else { return .none }
       let text = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard text.count <= 240 else {
+        state.errorMessage = "240자 이내로 줄여 주세요."
+        return .none
+      }
       let isFinalRound = state.round == state.totalRounds
       state.isGenerating = true
       state.errorMessage = nil
@@ -272,14 +290,18 @@ extension ClassAIChatFeature {
             text,
             isFinalRound: isFinalRound
           )
+          guard !Task.isCancelled else { return }
           let bubbles = ClassAIChatMessageUseCase.bubbles(from: reply)
           if bubbles.isEmpty {
-            await send(.inner(.responseFailed(requestID, "답변을 만들지 못했어요. 다시 시도해 주세요.")))
+            await send(.inner(.responseFailed(requestID, .emptyResponse)))
           } else {
             await send(.inner(.responseReceived(requestID, bubbles)))
           }
+        } catch is CancellationError {
+          return
         } catch {
-          await send(.inner(.responseFailed(requestID, error.localizedDescription)))
+          guard !Task.isCancelled else { return }
+          await send(.inner(.responseFailed(requestID, error as? ClassAIChatError ?? .unexpectedFailure)))
         }
       }
       .cancellable(id: CancelID.response, cancelInFlight: true)
@@ -306,17 +328,22 @@ extension ClassAIChatFeature {
       state.isGenerating = false
       state.isModelAvailable = true
       state.canRetrySession = false
+      state.isTerminal = false
+      state.errorMessage = state.blockedInput == nil
+        ? nil : ClassAIChatError.contentRejected.localizedDescription
       state.messages.append(contentsOf: bubbles.map { .init(speaker: .opponent, text: $0) })
       return .none
 
-    case let .sessionFailed(requestID, message, canRetry):
+    case let .sessionFailed(requestID, error):
       guard state.sessionRequestID == requestID else { return .none }
       state.sessionRequestID = nil
       state.isGenerating = false
       state.isModelAvailable = false
-      state.canRetrySession = canRetry
+      state.canRetrySession = error.canRetryOpening
+      state.isTerminal = !error.canRetryOpening
       state.hasStarted = false
-      state.errorMessage = message
+      state.errorMessage = state.messages.isEmpty
+        ? openingErrorMessage(for: error) : error.localizedDescription
       return .none
 
     case let .responseReceived(requestID, bubbles):
@@ -324,6 +351,8 @@ extension ClassAIChatFeature {
       state.responseRequestID = nil
       state.isGenerating = false
       state.pendingText = nil
+      state.blockedInput = nil
+      state.errorMessage = nil
       state.messages.append(contentsOf: bubbles.map { .init(speaker: .opponent, text: $0) })
       if state.round == state.totalRounds {
         state.isCompleted = true
@@ -333,7 +362,7 @@ extension ClassAIChatFeature {
       }
       return .none
 
-    case let .responseFailed(requestID, message):
+    case let .responseFailed(requestID, error):
       guard state.responseRequestID == requestID else { return .none }
       state.responseRequestID = nil
       state.isGenerating = false
@@ -342,9 +371,20 @@ extension ClassAIChatFeature {
       }
       state.draft = state.pendingText ?? state.draft
       state.pendingText = nil
-      state.errorMessage = message
+      state.blockedInput = error.requiresChangedInput
+        ? state.draft.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+      state.isTerminal = error.isTerminal
+      if error.isTerminal {
+        state.isModelAvailable = false
+      }
+      state.errorMessage = error.localizedDescription
       return .none
     }
+  }
+
+  private func openingErrorMessage(for error: ClassAIChatError) -> String {
+    guard !error.canRetryOpening else { return error.localizedDescription }
+    return "첫 질문을 시작할 수 없어요. \(error.localizedDescription) 최종투표로 계속해 주세요."
   }
 }
 

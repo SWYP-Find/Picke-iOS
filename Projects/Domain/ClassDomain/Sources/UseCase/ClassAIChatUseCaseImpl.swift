@@ -28,8 +28,11 @@ public struct ClassAIChatUseCaseImpl: ClassAIChatInterface {
   ) async throws -> String {
     #if canImport(FoundationModels)
       if #available(iOS 26.0, *) {
-        let prompt = isFinalRound ? ClassAIChatInstructions.finalRoundPrompt(text) : text
-        return try await ClassAIChatFoundationEngine.shared.respond(id: id, text: prompt)
+        return try await ClassAIChatFoundationEngine.shared.respond(
+          id: id,
+          text: text,
+          isFinalRound: isFinalRound
+        )
       }
     #endif
     throw ClassAIChatError.unavailable

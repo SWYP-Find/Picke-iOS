@@ -40,6 +40,64 @@ struct ClassAIChatTests {
     }
   }
 
+  private actor CallCounter {
+    private var count = 0
+
+    func record() {
+      count += 1
+    }
+
+    func value() -> Int {
+      count
+    }
+  }
+
+  private actor EmptyThenSuccessStub {
+    private var responseCount = 0
+
+    func respond(_ text: String) -> String {
+      if text.contains("토론을 시작") {
+        return "첫 질문입니다."
+      }
+      responseCount += 1
+      return responseCount == 1 ? " \n " : "두 번째 시도 답변입니다."
+    }
+  }
+
+  private actor ReentryStartStub {
+    private var starts = 0
+
+    func start() throws {
+      starts += 1
+      if starts == 2 {
+        throw ClassAIChatError.modelNotReady
+      }
+    }
+  }
+
+  private actor DelayedResponseStub {
+    private var response: CheckedContinuation<String, Never>?
+    private var started: CheckedContinuation<Void, Never>?
+
+    func respond() async -> String {
+      await withCheckedContinuation { continuation in
+        response = continuation
+        started?.resume()
+        started = nil
+      }
+    }
+
+    func waitUntilStarted() async {
+      guard response == nil else { return }
+      await withCheckedContinuation { started = $0 }
+    }
+
+    func complete() {
+      response?.resume(returning: "늦은 성공 응답")
+      response = nil
+    }
+  }
+
   private actor FinalRoundRecorder {
     private var flags: [Bool] = []
 
@@ -191,7 +249,7 @@ struct ClassAIChatTests {
     store.exhaustivity = .off
     await store.send(.view(.onAppear))
     let failedID = try #require(store.state.sessionRequestID)
-    await store.receive(\.inner, .sessionFailed(failedID, ClassAIChatError.modelNotReady.localizedDescription, true))
+    await store.receive(\.inner, .sessionFailed(failedID, .modelNotReady))
     #expect(store.state.canRetrySession)
     await store.send(.view(.retryTapped))
     let retryID = try #require(store.state.sessionRequestID)
@@ -215,9 +273,7 @@ struct ClassAIChatTests {
     store.exhaustivity = .off
     await store.send(.view(.onAppear))
     let failedID = try #require(store.state.sessionRequestID)
-    await store.receive(\.inner, .sessionFailed(
-      failedID, ClassAIChatError.appleIntelligenceNotEnabled.localizedDescription, true
-    ))
+    await store.receive(\.inner, .sessionFailed(failedID, .appleIntelligenceNotEnabled))
     #expect(store.state.canRetrySession)
   }
 
@@ -406,10 +462,7 @@ struct ClassAIChatTests {
     await store.send(.view(.draftChanged("제 생각")))
     await store.send(.view(.sendTapped))
     let failedRequestID = try #require(store.state.responseRequestID)
-    await store.receive(\.inner, .responseFailed(
-      failedRequestID,
-      ClassAIChatError.alreadyResponding.localizedDescription
-    ))
+    await store.receive(\.inner, .responseFailed(failedRequestID, .alreadyResponding))
     #expect(store.state.draft == "제 생각")
     #expect(store.state.round == 1)
     #expect(store.state.errorMessage != nil)
@@ -454,5 +507,393 @@ struct ClassAIChatTests {
     await store.send(.inner(.responseReceived(staleID, ["늦은 답변"])))
     #expect(store.state.messages.last?.text != "늦은 답변")
     #expect(store.state.round == 1)
+  }
+
+  @Test
+  func 취소를_무시한_의존성이_늦게_성공해도_응답_액션을_보내지_않는다() async throws {
+    let delayed = DelayedResponseStub()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, text, _ in
+          if text.contains("토론을 시작") {
+            return "첫 질문입니다."
+          }
+          return await delayed.respond()
+        },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let openingID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(openingID, ["첫 질문입니다."]))
+    await store.send(.view(.draftChanged("제 생각")))
+    await store.send(.view(.sendTapped))
+    await delayed.waitUntilStarted()
+    await store.send(.view(.onDisappear))
+    await delayed.complete()
+    await store.finish(timeout: .seconds(1))
+
+    #expect(store.state.messages.map(\.text) == ["첫 질문입니다."])
+    #expect(store.state.draft == "제 생각")
+    #expect(store.state.round == 1)
+  }
+
+  @Test
+  func 재진입은_완료된_대화만_전달하고_첫_질문을_반복하지_않는다() async throws {
+    let recorder = ContextRecorder()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, context in await recorder.record(context) },
+        respond: { _, text, _ in
+          text.contains("토론을 시작") ? "첫 질문입니다." : "첫 답변입니다."
+        },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let openingID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(openingID, ["첫 질문입니다."]))
+    await store.send(.view(.draftChanged("제 주장입니다")))
+    await store.send(.view(.sendTapped))
+    let responseID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseReceived(responseID, ["첫 답변입니다."]))
+    let completed = store.state.messages
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    let reentryID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(reentryID, []))
+
+    #expect(await recorder.value()?.priorMessages == completed)
+    #expect(store.state.messages == completed)
+    #expect(store.state.round == 2)
+  }
+
+  @Test
+  func 거절된_입력은_같은_초안으로_다시_보내지_못하고_재진입에도_유지된다() async throws {
+    let recorder = ContextRecorder()
+    let calls = CallCounter()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, context in await recorder.record(context) },
+        respond: { _, text, _ in
+          await calls.record()
+          if text.contains("토론을 시작") {
+            return "첫 질문입니다."
+          }
+          throw ClassAIChatError.contentRejected
+        },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let openingID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(openingID, ["첫 질문입니다."]))
+    await store.send(.view(.draftChanged("거절된 입력")))
+    await store.send(.view(.sendTapped))
+    let responseID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseFailed(responseID, .contentRejected))
+    #expect(await calls.value() == 2)
+    #expect(store.state.draft == "거절된 입력")
+    #expect(store.state.round == 1)
+    #expect(!store.state.canSend)
+    #expect(store.state.errorMessage == ClassAIChatError.contentRejected.localizedDescription)
+    await store.send(.view(.draftChanged("거절된 입력")))
+    await store.send(.view(.sendTapped))
+    #expect(await calls.value() == 2)
+    #expect(!store.state.canSend)
+    #expect(store.state.errorMessage != nil)
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    let reentryID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(reentryID, []))
+    #expect(await calls.value() == 2)
+    #expect(await recorder.value()?.priorMessages.map(\.text) == ["첫 질문입니다."])
+    #expect(store.state.errorMessage != nil)
+    #expect(!store.state.canSend)
+    await store.send(.view(.draftChanged("수정한 입력")))
+    #expect(store.state.canSend)
+    #expect(store.state.errorMessage == nil)
+  }
+
+  @Test
+  func 거절_후_재진입_준비가_한번_실패해도_재시도_성공시_거절_문구를_복구한다() async throws {
+    let starts = ReentryStartStub()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in try await starts.start() },
+        respond: { _, text, _ in
+          if text.contains("토론을 시작") {
+            return "첫 질문입니다."
+          }
+          throw ClassAIChatError.contentRejected
+        },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let openingID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(openingID, ["첫 질문입니다."]))
+    await store.send(.view(.draftChanged("거절된 입력")))
+    await store.send(.view(.sendTapped))
+    let blockedID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseFailed(blockedID, .contentRejected))
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    let failedReentryID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionFailed(failedReentryID, .modelNotReady))
+    #expect(store.state.canRetrySession)
+    #expect(store.state.errorMessage == ClassAIChatError.modelNotReady.localizedDescription)
+    await store.send(.view(.retryTapped))
+    let retryID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(retryID, []))
+    #expect(store.state.errorMessage == ClassAIChatError.contentRejected.localizedDescription)
+    #expect(store.state.draft == "거절된 입력")
+    #expect(!store.state.canSend)
+  }
+
+  @Test
+  func 첫_질문_거절은_재진입해도_자동_재시도하지_않는다() async throws {
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in throw ClassAIChatError.contentRejected },
+        respond: { _, _, _ in "" },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let requestID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionFailed(requestID, .contentRejected))
+    #expect(store.state.isTerminal)
+    #expect(!store.state.canRetrySession)
+    #expect(store.state.errorMessage?.contains("첫 질문") == true)
+    #expect(store.state.errorMessage?.contains("최종투표") == true)
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    #expect(store.state.sessionRequestID == nil)
+    #expect(store.state.isTerminal)
+  }
+
+  @Test
+  func 긴_입력은_초안과_라운드를_보존하고_모델에_전송하지_않는다() async {
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.hasStarted = true
+    state.messages = [.init(speaker: .opponent, text: "첫 질문입니다.")]
+    state.draft = String(repeating: "가", count: 241)
+    let store = TestStore(initialState: state) { ClassAIChatFeature() }
+
+    await store.send(.view(.sendTapped)) {
+      $0.errorMessage = "240자 이내로 줄여 주세요."
+    }
+    #expect(store.state.draft.count == 241)
+    #expect(store.state.messages.count == 1)
+    #expect(store.state.round == 1)
+    #expect(store.state.responseRequestID == nil)
+  }
+
+  @Test
+  func 빈_응답은_초안을_복구하고_명시적인_재전송만_허용한다() async throws {
+    let stub = EmptyThenSuccessStub()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, text, _ in await stub.respond(text) }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let openingID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(openingID, ["첫 질문입니다."]))
+    await store.send(.view(.draftChanged("제 생각")))
+    await store.send(.view(.sendTapped))
+    let responseID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseFailed(responseID, .emptyResponse))
+    #expect(store.state.draft == "제 생각")
+    #expect(store.state.round == 1)
+    #expect(store.state.canSend)
+    #expect(store.state.messages.map(\.text) == ["첫 질문입니다."])
+    await store.send(.view(.sendTapped))
+    let retryID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseReceived(retryID, ["두 번째 시도 답변입니다."]))
+    #expect(store.state.round == 2)
+    #expect(store.state.draft.isEmpty)
+  }
+
+  @Test
+  func 응답_모델_준비_오류는_자동_재호출_없이_사용자_재전송으로_복구한다() async throws {
+    let requestID = UUID()
+    let calls = CallCounter()
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.hasStarted = true
+    state.isGenerating = true
+    state.responseRequestID = requestID
+    state.pendingText = "제 주장"
+    state.messages = [
+      .init(speaker: .opponent, text: "첫 질문"),
+      .init(speaker: .user, text: "제 주장"),
+    ]
+    let store = TestStore(initialState: state) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, _, _ in
+          await calls.record()
+          return "복구한 답변"
+        }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.responseFailed(requestID, .modelNotReady)))
+    #expect(await calls.value() == 0)
+    #expect(store.state.canSend)
+    #expect(store.state.draft == "제 주장")
+    await store.send(.view(.sendTapped))
+    let retryID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseReceived(retryID, ["복구한 답변"]))
+    #expect(await calls.value() == 1)
+    #expect(store.state.round == 2)
+  }
+
+  @Test
+  func 응답_한국어_미지원은_토론을_종료하고_최종투표를_안내한다() async {
+    let requestID = UUID()
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.hasStarted = true
+    state.isGenerating = true
+    state.responseRequestID = requestID
+    state.pendingText = "제 주장"
+    state.messages = [
+      .init(speaker: .opponent, text: "첫 질문"),
+      .init(speaker: .user, text: "제 주장"),
+    ]
+    let store = TestStore(initialState: state) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, _ in }, respond: { _, _, _ in "" }, end: { _ in })
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.responseFailed(requestID, .unsupportedLanguage)))
+    #expect(store.state.isTerminal)
+    #expect(!store.state.isModelAvailable)
+    #expect(store.state.errorMessage?.contains("최종투표") == true)
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    #expect(store.state.sessionRequestID == nil)
+  }
+
+  @Test
+  func 재진입_후_세번째_라운드만_마무리_신호를_전달한다() async throws {
+    let flags = FinalRoundRecorder()
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.round = 3
+    state.messages = [
+      .init(speaker: .opponent, text: "첫 질문"),
+      .init(speaker: .user, text: "첫 주장"),
+      .init(speaker: .opponent, text: "두번째 답변"),
+    ]
+    let store = TestStore(initialState: state) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, _, isFinalRound in
+          await flags.record(isFinalRound)
+          return "마지막 답변"
+        },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let reentryID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(reentryID, []))
+    await store.send(.view(.draftChanged("마지막 주장")))
+    await store.send(.view(.sendTapped))
+    let responseID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseReceived(responseID, ["마지막 답변"]))
+    #expect(await flags.values() == [true])
+    #expect(store.state.isCompleted)
+  }
+
+  @Test
+  func 재진입_세션의_종료_오류는_첫_질문_오류로_표시하지_않는다() async throws {
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.messages = [.init(speaker: .opponent, text: "이미 받은 첫 질문")]
+    let store = TestStore(initialState: state) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in throw ClassAIChatError.unsupportedLanguage },
+        respond: { _, _, _ in "" }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let requestID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionFailed(requestID, .unsupportedLanguage))
+    #expect(store.state.isTerminal)
+    #expect(store.state.errorMessage == ClassAIChatError.unsupportedLanguage.localizedDescription)
+    #expect(store.state.messages.map(\.text) == ["이미 받은 첫 질문"])
+  }
+
+  @Test
+  func 문맥_초과는_최종투표_안내를_남기고_재진입을_막는다() async {
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    let requestID = UUID()
+    state.hasStarted = true
+    state.isGenerating = true
+    state.responseRequestID = requestID
+    state.pendingText = "제 주장"
+    state.messages = [
+      .init(speaker: .opponent, text: "첫 질문"),
+      .init(speaker: .user, text: "제 주장"),
+    ]
+    let store = TestStore(initialState: state) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, _ in }, respond: { _, _, _ in "" }, end: { _ in })
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.responseFailed(requestID, .contextExhausted)))
+    #expect(store.state.draft == "제 주장")
+    #expect(store.state.isTerminal)
+    #expect(!store.state.isModelAvailable)
+    #expect(store.state.errorMessage?.contains("최종투표") == true)
+    await store.send(.view(.draftChanged("제 주장")))
+    #expect(store.state.errorMessage?.contains("최종투표") == true)
+    await store.send(.view(.onDisappear))
+    await store.send(.view(.onAppear))
+    #expect(store.state.sessionRequestID == nil)
   }
 }
