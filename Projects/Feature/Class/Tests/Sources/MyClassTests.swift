@@ -17,6 +17,7 @@ struct MyClassTests {
   func 진행_상태로_필터링한다() async {
     var state = MyClassFeature.State()
     state.rooms = ClassRoom.mocks
+    state.viewState = .loaded
     let store = TestStore(initialState: state) {
       MyClassFeature()
     }
@@ -38,6 +39,7 @@ struct MyClassTests {
   func 클래스를_누르면_해당_방을_델리게이트로_전달한다() async {
     var state = MyClassFeature.State()
     state.rooms = ClassRoom.mocks
+    state.viewState = .loaded
     let store = TestStore(initialState: state) {
       MyClassFeature()
     }
@@ -50,6 +52,7 @@ struct MyClassTests {
   func 카드_더보기는_목록_위에_기존_관리_모달을_연다() async {
     var state = MyClassFeature.State()
     state.rooms = ClassRoom.mocks
+    state.viewState = .loaded
     let store = TestStore(initialState: state) {
       MyClassFeature()
     }
@@ -69,6 +72,7 @@ struct MyClassTests {
   func 운영자_관리_메뉴의_수정_경로와_권한_검사를_유지한다() async {
     var state = MyClassFeature.State()
     state.rooms = [ClassRoom.mocks[0], .mockJoinable]
+    state.viewState = .loaded
     let store = TestStore(initialState: state) { MyClassFeature() }
 
     await store.send(.view(.managementTapped(999)))
@@ -110,6 +114,7 @@ struct MyClassTests {
   func 운영자_삭제_확인은_선택한_원래_방에만_적용된다() async {
     var state = MyClassFeature.State()
     state.rooms = ClassRoom.mocks
+    state.viewState = .loaded
     state.selectedRoomID = 1
     let store = TestStore(initialState: state) { MyClassFeature() }
 
@@ -136,6 +141,7 @@ struct MyClassTests {
     let repository = MockClassRepository(rooms: ClassRoom.mocks, availableRooms: [])
     var state = MyClassFeature.State()
     state.rooms = ClassRoom.mocks
+    state.viewState = .loaded
     state.selectedRoomID = 1
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
       $0.classUseCase = repository
@@ -185,6 +191,7 @@ struct MyClassTests {
   func 학생은_진행중이거나_종료된_방의_관리_메뉴를_연다() async {
     var state = MyClassFeature.State()
     state.rooms = [.mockJoinable, .mockClosedSociety]
+    state.viewState = .loaded
     let store = TestStore(initialState: state) { MyClassFeature() }
 
     for room in state.rooms {
@@ -204,6 +211,7 @@ struct MyClassTests {
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
     var state = MyClassFeature.State()
     state.rooms = [room, .mockClosedSociety]
+    state.viewState = .loaded
     state.selectedRoomID = room.id
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
       $0.classUseCase = repository
@@ -257,6 +265,7 @@ struct MyClassTests {
     let repository = MockClassRepository(rooms: [])
     var state = MyClassFeature.State()
     state.rooms = [room]
+    state.viewState = .loaded
     state.selectedRoomID = room.id
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
       $0.classUseCase = repository
@@ -293,14 +302,66 @@ struct MyClassTests {
   @Test
   func 로딩_중이고_클래스가_없으면_스켈레톤을_보여주고_실패하면_오류로_바꾼다() {
     var state = MyClassFeature.State()
+    #expect(state.viewState == .loading)
     state.isLoading = true
     #expect(state.viewState == .loading)
 
-    state.isLoading = false
-    state.errorMessage = "error"
+    state.viewState = .error
     #expect(state.viewState == .error)
 
     state.rooms = ClassRoom.mocks
-    #expect(state.viewState == .loaded(ClassRoom.mocks))
+    state.viewState = .loaded
+    #expect(state.viewState == .loaded)
+  }
+
+  @Test
+  func 첫_조회가_빈_결과로_끝난_뒤에만_빈_상태를_보여준다() async {
+    let store = TestStore(initialState: MyClassFeature.State()) { MyClassFeature() }
+    #expect(store.state.viewState == .loading)
+
+    await store.send(.inner(.roomsResponse(0, .success([])))) {
+      $0.viewState = .empty
+    }
+    #expect(store.state.viewState == .empty)
+  }
+
+  @Test
+  func 마지막_방을_삭제하면_재조회_중에도_빈_상태를_유지한다() async {
+    let repository = MockClassRepository(rooms: [], availableRooms: [])
+    var state = MyClassFeature.State()
+    state.rooms = [ClassRoom.mocks[0]]
+    state.viewState = .loaded
+    state.isDeleting = true
+    let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
+      $0.classUseCase = repository
+    }
+
+    await store.send(.inner(.deleted(.success(ClassRoom.mocks[0].id)))) {
+      $0.isDeleting = false
+      $0.rooms = []
+      $0.viewState = .empty
+    }
+    await store.receive(\.async, .fetchRooms) {
+      $0.fetchGeneration = 1
+      $0.isLoading = true
+    }
+    #expect(store.state.viewState == .empty)
+    await store.receive(\.inner, .roomsResponse(1, .success([]))) {
+      $0.isLoading = false
+    }
+  }
+
+  @Test
+  func 빈_목록의_새로고침_실패는_빈_상태를_보존한다() async {
+    var state = MyClassFeature.State()
+    state.viewState = .empty
+    state.isLoading = true
+    let store = TestStore(initialState: state) { MyClassFeature() }
+
+    await store.send(.inner(.roomsResponse(0, .failure(.invalidCode)))) {
+      $0.isLoading = false
+      $0.errorMessage = ClassError.invalidCode.message
+    }
+    #expect(store.state.viewState == .empty)
   }
 }

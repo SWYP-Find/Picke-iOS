@@ -51,7 +51,10 @@ private extension ClassAIVoteView {
   }
 
   @ViewBuilder
-  func artwork(width: CGFloat, height: CGFloat) -> some View {
+  func artwork(
+    width: CGFloat,
+    height: CGFloat
+  ) -> some View {
     Group {
       if store.room.battle.thumbnailURL == nil {
         Image(asset: .classAIVoteArtwork)
@@ -106,17 +109,17 @@ private extension ClassAIVoteView {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.bottom, 26)
 
-      voteOptions()
+      participationContent()
         .padding(.bottom, 22)
 
-      if let errorMessage = store.errorMessage {
+      if store.viewState == .loaded, let errorMessage = store.errorMessage {
         Text(errorMessage)
           .pretendardFont(.regular13)
           .foregroundStyle(.primary500)
           .padding(.bottom, 8)
       }
 
-      Button(store.hasSubmitted ? "의견 보기" : "투표하기") {
+      Button(store.submitTitle) {
         send(.submitTapped)
       }
       .ctaButtonStyle(.primary, size: .large, height: 52)
@@ -128,6 +131,32 @@ private extension ClassAIVoteView {
     .padding(.horizontal, 16)
     .padding(.bottom, 16)
     .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  @ViewBuilder
+  func participationContent() -> some View {
+    switch store.viewState {
+    case .loading:
+      HStack(spacing: 8) {
+        SkeletonView(.rect)
+        SkeletonView(.rect)
+      }
+      .frame(height: 78)
+      .accessibilityLabel("투표 상태를 불러오는 중")
+    case .error:
+      VStack(spacing: 10) {
+        Text("투표 상태를 불러오지 못했어요")
+          .pretendardFont(.regular13)
+          .foregroundStyle(.gray500)
+        Button("다시 시도") { send(.retryTapped) }
+          .pretendardFont(.semiBold13)
+          .foregroundStyle(.primary500)
+      }
+      .frame(maxWidth: .infinity)
+      .frame(minHeight: 78)
+    case .loaded:
+      voteOptions()
+    }
   }
 
   @ViewBuilder
@@ -155,7 +184,11 @@ private extension ClassAIVoteView {
     }
   }
 
-  func optionCard(id: Int, title: String, subtitle: String) -> some View {
+  func optionCard(
+    id: Int,
+    title: String,
+    subtitle: String
+  ) -> some View {
     let isSelected = store.selectedOptionID == id
     return Button { send(.optionTapped(id)) } label: {
       VStack(spacing: 5) {

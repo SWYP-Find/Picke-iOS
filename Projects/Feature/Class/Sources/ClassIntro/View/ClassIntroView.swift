@@ -41,15 +41,6 @@ public struct ClassIntroView: View {
     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
     .background(backgroundImage())
     .toolbar(.hidden, for: .navigationBar)
-    .pickeModal(
-      $store.scope(
-        state: \.join,
-        action: \.join
-      ),
-      dimOpacity: 0.28
-    ) { joinStore in
-      ClassJoinView(store: joinStore)
-    }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }

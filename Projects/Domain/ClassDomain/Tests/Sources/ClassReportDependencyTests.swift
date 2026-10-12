@@ -20,11 +20,11 @@ struct ClassReportDependencyTests {
       .teacherSummary: "“왜 생각이 달라졌는지 자신의 말로 설명한 점이 좋았어요”",
       .commentStance: "낮춰야한다",
       .commentDate: "26.09.23. 14:02",
-      .commentBody: "제도화가 무서운 건, 사회적 압력이 '선택'을 '의무'로 바꿀 수 있다는 거예요. 네덜란드 사례를 보면 우려가 현실이 되고 있죠.",
+      .commentBody: "촉법소년 연령을 낮추는 것만으로는 재범을 막기 어려워요. 피해자를 보호하면서 교육과 교정도 함께 해야 한다고 생각해요.",
       .commentLikes: "1,340",
       .commentReplies: "23",
       .replyAuthor: "김민지 · 교정이 우선이다",
-      .replyParent: "제도화가 무서운 건, 사회적 압력이 '선택'을 '의무'로 바꿀 수 있다는 거예요.",
+      .replyParent: "촉법소년 연령을 낮추는 것만으로는 재범을 막기 어려워요.",
       .replyBody: "토론을 들으면서 처벌만으로는 해결되지 않는 점을 이해하게 됐어요. 교육과 보호도 함께 필요하다고 생각해요.",
       .replyDate: "26.09.23. 14:02",
       .replyLikes: "12",
@@ -74,7 +74,7 @@ struct ClassReportDependencyTests {
     #expect(MockClassOwnerDashboard.figma.members.count == 32)
     #expect(MockClassOwnerDashboard.figma.opinions.count == 3)
     #expect(MockClassOwnerDashboard.figma.insight ==
-      "처음에는 뫼르소의 태도를 비난할 수 있다는 의견이 많았지만, 대화 후에는 행동과 감정을 분리해서 봐야 한다는 의견이 늘어났어요.")
+      "촉법소년 연령 하향에 관한 의견과 함께 피해자 보호, 교육 및 교정의 필요성을 논의했어요.")
     let ownerReport = try #require(MockClassOwnerDashboard.figma.report)
     let memberReport = MockClassReport.figma
     #expect(ownerReport[.aiSummaryDetail] == MockClassOwnerDashboard.figma.insight)

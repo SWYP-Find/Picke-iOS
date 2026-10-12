@@ -95,9 +95,9 @@ private extension MyClassView {
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
         .frame(maxWidth: .infinity, minHeight: 160)
-    case let .loaded(rooms):
+    case .loaded:
       LazyVStack(spacing: 12) {
-        ForEach(rooms) { room in
+        ForEach(store.visibleRooms) { room in
           MyClassRoomCard(
             room: room,
             onOpen: { send(.roomTapped(room.id)) },

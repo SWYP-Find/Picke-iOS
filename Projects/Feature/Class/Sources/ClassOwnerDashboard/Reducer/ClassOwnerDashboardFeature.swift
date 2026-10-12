@@ -8,6 +8,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeCoreUtility
 
 @Reducer
 public struct ClassOwnerDashboardFeature {
@@ -38,7 +39,7 @@ public struct ClassOwnerDashboardFeature {
       case loaded([ClassOwnerMember])
     }
 
-    public let room: ClassRoom
+    public var room: ClassRoom
     public let instanceID: UUID
     public var selectedTab: ClassOwnerTab = .home
     public var showsMyOpinions = false
@@ -48,12 +49,22 @@ public struct ClassOwnerDashboardFeature {
     public var searchText = ""
     public var members: [ClassOwnerMember] = []
     public var opinions: [ClassOwnerOpinion] = []
-    public var insight: String?
+    public var dashboard: ClassOwnerDashboardData?
+    public var insightContext: ClassAIFeedbackContext?
+    public var feedbackContext: ClassAIFeedbackContext?
+    public var generatedInsight: String?
+    public var generatedFeedback: ClassAIPersonalFeedback?
+    public var insightError: ClassAIFeedbackError?
+    public var feedbackError: ClassAIFeedbackError?
+    public var insightRequestID: UUID?
+    public var feedbackRequestID: UUID?
+    public var isGeneratingInsight = false
+    public var isGeneratingFeedback = false
+    public var insightUnknownRetryCount = 0
+    public var feedbackUnknownRetryCount = 0
     public var report: ClassReport?
     public var metrics: ClassParticipationMetrics?
-    public var hasLoaded = false
-    public var isLoading = false
-    public var loadFailed = false
+    public var sourceViewState: ClassOwnerDashboardSourceViewState = .loading
     public var requestID: UUID?
     @Presents public var management: ClassModalFeature.State?
 
@@ -64,6 +75,51 @@ public struct ClassOwnerDashboardFeature {
       @Dependency(\.uuid) var uuid
       self.room = room
       self.instanceID = instanceID ?? uuid()
+    }
+
+    public var deadlineText: String {
+      guard room.deadline != .distantFuture else { return "마감일 없음" }
+      return room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
+    }
+
+    public var insightViewState: ClassOwnerDashboardInsightViewState {
+      if let generatedInsight {
+        return .ready(generatedInsight)
+      }
+      if isGeneratingInsight {
+        return .loading
+      }
+      if let insightError, insightError.isRetryable {
+        return .retryableFailure
+      }
+      if let insightError, insightError != .insufficientInput, !insightError.isUnavailable {
+        return .failure
+      }
+      return .unavailable
+    }
+
+    public var feedbackViewState: ClassOwnerDashboardFeedbackViewState {
+      if let generatedFeedback {
+        return .ready(generatedFeedback)
+      }
+      if isGeneratingFeedback {
+        return .loading
+      }
+      if let feedbackError, feedbackError.isRetryable {
+        return .retryableFailure
+      }
+      if let feedbackError, feedbackError != .insufficientInput, !feedbackError.isUnavailable {
+        return .failure
+      }
+      return .unavailable
+    }
+
+    public var myOpinionCount: Int {
+      report?.myOpinions.count ?? 0
+    }
+
+    public var myOpinions: [String] {
+      report?.myOpinions ?? []
     }
 
     public var searchedMembers: [ClassOwnerMember] {
@@ -165,6 +221,8 @@ public struct ClassOwnerDashboardFeature {
   public enum View: Equatable {
     case onAppear
     case retryTapped
+    case insightRetryTapped
+    case feedbackRetryTapped
     case backTapped
     case managementTapped
     case managementDismissed
@@ -184,15 +242,33 @@ public struct ClassOwnerDashboardFeature {
   @CasePathable
   public enum AsyncAction: Equatable {
     case fetchDashboard
+    case generateInsight
+    case generatePersonal
   }
 
   @CasePathable
   public enum InnerAction: Equatable {
     case dashboardResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassOwnerDashboardData?, ClassError>)
+    case insightResponse(
+      instanceID: UUID,
+      requestID: UUID,
+      roomID: Int,
+      Result<ClassAIFeedbackResult, ClassAIFeedbackError>,
+      wasUnknown: Bool
+    )
+    case feedbackResponse(
+      instanceID: UUID,
+      requestID: UUID,
+      roomID: Int,
+      Result<ClassAIFeedbackResult, ClassAIFeedbackError>,
+      wasUnknown: Bool
+    )
   }
 
   public enum CancelID: Hashable, Sendable {
     case load(UUID)
+    case generate(UUID)
+    case generatePersonal(UUID)
   }
 
   public enum DelegateAction: Equatable {
@@ -205,6 +281,7 @@ public struct ClassOwnerDashboardFeature {
   }
 
   @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classAIFeedbackUseCase) private var classAIFeedbackUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -235,15 +312,30 @@ extension ClassOwnerDashboardFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      guard !state.hasLoaded, !state.isLoading else { return .none }
+      guard state.sourceViewState == .loading, state.requestID == nil else { return .none }
       return .send(.async(.fetchDashboard))
     case .retryTapped:
       return .send(.async(.fetchDashboard))
+    case .insightRetryTapped:
+      guard state.insightError?.isRetryable == true,
+            !state.isGeneratingInsight,
+            state.insightContext != nil else { return .none }
+      return .send(.async(.generateInsight))
+    case .feedbackRetryTapped:
+      guard state.feedbackError?.isRetryable == true,
+            !state.isGeneratingFeedback,
+            state.feedbackContext != nil else { return .none }
+      return .send(.async(.generatePersonal))
     case .backTapped:
       state.requestID = nil
-      state.isLoading = false
+      state.insightRequestID = nil
+      state.feedbackRequestID = nil
+      state.isGeneratingInsight = false
+      state.isGeneratingFeedback = false
       return .merge(
         .cancel(id: CancelID.load(state.instanceID)),
+        .cancel(id: CancelID.generate(state.instanceID)),
+        .cancel(id: CancelID.generatePersonal(state.instanceID)),
         .send(.delegate(.dismiss))
       )
     case .managementTapped:
@@ -290,11 +382,22 @@ extension ClassOwnerDashboardFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetchDashboard:
+      state.insightRequestID = nil
+      state.feedbackRequestID = nil
+      state.generatedInsight = nil
+      state.generatedFeedback = nil
+      state.insightContext = nil
+      state.feedbackContext = nil
+      state.insightError = nil
+      state.feedbackError = nil
+      state.isGeneratingInsight = false
+      state.isGeneratingFeedback = false
+      state.insightUnknownRetryCount = 0
+      state.feedbackUnknownRetryCount = 0
       let requestID = uuid()
       state.requestID = requestID
-      state.isLoading = true
-      state.loadFailed = false
-      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      state.sourceViewState = .loading
+      let fetch = Effect<Action>.run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
         let result = await Result {
           try await classUseCase.fetchOwnerDashboard(roomID: roomID)
         }
@@ -307,6 +410,89 @@ extension ClassOwnerDashboardFeature {
         )))
       }
       .cancellable(id: CancelID.load(state.instanceID), cancelInFlight: true)
+      return .concatenate(
+        .cancel(id: CancelID.generate(state.instanceID)),
+        .cancel(id: CancelID.generatePersonal(state.instanceID)),
+        fetch
+      )
+    case .generateInsight:
+      let context: ClassAIFeedbackContext
+      if let retained = state.insightContext {
+        context = retained
+      } else {
+        guard let dashboard = state.dashboard else { return .none }
+        do {
+          context = try .classInsight(room: state.room, dashboard: dashboard)
+          state.insightContext = context
+        } catch {
+          state.insightError = .insufficientInput
+          return .none
+        }
+      }
+      let requestID = uuid()
+      state.insightRequestID = requestID
+      state.insightError = nil
+      state.isGeneratingInsight = true
+      return .run { [classAIFeedbackUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        var wasUnknown = false
+        var wasCancelled = false
+        let result = await Result {
+          try await classAIFeedbackUseCase.generate(context: context)
+        }
+        .mapError { error in
+          wasCancelled = error is CancellationError
+          wasUnknown = !(error is ClassAIFeedbackError)
+          return (error as? ClassAIFeedbackError) ?? .temporarilyUnavailable
+        }
+        guard !Task.isCancelled, !wasCancelled else { return }
+        await send(.inner(.insightResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result,
+          wasUnknown: wasUnknown
+        )))
+      }
+      .cancellable(id: CancelID.generate(state.instanceID), cancelInFlight: true)
+    case .generatePersonal:
+      let context: ClassAIFeedbackContext
+      if let retained = state.feedbackContext {
+        context = retained
+      } else {
+        guard let report = state.dashboard?.report else { return .none }
+        do {
+          context = try .personal(room: state.room, report: report, isOwner: true)
+          state.feedbackContext = context
+        } catch {
+          state.feedbackError = .insufficientInput
+          return .none
+        }
+      }
+      let requestID = uuid()
+      state.feedbackRequestID = requestID
+      state.feedbackError = nil
+      state.isGeneratingFeedback = true
+      return .run { [classAIFeedbackUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        var wasUnknown = false
+        var wasCancelled = false
+        let result = await Result {
+          try await classAIFeedbackUseCase.generate(context: context)
+        }
+        .mapError { error in
+          wasCancelled = error is CancellationError
+          wasUnknown = !(error is ClassAIFeedbackError)
+          return (error as? ClassAIFeedbackError) ?? .temporarilyUnavailable
+        }
+        guard !Task.isCancelled, !wasCancelled else { return }
+        await send(.inner(.feedbackResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result,
+          wasUnknown: wasUnknown
+        )))
+      }
+      .cancellable(id: CancelID.generatePersonal(state.instanceID), cancelInFlight: true)
     }
   }
 
@@ -320,23 +506,69 @@ extension ClassOwnerDashboardFeature {
             state.requestID == requestID,
             state.room.id == roomID else { return .none }
       state.requestID = nil
-      state.hasLoaded = true
-      state.isLoading = false
       switch result {
       case let .success(dashboard):
+        state.dashboard = dashboard
         state.members = dashboard?.members ?? []
         state.opinions = dashboard?.opinions ?? []
-        state.insight = dashboard?.insight
         state.report = dashboard?.report
         state.metrics = dashboard?.metrics
-        state.loadFailed = false
+        state.sourceViewState = .ready
+        guard dashboard != nil else { return .none }
+        return .merge(.send(.async(.generateInsight)), .send(.async(.generatePersonal)))
       case .failure:
+        state.dashboard = nil
         state.members = []
         state.opinions = []
-        state.insight = nil
         state.report = nil
         state.metrics = nil
-        state.loadFailed = true
+        state.sourceViewState = .failed
+      }
+      return .none
+    case let .insightResponse(instanceID, requestID, roomID, result, wasUnknown):
+      guard state.instanceID == instanceID,
+            state.insightRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.insightRequestID = nil
+      state.isGeneratingInsight = false
+      switch result {
+      case let .success(result):
+        guard case let .classInsight(insight) = result else {
+          state.insightError = .generationFailed
+          return .none
+        }
+        state.generatedInsight = insight
+        state.insightError = nil
+      case let .failure(error):
+        if wasUnknown {
+          state.insightUnknownRetryCount += 1
+          state.insightError = state.insightUnknownRetryCount > 1 ? .generationFailed : .temporarilyUnavailable
+        } else {
+          state.insightError = error
+        }
+      }
+      return .none
+    case let .feedbackResponse(instanceID, requestID, roomID, result, wasUnknown):
+      guard state.instanceID == instanceID,
+            state.feedbackRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.feedbackRequestID = nil
+      state.isGeneratingFeedback = false
+      switch result {
+      case let .success(result):
+        guard case let .personal(feedback) = result, feedback.points.count == 3 else {
+          state.feedbackError = .generationFailed
+          return .none
+        }
+        state.generatedFeedback = feedback
+        state.feedbackError = nil
+      case let .failure(error):
+        if wasUnknown {
+          state.feedbackUnknownRetryCount += 1
+          state.feedbackError = state.feedbackUnknownRetryCount > 1 ? .generationFailed : .temporarilyUnavailable
+        } else {
+          state.feedbackError = error
+        }
       }
       return .none
     }

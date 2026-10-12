@@ -117,6 +117,8 @@ private extension ClassSettingView {
           displayedComponents: [.date, .hourAndMinute]
         )
         .datePickerStyle(.graphical)
+        .environment(\.timeZone, AppDateFormat.timeZone)
+        .environment(\.calendar, AppDateFormat.calendar)
         .tint(.primary500)
         .pickeCard(.beige50, border: .beige600)
       }

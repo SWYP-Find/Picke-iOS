@@ -61,41 +61,19 @@ struct ClassDetailTests {
   }
 
   @Test
-  func 선생님은_마감일을_수정할_수_있다() async {
+  func 선생님은_관리_모달을_닫고_마감일_편집을_상위에_요청한다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
       ClassDetailFeature()
     }
-    let updated = room.deadline.addingTimeInterval(86400)
 
+    await store.send(.view(.managementTapped)) {
+      $0.modal = .init(kind: .management)
+    }
     await store.send(.view(.deadlineTapped)) {
-      $0.modal = .init(kind: .deadline)
-    }
-    await store.send(.binding(.set(\.draftDeadline, updated))) {
-      $0.draftDeadline = updated
-    }
-    await store.send(.view(.deadlineSaved))
-    await store.receive(\.async, .updateDeadline(room.id, updated)) {
-      $0.isLoading = true
-    }
-    let updatedRoom = ClassRoom(
-      id: room.id,
-      name: room.name,
-      joinCode: room.joinCode,
-      battle: room.battle,
-      deadline: updated,
-      memberCount: room.memberCount,
-      role: room.role,
-      status: room.status,
-      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
-    )
-    await store.receive(\.inner, .deadlineUpdated(.success(updatedRoom))) {
-      $0.isLoading = false
-      $0.room = updatedRoom
-      $0.deadline = updated
       $0.modal = nil
     }
+    await store.receive(\.delegate, .openDeadline(room))
   }
 
   @Test
@@ -224,6 +202,32 @@ struct ClassDetailTests {
     await store.send(.dataUpdated(updated)) {
       $0.room = updated
     }
+  }
+
+  @Test
+  func 변경된_마감일은_상세_표시에_반영된다() async {
+    let room = ClassRoom.mocks[0]
+    let updated = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: .distantFuture,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates
+    )
+    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.dataUpdated(updated)) {
+      $0.room = updated
+    }
+    #expect(store.state.deadlineText == "마감일 없음")
   }
 
   @Test

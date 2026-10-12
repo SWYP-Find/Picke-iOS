@@ -51,7 +51,7 @@ struct ClassShareTests {
   }
 
   @Test
-  func 목_클래스에서는_이름_입력_모달을_먼저_띄운다() async {
+  func 목_클래스에서는_운영자_이름_경로를_요청한다() async {
     let repository = MockClassRepository(rooms: [room])
     let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
       ClassShareFeature()
@@ -59,17 +59,12 @@ struct ClassShareTests {
       $0.classMockRepository = repository
     }
 
-    await store.send(.view(.enterClassTapped)) {
-      $0.join = .init(mode: .ownerName, preview: room)
-    }
-    await store.send(.join(.presented(.view(.backTapped))))
-    await store.receive(\.join.presented.delegate.dismiss) {
-      $0.join = nil
-    }
+    await store.send(.view(.enterClassTapped))
+    await store.receive(\.delegate, .nameOwner(room))
   }
 
   @Test
-  func 운영자_이름_저장_후_상세_화면_이동을_위임한다() async {
+  func 이름_경로_요청은_공유_화면을_유지한다() async {
     let repository = MockClassRepository(rooms: [room])
     let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
       ClassShareFeature()
@@ -77,26 +72,8 @@ struct ClassShareTests {
       $0.classMockRepository = repository
     }
 
-    await store.send(.view(.enterClassTapped)) {
-      $0.join = .init(mode: .ownerName, preview: room)
-    }
-    await store.send(.join(.presented(.binding(.set(\.nickname, " 선생님 "))))) {
-      $0.join?.nickname = " 선생님 "
-    }
-    await store.send(.join(.presented(.view(.joinTapped))))
-    await store.receive(\.join.presented.async, .nameOwner(roomID: room.id, nickname: "선생님")) {
-      $0.join?.isLoading = true
-    }
-    await store.receive(\.join.presented.inner, .ownerNamed(.success(room))) {
-      $0.join?.isLoading = false
-      $0.join?.preview = nil
-    }
-    await store.receive(\.join.presented.delegate.ownerNamed) {
-      $0.join = nil
-    }
-    await store.receive(\.delegate.enterClass, room)
-    let memberID = try? await repository.currentMemberID(roomID: room.id)
-    let members = try? await repository.fetchMembers(roomID: room.id)
-    #expect(members?.first(where: { $0.id == memberID })?.name == "선생님")
+    await store.send(.view(.enterClassTapped))
+    await store.receive(\.delegate, .nameOwner(room))
+    #expect(store.state.room == room)
   }
 }

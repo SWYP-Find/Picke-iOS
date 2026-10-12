@@ -33,8 +33,8 @@ public struct ClassRecommendFeature {
     public var questions: [ClassAIQuestion] = []
     public var selectedBattleId: Int?
     public var selectedQuestionId: Int?
+    public var viewState: ViewState = .loading
     public var isLoading = false
-    public var loadFailed = false
 
     public init(
       filter: ClassTopicFilter,
@@ -42,6 +42,10 @@ public struct ClassRecommendFeature {
     ) {
       self.filter = filter
       self.mode = mode
+      if mode == .aiQuestions {
+        questions = ClassAIQuestion.examples
+        viewState = questions.isEmpty ? .empty : .loaded
+      }
     }
 
     public var conditionTitles: [String] {
@@ -77,19 +81,6 @@ public struct ClassRecommendFeature {
 
     public var canSelect: Bool {
       mode == .aiQuestions ? selectedQuestion != nil : selectedBattle != nil
-    }
-
-    public var viewState: ViewState {
-      if mode == .aiQuestions {
-        return questions.isEmpty ? .empty : .loaded
-      }
-      if loadFailed && battles.isEmpty {
-        return .error
-      }
-      if isLoading && battles.isEmpty {
-        return .loading
-      }
-      return battles.isEmpty ? .empty : .loaded
     }
   }
 
@@ -166,9 +157,10 @@ extension ClassRecommendFeature {
         if state.questions.isEmpty {
           state.questions = ClassAIQuestion.examples
         }
+        state.viewState = state.questions.isEmpty ? .empty : .loaded
         return .none
       }
-      guard state.battles.isEmpty else { return .none }
+      guard state.viewState == .loading, !state.isLoading else { return .none }
       return .send(.async(.fetch(state.filter)))
 
     case .retryTapped:
@@ -191,6 +183,7 @@ extension ClassRecommendFeature {
       guard state.mode == .aiQuestions else { return .none }
       state.questions = Array(state.questions.dropFirst()) + state.questions.prefix(1)
       state.selectedQuestionId = nil
+      state.viewState = state.questions.isEmpty ? .empty : .loaded
       return .none
 
     case .previewTapped:
@@ -213,7 +206,9 @@ extension ClassRecommendFeature {
     switch action {
     case let .fetch(filter):
       state.isLoading = true
-      state.loadFailed = false
+      if state.viewState == .loading || state.viewState == .error {
+        state.viewState = .loading
+      }
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.fetchRecommendedBattles(filter: filter)
@@ -235,8 +230,11 @@ extension ClassRecommendFeature {
       switch result {
       case let .success(battles):
         state.battles = battles
+        state.viewState = battles.isEmpty ? .empty : .loaded
       case .failure:
-        state.loadFailed = true
+        if state.viewState == .loading {
+          state.viewState = .error
+        }
       }
       return .none
     }

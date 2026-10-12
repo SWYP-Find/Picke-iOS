@@ -76,6 +76,7 @@ struct ClassRecommendTests {
     ))) {
       $0.isLoading = false
       $0.battles = ClassBattleSummary.mocks.filter { $0.level == .middle }
+      $0.viewState = .loaded
     }
   }
 
@@ -84,6 +85,7 @@ struct ClassRecommendTests {
     let battle = ClassBattleSummary.mocks[0]
     var state = ClassRecommendFeature.State(filter: .init())
     state.battles = [battle]
+    state.viewState = .loaded
     let store = TestStore(initialState: state) {
       ClassRecommendFeature()
     }
@@ -99,6 +101,7 @@ struct ClassRecommendTests {
   func 선택한_배틀을_다시_누르면_선택이_해제된다() async {
     var state = ClassRecommendFeature.State(filter: .init())
     state.battles = ClassBattleSummary.mocks
+    state.viewState = .loaded
     state.selectedBattleId = 101
     let store = TestStore(initialState: state) {
       ClassRecommendFeature()
@@ -113,15 +116,40 @@ struct ClassRecommendTests {
   @Test
   func 로딩_중이고_배틀이_없으면_스켈레톤을_보여주고_실패하면_오류로_바꾼다() {
     var state = ClassRecommendFeature.State(filter: .init())
+    #expect(state.viewState == .loading)
     state.isLoading = true
     #expect(state.viewState == .loading)
 
-    state.isLoading = false
-    state.loadFailed = true
+    state.viewState = .error
     #expect(state.viewState == .error)
 
     state.battles = ClassBattleSummary.mocks
+    state.viewState = .loaded
     #expect(state.viewState == .loaded)
+  }
+
+  @Test
+  func AI_예시는_첫_화면부터_준비되고_빈_배틀_결과는_조회_완료_후에만_표시된다() {
+    let ai = ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)
+    #expect(ai.questions == ClassAIQuestion.examples)
+    #expect(ai.viewState == .loaded)
+
+    var existing = ClassRecommendFeature.State(filter: .init())
+    #expect(existing.viewState == .loading)
+    existing.viewState = .empty
+    #expect(existing.viewState == .empty)
+  }
+
+  @Test
+  func 빈_추천_결과를_받아도_화면_재등장은_자동으로_재조회하지_않는다() async {
+    let store = TestStore(initialState: ClassRecommendFeature.State(filter: .init())) {
+      ClassRecommendFeature()
+    }
+    await store.send(.inner(.battles(.success([])))) {
+      $0.viewState = .empty
+    }
+    #expect(store.state.viewState == .empty)
+    await store.send(.view(.onAppear))
   }
 
   @Test
@@ -131,9 +159,7 @@ struct ClassRecommendTests {
       ClassRecommendFeature()
     }
 
-    await store.send(.view(.onAppear)) {
-      $0.questions = ClassAIQuestion.examples
-    }
+    await store.send(.view(.onAppear))
     await store.send(.view(.questionTapped(1))) {
       $0.selectedQuestionId = 1
     }

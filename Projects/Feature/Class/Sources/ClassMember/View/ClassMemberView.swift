@@ -36,20 +36,16 @@ public struct ClassMemberView: View {
             .padding(.bottom, 4)
 
           switch store.viewState {
-          case .unavailable:
-            Text("멤버 목록을 불러올 수 없어요.")
-              .pretendardFont(family: .Medium, size: 14)
-              .foregroundStyle(.gray300)
-              .frame(maxWidth: .infinity)
-              .padding(.top, 72)
+          case .loading:
+            memberSkeleton()
+          case .error:
+            loadError()
+          case .empty:
+            emptyMessage("아직 참여한 멤버가 없어요.")
           case .noSearchResults:
-            Text("검색 결과가 없어요.")
-              .pretendardFont(family: .Medium, size: 14)
-              .foregroundStyle(.gray300)
-              .frame(maxWidth: .infinity)
-              .padding(.top, 72)
-          case let .members(members):
-            ForEach(members) { member in
+            emptyMessage("검색 결과가 없어요.")
+          case .loaded:
+            ForEach(store.visibleMembers) { member in
               memberRow(member)
             }
           }
@@ -86,6 +82,40 @@ public struct ClassMemberView: View {
 #endif
 
 private extension ClassMemberView {
+  @ViewBuilder
+  func memberSkeleton() -> some View {
+    ForEach(0 ..< 5, id: \.self) { _ in
+      HStack(spacing: 12) {
+        SkeletonView(.circle)
+          .frame(width: 36, height: 36)
+        SkeletonView(.round(cornerRadius: 2))
+          .frame(width: 112, height: 18)
+        Spacer(minLength: 0)
+      }
+      .frame(height: 68)
+      .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
+      .accessibilityHidden(true)
+    }
+  }
+
+  @ViewBuilder
+  func loadError() -> some View {
+    VStack(spacing: 12) {
+      emptyMessage("멤버 목록을 불러올 수 없어요.")
+      Button("다시 시도하기") { send(.retryTapped) }
+        .pretendardFont(family: .SemiBold, size: 14)
+        .foregroundStyle(.primary500)
+    }
+  }
+
+  func emptyMessage(_ message: String) -> some View {
+    Text(message)
+      .pretendardFont(family: .Medium, size: 14)
+      .foregroundStyle(.gray300)
+      .frame(maxWidth: .infinity)
+      .padding(.top, 72)
+  }
+
   var searchField: some View {
     HStack(spacing: 8) {
       Image(systemName: "magnifyingglass")

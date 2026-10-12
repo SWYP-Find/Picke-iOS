@@ -8,6 +8,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeCoreUtility
 import PickeSharedUI
 
 @Reducer
@@ -49,7 +50,7 @@ public struct ClassSettingFeature {
     }
 
     public var deadlineText: String {
-      Self.deadlineFormatter.string(from: deadline)
+      deadline.formatted(.fullKoreanDateTime)
     }
 
     public var heading: String {
@@ -124,13 +125,6 @@ public struct ClassSettingFeature {
     private var trimmedName: String {
       name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
-
-    private static let deadlineFormatter: DateFormatter = {
-      let formatter = DateFormatter()
-      formatter.locale = Locale(identifier: "ko_KR")
-      formatter.dateFormat = "yyyy년 MM월 dd일 HH:mm"
-      return formatter
-    }()
   }
 
   public enum Action: ViewAction, BindableAction {

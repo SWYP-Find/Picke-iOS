@@ -49,7 +49,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       var state = ClassCoordinator.State()
       state.routes.push(.detail(.init(room: room)))
       if isAI {
-        state.routes.push(.aiVote(.init(room: room, battleID: battleID)))
+        state.routes.push(.aiVote(.init(room: room, battleID: battleID, instanceID: UUID())))
         state.routes.push(.aiChat(.init(room: room, battleID: battleID, selectedOptionID: 1)))
       }
       state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
@@ -64,6 +64,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.perspectiveUseCase, session)
           .dependency(\.commentUseCase, session)
           .dependency(\.classAIChatUseCase, MockClassAIChatUseCase())
+          .dependency(\.classAIFeedbackUseCase, Self.visualAIFeedbackUseCase())
           .dependency(\.analyticsUseCase, .testValue)
           .dependency(\.shareUseCase, .testValue)
       }
@@ -93,11 +94,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       do {
         try await waitForClassAudit("loaded report after route replacement") {
           guard case let .report(report)? = store.routes.last?.screen else { return false }
-          return report.hasLoaded && !report.isLoading && !report.loadFailed
+          if case .ready = report.feedbackViewState {
+            return report.sourceViewState == .ready
+          }
+          return false
         }
       } catch {
         let routeDescription = if case let .report(report)? = store.routes.last?.screen {
-          "report loaded=\(report.hasLoaded), loading=\(report.isLoading), failed=\(report.loadFailed)"
+          "report source=\(report.sourceViewState), request=\(String(describing: report.requestID))"
         } else {
           "last route is not report"
         }
@@ -148,7 +152,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         finalVoteLeading: fixture.finalVoteLeading,
         layout: layout
       )
-      state.hasLoaded = true
+      state.sourceViewState = .ready
+      state.feedback = Self.visualPersonalFeedback
       state.selectedTab = .summary
       let store = Store(initialState: state) { ClassReportFeature() }
       let (_, bottomImage) = try await capture(
@@ -177,6 +182,159 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         XCTAssertTrue(text.contains("피드백"), "Tabbed page links missing: \(text)")
       }
     }
+  }
+
+  @MainActor
+  func testClassAIFeedbackStatusFrames() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture generated-feedback statuses")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func saveStatus(_ name: String, view: AnyView, unavailableText: String?) async throws {
+      let (image, _) = try await capture(view, ready: nil, includeScrollBottom: false)
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name + " (seeded AI status; no model call)"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      if let unavailableText {
+        let text = try recognizedAuditText(in: image, name: name)
+        XCTAssertTrue(text.contains(unavailableText), "Expected AI unavailable message in pixels: \(text)")
+      }
+    }
+
+    var member = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    member.report = MockClassReport.figma
+    member.sourceViewState = .ready
+    member.isGeneratingFeedback = true
+    XCTAssertEqual(member.feedbackViewState, .loading)
+    try await saveStatus(
+      "member-feedback-generating",
+      view: AnyView(ClassReportView(store: Store(initialState: member) {
+        ClassReportFeature()
+      })),
+      unavailableText: nil
+    )
+    member.isGeneratingFeedback = false
+    member.feedbackError = .deviceNotEligible
+    XCTAssertEqual(member.feedbackViewState, .unavailable)
+    try await saveStatus(
+      "member-feedback-unavailable",
+      view: AnyView(ClassReportView(store: Store(initialState: member) {
+        ClassReportFeature()
+      })),
+      unavailableText: "피드백을사용할수없어요"
+    )
+
+    var owner = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
+    let dashboard = MockClassOwnerDashboard.figma
+    owner.dashboard = dashboard
+    owner.report = dashboard.report
+    owner.members = dashboard.members
+    owner.opinions = dashboard.opinions
+    owner.metrics = dashboard.metrics
+    owner.sourceViewState = .ready
+    owner.isGeneratingInsight = true
+    XCTAssertEqual(owner.insightViewState, .loading)
+    try await saveStatus(
+      "owner-insight-generating",
+      view: AnyView(ClassOwnerDashboardView(store: Store(initialState: owner) {
+        ClassOwnerDashboardFeature()
+      })),
+      unavailableText: nil
+    )
+    owner.isGeneratingInsight = false
+    owner.insightError = .deviceNotEligible
+    XCTAssertEqual(owner.insightViewState, .unavailable)
+    try await saveStatus(
+      "owner-insight-unavailable",
+      view: AnyView(ClassOwnerDashboardView(store: Store(initialState: owner) {
+        ClassOwnerDashboardFeature()
+      })),
+      unavailableText: "인사이트를사용할수없어요"
+    )
+
+    owner.selectedTab = .report
+    owner.isGeneratingFeedback = true
+    XCTAssertEqual(owner.feedbackViewState, .loading)
+    try await saveStatus(
+      "owner-feedback-generating",
+      view: AnyView(ClassOwnerDashboardView(store: Store(initialState: owner) {
+        ClassOwnerDashboardFeature()
+      })),
+      unavailableText: nil
+    )
+    owner.isGeneratingFeedback = false
+    owner.feedbackError = .deviceNotEligible
+    XCTAssertEqual(owner.feedbackViewState, .unavailable)
+    try await saveStatus(
+      "owner-feedback-unavailable",
+      view: AnyView(ClassOwnerDashboardView(store: Store(initialState: owner) {
+        ClassOwnerDashboardFeature()
+      })),
+      unavailableText: "피드백을사용할수없어요"
+    )
+  }
+
+  @MainActor
+  func testClassMemberAndVoteLoadStates() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture member and AI vote states")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func saveState(_ name: String, view: AnyView, expectedText: String?) async throws {
+      let (image, _) = try await capture(view, ready: nil, includeScrollBottom: false,
+                                         viewport: CGSize(width: 402, height: 874))
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name + " (seeded load state)"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      if let expectedText {
+        let text = try recognizedAuditText(in: image, name: name)
+        XCTAssertTrue(text.contains(expectedText), "Expected load-state message in pixels: \(text)")
+      }
+    }
+
+    let room = ClassRoom.mockJoinable
+    var member = ClassMemberFeature.State(room: room, instanceID: UUID())
+    member.viewState = .loading
+    XCTAssertEqual(member.viewState, .loading)
+    try await saveState("member-loading", view: AnyView(ClassMemberView(store: Store(initialState: member) {
+      ClassMemberFeature()
+    })), expectedText: nil)
+    member.loadErrorMessage = "멤버 정보를 불러올 수 없어요."
+    member.viewState = .error
+    XCTAssertEqual(member.viewState, .error)
+    try await saveState("member-error", view: AnyView(ClassMemberView(store: Store(initialState: member) {
+      ClassMemberFeature()
+    })), expectedText: "멤버목록을불러올수없어요")
+    member.loadErrorMessage = nil
+    member.viewState = .empty
+    XCTAssertEqual(member.viewState, .empty)
+    try await saveState("member-empty", view: AnyView(ClassMemberView(store: Store(initialState: member) {
+      ClassMemberFeature()
+    })), expectedText: "아직참여한멤버가없어요")
+
+    var vote = ClassAIVoteFeature.State(room: room, battleID: 1001, instanceID: UUID())
+    vote.viewState = .loading
+    XCTAssertEqual(vote.viewState, .loading)
+    try await saveState("ai-vote-loading", view: AnyView(ClassAIVoteView(store: Store(initialState: vote) {
+      ClassAIVoteFeature()
+    })), expectedText: nil)
+    vote.viewState = .error
+    XCTAssertEqual(vote.viewState, .error)
+    try await saveState("ai-vote-error", view: AnyView(ClassAIVoteView(store: Store(initialState: vote) {
+      ClassAIVoteFeature()
+    })), expectedText: nil)
   }
 
   @MainActor
@@ -553,7 +711,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   @MainActor
   func testCaptureClassJoinOverlays() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
-      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture Class join overlays")
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture Class join push screens")
     }
     let room = ClassRoom.mockJoinable
     let repository = MockClassRepository(rooms: [], availableRooms: [room])
@@ -583,99 +741,191 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       add(attachment)
     }
 
-    let valid = Store(initialState: ClassIntroFeature.State()) {
-      ClassIntroFeature().dependency(\.classUseCase, repository)
+    func joinStore() -> StoreOf<ClassCoordinator> {
+      let store = withDependencies {
+        $0.uuid = .incrementing
+      } operation: {
+        Store(initialState: ClassCoordinator.State()) {
+          ClassCoordinator().dependency(\.classUseCase, repository)
+        }
+      }
+      store.send(.router(.routeAction(id: 0, action: .intro(.view(.joinTapped)))))
+      return store
     }
-    valid.send(.view(.joinTapped))
-    valid.send(.join(.presented(.binding(.set(\.joinCode, room.joinCode)))))
+
+    let valid = joinStore()
+    valid.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, room.joinCode))))))
     try await save(
-      "join-valid-code-overlay",
-      view: AnyView(ClassIntroView(store: valid)),
-      ready: { valid.join?.joinCode == room.joinCode && valid.join?.canFindClass == true }
+      "join-valid-code-push",
+      view: AnyView(ClassCoordinatorView(store: valid)),
+      ready: {
+        guard case let .join(code)? = valid.routes.last?.screen else { return false }
+        return valid.routes.count == 2 && code.mode == .code && code.canFindClass
+      },
+      viewport: CGSize(width: 402, height: 874)
     )
-    valid.send(.join(.presented(.view(.findTapped))))
+    valid.send(.router(.routeAction(id: 1, action: .join(.view(.findTapped)))))
     try await save(
-      "join-valid-name-overlay",
-      view: AnyView(ClassIntroView(store: valid)),
-      ready: { valid.join?.mode == .nickname && valid.join?.preview?.id == room.id }
+      "join-valid-name-push",
+      view: AnyView(ClassCoordinatorView(store: valid)),
+      ready: {
+        guard case let .join(name)? = valid.routes.last?.screen else { return false }
+        return valid.routes.count == 3 && name.mode == .nickname && name.preview?.id == room.id
+      },
+      viewport: CGSize(width: 402, height: 874)
     )
 
-    let invalid = Store(initialState: ClassIntroFeature.State()) {
-      ClassIntroFeature().dependency(\.classUseCase, repository)
-    }
-    invalid.send(.view(.joinTapped))
-    invalid.send(.join(.presented(.binding(.set(\.joinCode, "BAD123")))))
-    invalid.send(.join(.presented(.view(.findTapped))))
+    let invalid = joinStore()
+    invalid.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, "BAD123"))))))
+    invalid.send(.router(.routeAction(id: 1, action: .join(.view(.findTapped)))))
     try await save(
-      "join-invalid-code-overlay",
-      view: AnyView(ClassIntroView(store: invalid)),
-      ready: { invalid.join?.errorMessage == ClassError.invalidCode.message && invalid.join?.isLoading == false }
+      "join-invalid-code-push",
+      view: AnyView(ClassCoordinatorView(store: invalid)),
+      ready: {
+        guard case let .join(code)? = invalid.routes.last?.screen else { return false }
+        return invalid.routes.count == 2 && code.mode == .code
+          && code.errorMessage == ClassError.invalidCode.message && !code.isLoading
+      },
+      viewport: CGSize(width: 402, height: 874)
     )
 
-    let duplicate = Store(initialState: ClassIntroFeature.State()) {
-      ClassIntroFeature().dependency(\.classUseCase, repository)
+    let duplicate = joinStore()
+    duplicate.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, room.joinCode))))))
+    duplicate.send(.router(.routeAction(id: 1, action: .join(.view(.findTapped)))))
+    try await waitForClassAudit("nickname push") {
+      guard case let .join(name)? = duplicate.routes.last?.screen else { return false }
+      return duplicate.routes.count == 3 && name.mode == .nickname
     }
-    duplicate.send(.view(.joinTapped))
-    duplicate.send(.join(.presented(.binding(.set(\.joinCode, room.joinCode)))))
-    duplicate.send(.join(.presented(.view(.findTapped))))
-    for _ in 0 ..< 50 where duplicate.join?.mode != .nickname {
-      try await Task.sleep(for: .milliseconds(100))
-    }
-    guard duplicate.join?.mode == .nickname else { throw CaptureError.contentNotReady }
-    duplicate.send(.join(.presented(.binding(.set(\.nickname, "운영자")))))
-    duplicate.send(.join(.presented(.view(.joinTapped))))
+    duplicate.send(.router(.routeAction(id: 2, action: .join(.binding(.set(\.nickname, "운영자"))))))
+    duplicate.send(.router(.routeAction(id: 2, action: .join(.view(.joinTapped)))))
     try await save(
-      "join-duplicate-name-overlay",
-      view: AnyView(ClassIntroView(store: duplicate)),
+      "join-duplicate-name-push",
+      view: AnyView(ClassCoordinatorView(store: duplicate)),
       ready: {
-        duplicate.join?.nicknameErrorMessage == ClassError.duplicateName.message
-          && duplicate.join?.isLoading == false
-      }
+        guard case let .join(name)? = duplicate.routes.last?.screen else { return false }
+        return name.nicknameErrorMessage == ClassError.duplicateName.message && !name.isLoading
+      },
+      viewport: CGSize(width: 402, height: 874)
     )
-    duplicate.send(.join(.presented(.binding(.set(\.nickname, "1234567890123")))))
+    duplicate.send(.router(.routeAction(id: 2, action: .join(.binding(.set(\.nickname, "1234567890123"))))))
     try await save(
-      "join-name-overlength-overlay",
-      view: AnyView(ClassIntroView(store: duplicate)),
+      "join-name-overlength-push",
+      view: AnyView(ClassCoordinatorView(store: duplicate)),
       ready: {
-        duplicate.join?.nicknameCharacterCount == 13
-          && duplicate.join?.nicknameErrorMessage == nil
-          && duplicate.join?.nicknameValidationMessage != nil
-          && duplicate.join?.canJoin == false
-      }
+        guard case let .join(name)? = duplicate.routes.last?.screen else { return false }
+        return name.nicknameCharacterCount == 13 && name.nicknameErrorMessage == nil
+          && name.nicknameValidationMessage != nil && !name.canJoin
+      },
+      viewport: CGSize(width: 402, height: 874)
     )
 
     let owner = ClassRoom.mocks[0]
     let ownerRepository = MockClassRepository(rooms: [owner], availableRooms: [])
-    let ownerStore = Store(initialState: ClassShareFeature.State(room: owner)) {
-      ClassShareFeature().dependency(\.classMockRepository, ownerRepository)
+    var ownerState = ClassCoordinator.State()
+    ownerState.routes.push(.share(.init(room: owner)))
+    let ownerStore = withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      Store(initialState: ownerState) {
+        ClassCoordinator().dependency(\.classMockRepository, ownerRepository)
+      }
     }
-    ownerStore.send(.view(.enterClassTapped))
-    ownerStore.send(.join(.presented(.binding(.set(\.nickname, "김선생")))))
+    ownerStore.send(.router(.routeAction(id: 1, action: .share(.delegate(.nameOwner(owner))))))
+    ownerStore.send(.router(.routeAction(id: 2, action: .ownerName(.binding(.set(\.nickname, "김선생"))))))
     try await save(
-      "join-owner-name-overlay",
-      view: AnyView(ClassShareView(store: ownerStore)),
-      ready: { ownerStore.join?.mode == .ownerName && ownerStore.join?.canJoin == true }
+      "join-owner-name-push",
+      view: AnyView(ClassCoordinatorView(store: ownerStore)),
+      ready: {
+        guard case let .ownerName(name)? = ownerStore.routes.last?.screen else { return false }
+        return ownerStore.routes.count == 3 && name.mode == .ownerName && name.canJoin
+      }
     )
 
-    let compact = Store(initialState: ClassIntroFeature.State()) {
-      ClassIntroFeature().dependency(\.classUseCase, repository)
-    }
-    compact.send(.view(.joinTapped))
-    compact.send(.join(.presented(.binding(.set(\.joinCode, room.joinCode)))))
+    let compact = joinStore()
+    compact.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, room.joinCode))))))
     try await save(
-      "join-valid-code-overlay-keyboard-attempt",
-      view: AnyView(ClassIntroView(store: compact)),
-      ready: { compact.join?.canFindClass == true },
+      "join-valid-code-push-keyboard-attempt",
+      view: AnyView(ClassCoordinatorView(store: compact)),
+      ready: {
+        guard case let .join(code)? = compact.routes.last?.screen else { return false }
+        return code.canFindClass
+      },
       focusTextField: true
     )
 
-    // Resized host on the current simulator, not a native 375x667 device screenshot.
+    // Resized host on the current simulator, not a native 375x812 device screenshot.
     try await save(
-      "join-valid-code-overlay-resized-375x667",
-      view: AnyView(ClassIntroView(store: compact)),
-      ready: { compact.join?.canFindClass == true },
-      viewport: CGSize(width: 375, height: 667)
+      "join-valid-code-push-resized-375x812",
+      view: AnyView(ClassCoordinatorView(store: compact)),
+      ready: {
+        guard case let .join(code)? = compact.routes.last?.screen else { return false }
+        return code.canFindClass
+      },
+      viewport: CGSize(width: 375, height: 812)
     )
+  }
+
+  @MainActor
+  func testCaptureClassDeadlineSheet() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture Class deadline sheets")
+    }
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func save(_ name: String, store: StoreOf<ClassCoordinator>) async throws {
+      let (image, _) = try await capture(
+        AnyView(ClassCoordinatorView(store: store)),
+        ready: { store.deadlineEdit?.room.id == room.id },
+        includeScrollBottom: false,
+        viewport: CGSize(width: 402, height: 874)
+      )
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+
+    func makeStore(_ state: ClassCoordinator.State) -> StoreOf<ClassCoordinator> {
+      withDependencies {
+        $0.uuid = .incrementing
+        $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+      } operation: {
+        Store(initialState: state) {
+          ClassCoordinator().dependency(\.classUseCase, repository)
+        }
+      }
+    }
+
+    var list = MyClassFeature.State()
+    list.rooms = [room]
+    list.viewState = .loaded
+    var listState = ClassCoordinator.State()
+    listState.routes.push(.myClasses(list))
+    let listStore = makeStore(listState)
+    listStore.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    XCTAssertEqual(listStore.routes.count, 2)
+    try await save("deadline-sheet-list-medium", store: listStore)
+    listStore.send(.deadlineEdit(.presented(.view(.deadlineEnabledChanged(false)))))
+    try await save("deadline-sheet-toggle-off", store: listStore)
+
+    var detailState = ClassCoordinator.State()
+    detailState.routes.push(.detail(.init(room: room)))
+    let detailStore = makeStore(detailState)
+    detailStore.send(.router(.routeAction(id: 1, action: .detail(.delegate(.openDeadline(room))))))
+    XCTAssertEqual(detailStore.routes.count, 2)
+    try await save("deadline-sheet-detail-medium", store: detailStore)
+
+    detailState.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let dashboardStore = makeStore(detailState)
+    dashboardStore.send(.router(.routeAction(id: 2, action: .ownerDashboard(.delegate(.editClass)))))
+    XCTAssertEqual(dashboardStore.routes.count, 3)
+    try await save("deadline-sheet-dashboard-medium", store: dashboardStore)
   }
 
   @MainActor
@@ -1010,6 +1260,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       )
       state.questions = Array(ClassAIQuestion.examples.prefix(3))
       state.battles = ClassBattleSummary.mocks.filter { $0.level == .middle && $0.category == .philosophy }
+      state.viewState = .loaded
       let store = Store(initialState: state) { ClassRecommendFeature() }
       let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
       let window = UIWindow(windowScene: scene)
@@ -1158,10 +1409,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         ))
         continue
       }
+      // Generated feedback can fit entirely on a tall phone. A compact viewport
+      // exercises scrolling while preserving the actual bottom/changed-pixel checks.
+      let needsBottomCapture = [19, 23, 25].contains(frame.number)
       let (image, bottomImage) = try await capture(
         view,
         ready: frame.ready,
-        includeScrollBottom: [19, 23, 25].contains(frame.number)
+        includeScrollBottom: needsBottomCapture,
+        viewport: needsBottomCapture ? CGSize(width: 402, height: 640) : nil
       )
       let name = String(format: "%02d", frame.number) + "-" + frame.slug + ".png"
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name))
@@ -1277,9 +1532,16 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
     var bottomImage: UIImage?
     if includeScrollBottom {
+      if verticalScrollViews(in: host.view, window: window).isEmpty {
+        let attachment = XCTAttachment(image: image)
+        attachment.name = "missing-scroll-view-top"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+      }
       let scrollView = try XCTUnwrap(verticalScrollViews(in: host.view, window: window).max {
         $0.bounds.height < $1.bounds.height
-      }, "Expected visible report content to have a vertical scroll view")
+      },
+      "Expected visible report content to have a vertical scroll view: \(scrollDiagnostics(in: host.view, window: window))")
       let bottomOffset = max(
         -scrollView.adjustedContentInset.top,
         scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
@@ -1417,6 +1679,32 @@ final class ClassFlowVisualAuditTests: XCTestCase {
                       "Navigation title and body title must occupy separate lines")
   }
 
+  private static var visualPersonalFeedback: ClassAIPersonalFeedback {
+    ClassAIPersonalFeedback(
+      summaryTitle: "생각의 흐름",
+      summaryDetail: "처음 선택한 근거와 마지막 판단을 연결해 봤어요.",
+      points: [
+        .init(title: "처음 관점", detail: "처음에는 선택의 이유를 분명히 적었어요."),
+        .init(title: "새로운 근거", detail: "다른 의견을 읽고 비교할 지점을 찾았어요."),
+        .init(title: "다음 생각", detail: "다음에는 반대 의견의 근거도 살펴보세요."),
+      ],
+      nextQuestion: "서로 다른 근거를 어떻게 비교할까요?",
+      nextHint: "친구의 의견에서 한 가지 근거를 골라 보세요."
+    )
+  }
+
+  @MainActor
+  private static func visualAIFeedbackUseCase() -> MockClassAIFeedbackUseCase {
+    MockClassAIFeedbackUseCase { context in
+      switch context.kind {
+      case .classInsight:
+        return .classInsight("서로 다른 의견을 비교하며 근거를 살펴봤어요.")
+      case .studentPersonal, .ownerPersonal:
+        return .personal(Self.visualPersonalFeedback)
+      }
+    }
+  }
+
   @MainActor
   private func makeFrames() async throws -> [Frame] {
     let owner = ClassRoom.mocks[0]
@@ -1489,14 +1777,25 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.classMockRepository, previewRepository)
           .dependency(\.classMockChatSession, session)
           .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+          .dependency(\.classAIFeedbackUseCase, Self.visualAIFeedbackUseCase())
       }
       let ready: @MainActor () -> Bool = {
         switch store.classState.routes.last?.screen {
         case let .report(value)?:
-          return value.hasLoaded && !value.isLoading && !value.loadFailed && value.report != nil
+          if case .ready = value.feedbackViewState {
+            return value.sourceViewState == .ready && value.report != nil
+          }
+          return false
         case let .ownerDashboard(value)?:
-          return value.hasLoaded && !value.isLoading && !value.loadFailed
-            && value.report != nil && value.metrics != nil
+          guard value.sourceViewState == .ready, value.report != nil, value.metrics != nil else { return false }
+          if value.selectedTab == .report {
+            if case .ready = value.feedbackViewState {
+              return true
+            }
+          } else if case .ready = value.insightViewState {
+            return true
+          }
+          return false
         default:
           return false
         }
@@ -1561,14 +1860,18 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
     var aiRecommend = ClassRecommendFeature.State(filter: filter, mode: .aiQuestions)
     aiRecommend.questions = ClassAIQuestion.examples
+    aiRecommend.viewState = .loaded
     aiRecommend.selectedQuestionId = aiQuestion.id
     var existingRecommend = ClassRecommendFeature.State(filter: filter)
     existingRecommend.battles = ClassBattleSummary.mocks
+    existingRecommend.viewState = .loaded
     existingRecommend.selectedBattleId = ClassBattleSummary.mocks[0].id
     var ownerList = MyClassFeature.State()
     ownerList.rooms = ClassRoom.mocks
+    ownerList.viewState = .loaded
     var memberList = MyClassFeature.State()
     memberList.rooms = memberRooms
+    memberList.viewState = .loaded
     var ownerReport = ClassOwnerDashboardFeature.State(room: owner, instanceID: UUID())
     ownerReport.selectedTab = .report
 
@@ -1685,7 +1988,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         classTab(.members(.init(
           room: member,
           members: MockClassRepository.figmaParticipantMembers,
-          currentMemberID: 2
+          currentMemberID: 2,
+          instanceID: UUID(),
+          preloadedViewState: .loaded
         )))
       ),
       chatFrame(15, "댓글", "comment", .init(commentBattleId: battleID), session: session, battleID: battleID),
@@ -1711,7 +2016,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         "멤버 개인 리포트",
         "member-report",
         "member room summary tab",
-        .report(.init(room: member))
+        .report(.init(room: member, instanceID: UUID()))
       ),
       frame(
         20,
@@ -1741,7 +2046,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         "운영자 클래스 요약",
         "owner-dashboard",
         "loaded home metrics",
-        .ownerDashboard(.init(room: owner))
+        .ownerDashboard(.init(room: owner, instanceID: UUID()))
       ),
       frame(
         24,
@@ -1751,7 +2056,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         classTab(.members(.init(
           room: owner,
           members: ownerMembers,
-          currentMemberID: 1
+          currentMemberID: 1,
+          instanceID: UUID(),
+          preloadedViewState: .loaded
         )))
       ),
       loadedClassFrame(
@@ -1786,7 +2093,11 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         "AI 질문 단일 투표",
         "ai-vote",
         "AI question mock room",
-        AnyView(ClassAIVoteView(store: Store(initialState: .init(room: aiRoom, battleID: -1_000_801)) {
+        AnyView(ClassAIVoteView(store: Store(initialState: .init(
+          room: aiRoom,
+          battleID: -1_000_801,
+          instanceID: UUID()
+        )) {
           ClassAIVoteFeature()
         }))
       ),

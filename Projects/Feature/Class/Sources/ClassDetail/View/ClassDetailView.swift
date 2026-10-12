@@ -62,7 +62,7 @@ public struct ClassDetailView: View {
           )
         }
       case .deadline:
-        modalBackdrop({ modalStore.send(.dismissTapped) }) { deadlineSheet() }
+        EmptyView()
       case .code:
         modalBackdrop({ send(.codeDismissed) }) { codeSheet() }
       }
@@ -261,26 +261,6 @@ private extension ClassDetailView {
       .frame(width: 40, height: 4)
       .frame(maxWidth: .infinity)
       .padding(.bottom, 10)
-  }
-
-  @ViewBuilder
-  func deadlineSheet() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      sheetHandle
-      Text("마감일 수정")
-        .pretendardFont(.semiBold24)
-        .foregroundStyle(.gray800)
-
-      DatePicker("마감일", selection: $store.draftDeadline, displayedComponents: [.date, .hourAndMinute])
-        .datePickerStyle(.compact)
-
-      Button("수정하기") { send(.deadlineSaved) }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
-        .disabled(store.isLoading)
-    }
-    .padding(.top, 16)
-    .padding(.horizontal, 16)
-    .padding(.bottom, 40)
   }
 
   @ViewBuilder

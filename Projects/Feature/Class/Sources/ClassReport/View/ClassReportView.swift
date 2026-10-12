@@ -38,11 +38,11 @@ public struct ClassReportView: View {
 
       reportTitle()
         .padding(.top, 16)
-      if store.loadFailed {
+      if store.sourceViewState == .failed {
         PickeRetryErrorView(message: "리포트를 불러오지 못했어요") { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
-      } else if store.isLoading || !store.hasLoaded {
-        MyClassSkeletonView()
+      } else if store.sourceViewState == .loading {
+        sourceSkeleton()
       } else {
         reportPages()
       }
@@ -54,6 +54,55 @@ public struct ClassReportView: View {
 }
 
 private extension ClassReportView {
+  @ViewBuilder
+  func sourceSkeleton() -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 120, height: 18)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 136)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 120, height: 18)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 350)
+      }
+      .padding(16)
+    }
+    .accessibilityLabel("리포트를 불러오는 중")
+  }
+
+  @ViewBuilder
+  func feedbackStatus() -> some View {
+    switch store.feedbackViewState {
+    case .loading:
+      VStack(alignment: .leading, spacing: 12) {
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 144, height: 20)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 14)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 220, height: 14)
+      }
+      .accessibilityLabel("AI 피드백을 생성하는 중")
+    case .retryableFailure:
+      PickeRetryErrorView(message: "AI 피드백을 생성하지 못했어요") { send(.feedbackRetryTapped) }
+    case .failure:
+      unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "이 리포트의 피드백을 생성하지 못했습니다.")
+    case .unavailable:
+      unavailableReport(title: "AI 피드백을 사용할 수 없어요", message: "작성한 의견과 기기 설정을 확인해 주세요.")
+    case .ready:
+      EmptyView()
+    }
+  }
+
+  @ViewBuilder
+  func nextThought() -> some View {
+    if case let .ready(feedback) = store.feedbackViewState {
+      VStack(alignment: .leading, spacing: 12) {
+        Text(feedback.nextQuestion)
+          .pretendardFont(family: .SemiBold, size: 18)
+          .foregroundStyle(.gray800)
+        Text(feedback.nextHint)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.gray300)
+      }
+    }
+  }
+
   @ViewBuilder
   func reportTitle() -> some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -157,32 +206,30 @@ private extension ClassReportView {
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("AI 피드백")
         reportCard(padding: 0, horizontalPadding: 0, spacing: 0, minHeight: store.report != nil ? 350 : 0) {
-          if store.report != nil {
-            aiFeedbackSummary()
-          } else {
-            unavailableReport(
-              title: "AI 피드백을 준비하고 있어요",
-              message: "작성한 의견이 분석되면 이곳에서 확인할 수 있어요."
-            )
-            .padding(16)
+          VStack(alignment: .leading, spacing: 0) {
+            switch store.feedbackViewState {
+            case let .ready(feedback):
+              aiFeedbackSummary(feedback)
+            default:
+              feedbackStatus()
+                .padding(16)
+            }
+            if store.report != nil {
+              myOpinionsSection()
+            }
           }
         }
       }
 
       if !store.showsSummaryLayout {
-        VStack(alignment: .leading, spacing: 12) {
-          sectionHeading("다음 생각 해보기")
+        if case .ready = store.feedbackViewState {
           VStack(alignment: .leading, spacing: 12) {
-            Text(store.report != nil ? reportText(.nextQuestion) : store.room.battle.title)
-              .pretendardFont(family: .SemiBold, size: 18)
-              .foregroundStyle(.gray800)
-            Text(store.report != nil ? reportText(.nextHint) : "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
-              .pretendardFont(.regular13)
-              .foregroundStyle(.gray300)
+            sectionHeading("다음 생각 해보기")
+            nextThought()
+              .padding(16)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .pickeCard(.beige100, border: .beige600, radius: 2)
           }
-          .padding(16)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .pickeCard(.beige100, border: .beige600, radius: 2)
         }
 
         HStack(spacing: 8) {
@@ -319,28 +366,22 @@ private extension ClassReportView {
   func feedbackContent() -> some View {
     reportCard(minHeight: store.report != nil ? 361 : 0) {
       cardHeading("AI 피드백")
-      if store.report != nil {
-        feedbackPoint(reportText(.feedbackTitle1), detail: reportText(.feedbackDetail1))
-        feedbackPoint(reportText(.feedbackTitle2), detail: reportText(.feedbackDetail2))
-        feedbackPoint(reportText(.feedbackTitle3), detail: reportText(.feedbackDetail3))
+      if case let .ready(feedback) = store.feedbackViewState {
+        ForEach(feedback.points.indices, id: \.self) { index in
+          feedbackPoint(feedback.points[index].title, detail: feedback.points[index].detail)
+        }
         Text("분석에 사용한 내 대댓글 보기")
           .pretendardFont(.semiBold13)
           .foregroundStyle(.primary500)
       } else {
-        unavailableReport(
-          title: "AI 분석 결과가 아직 없어요",
-          message: "내 의견과 댓글 데이터가 연결되면 생각의 변화와 근거를 분석해 드릴게요."
-        )
+        feedbackStatus()
       }
     }
-    reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 138 : 0) {
-      cardHeading("다음 생각 해보기")
-      Text(store.report != nil ? reportText(.nextQuestion) : store.room.battle.title)
-        .pretendardFont(family: .SemiBold, size: 18)
-        .foregroundStyle(.gray700)
-      Text(store.report != nil ? reportText(.nextHint) : "두 선택지를 비교하며 내 생각을 정리해 보세요.")
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray300)
+    if case .ready = store.feedbackViewState {
+      reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 138 : 0) {
+        cardHeading("다음 생각 해보기")
+        nextThought()
+      }
     }
     reportCard(padding: 16, spacing: 8, minHeight: store.report != nil ? 142 : 0) {
       cardHeading("선생님 피드백")
@@ -372,11 +413,11 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
-  func aiFeedbackSummary() -> some View {
+  func aiFeedbackSummary(_ feedback: ClassAIPersonalFeedback) -> some View {
     VStack(alignment: .leading, spacing: 0) {
       VStack(alignment: .leading, spacing: 8) {
         ClassAIInsightHeading(title: "내 판단의 기준")
-        Text(reportText(.aiSummaryDetail))
+        Text(feedback.summaryDetail)
           .pretendardFont(.regular13)
       }
       .foregroundStyle(.primary500)
@@ -387,42 +428,49 @@ private extension ClassReportView {
       VStack(alignment: .leading, spacing: 16) {
         insightPoint(
           "이번에 잘한 점",
-          detail: reportText(.feedbackDetail1)
+          detail: feedback.points[0].detail
         )
         Rectangle().fill(.beige600).frame(height: 1)
         insightPoint(
           "한 가지 더 살펴볼 점",
-          detail: reportText(.feedbackDetail2)
+          detail: feedback.points[1].detail
         )
         Rectangle().fill(.beige600).frame(height: 1)
         insightPoint(
           "다음 생각 한 걸음",
-          detail: reportText(.feedbackDetail3)
+          detail: feedback.points[2].detail
         )
-        Rectangle().fill(.beige600).frame(height: 1)
-        Button { send(.myOpinionsTapped) } label: {
-          HStack {
-            Text("내가 남긴 의견 \(store.report?.myOpinions.count ?? 0)개 보기")
-            Spacer()
-            Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
-          }
-          .pretendardFont(.semiBold13)
-          .foregroundStyle(.primary500)
-        }
-        .buttonStyle(.plain)
-        if store.showsMyOpinions {
-          ForEach(store.report?.myOpinions ?? [], id: \.self) { opinion in
-            Text(opinion)
-              .pretendardFont(.regular13)
-              .foregroundStyle(.gray700)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(12)
-              .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
-          }
-        }
       }
       .padding(16)
     }
+  }
+
+  @ViewBuilder
+  func myOpinionsSection() -> some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Rectangle().fill(.beige600).frame(height: 1)
+      Button { send(.myOpinionsTapped) } label: {
+        HStack {
+          Text("내가 남긴 의견 \(store.myOpinionCount)개 보기")
+          Spacer()
+          Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
+        }
+        .pretendardFont(.semiBold13)
+        .foregroundStyle(.primary500)
+      }
+      .buttonStyle(.plain)
+      if store.showsMyOpinions {
+        ForEach(store.myOpinions, id: \.self) { opinion in
+          Text(opinion)
+            .pretendardFont(.regular13)
+            .foregroundStyle(.gray700)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+        }
+      }
+    }
+    .padding(16)
   }
 
   func insightPoint(_ label: String, detail: String) -> some View {

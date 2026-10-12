@@ -27,9 +27,9 @@ public struct ClassOwnerDashboardView: View {
       navigationBar()
       titleHeader()
       dashboardTabs()
-      if store.isLoading || !store.hasLoaded {
-        MyClassSkeletonView()
-      } else if store.loadFailed {
+      if store.sourceViewState == .loading {
+        sourceSkeleton()
+      } else if store.sourceViewState == .failed {
         PickeRetryErrorView(message: "클래스 현황을 불러오지 못했어요") { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
@@ -67,6 +67,61 @@ public struct ClassOwnerDashboardView: View {
 
 private extension ClassOwnerDashboardView {
   @ViewBuilder
+  func sourceSkeleton() -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 16) {
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 120)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 150, height: 18)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 180)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 150, height: 18)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 180)
+      }
+      .padding(16)
+    }
+    .accessibilityLabel("클래스 현황을 불러오는 중")
+  }
+
+  @ViewBuilder
+  func insightStatus() -> some View {
+    switch store.insightViewState {
+    case .loading:
+      VStack(alignment: .leading, spacing: 10) {
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 14)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 220, height: 14)
+      }
+      .accessibilityLabel("AI 인사이트를 생성하는 중")
+    case .retryableFailure:
+      PickeRetryErrorView(message: "AI 인사이트를 생성하지 못했어요") { send(.insightRetryTapped) }
+    case .failure:
+      unavailableContent("AI 인사이트를 표시할 수 없어요")
+    case .unavailable:
+      unavailableContent("AI 인사이트를 사용할 수 없어요")
+    case .ready:
+      EmptyView()
+    }
+  }
+
+  @ViewBuilder
+  func feedbackStatus() -> some View {
+    switch store.feedbackViewState {
+    case .loading:
+      VStack(alignment: .leading, spacing: 10) {
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 14)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 220, height: 14)
+      }
+      .accessibilityLabel("AI 피드백을 생성하는 중")
+    case .retryableFailure:
+      PickeRetryErrorView(message: "AI 피드백을 생성하지 못했어요") { send(.feedbackRetryTapped) }
+    case .failure:
+      unavailableContent("AI 피드백을 표시할 수 없어요")
+    case .unavailable:
+      unavailableContent("AI 피드백을 사용할 수 없어요")
+    case .ready:
+      EmptyView()
+    }
+  }
+
+  @ViewBuilder
   func navigationBar() -> some View {
     PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
       switch store.selectedTab {
@@ -103,20 +158,13 @@ private extension ClassOwnerDashboardView {
         .foregroundStyle(.gray800)
         .lineLimit(2)
         .frame(maxWidth: .infinity, alignment: .leading)
-      Text("\(Self.deadlineFormatter.string(from: store.room.deadline))까지")
+      Text(store.deadlineText)
         .pretendardFont(.medium13)
         .foregroundStyle(.gray300)
     }
     .padding(.horizontal, 16)
     .frame(height: 118, alignment: .center)
   }
-
-  static let deadlineFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "ko_KR")
-    formatter.dateFormat = "yyyy. MM. dd. EEEE HH:mm"
-    return formatter
-  }()
 
   @ViewBuilder
   func dashboardTabs() -> some View {
@@ -142,7 +190,7 @@ private extension ClassOwnerDashboardView {
   @ViewBuilder
   func homePage() -> some View {
     VStack(alignment: .leading, spacing: 24) {
-      if let insight = store.insight {
+      if case let .ready(insight) = store.insightViewState {
         VStack(alignment: .leading, spacing: 8) {
           ClassAIInsightHeading(title: "AI 인사이트")
           Text(insight)
@@ -155,7 +203,7 @@ private extension ClassOwnerDashboardView {
         .overlay(RoundedRectangle(cornerRadius: 2).stroke(.primary100, lineWidth: 1))
       } else {
         dashboardSection("AI 인사이트") {
-          unavailableContent("AI 인사이트를 준비 중이에요")
+          insightStatus()
         }
       }
       dashboardSection("클래스 참여 현황") {
@@ -284,11 +332,11 @@ private extension ClassOwnerDashboardView {
       }
 
       dashboardSection("AI 피드백") {
-        if let content = store.report {
+        if case let .ready(feedback) = store.feedbackViewState {
           VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-              ClassAIInsightHeading(title: content[.aiSummaryTitle])
-              Text(content[.aiSummaryDetail]).pretendardFont(.regular13)
+              ClassAIInsightHeading(title: feedback.summaryTitle)
+              Text(feedback.summaryDetail).pretendardFont(.regular13)
             }
             .foregroundStyle(.primary500)
             .padding(16)
@@ -296,52 +344,36 @@ private extension ClassOwnerDashboardView {
             .background(.primary50)
 
             VStack(alignment: .leading, spacing: 16) {
-              reportInsight("생각의 흐름", title: content[.feedbackTitle1], detail: content[.feedbackDetail1])
+              reportInsight("생각의 흐름", title: feedback.points[0].title, detail: feedback.points[0].detail)
               Rectangle().fill(.beige600).frame(height: 1)
-              reportInsight("내가 더한 관점", title: content[.feedbackTitle2], detail: content[.feedbackDetail2])
-              Rectangle().fill(.beige600).frame(height: 1)
-              Button { send(.myOpinionsTapped) } label: {
-                HStack {
-                  Text("내가 남긴 의견 \(content.myOpinions.count)개 보기")
-                  Spacer()
-                  Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.down")
-                }
-                .pretendardFont(.semiBold13)
-                .foregroundStyle(.primary500)
-              }
-              .buttonStyle(.plain)
-              if store.showsMyOpinions {
-                ForEach(content.myOpinions, id: \.self) { opinion in
-                  Text(opinion)
-                    .pretendardFont(.regular13)
-                    .foregroundStyle(.gray700)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
-                }
-              }
+              reportInsight("내가 더한 관점", title: feedback.points[1].title, detail: feedback.points[1].detail)
             }
             .padding(16)
           }
           .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
           .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
         } else {
-          unavailableContent("AI 피드백을 준비하고 있어요")
+          feedbackStatus()
+        }
+        if store.report != nil {
+          myOpinionsSection()
         }
       }
 
-      dashboardSection("다음 생각 해보기") {
-        VStack(alignment: .leading, spacing: 12) {
-          Text(store.report?[.nextQuestion] ?? store.room.battle.title)
-            .pretendardFont(family: .SemiBold, size: 18)
-            .foregroundStyle(.gray800)
-          Text(store.report?[.nextHint] ?? "내 의견과 반대되는 입장도 함께 떠올려 보세요.")
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray500)
+      if case let .ready(feedback) = store.feedbackViewState {
+        dashboardSection("다음 생각 해보기") {
+          VStack(alignment: .leading, spacing: 12) {
+            Text(feedback.nextQuestion)
+              .pretendardFont(family: .SemiBold, size: 18)
+              .foregroundStyle(.gray800)
+            Text(feedback.nextHint)
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray500)
+          }
+          .padding(16)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
       }
     }
   }
@@ -352,6 +384,35 @@ private extension ClassOwnerDashboardView {
       Text(value).pretendardFont(.semiBold13).foregroundStyle(.gray800)
     }
     .frame(maxWidth: .infinity)
+  }
+
+  @ViewBuilder
+  func myOpinionsSection() -> some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Button { send(.myOpinionsTapped) } label: {
+        HStack {
+          Text("내가 남긴 의견 \(store.myOpinionCount)개 보기")
+          Spacer()
+          Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.down")
+        }
+        .pretendardFont(.semiBold13)
+        .foregroundStyle(.primary500)
+      }
+      .buttonStyle(.plain)
+      if store.showsMyOpinions {
+        ForEach(store.myOpinions, id: \.self) { opinion in
+          Text(opinion)
+            .pretendardFont(.regular13)
+            .foregroundStyle(.gray700)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+        }
+      }
+    }
+    .padding(16)
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
   }
 
   func reportActivity(_ count: String, label: String) -> some View {

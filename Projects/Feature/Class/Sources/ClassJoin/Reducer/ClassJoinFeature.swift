@@ -27,16 +27,22 @@ public struct ClassJoinFeature {
     public var joinCode = ""
     public var nickname = ""
     public var preview: ClassRoom?
+    public let instanceID: UUID?
+    public var activeFindRequestID: UUID?
+    public var activeJoinRequestID: UUID?
+    public var activeOwnerRequestID: UUID?
     public var isLoading = false
     public var errorMessage: String?
     public var nicknameErrorMessage: String?
 
     public init(
       mode: Mode = .code,
-      preview: ClassRoom? = nil
+      preview: ClassRoom? = nil,
+      instanceID: UUID? = nil
     ) {
       self.mode = mode
       self.preview = preview
+      self.instanceID = instanceID
     }
 
     public var canFindClass: Bool {
@@ -81,32 +87,33 @@ public struct ClassJoinFeature {
   public enum AsyncAction: Equatable {
     case find(String)
     case join(joinCode: String, nickname: String)
-    case nameOwner(roomID: Int, nickname: String)
+    case nameOwner(roomID: Int, nickname: String, instanceID: UUID, requestID: UUID)
   }
 
   @CasePathable
   public enum InnerAction: Equatable {
-    case found(Result<ClassRoom, ClassError>)
-    case joined(Result<ClassRoom, ClassError>, nickname: String)
-    case ownerNamed(Result<ClassRoom, ClassError>)
+    case found(Result<ClassRoom, ClassError>, instanceID: UUID?, requestID: UUID)
+    case joined(Result<ClassRoom, ClassError>, nickname: String, instanceID: UUID?, requestID: UUID)
+    case ownerNamed(Result<ClassRoom, ClassError>, instanceID: UUID, requestID: UUID)
   }
 
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
-    case found(ClassRoom)
-    case joined(ClassRoom, nickname: String)
-    case ownerNamed(ClassRoom)
+    case found(ClassRoom, instanceID: UUID?)
+    case joined(ClassRoom, nickname: String, instanceID: UUID?)
+    case ownerNamed(ClassRoom, instanceID: UUID)
   }
 
-  nonisolated enum CancelID: Hashable {
-    case find
-    case join
-    case nameOwner
+  public nonisolated enum CancelID: Hashable, Sendable {
+    case find(UUID?)
+    case join(UUID?)
+    case nameOwner(UUID)
   }
 
   @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.classMockRepository) private var classMockRepository
+  @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -147,7 +154,19 @@ extension ClassJoinFeature {
   ) -> Effect<Action> {
     switch action {
     case .backTapped:
-      return .send(.delegate(.dismiss))
+      state.activeFindRequestID = nil
+      state.activeJoinRequestID = nil
+      state.activeOwnerRequestID = nil
+      state.isLoading = false
+      var effects: [Effect<Action>] = [
+        .cancel(id: CancelID.find(state.instanceID)),
+        .cancel(id: CancelID.join(state.instanceID)),
+        .send(.delegate(.dismiss)),
+      ]
+      if let instanceID = state.instanceID {
+        effects.append(.cancel(id: CancelID.nameOwner(instanceID)))
+      }
+      return .merge(effects)
 
     case .findTapped:
       guard state.canFindClass else { return .none }
@@ -160,7 +179,13 @@ extension ClassJoinFeature {
       case .nickname:
         return .send(.async(.join(joinCode: room.joinCode, nickname: nickname)))
       case .ownerName:
-        return .send(.async(.nameOwner(roomID: room.id, nickname: nickname)))
+        guard let instanceID = state.instanceID else { return .none }
+        return .send(.async(.nameOwner(
+          roomID: room.id,
+          nickname: nickname,
+          instanceID: instanceID,
+          requestID: uuid()
+        )))
       case .code:
         return .none
       }
@@ -174,32 +199,45 @@ extension ClassJoinFeature {
     switch action {
     case let .find(code):
       state.isLoading = true
+      let requestID = uuid()
+      state.activeFindRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classUseCase] send in
+      return .run { [classUseCase, instanceID = state.instanceID] send in
         let result = await Result {
           try await classUseCase.fetchClass(joinCode: code)
         }
         .mapError(ClassError.from)
-        await send(.inner(.found(result)))
+        guard !Task.isCancelled else { return }
+        await send(.inner(.found(result, instanceID: instanceID, requestID: requestID)))
       }
-      .cancellable(id: CancelID.find, cancelInFlight: true)
+      .cancellable(id: CancelID.find(state.instanceID), cancelInFlight: true)
 
     case let .join(code, nickname):
       state.isLoading = true
+      let requestID = uuid()
+      state.activeJoinRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classUseCase] send in
+      return .run { [classUseCase, instanceID = state.instanceID] send in
         let result = await Result {
           try await classUseCase.joinClass(joinCode: code, nickname: nickname)
         }
         .mapError(ClassError.from)
-        await send(.inner(.joined(result, nickname: nickname)))
+        guard !Task.isCancelled else { return }
+        await send(.inner(.joined(
+          result,
+          nickname: nickname,
+          instanceID: instanceID,
+          requestID: requestID
+        )))
       }
-      .cancellable(id: CancelID.join, cancelInFlight: true)
+      .cancellable(id: CancelID.join(state.instanceID), cancelInFlight: true)
 
-    case let .nameOwner(roomID, nickname):
+    case let .nameOwner(roomID, nickname, instanceID, requestID):
+      guard state.instanceID == instanceID, state.preview?.id == roomID else { return .none }
       state.isLoading = true
+      state.activeOwnerRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
       return .run { [classMockRepository] send in
@@ -217,9 +255,9 @@ extension ClassJoinFeature {
           return room
         }
         .mapError(ClassError.from)
-        await send(.inner(.ownerNamed(result)))
+        await send(.inner(.ownerNamed(result, instanceID: instanceID, requestID: requestID)))
       }
-      .cancellable(id: CancelID.nameOwner, cancelInFlight: true)
+      .cancellable(id: CancelID.nameOwner(instanceID), cancelInFlight: true)
     }
   }
 
@@ -227,24 +265,56 @@ extension ClassJoinFeature {
     state: inout State,
     action: InnerAction
   ) -> Effect<Action> {
-    state.isLoading = false
     switch action {
-    case let .found(.success(room)):
-      return .send(.delegate(.found(room)))
+    case let .found(.success(room), instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeFindRequestID == requestID else { return .none }
+      state.isLoading = false
+      state.activeFindRequestID = nil
+      return .send(.delegate(.found(room, instanceID: instanceID)))
 
-    case let .joined(.success(room), nickname):
+    case let .joined(.success(room), nickname, instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeJoinRequestID == requestID else { return .none }
+      state.isLoading = false
+      state.activeJoinRequestID = nil
       state.preview = nil
-      return .send(.delegate(.joined(room, nickname: nickname)))
+      return .send(.delegate(.joined(room, nickname: nickname, instanceID: instanceID)))
 
-    case let .ownerNamed(.success(room)):
+    case let .ownerNamed(.success(room), instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeOwnerRequestID == requestID else { return .none }
+      state.isLoading = false
+      state.activeOwnerRequestID = nil
       state.preview = nil
-      return .send(.delegate(.ownerNamed(room)))
+      return .send(.delegate(.ownerNamed(room, instanceID: instanceID)))
 
-    case .joined(.failure(.duplicateName), _), .ownerNamed(.failure(.duplicateName)):
+    case let .joined(.failure(.duplicateName), _, instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeJoinRequestID == requestID else { return .none }
+      state.isLoading = false
+      state.activeJoinRequestID = nil
       state.nicknameErrorMessage = ClassError.duplicateName.message
       return .none
 
-    case let .found(.failure(error)), let .joined(.failure(error), _), let .ownerNamed(.failure(error)):
+    case let .ownerNamed(.failure(error), instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeOwnerRequestID == requestID else { return .none }
+      state.isLoading = false
+      state.activeOwnerRequestID = nil
+      if error == .duplicateName {
+        state.nicknameErrorMessage = error.message
+      } else {
+        state.errorMessage = error.message
+      }
+      return .none
+
+    case let .found(.failure(error), instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeFindRequestID == requestID else { return .none }
+      state.activeFindRequestID = nil
+      state.isLoading = false
+      state.errorMessage = error.message
+      return .none
+
+    case let .joined(.failure(error), _, instanceID, requestID):
+      guard state.instanceID == instanceID, state.activeJoinRequestID == requestID else { return .none }
+      state.activeJoinRequestID = nil
+      state.isLoading = false
       state.errorMessage = error.message
       return .none
     }

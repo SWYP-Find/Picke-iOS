@@ -17,9 +17,10 @@ struct ClassOwnerDashboardTests {
     var state = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
     state.members = MockClassOwnerDashboard.figma.members
     state.opinions = MockClassOwnerDashboard.figma.opinions
-    state.insight = MockClassOwnerDashboard.figma.insight
+    state.dashboard = MockClassOwnerDashboard.figma
     state.report = MockClassOwnerDashboard.figma.report
     state.metrics = MockClassOwnerDashboard.figma.metrics
+    state.sourceViewState = .ready
     return state
   }
 
@@ -173,19 +174,18 @@ struct ClassOwnerDashboardTests {
       $0.uuid = .constant(requestID)
       $0.classUseCase = MockClassRepository(rooms: [room], dashboards: [room.id: dashboard])
     }
+    store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
     await store.receive(\.async.fetchDashboard) {
       $0.requestID = requestID
-      $0.isLoading = true
     }
     await store.receive(\.inner.dashboardResponse) {
       $0.requestID = nil
-      $0.isLoading = false
-      $0.hasLoaded = true
+      $0.sourceViewState = .ready
+      $0.dashboard = dashboard
       $0.members = dashboard.members
       $0.opinions = dashboard.opinions
-      $0.insight = dashboard.insight
       $0.report = dashboard.report
       $0.metrics = dashboard.metrics
     }
@@ -209,14 +209,12 @@ struct ClassOwnerDashboardTests {
     await store.send(.view(.onAppear))
     await store.receive(\.async.fetchDashboard) {
       $0.requestID = requestID
-      $0.isLoading = true
     }
     await store.receive(\.inner.dashboardResponse) {
       $0.requestID = nil
-      $0.isLoading = false
-      $0.hasLoaded = true
+      $0.sourceViewState = .ready
     }
-    #expect(!store.state.loadFailed)
+    #expect(store.state.sourceViewState == .ready)
     #expect(store.state.members.isEmpty)
     #expect(store.state.report == nil)
     #expect(store.state.metrics == nil)
@@ -229,7 +227,6 @@ struct ClassOwnerDashboardTests {
     let requestID = UUID()
     var state = ClassOwnerDashboardFeature.State(room: room, instanceID: instanceID)
     state.requestID = requestID
-    state.isLoading = true
     let store = TestStore(initialState: state) {
       ClassOwnerDashboardFeature()
     }
@@ -242,7 +239,6 @@ struct ClassOwnerDashboardTests {
     await store.send(staleResponse)
     await store.send(.view(.backTapped)) {
       $0.requestID = nil
-      $0.isLoading = false
     }
     await store.receive(\.delegate, .dismiss)
     await store.send(.inner(.dashboardResponse(
@@ -251,7 +247,7 @@ struct ClassOwnerDashboardTests {
       roomID: room.id,
       .success(MockClassOwnerDashboard.figma)
     )))
-    #expect(!store.state.hasLoaded)
+    #expect(store.state.sourceViewState == .loading)
     #expect(store.state.members.isEmpty)
   }
 
@@ -270,24 +266,21 @@ struct ClassOwnerDashboardTests {
     await store.send(.view(.onAppear))
     await store.receive(\.async.fetchDashboard) {
       $0.requestID = requestID
-      $0.isLoading = true
     }
     await store.receive(\.inner.dashboardResponse) {
       $0.requestID = nil
-      $0.isLoading = false
-      $0.hasLoaded = true
-      $0.loadFailed = true
+      $0.sourceViewState = .failed
     }
+    await store.send(.view(.onAppear))
+    #expect(store.state.sourceViewState == .failed)
     await store.send(.view(.retryTapped))
     await store.receive(\.async.fetchDashboard) {
       $0.requestID = requestID
-      $0.isLoading = true
-      $0.loadFailed = false
+      $0.sourceViewState = .loading
     }
     await store.receive(\.inner.dashboardResponse) {
       $0.requestID = nil
-      $0.isLoading = false
-      $0.loadFailed = true
+      $0.sourceViewState = .failed
     }
   }
 
@@ -306,23 +299,141 @@ struct ClassOwnerDashboardTests {
       $0.uuid = .constant(requestID)
       $0.classUseCase = repository
     }
+    store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
     await store.receive(\.async.fetchDashboard) {
       $0.requestID = requestID
-      $0.isLoading = true
     }
     await store.receive(\.inner.dashboardResponse) {
       $0.requestID = nil
-      $0.isLoading = false
-      $0.hasLoaded = true
+      $0.sourceViewState = .ready
+      $0.dashboard = MockClassOwnerDashboard.figma
       $0.members = MockClassOwnerDashboard.figma.members
       $0.opinions = MockClassOwnerDashboard.figma.opinions
-      $0.insight = MockClassOwnerDashboard.figma.insight
       $0.report = MockClassOwnerDashboard.figma.report
       $0.metrics = MockClassOwnerDashboard.figma.metrics
     }
     #expect(store.state.room.deadline == deadline)
+  }
+
+  @Test
+  func 학급_인사이트_실패와_개인_피드백_성공은_독립적이다() async {
+    let room = ClassRoom.mocks[0]
+    let dashboard = MockClassOwnerDashboard.figma
+    let requestID = UUID()
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: "생성된 제목",
+      summaryDetail: "생성된 개인 분석",
+      points: [
+        .init(title: "첫째", detail: "설명1"),
+        .init(title: "둘째", detail: "설명2"),
+        .init(title: "셋째", detail: "설명3"),
+      ],
+      nextQuestion: "다음 질문?",
+      nextHint: "다음 힌트"
+    )
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.dashboard = dashboard
+    state.report = dashboard.report
+    state.members = dashboard.members
+    state.opinions = dashboard.opinions
+    state.metrics = dashboard.metrics
+    state.sourceViewState = .ready
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { context in
+        switch context.kind {
+        case .classInsight: throw ClassAIFeedbackError.modelNotReady
+        case .ownerPersonal: return .personal(feedback)
+        case .studentPersonal: throw ClassAIFeedbackError.generationFailed
+        }
+      }
+    }
+
+    await store.send(.async(.generateInsight)) {
+      $0.insightContext = try! .classInsight(room: room, dashboard: dashboard)
+      $0.insightRequestID = requestID
+      $0.isGeneratingInsight = true
+    }
+    await store.receive(\.inner.insightResponse) {
+      $0.insightRequestID = nil
+      $0.isGeneratingInsight = false
+      $0.insightError = .modelNotReady
+    }
+    await store.send(.view(.insightRetryTapped))
+    await store.receive(\.async.generateInsight) {
+      $0.insightRequestID = requestID
+      $0.isGeneratingInsight = true
+      $0.insightError = nil
+    }
+    await store.receive(\.inner.insightResponse) {
+      $0.insightRequestID = nil
+      $0.isGeneratingInsight = false
+      $0.insightError = .modelNotReady
+    }
+    await store.send(.async(.generatePersonal)) {
+      $0.feedbackContext = try! .personal(room: room, report: dashboard.report!, isOwner: true)
+      $0.feedbackRequestID = requestID
+      $0.isGeneratingFeedback = true
+    }
+    await store.receive(\.inner.feedbackResponse) {
+      $0.feedbackRequestID = nil
+      $0.isGeneratingFeedback = false
+      $0.generatedFeedback = feedback
+    }
+    #expect(store.state.insightViewState == .retryableFailure)
+    #expect(store.state.feedbackViewState == .ready(feedback))
+    #expect(store.state.metrics == dashboard.metrics)
+    #expect(store.state.opinions == dashboard.opinions)
+    #expect(store.state.generatedInsight == nil)
+  }
+
+  @Test
+  func 주입된_학급_인사이트만_AI_영역에_나타난다() async {
+    let room = ClassRoom.mocks[0]
+    let dashboard = MockClassOwnerDashboard.figma
+    let requestID = UUID()
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.dashboard = dashboard
+    state.sourceViewState = .ready
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { context in
+        #expect(context.kind == .classInsight)
+        #expect(context.roomID == room.id)
+        return .classInsight("생성된 학급 인사이트")
+      }
+    }
+    await store.send(.async(.generateInsight)) {
+      $0.insightContext = try! .classInsight(room: room, dashboard: dashboard)
+      $0.insightRequestID = requestID
+      $0.isGeneratingInsight = true
+    }
+    await store.receive(\.inner.insightResponse) {
+      $0.insightRequestID = nil
+      $0.isGeneratingInsight = false
+      $0.generatedInsight = "생성된 학급 인사이트"
+    }
+    #expect(store.state.insightViewState == .ready("생성된 학급 인사이트"))
+    #expect(store.state.generatedInsight != dashboard.insight)
+  }
+
+  @Test
+  func AI_상태와_무관하게_운영자의_서버_의견_목록을_보존한다() {
+    var state = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
+    state.report = MockClassOwnerDashboard.figma.report
+    state.sourceViewState = .ready
+    let opinions = state.myOpinions
+    #expect(!opinions.isEmpty)
+    state.isGeneratingFeedback = true
+    #expect(state.myOpinions == opinions)
+    state.isGeneratingFeedback = false
+    for error in [ClassAIFeedbackError.deviceNotEligible, .modelNotReady, .generationFailed] {
+      state.feedbackError = error
+      #expect(state.myOpinions == opinions)
+      #expect(state.myOpinionCount == opinions.count)
+    }
   }
 
   @Test

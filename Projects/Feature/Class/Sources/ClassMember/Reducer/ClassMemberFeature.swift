@@ -17,14 +17,21 @@ public struct ClassMemberFeature {
   @ObservableState
   public struct State: Equatable {
     public enum ViewState: Equatable {
-      case unavailable
+      case loading
+      case error
+      case empty
       case noSearchResults
-      case members([ClassMember])
+      case loaded
     }
 
+    public let instanceID: UUID
     public var room: ClassRoom
     public var members: [ClassMember]
     public var currentMemberID: Int
+    public var viewState: ViewState
+    public var isLoading = false
+    public var loadErrorMessage: String?
+    public var activeLoadRequestID: UUID?
     public var searchText = ""
     public var draftName = ""
     public var pendingRemovalID: Int?
@@ -39,11 +46,16 @@ public struct ClassMemberFeature {
     public init(
       room: ClassRoom,
       members: [ClassMember] = [],
-      currentMemberID: Int = 1
+      currentMemberID: Int = 1,
+      instanceID: UUID? = nil,
+      preloadedViewState: ViewState? = nil
     ) {
+      @Dependency(\.uuid) var uuid
+      self.instanceID = instanceID ?? uuid()
       self.room = room
       self.members = members
       self.currentMemberID = currentMemberID
+      viewState = preloadedViewState ?? .loading
     }
 
     public var visibleMembers: [ClassMember] {
@@ -72,10 +84,13 @@ public struct ClassMemberFeature {
       return prioritized + remaining
     }
 
-    public var viewState: ViewState {
-      guard !members.isEmpty else { return .unavailable }
-      let visible = visibleMembers
-      return visible.isEmpty ? .noSearchResults : .members(visible)
+    public mutating func refreshLoadedViewState() {
+      guard viewState == .loaded || viewState == .empty || viewState == .noSearchResults else { return }
+      if members.isEmpty {
+        viewState = .empty
+      } else {
+        viewState = visibleMembers.isEmpty ? .noSearchResults : .loaded
+      }
     }
   }
 
@@ -85,7 +100,9 @@ public struct ClassMemberFeature {
     case filter(PresentationAction<ClassMemberFilterFeature.Action>)
     case editName(PresentationAction<ClassMemberEditNameFeature.Action>)
     case customAlert(PresentationAction<CustomAlertAction>)
-    case membersLoaded(room: ClassRoom, members: [ClassMember], currentMemberID: Int)
+    case loadingStarted(UUID)
+    case membersLoaded(room: ClassRoom, members: [ClassMember], currentMemberID: Int, requestID: UUID)
+    case loadFailed(requestID: UUID, message: String)
     case dataUpdated(room: ClassRoom, members: [ClassMember])
     case dataFailed(String)
     case delegate(DelegateAction)
@@ -93,6 +110,7 @@ public struct ClassMemberFeature {
 
   public enum View {
     case backTapped
+    case retryTapped
     case filterTapped
     case editNameTapped(Int)
     case nameSaved
@@ -102,8 +120,13 @@ public struct ClassMemberFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case retryMembers(roomID: Int)
     case removeMember(roomID: Int, memberID: Int, currentMemberID: Int)
     case updateDisplayName(roomID: Int, memberID: Int, currentMemberID: Int, name: String)
+  }
+
+  public enum CancelID: Hashable, Sendable {
+    case load(UUID)
   }
 
   public var body: some Reducer<State, Action> {
@@ -111,6 +134,7 @@ public struct ClassMemberFeature {
     Reduce { state, action in
       switch action {
       case .binding:
+        state.refreshLoadedViewState()
         return .none
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
@@ -120,14 +144,41 @@ public struct ClassMemberFeature {
         return handleEditNameAction(state: &state, action: editNameAction)
       case let .customAlert(alertAction):
         return handleCustomAlertAction(state: &state, action: alertAction)
-      case let .membersLoaded(room, members, currentMemberID):
+      case let .loadingStarted(requestID):
+        state.activeLoadRequestID = requestID
+        state.isLoading = true
+        state.loadErrorMessage = nil
+        if state.viewState == .loading || state.viewState == .error {
+          state.viewState = .loading
+        }
+        return .none
+      case let .membersLoaded(room, members, currentMemberID, requestID):
+        guard state.activeLoadRequestID == requestID, state.room.id == room.id else { return .none }
+        state.activeLoadRequestID = nil
+        state.isLoading = false
         state.room = room
         state.members = members
         state.currentMemberID = currentMemberID
+        state.viewState = .loaded
+        state.refreshLoadedViewState()
+        return .none
+      case let .loadFailed(requestID, message):
+        guard state.activeLoadRequestID == requestID else { return .none }
+        state.activeLoadRequestID = nil
+        state.isLoading = false
+        state.loadErrorMessage = message
+        if state.viewState == .loading {
+          state.viewState = .error
+        }
         return .none
       case let .dataUpdated(room, members):
+        state.activeLoadRequestID = nil
+        state.isLoading = false
+        state.loadErrorMessage = nil
         state.room = room
         state.members = members
+        state.viewState = .loaded
+        state.refreshLoadedViewState()
         state.editName = nil
         state.pendingRemovalID = nil
         state.errorMessage = nil
@@ -164,7 +215,8 @@ public struct ClassMemberFeature {
         members: room.role == .owner
           ? MockClassRepository.figmaOwnerMembers
           : MockClassRepository.figmaParticipantMembers,
-        currentMemberID: room.role == .owner ? 1 : 2
+        currentMemberID: room.role == .owner ? 1 : 2,
+        preloadedViewState: .loaded
       )
     }
   }
@@ -182,6 +234,7 @@ extension ClassMemberFeature {
       if let filter = state.filter {
         state.appliedFilter = filter
         state.hasAppliedSort = true
+        state.refreshLoadedViewState()
       }
       state.filter = nil
       return .none
@@ -232,7 +285,15 @@ extension ClassMemberFeature {
   ) -> Effect<Action> {
     switch action {
     case .backTapped:
-      return .send(.delegate(.dismiss))
+      state.activeLoadRequestID = nil
+      state.isLoading = false
+      return .merge(
+        .cancel(id: CancelID.load(state.instanceID)),
+        .send(.delegate(.dismiss))
+      )
+    case .retryTapped:
+      guard !state.isLoading else { return .none }
+      return .send(.delegate(.retryMembers(roomID: state.room.id)))
     case .filterTapped:
       state.filter = state.appliedFilter
       return .none

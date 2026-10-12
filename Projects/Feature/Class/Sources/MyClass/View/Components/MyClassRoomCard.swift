@@ -6,6 +6,7 @@
 //
 
 import ClassDomainInterface
+import PickeCoreUtility
 import PickeDesignKit
 import SwiftUI
 
@@ -137,13 +138,6 @@ private extension MyClassRoomCard {
   /// 마감일을 끈 클래스(`.distantFuture`)는 표시하지 않는다.
   var deadlineText: String? {
     guard room.deadline != .distantFuture else { return nil }
-    return "\(Self.deadlineFormatter.string(from: room.deadline))까지"
+    return "\(room.deadline.formatted(.dottedDateTimeWithWeekday))까지"
   }
-
-  static let deadlineFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "ko_KR")
-    formatter.dateFormat = "yyyy. MM. dd. EEEE HH:mm"
-    return formatter
-  }()
 }

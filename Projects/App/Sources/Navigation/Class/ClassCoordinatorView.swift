@@ -23,6 +23,9 @@ public struct ClassCoordinatorView: View {
       case let .intro(introStore):
         ClassIntroView(store: introStore)
 
+      case let .join(joinStore):
+        ClassJoinView(store: joinStore)
+
       case let .startMethod(startMethodStore):
         ClassStartMethodView(store: startMethodStore)
 
@@ -37,6 +40,9 @@ public struct ClassCoordinatorView: View {
 
       case let .share(shareStore):
         ClassShareView(store: shareStore)
+
+      case let .ownerName(ownerNameStore):
+        ClassJoinView(store: ownerNameStore)
 
       case let .myClasses(myClassesStore):
         MyClassView(store: myClassesStore)
@@ -78,5 +84,11 @@ public struct ClassCoordinatorView: View {
       }
     }
     .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
+    .sheet(item: $store.scope(state: \.deadlineEdit, action: \.deadlineEdit)) { editorStore in
+      ClassDeadlineEditView(store: editorStore)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .interactiveDismissDisabled(editorStore.isSaving)
+    }
   }
 }

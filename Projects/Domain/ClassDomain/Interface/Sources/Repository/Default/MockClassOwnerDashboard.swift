@@ -24,7 +24,7 @@ public enum MockClassOwnerDashboard {
       ClassOwnerOpinion(
         id: 1,
         author: "김민지",
-        text: "슬픔을 겉으로 드러내지 않는다고 해서 타인을 사랑하지 않는다고 판단할 수는 없다고 생각해요.",
+        text: "연령을 낮추면 책임의 기준은 분명해지지만, 재범을 줄일 교육과 교정도 함께 준비해야 한다고 생각해요.",
         replyCount: 23,
         recommendationCount: 1340,
         createdAt: Date(timeIntervalSince1970: 1_780_000_300)
@@ -32,7 +32,7 @@ public enum MockClassOwnerDashboard {
       ClassOwnerOpinion(
         id: 2,
         author: "이서준",
-        text: "감정은 개인의 자유지만, 사회적 관계에서는 최소한의 공감 표현도 필요하다고 생각해요.",
+        text: "피해자의 안전을 위해 보호 조치가 필요하고, 청소년이 다시 범죄를 저지르지 않도록 지원해야 해요.",
         replyCount: 12,
         recommendationCount: 840,
         createdAt: Date(timeIntervalSince1970: 1_780_000_200)
@@ -46,7 +46,7 @@ public enum MockClassOwnerDashboard {
         createdAt: Date(timeIntervalSince1970: 1_780_000_100)
       ),
     ]
-    let insight = "처음에는 뫼르소의 태도를 비난할 수 있다는 의견이 많았지만, 대화 후에는 행동과 감정을 분리해서 봐야 한다는 의견이 늘어났어요."
+    let insight = "촉법소년 연령 하향에 관한 의견과 함께 피해자 보호, 교육 및 교정의 필요성을 논의했어요."
     let baseReport = MockClassReport.figma
     var reportTexts = baseReport.texts
     reportTexts[.aiSummaryDetail] = insight

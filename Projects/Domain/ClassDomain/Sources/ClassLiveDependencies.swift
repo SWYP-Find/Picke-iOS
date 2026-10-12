@@ -20,6 +20,12 @@ extension ClassAIChatUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassAIFeedbackUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassAIFeedbackInterface {
+    ClassAIFeedbackUseCaseImpl()
+  }
+}
+
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
     ClassMockRepositoryStorage.shared

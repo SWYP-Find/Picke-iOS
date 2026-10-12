@@ -18,6 +18,8 @@ import TCAFlow
 public struct ClassCoordinator {
   @Dependency(\.classMockRepository) private var classMockRepository
   @Dependency(\.classMockChatSession) private var classMockChatSession
+  @Dependency(\.uuid) private var uuid
+  @Dependency(\.date) private var date
 
   public init() {}
 
@@ -27,10 +29,17 @@ public struct ClassCoordinator {
     public var usesAIQuestions = false
     public var completedAIBattles: [Int: Bool] = [:]
     public var chatRoomsByBattleID: [Int: ClassRoom] = [:]
+    @Presents public var deadlineEdit: ClassDeadlineEditFeature.State?
     var pendingJoinID: UUID?
+    var completingJoinCodeInstanceID: UUID?
+    var completingJoinNicknameInstanceID: UUID?
     var reportInstanceIDs: Set<UUID> = []
     var dashboardInstanceIDs: Set<UUID> = []
     var chatRoomInstanceIDs: Set<UUID> = []
+    var ownerNameInstanceIDs: Set<UUID> = []
+    var participantJoinInstanceIDs: Set<UUID> = []
+    var memberInstanceIDs: Set<UUID> = []
+    var aiVoteInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
@@ -56,6 +65,7 @@ public struct ClassCoordinator {
     case async(AsyncAction)
     case inner(InnerAction)
     case navigation(NavigationAction)
+    case deadlineEdit(PresentationAction<ClassDeadlineEditFeature.Action>)
   }
 
   @CasePathable
@@ -67,8 +77,22 @@ public struct ClassCoordinator {
 
   public enum AsyncAction: Equatable {}
   public enum InnerAction: Equatable {
-    case membersLoaded(ClassRoom, [ClassMember], Int)
-    case membersFailed(Int, String)
+    case membersLoaded(
+      routeID: Int,
+      roomID: Int,
+      instanceID: UUID,
+      requestID: UUID,
+      room: ClassRoom,
+      members: [ClassMember],
+      currentMemberID: Int
+    )
+    case membersFailed(
+      routeID: Int,
+      roomID: Int,
+      instanceID: UUID,
+      requestID: UUID,
+      message: String
+    )
     case memberMutationCompleted(ClassRoom, [ClassMember])
     case memberMutationFailed(Int, String)
     case mockBattleRegistered(roomID: Int, battleID: Int)
@@ -78,6 +102,40 @@ public struct ClassCoordinator {
   }
 
   public enum NavigationAction: Equatable {}
+
+  public var body: some Reducer<State, Action> {
+    Reduce { state, action in
+      if case .deadlineEdit(.dismiss) = action, state.deadlineEdit?.isSaving == true {
+        return .none
+      }
+      if state.pendingJoinID != nil,
+         isCompletingJoinPrefix(state),
+         case let .router(.routeAction(routeID, action: .join(joinAction))) = action,
+         routeID == state.routes.count - 1,
+         case let .join(code)? = state.routes.last?.screen,
+         code.mode == .code,
+         code.instanceID == state.completingJoinCodeInstanceID
+      {
+        switch joinAction {
+        case .view(.findTapped), .async(.find(_)):
+          return .none
+        default:
+          break
+        }
+      }
+      return routedBody.reduce(into: &state, action: action)
+    }
+  }
+
+  private var routedBody: some Reducer<State, Action> {
+    Reduce { state, action in
+      handleRoute(state: &state, action: action)
+    }
+    .forEachRoute(\.routes, action: \.router)
+    .ifLet(\.$deadlineEdit, action: \.deadlineEdit) {
+      ClassDeadlineEditFeature()
+    }
+  }
 
   func handleRoute(
     state: inout State,
@@ -90,8 +148,13 @@ public struct ClassCoordinator {
       handleViewAction(state: &state, action: viewAction)
     case let .inner(innerAction):
       handleInnerAction(state: &state, action: innerAction)
+    case let .deadlineEdit(deadlineAction):
+      handleDeadlineEditAction(state: &state, action: deadlineAction)
     case .async, .navigation:
       .none
+    }
+    if state.pendingJoinID != nil, !isCompletingJoinPrefix(state) {
+      invalidateCompletingJoin(state: &state)
     }
     if state.routes.count == 1 {
       state.chatRoomsByBattleID.removeAll()
@@ -99,12 +162,193 @@ public struct ClassCoordinator {
     return .merge(
       effect,
       cancelRemovedReportLoads(state: &state),
-      cancelRemovedChatObservers(state: &state)
+      cancelRemovedChatObservers(state: &state),
+      cancelRemovedClassEffects(state: &state)
     )
   }
 }
 
 private extension ClassCoordinator {
+  func openDeadlineEditor(
+    state: inout State,
+    room: ClassRoom
+  ) -> Effect<Action> {
+    guard room.role == .owner, state.deadlineEdit?.isSaving != true else { return .none }
+    let previousID = state.deadlineEdit?.instanceID
+    state.deadlineEdit = .init(room: room, instanceID: uuid(), referenceNow: date.now)
+    return previousID.map { .cancel(id: ClassDeadlineEditFeature.CancelID.save($0)) } ?? .none
+  }
+
+  func handleDeadlineEditAction(
+    state: inout State,
+    action: PresentationAction<ClassDeadlineEditFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss, .presented(.delegate(.dismiss)):
+      guard let editor = state.deadlineEdit, !editor.isSaving else { return .none }
+      state.deadlineEdit = nil
+      return .cancel(id: ClassDeadlineEditFeature.CancelID.save(editor.instanceID))
+
+    case let .presented(.delegate(.saved(room, instanceID: instanceID, requestID: requestID))):
+      guard let editor = state.deadlineEdit,
+            editor.instanceID == instanceID,
+            editor.activeRequestID == requestID,
+            editor.room.id == room.id,
+            editor.isSaving
+      else { return .none }
+      for (index, route) in state.routes.enumerated() {
+        switch route.screen {
+        case var .myClasses(list):
+          for roomIndex in list.rooms.indices where list.rooms[roomIndex].id == room.id {
+            list.rooms[roomIndex] = room
+          }
+          if list.viewState == .loaded || list.viewState == .empty {
+            list.viewState = list.visibleRooms.isEmpty ? .empty : .loaded
+          }
+          state.routes[screenAt: index] = .myClasses(list)
+        case var .detail(detail) where detail.room.id == room.id:
+          detail.room = room
+          state.routes[screenAt: index] = .detail(detail)
+        case var .ownerDashboard(dashboard) where dashboard.room.id == room.id:
+          dashboard.room = room
+          state.routes[screenAt: index] = .ownerDashboard(dashboard)
+        case var .closedBattle(closed) where closed.room.id == room.id:
+          closed.room = room
+          state.routes[screenAt: index] = .closedBattle(closed)
+        case var .report(report) where report.room.id == room.id:
+          report.room = room
+          state.routes[screenAt: index] = .report(report)
+        default:
+          break
+        }
+      }
+      for (battleID, cachedRoom) in state.chatRoomsByBattleID where cachedRoom.id == room.id {
+        state.chatRoomsByBattleID[battleID] = room
+      }
+      state.deadlineEdit = nil
+      return .none
+
+    case .presented:
+      return .none
+    }
+  }
+
+  func invalidateCompletingJoin(state: inout State) {
+    state.pendingJoinID = nil
+    state.completingJoinCodeInstanceID = nil
+    state.completingJoinNicknameInstanceID = nil
+  }
+
+  func isCompletingJoinPrefix(_ state: State) -> Bool {
+    guard state.pendingJoinID != nil,
+          let codeID = state.completingJoinCodeInstanceID,
+          let nicknameID = state.completingJoinNicknameInstanceID,
+          (1 ... 3).contains(state.routes.count),
+          case .intro = state.routes[0].screen
+    else { return false }
+    if state.routes.count >= 2 {
+      guard case let .join(code) = state.routes[1].screen,
+            code.mode == .code, code.instanceID == codeID
+      else { return false }
+    }
+    if state.routes.count == 3 {
+      guard case let .join(nickname) = state.routes[2].screen,
+            nickname.mode == .nickname, nickname.instanceID == nicknameID
+      else { return false }
+    }
+    return true
+  }
+
+  func fetchMembers(
+    room: ClassRoom,
+    routeID: Int,
+    roomID: Int,
+    instanceID: UUID,
+    requestID: UUID
+  ) -> Effect<Action> {
+    let started: Effect<Action> = .send(.router(.routeAction(
+      id: routeID,
+      action: .members(.loadingStarted(requestID))
+    )))
+    guard let classMockRepository else {
+      return .concatenate(started, .send(.inner(.membersFailed(
+        routeID: routeID,
+        roomID: roomID,
+        instanceID: instanceID,
+        requestID: requestID,
+        message: "멤버 정보를 불러올 수 없어요."
+      ))))
+    }
+    let fetch: Effect<Action> = .run { send in
+      do {
+        let members = try await classMockRepository.fetchMembers(roomID: roomID)
+        let currentMemberID = try await classMockRepository.currentMemberID(roomID: roomID)
+        await send(.inner(.membersLoaded(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          room: room,
+          members: members,
+          currentMemberID: currentMemberID
+        )))
+      } catch {
+        await send(.inner(.membersFailed(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          message: error.localizedDescription
+        )))
+      }
+    }
+    .cancellable(id: ClassMemberFeature.CancelID.load(instanceID), cancelInFlight: true)
+    return .concatenate(started, fetch)
+  }
+
+  func cancelRemovedClassEffects(state: inout State) -> Effect<Action> {
+    let joinIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .join(join) = route.screen else { return nil }
+      return join.instanceID
+    })
+    let ownerIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ownerName(owner) = route.screen else { return nil }
+      return owner.instanceID
+    })
+    let memberIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .members(member) = route.screen else { return nil }
+      return member.instanceID
+    })
+    let voteIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .aiVote(vote) = route.screen else { return nil }
+      return vote.instanceID
+    })
+    let removedOwners = state.ownerNameInstanceIDs.subtracting(ownerIDs)
+    let removedJoins = state.participantJoinInstanceIDs.subtracting(joinIDs)
+    let removedMembers = state.memberInstanceIDs.subtracting(memberIDs)
+    let removedVotes = state.aiVoteInstanceIDs.subtracting(voteIDs)
+    state.ownerNameInstanceIDs = ownerIDs
+    state.participantJoinInstanceIDs = joinIDs
+    state.memberInstanceIDs = memberIDs
+    state.aiVoteInstanceIDs = voteIDs
+    return .merge(
+      removedOwners.map { .cancel(id: ClassJoinFeature.CancelID.nameOwner($0)) }
+        + removedJoins.flatMap { id in
+          [
+            .cancel(id: ClassJoinFeature.CancelID.find(id)),
+            .cancel(id: ClassJoinFeature.CancelID.join(id)),
+          ]
+        }
+        + removedMembers.map { .cancel(id: ClassMemberFeature.CancelID.load($0)) }
+        + removedVotes.flatMap { id in
+          [
+            .cancel(id: ClassAIVoteFeature.CancelID.load(id)),
+            .cancel(id: ClassAIVoteFeature.CancelID.submit(id)),
+          ]
+        }
+    )
+  }
+
   func cancelRemovedChatObservers(state: inout State) -> Effect<Action> {
     let currentIDs = Set(state.routes.flatMap { route -> Set<UUID> in
       guard case let .chat(chat) = route.screen else { return [] }
@@ -131,8 +375,19 @@ private extension ClassCoordinator {
     state.reportInstanceIDs = reportIDs
     state.dashboardInstanceIDs = dashboardIDs
     return .merge(
-      cancelledReports.map { .cancel(id: ClassReportFeature.CancelID.load($0)) }
-        + cancelledDashboards.map { .cancel(id: ClassOwnerDashboardFeature.CancelID.load($0)) }
+      cancelledReports.flatMap { id in
+        [
+          .cancel(id: ClassReportFeature.CancelID.load(id)),
+          .cancel(id: ClassReportFeature.CancelID.generate(id)),
+        ]
+      }
+        + cancelledDashboards.flatMap { id in
+          [
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.load(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.generate(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.generatePersonal(id)),
+          ]
+        }
     )
   }
 
@@ -141,9 +396,56 @@ private extension ClassCoordinator {
     action: IndexedRouterActionOf<ClassScreen>
   ) -> Effect<Action> {
     switch action {
-    case let .routeAction(_, action: .intro(.delegate(.joined(room, nickname: _)))):
-      let requestID = UUID()
+    case .routeAction(_, action: .intro(.delegate(.backToHome))):
+      invalidateCompletingJoin(state: &state)
+      return .none
+
+    case let .routeAction(routeID, action: .intro(.delegate(.join))):
+      guard routeID == 0, state.routes.count == 1,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.join(.init(mode: .code, instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .join(.delegate(.found(room, instanceID: instanceID)))):
+      guard routeID == state.routes.count - 1,
+            let instanceID,
+            case let .join(code)? = state.routes.last?.screen,
+            code.mode == .code, code.instanceID == instanceID,
+            case .intro? = state.routes.first?.screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.join(.init(mode: .nickname, preview: room, instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .join(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case let .join(join)? = state.routes.last?.screen
+      else { return .none }
+      if state.pendingJoinID != nil,
+         join.instanceID == state.completingJoinNicknameInstanceID
+      {
+        return .none
+      }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .join(.delegate(.joined(room, nickname: _, instanceID: instanceID)))):
+      guard routeID == 2, state.routes.count == 3,
+            let instanceID,
+            case .intro = state.routes[0].screen,
+            case let .join(code) = state.routes[1].screen,
+            code.mode == .code, let codeID = code.instanceID,
+            case let .join(nickname) = state.routes[2].screen,
+            nickname.mode == .nickname,
+            nickname.instanceID == instanceID,
+            nickname.preview == nil,
+            state.pendingJoinID == nil
+      else { return .none }
+      let requestID = uuid()
       state.pendingJoinID = requestID
+      state.completingJoinCodeInstanceID = codeID
+      state.completingJoinNicknameInstanceID = instanceID
       state.completedAIBattles[-1_000_000 - room.id] = nil
       state.chatRoomsByBattleID[-1_000_000 - room.id] = nil
       return .run { [classMockChatSession] send in
@@ -151,11 +453,31 @@ private extension ClassCoordinator {
         await send(.inner(.joinedSessionCleared(requestID, room)))
       }
 
+    case let .routeAction(routeID, action: .join(.async(.find(_)))):
+      if routeID == state.routes.count - 1,
+         case let .join(code)? = state.routes.last?.screen,
+         code.mode == .code, code.activeFindRequestID != nil
+      {
+        invalidateCompletingJoin(state: &state)
+      }
+      return .none
+
+    case let .routeAction(routeID, action: .join(.async(.join(joinCode: _, nickname: _)))):
+      if routeID == state.routes.count - 1,
+         case let .join(nickname)? = state.routes.last?.screen,
+         nickname.mode == .nickname, nickname.activeJoinRequestID != nil
+      {
+        invalidateCompletingJoin(state: &state)
+      }
+      return .none
+
     case .routeAction(_, action: .intro(.delegate(.myClasses))):
+      invalidateCompletingJoin(state: &state)
       state.routes.push(.myClasses(.init()))
       return .none
 
     case .routeAction(_, action: .intro(.delegate(.create))):
+      invalidateCompletingJoin(state: &state)
       state.routes.push(.startMethod(.init()))
       return .none
 
@@ -203,6 +525,36 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .share(.delegate(.dismiss))):
       return .send(.view(.backToRootAction))
 
+    case let .routeAction(routeID, action: .share(.delegate(.nameOwner(room)))):
+      guard routeID == state.routes.count - 1,
+            case let .share(share)? = state.routes.last?.screen,
+            share.room.id == room.id
+      else { return .none }
+      state.routes.push(.ownerName(.init(
+        mode: .ownerName,
+        preview: room,
+        instanceID: uuid()
+      )))
+      return .none
+
+    case .routeAction(_, action: .ownerName(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .ownerName(.delegate(.ownerNamed(room, instanceID: instanceID)))):
+      guard routeID == state.routes.count - 1,
+            state.routes.count >= 2,
+            case let .ownerName(owner)? = state.routes.last?.screen,
+            owner.instanceID == instanceID,
+            owner.mode == .ownerName,
+            owner.preview == nil,
+            case let .share(share) = state.routes[state.routes.count - 2].screen,
+            share.room.id == room.id
+      else { return .none }
+      state.routes.goBackToRoot()
+      state.chatRoomsByBattleID.removeAll()
+      state.routes.push(.detail(.init(room: room)))
+      return .none
+
     case let .routeAction(_, action: .share(.delegate(.enterClass(room)))):
       state.routes.goBackToRoot()
       state.chatRoomsByBattleID.removeAll()
@@ -226,24 +578,43 @@ private extension ClassCoordinator {
         await send(.inner(.membershipSessionCleared(routeID: routeID, roomID: roomID)))
       }
 
-    case let .routeAction(_, action: .myClasses(.delegate(.openInformation(room)))):
-      var detail = ClassDetailFeature.State(room: room)
-      detail.modal = .init(kind: .deadline)
-      state.routes.push(.detail(detail))
-      return .none
+    case let .routeAction(routeID, action: .myClasses(.delegate(.openInformation(room)))):
+      guard routeID == state.routes.count - 1,
+            case let .myClasses(list)? = state.routes.last?.screen,
+            list.rooms.contains(where: { $0.id == room.id })
+      else { return .none }
+      return openDeadlineEditor(state: &state, room: room)
+
+    case let .routeAction(routeID, action: .detail(.delegate(.openDeadline(room)))):
+      guard routeID == state.routes.count - 1,
+            case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == room.id
+      else { return .none }
+      return openDeadlineEditor(state: &state, room: room)
 
     case let .routeAction(_, action: .detail(.delegate(.openMembers(room)))):
-      state.routes.push(.members(.init(room: room)))
-      guard let classMockRepository else { return .none }
-      return .run { send in
-        do {
-          let members = try await classMockRepository.fetchMembers(roomID: room.id)
-          let currentMemberID = try await classMockRepository.currentMemberID(roomID: room.id)
-          await send(.inner(.membersLoaded(room, members, currentMemberID)))
-        } catch {
-          await send(.inner(.membersFailed(room.id, error.localizedDescription)))
-        }
-      }
+      let member = ClassMemberFeature.State(room: room, instanceID: uuid())
+      state.routes.push(.members(member))
+      return fetchMembers(
+        room: room,
+        routeID: state.routes.count - 1,
+        roomID: room.id,
+        instanceID: member.instanceID,
+        requestID: uuid()
+      )
+
+    case let .routeAction(routeID, action: .members(.delegate(.retryMembers(roomID)))):
+      guard routeID == state.routes.count - 1,
+            case let .members(member)? = state.routes.last?.screen,
+            member.room.id == roomID
+      else { return .none }
+      return fetchMembers(
+        room: member.room,
+        routeID: routeID,
+        roomID: roomID,
+        instanceID: member.instanceID,
+        requestID: uuid()
+      )
 
     case let .routeAction(
       _,
@@ -329,8 +700,11 @@ private extension ClassCoordinator {
          .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case .routeAction(_, action: .ownerDashboard(.delegate(.editClass))):
-      return returnToClassDetail(state: &state, action: .deadlineTapped)
+    case let .routeAction(routeID, action: .ownerDashboard(.delegate(.editClass))):
+      guard routeID == state.routes.count - 1,
+            case let .ownerDashboard(dashboard)? = state.routes.last?.screen
+      else { return .none }
+      return openDeadlineEditor(state: &state, room: dashboard.room)
 
     case .routeAction(_, action: .ownerDashboard(.delegate(.deleteClass))):
       return returnToClassDetail(state: &state, action: .deleteTapped)
@@ -453,10 +827,31 @@ private extension ClassCoordinator {
   ) -> Effect<Action> {
     switch action {
     case .backAction:
+      if let editor = state.deadlineEdit {
+        guard !editor.isSaving else { return .none }
+        state.deadlineEdit = nil
+        return .cancel(id: ClassDeadlineEditFeature.CancelID.save(editor.instanceID))
+      }
+      if state.pendingJoinID != nil,
+         state.routes.count == 3,
+         case let .join(join)? = state.routes.last?.screen,
+         join.instanceID == state.completingJoinNicknameInstanceID
+      {
+        return .none
+      }
       state.routes.goBack()
       return .none
 
     case .backToRootAction:
+      if let editor = state.deadlineEdit {
+        guard !editor.isSaving else { return .none }
+        state.deadlineEdit = nil
+        invalidateCompletingJoin(state: &state)
+        state.routes.goBackToRoot()
+        state.chatRoomsByBattleID.removeAll()
+        return .cancel(id: ClassDeadlineEditFeature.CancelID.save(editor.instanceID))
+      }
+      invalidateCompletingJoin(state: &state)
       state.routes.goBackToRoot()
       state.chatRoomsByBattleID.removeAll()
       return .none
@@ -490,9 +885,11 @@ private extension ClassCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .joinedSessionCleared(requestID, room):
-      guard state.pendingJoinID == requestID else { return .none }
-      state.pendingJoinID = nil
-      guard case .intro? = state.routes.last?.screen else { return .none }
+      guard state.pendingJoinID == requestID,
+            isCompletingJoinPrefix(state)
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.goBackToRoot()
       state.routes.push(.detail(.init(room: room)))
       return .none
 
@@ -533,19 +930,36 @@ private extension ClassCoordinator {
       }
       return .none
 
-    case let .membersLoaded(room, members, currentMemberID):
-      guard let index = state.routes.lastIndex(where: {
-        if case let .members(memberState) = $0.screen {
-          return memberState.room.id == room.id
-        }
-        return false
-      }) else { return .none }
+    case let .membersLoaded(routeID, roomID, instanceID, requestID, room, members, currentMemberID):
+      guard state.routes.indices.contains(routeID),
+            case let .members(member) = state.routes[routeID].screen,
+            member.room.id == roomID,
+            member.instanceID == instanceID,
+            member.activeLoadRequestID == requestID
+      else { return .none }
       return .send(.router(.routeAction(
-        id: index,
-        action: .members(.membersLoaded(room: room, members: members, currentMemberID: currentMemberID))
+        id: routeID,
+        action: .members(.membersLoaded(
+          room: room,
+          members: members,
+          currentMemberID: currentMemberID,
+          requestID: requestID
+        ))
       )))
 
-    case let .membersFailed(roomID, message), let .memberMutationFailed(roomID, message):
+    case let .membersFailed(routeID, roomID, instanceID, requestID, message):
+      guard state.routes.indices.contains(routeID),
+            case let .members(member) = state.routes[routeID].screen,
+            member.room.id == roomID,
+            member.instanceID == instanceID,
+            member.activeLoadRequestID == requestID
+      else { return .none }
+      return .send(.router(.routeAction(
+        id: routeID,
+        action: .members(.loadFailed(requestID: requestID, message: message))
+      )))
+
+    case let .memberMutationFailed(roomID, message):
       guard let index = state.routes.lastIndex(where: {
         if case let .members(memberState) = $0.screen {
           return memberState.room.id == roomID
@@ -584,11 +998,13 @@ extension ClassCoordinator {
   @Reducer
   public enum ClassScreen {
     case intro(ClassIntroFeature)
+    case join(ClassJoinFeature)
     case startMethod(ClassStartMethodFeature)
     case topic(ClassTopicFeature)
     case recommend(ClassRecommendFeature)
     case setting(ClassSettingFeature)
     case share(ClassShareFeature)
+    case ownerName(ClassJoinFeature)
     case myClasses(MyClassFeature)
     case detail(ClassDetailFeature)
     case members(ClassMemberFeature)

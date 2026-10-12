@@ -8,6 +8,7 @@
 import BattleDomainInterface
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 
 @Reducer
 public struct ClassAIVoteFeature {
@@ -15,24 +16,39 @@ public struct ClassAIVoteFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public let instanceID: UUID
     public let room: ClassRoom
     public let battleID: Int
     public var selectedOptionID: Int?
     public var hasSubmitted = false
     public var hasCompletedPostVote = false
     public var isSubmitting = false
+    public var viewState: ViewState = .loading
+    public var loadRequestID: UUID?
+    public var submitRequestID: UUID?
     public var errorMessage: String?
 
     public init(
       room: ClassRoom,
-      battleID: Int
+      battleID: Int,
+      instanceID: UUID? = nil
     ) {
+      @Dependency(\.uuid) var uuid
+      self.instanceID = instanceID ?? uuid()
       self.room = room
       self.battleID = battleID
     }
 
+    public enum ViewState: Equatable {
+      case loading, error, loaded
+    }
+
+    public var submitTitle: String {
+      hasSubmitted ? "의견 보기" : "투표하기"
+    }
+
     public var canSubmit: Bool {
-      selectedOptionID != nil && !isSubmitting
+      viewState == .loaded && selectedOptionID != nil && !isSubmitting
     }
   }
 
@@ -45,6 +61,7 @@ public struct ClassAIVoteFeature {
   @CasePathable
   public enum View: Equatable {
     case onAppear
+    case retryTapped
     case backTapped
     case optionTapped(Int)
     case submitTapped
@@ -64,8 +81,8 @@ public struct ClassAIVoteFeature {
   }
 
   public enum InnerAction: Equatable {
-    case voteLoaded(Result<VoteProgress, BattleError>)
-    case voteSubmitted(Result<PreVoteResult, BattleError>)
+    case voteLoaded(instanceID: UUID, requestID: UUID, battleID: Int, Result<VoteProgress, BattleError>)
+    case voteSubmitted(instanceID: UUID, requestID: UUID, battleID: Int, Result<PreVoteResult, BattleError>)
   }
 
   @CasePathable
@@ -74,6 +91,12 @@ public struct ClassAIVoteFeature {
     case voteSubmitted(battleID: Int, selectedOptionID: Int, hasCompletedPostVote: Bool)
   }
 
+  public enum CancelID: Hashable, Sendable {
+    case load(UUID)
+    case submit(UUID)
+  }
+
+  @Dependency(\.uuid) private var uuid
   @Dependency(\.battleUseCase) private var battleUseCase
 
   public var body: some Reducer<State, Action> {
@@ -99,24 +122,29 @@ extension ClassAIVoteFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear:
-      let battleID = state.battleID
-      return .run { send in
-        do {
-          let battle = try await battleUseCase.fetchBattle(battleId: battleID)
-          await send(.inner(.voteLoaded(.success(.init(
-            status: battle.userVoteStatus,
-            step: battle.currentStep
-          )))))
-        } catch {
-          await send(.inner(.voteLoaded(.failure(BattleError.from(error)))))
-        }
-      }
+      guard state.viewState != .loaded, state.loadRequestID == nil else { return .none }
+      return loadVote(state: &state)
+
+    case .retryTapped:
+      guard state.viewState == .error, state.loadRequestID == nil else { return .none }
+      return loadVote(state: &state)
 
     case .backTapped:
-      return .send(.delegate(.dismiss))
+      state.loadRequestID = nil
+      state.submitRequestID = nil
+      state.isSubmitting = false
+      return .concatenate(
+        .merge(
+          .cancel(id: CancelID.load(state.instanceID)),
+          .cancel(id: CancelID.submit(state.instanceID))
+        ),
+        .send(.delegate(.dismiss))
+      )
 
     case let .optionTapped(optionID):
-      guard !state.hasSubmitted, !state.isSubmitting, optionID == 1 || optionID == 2 else {
+      guard state.viewState == .loaded, !state.hasSubmitted, !state.isSubmitting,
+            optionID == 1 || optionID == 2
+      else {
         return .none
       }
       state.selectedOptionID = optionID
@@ -124,7 +152,7 @@ extension ClassAIVoteFeature {
       return .none
 
     case .submitTapped:
-      guard let optionID = state.selectedOptionID, !state.isSubmitting else { return .none }
+      guard state.canSubmit, let optionID = state.selectedOptionID else { return .none }
       if state.hasSubmitted {
         return .send(.delegate(.voteSubmitted(
           battleID: state.battleID,
@@ -134,16 +162,43 @@ extension ClassAIVoteFeature {
       }
       state.isSubmitting = true
       state.errorMessage = nil
-      let battleID = state.battleID
-      return .run { send in
-        do {
-          let result = try await battleUseCase.submitPreVote(battleId: battleID, optionId: optionID)
-          await send(.inner(.voteSubmitted(.success(result))))
-        } catch {
-          await send(.inner(.voteSubmitted(.failure(BattleError.from(error)))))
-        }
+      let requestID = uuid()
+      state.submitRequestID = requestID
+      return .run { [battleUseCase, instanceID = state.instanceID, battleID = state.battleID] send in
+        let result = await Result {
+          try await battleUseCase.submitPreVote(battleId: battleID, optionId: optionID)
+        }.mapError(BattleError.from)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.voteSubmitted(
+          instanceID: instanceID,
+          requestID: requestID,
+          battleID: battleID,
+          result
+        )))
       }
+      .cancellable(id: CancelID.submit(state.instanceID), cancelInFlight: true)
     }
+  }
+
+  private func loadVote(state: inout State) -> Effect<Action> {
+    let requestID = uuid()
+    state.loadRequestID = requestID
+    state.viewState = .loading
+    state.errorMessage = nil
+    return .run { [battleUseCase, instanceID = state.instanceID, battleID = state.battleID] send in
+      let result = await Result {
+        let battle = try await battleUseCase.fetchBattle(battleId: battleID)
+        return VoteProgress(status: battle.userVoteStatus, step: battle.currentStep)
+      }.mapError(BattleError.from)
+      guard !Task.isCancelled else { return }
+      await send(.inner(.voteLoaded(
+        instanceID: instanceID,
+        requestID: requestID,
+        battleID: battleID,
+        result
+      )))
+    }
+    .cancellable(id: CancelID.load(state.instanceID), cancelInFlight: true)
   }
 
   private func handleInnerAction(
@@ -151,38 +206,49 @@ extension ClassAIVoteFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
-    case let .voteLoaded(.success(progress)):
-      switch progress.status {
-      case .pro:
-        state.selectedOptionID = 1
-        state.hasSubmitted = true
-      case .con:
-        state.selectedOptionID = 2
-        state.hasSubmitted = true
-      case .none, .unknown:
-        break
+    case let .voteLoaded(instanceID, requestID, battleID, result):
+      guard state.instanceID == instanceID, state.loadRequestID == requestID,
+            state.battleID == battleID else { return .none }
+      state.loadRequestID = nil
+      switch result {
+      case let .success(progress):
+        state.viewState = .loaded
+        switch progress.status {
+        case .pro:
+          state.selectedOptionID = 1
+          state.hasSubmitted = true
+        case .con:
+          state.selectedOptionID = 2
+          state.hasSubmitted = true
+        case .none, .unknown:
+          state.selectedOptionID = nil
+          state.hasSubmitted = false
+        }
+        state.hasCompletedPostVote = progress.step == .finished || progress.step == .completed
+      case .failure:
+        state.viewState = .error
+        state.errorMessage = "투표 상태를 불러오지 못했어요. 다시 시도해 주세요."
       }
-      state.hasCompletedPostVote = progress.step == .finished || progress.step == .completed
       return .none
 
-    case .voteLoaded(.failure):
-      state.errorMessage = "투표 상태를 불러오지 못했어요. 다시 시도해 주세요."
-      return .none
-
-    case .voteSubmitted(.success):
+    case let .voteSubmitted(instanceID, requestID, battleID, result):
+      guard state.instanceID == instanceID, state.submitRequestID == requestID,
+            state.battleID == battleID else { return .none }
+      state.submitRequestID = nil
       state.isSubmitting = false
-      state.hasSubmitted = true
-      guard let optionID = state.selectedOptionID else { return .none }
-      return .send(.delegate(.voteSubmitted(
-        battleID: state.battleID,
-        selectedOptionID: optionID,
-        hasCompletedPostVote: false
-      )))
-
-    case .voteSubmitted(.failure):
-      state.isSubmitting = false
-      state.errorMessage = "투표를 저장하지 못했어요. 다시 시도해 주세요."
-      return .none
+      switch result {
+      case .success:
+        state.hasSubmitted = true
+        guard let optionID = state.selectedOptionID else { return .none }
+        return .send(.delegate(.voteSubmitted(
+          battleID: state.battleID,
+          selectedOptionID: optionID,
+          hasCompletedPostVote: false
+        )))
+      case .failure:
+        state.errorMessage = "투표를 저장하지 못했어요. 다시 시도해 주세요."
+        return .none
+      }
     }
   }
 }

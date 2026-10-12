@@ -24,7 +24,7 @@ public struct MyClassFeature {
       case loading
       case error
       case empty
-      case loaded([ClassRoom])
+      case loaded
     }
 
     public enum Progress: Hashable, CaseIterable {
@@ -35,6 +35,7 @@ public struct MyClassFeature {
 
     public var rooms: [ClassRoom] = []
     public var progress: Progress = .all
+    public var viewState: ViewState = .loading
     public var isLoading = false
     public var isDeleting = false
     public var isLeaving = false
@@ -47,17 +48,6 @@ public struct MyClassFeature {
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init() {}
-
-    public var viewState: ViewState {
-      if errorMessage != nil && rooms.isEmpty {
-        return .error
-      }
-      if isLoading && rooms.isEmpty {
-        return .loading
-      }
-      let visible = visibleRooms
-      return visible.isEmpty ? .empty : .loaded(visible)
-    }
 
     public var visibleRooms: [ClassRoom] {
       rooms.filter { room in
@@ -191,6 +181,9 @@ extension MyClassFeature {
       return .send(.delegate(.dismiss))
     case let .progressTapped(progress):
       state.progress = progress
+      if state.viewState == .loaded || state.viewState == .empty {
+        state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
+      }
       return .none
     case let .roomTapped(id):
       guard !state.isLeaving else { return .none }
@@ -275,6 +268,9 @@ extension MyClassFeature {
       let generation = state.fetchGeneration
       state.isLoading = true
       state.errorMessage = nil
+      if state.viewState == .loading || state.viewState == .error {
+        state.viewState = .loading
+      }
       return .run { [classUseCase] send in
         let result = await Result {
           try await classUseCase.fetchMyClasses()
@@ -325,14 +321,19 @@ extension MyClassFeature {
       guard generation == state.fetchGeneration, !state.isLeaving, !state.isDeleting else { return .none }
       state.isLoading = false
       state.rooms = rooms
+      state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
     case let .roomsResponse(generation, .failure(error)):
       guard generation == state.fetchGeneration, !state.isLeaving, !state.isDeleting else { return .none }
       state.isLoading = false
       state.errorMessage = error.message
+      if state.viewState == .loading {
+        state.viewState = .error
+      }
     case let .deleted(.success(id)):
       state.isDeleting = false
       state.selectedRoomID = nil
       state.rooms.removeAll { $0.id == id }
+      state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
       return .send(.async(.fetchRooms))
     case let .deleted(.failure(error)):
       state.isDeleting = false
@@ -348,6 +349,7 @@ extension MyClassFeature {
     case let .leaveCleanupCompleted(id):
       guard state.isLeaving, state.leavingRoomID == id else { return .none }
       state.rooms.removeAll { $0.id == id }
+      state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
       state.selectedRoomID = nil
       state.isLeaving = false
       state.leavingRoomID = nil

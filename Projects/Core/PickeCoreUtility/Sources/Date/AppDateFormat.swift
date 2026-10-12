@@ -11,6 +11,7 @@ public enum AppDateFormat: String, CaseIterable, Sendable {
   case dateTime = "yyyy-MM-dd HH:mm:ss"
   case yearMonthDay = "yyyy-MM-dd"
   case fullKoreanDate = "yyyy년 MM월 dd일"
+  case fullKoreanDateTime = "yyyy년 MM월 dd일 HH:mm"
   case yearMonthDayDotted = "yyyy.MM.dd"
   /// 0 을 채우지 않는 점 표기 (예: 2026.4.10)
   case yearMonthDayDotShort = "yyyy.M.d"
@@ -20,12 +21,22 @@ public enum AppDateFormat: String, CaseIterable, Sendable {
   case serverDateTime = "yyyy-MM-dd'T'HH:mm:ss"
   case serverDateTimeMillis = "yyyy-MM-dd'T'HH:mm:ss.SSS"
   case serverDateTimeMicros = "yyyy-MM-dd'T'HH:mm:ss.SSSSSS"
+
+  public static var timeZone: TimeZone {
+    TimeZone(identifier: "Asia/Seoul") ?? .gmt
+  }
+
+  public static var calendar: Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    return calendar
+  }
 }
 
 enum AppDateFormatter {
   private static let locale = Locale(identifier: "en_US_POSIX")
-  private static let timeZone = TimeZone(identifier: "Asia/Seoul") ?? .gmt
-  private static let calendar = Calendar(identifier: .gregorian)
+  private static let timeZone = AppDateFormat.timeZone
+  private static let calendar = AppDateFormat.calendar
 
   /// 서버 날짜 문자열 파싱 전용
   static let parser: DateFormatter = {

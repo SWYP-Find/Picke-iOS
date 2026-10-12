@@ -8,6 +8,7 @@
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 import PickeSharedUI
 import Testing
 
@@ -19,7 +20,7 @@ struct ClassMemberTests {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassMemberFeature.State(room: room, members: [
       ClassMember(id: 1, name: "김선생", isOwner: true), member,
-    ])) {
+    ], instanceID: UUID(), preloadedViewState: .loaded)) {
       ClassMemberFeature()
     }
 
@@ -47,7 +48,9 @@ struct ClassMemberTests {
     let store = TestStore(initialState: ClassMemberFeature.State(
       room: ClassRoom.mockJoinable,
       members: [ClassMember(id: 1, name: "김선생", isOwner: true), ClassMember(id: 2, name: "김민지")],
-      currentMemberID: 2
+      currentMemberID: 2,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
     )) {
       ClassMemberFeature()
     }
@@ -60,7 +63,9 @@ struct ClassMemberTests {
   func 운영자와_본인_행은_내보낼_수_없다() async {
     let store = TestStore(initialState: ClassMemberFeature.State(
       room: ClassRoom.mocks[0],
-      members: [ClassMember(id: 1, name: "김선생", isOwner: true), ClassMember(id: 2, name: "김민지")]
+      members: [ClassMember(id: 1, name: "김선생", isOwner: true), ClassMember(id: 2, name: "김민지")],
+      instanceID: UUID(),
+      preloadedViewState: .loaded
     )) {
       ClassMemberFeature()
     }
@@ -74,7 +79,7 @@ struct ClassMemberTests {
     let room = ClassRoom.mockJoinable
     let member = ClassMember(id: 2, name: "김민지")
     let store = TestStore(initialState: ClassMemberFeature.State(
-      room: room, members: [member], currentMemberID: 2
+      room: room, members: [member], currentMemberID: 2, instanceID: UUID(), preloadedViewState: .loaded
     )) {
       ClassMemberFeature()
     }
@@ -103,7 +108,7 @@ struct ClassMemberTests {
 
   @Test
   func 저장_실패는_프로젝트_안내창으로_보여준다() async {
-    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
+    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())) {
       ClassMemberFeature()
     }
 
@@ -122,31 +127,111 @@ struct ClassMemberTests {
 
   @Test
   func 멤버_자료가_없으면_인원수만_보존하고_행은_만들지_않는다() {
-    let state = ClassMemberFeature.State(room: ClassRoom.mocks[0])
+    let state = ClassMemberFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
 
     #expect(state.room.memberCount == ClassRoom.mocks[0].memberCount)
     #expect(state.members.isEmpty)
     #expect(state.visibleMembers.isEmpty)
-    #expect(state.viewState == .unavailable)
+    #expect(state.viewState == .loading)
   }
 
   @Test
   func 멤버_로딩은_입력한_검색어를_보존한다() async {
     let room = ClassRoom.mocks[0]
     let member = ClassMember(id: 2, name: "김민지")
-    let store = TestStore(initialState: ClassMemberFeature.State(room: room)) {
+    let requestID = UUID()
+    let store = TestStore(initialState: ClassMemberFeature.State(room: room, instanceID: UUID())) {
       ClassMemberFeature()
     }
 
     await store.send(.binding(.set(\.searchText, "김"))) {
       $0.searchText = "김"
     }
-    await store.send(.membersLoaded(room: room, members: [member], currentMemberID: 2)) {
+    await store.send(.loadingStarted(requestID)) {
+      $0.activeLoadRequestID = requestID
+      $0.isLoading = true
+    }
+    await store.send(.membersLoaded(room: room, members: [member], currentMemberID: 2, requestID: requestID)) {
+      $0.activeLoadRequestID = nil
+      $0.isLoading = false
       $0.members = [member]
       $0.currentMemberID = 2
+      $0.viewState = .loaded
     }
     #expect(store.state.searchText == "김")
     #expect(store.state.visibleMembers == [member])
+  }
+
+  @Test
+  func 첫_멤버_조회는_로딩_뒤에_빈_결과_또는_오류를_구분한다() async {
+    let room = ClassRoom.mocks[0]
+    let first = UUID()
+    let retry = UUID()
+    let store = TestStore(initialState: ClassMemberFeature.State(room: room, instanceID: UUID())) {
+      ClassMemberFeature()
+    }
+
+    #expect(store.state.viewState == .loading)
+    await store.send(.loadingStarted(first)) {
+      $0.activeLoadRequestID = first
+      $0.isLoading = true
+    }
+    await store.send(.loadFailed(requestID: first, message: "연결 오류")) {
+      $0.activeLoadRequestID = nil
+      $0.isLoading = false
+      $0.loadErrorMessage = "연결 오류"
+      $0.viewState = .error
+    }
+    #expect(store.state.viewState == .error)
+    await store.send(.view(.retryTapped))
+    await store.receive(\.delegate, .retryMembers(roomID: room.id))
+    await store.send(.loadingStarted(retry)) {
+      $0.activeLoadRequestID = retry
+      $0.isLoading = true
+      $0.loadErrorMessage = nil
+      $0.viewState = .loading
+    }
+    #expect(store.state.viewState == .loading)
+    await store.send(.membersLoaded(room: room, members: [], currentMemberID: 1, requestID: retry)) {
+      $0.activeLoadRequestID = nil
+      $0.isLoading = false
+      $0.viewState = .empty
+    }
+    #expect(store.state.viewState == .empty)
+  }
+
+  @Test
+  func 다시_조회한_뒤_오래된_응답과_멤버_변경_전_응답은_무시한다() async {
+    let room = ClassRoom.mocks[0]
+    let old = UUID()
+    let fresh = UUID()
+    let member = ClassMember(id: 2, name: "최신 멤버")
+    let store = TestStore(initialState: ClassMemberFeature.State(
+      room: room,
+      members: [member],
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) { ClassMemberFeature() }
+
+    #expect(store.state.viewState == .loaded)
+    await store.send(.loadingStarted(old)) {
+      $0.activeLoadRequestID = old
+      $0.isLoading = true
+    }
+    #expect(store.state.viewState == .loaded)
+    await store.send(.loadingStarted(fresh)) {
+      $0.activeLoadRequestID = fresh
+    }
+    await store.send(.membersLoaded(room: room, members: [], currentMemberID: 1, requestID: old))
+    await store.send(.loadFailed(requestID: old, message: "늦은 오류"))
+    #expect(store.state.members == [member])
+
+    await store.send(.dataUpdated(room: room, members: [member])) {
+      $0.activeLoadRequestID = nil
+      $0.isLoading = false
+    }
+    await store.send(.membersLoaded(room: room, members: [], currentMemberID: 1, requestID: fresh))
+    #expect(store.state.members == [member])
   }
 
   @Test
@@ -155,7 +240,12 @@ struct ClassMemberTests {
       ClassMember(id: 1, name: "김민지"),
       ClassMember(id: 2, name: "서원지"),
     ]
-    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0], members: members)) {
+    let store = TestStore(initialState: ClassMemberFeature.State(
+      room: ClassRoom.mocks[0],
+      members: members,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) {
       ClassMemberFeature()
     }
 
@@ -163,12 +253,44 @@ struct ClassMemberTests {
       $0.searchText = "김민지"
     }
     #expect(store.state.visibleMembers == [members[0]])
-    #expect(store.state.viewState == .members([members[0]]))
+    #expect(store.state.viewState == .loaded)
 
     await store.send(.binding(.set(\.searchText, "없는 이름"))) {
       $0.searchText = "없는 이름"
+      $0.viewState = .noSearchResults
     }
     #expect(store.state.viewState == .noSearchResults)
+
+    await store.send(.binding(.set(\.searchText, ""))) {
+      $0.searchText = ""
+      $0.viewState = .loaded
+    }
+    #expect(store.state.visibleMembers.count == 2)
+  }
+
+  @Test
+  func 캐시된_멤버는_새로고침_실패에도_계속_표시한다() async {
+    let room = ClassRoom.mocks[0]
+    let member = ClassMember(id: 2, name: "김민지")
+    let requestID = UUID()
+    let store = TestStore(initialState: ClassMemberFeature.State(
+      room: room,
+      members: [member],
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) { ClassMemberFeature() }
+
+    await store.send(.loadingStarted(requestID)) {
+      $0.activeLoadRequestID = requestID
+      $0.isLoading = true
+    }
+    await store.send(.loadFailed(requestID: requestID, message: "연결 오류")) {
+      $0.activeLoadRequestID = nil
+      $0.isLoading = false
+      $0.loadErrorMessage = "연결 오류"
+    }
+    #expect(store.state.viewState == .loaded)
+    #expect(store.state.visibleMembers == [member])
   }
 
   @Test
@@ -182,7 +304,9 @@ struct ClassMemberTests {
     let state = ClassMemberFeature.State(
       room: .mockJoinable,
       members: members,
-      currentMemberID: 2
+      currentMemberID: 2,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
     )
 
     #expect(state.visibleMembers.map(\.id) == [2, 1, 3, 4])
@@ -198,7 +322,9 @@ struct ClassMemberTests {
         ClassMember(id: 3, name: "김민지"),
         ClassMember(id: 2, name: "공은지"),
       ],
-      currentMemberID: 2
+      currentMemberID: 2,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
     )
 
     state.searchText = "김"
@@ -214,10 +340,21 @@ struct ClassMemberTests {
       ClassMember(id: 1, name: "마바사", isOwner: true),
       ClassMember(id: 2, name: "하하하"),
     ]
-    let owner = ClassMemberFeature.State(room: ClassRoom.mocks[0], members: members)
+    let owner = ClassMemberFeature.State(
+      room: ClassRoom.mocks[0],
+      members: members,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )
     #expect(owner.visibleMembers.map(\.id) == [3, 1, 2])
 
-    var participant = ClassMemberFeature.State(room: .mockJoinable, members: members, currentMemberID: 2)
+    var participant = ClassMemberFeature.State(
+      room: .mockJoinable,
+      members: members,
+      currentMemberID: 2,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )
     #expect(participant.visibleMembers.map(\.id) == [2, 1, 3])
     participant.hasAppliedSort = true
     #expect(participant.visibleMembers.map(\.id) == [3, 1, 2])
@@ -232,7 +369,13 @@ struct ClassMemberTests {
       ClassMember(id: 2, name: "본인 운영자", isOwner: true),
       ClassMember(id: 4, name: "또 다른 참여자"),
     ]
-    let state = ClassMemberFeature.State(room: .mockJoinable, members: members, currentMemberID: 2)
+    let state = ClassMemberFeature.State(
+      room: .mockJoinable,
+      members: members,
+      currentMemberID: 2,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )
 
     #expect(state.visibleMembers.map(\.id) == [2, 3, 4])
   }
@@ -256,7 +399,7 @@ struct ClassMemberTests {
 
   @Test
   func 멤버_필터를_열고_선택한_조건을_적용한다() async {
-    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
+    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())) {
       ClassMemberFeature()
     }
 
@@ -279,7 +422,12 @@ struct ClassMemberTests {
       ClassMember(id: 1, name: "서원지"),
       ClassMember(id: 2, name: "김민지"),
     ]
-    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0], members: members)) {
+    let store = TestStore(initialState: ClassMemberFeature.State(
+      room: ClassRoom.mocks[0],
+      members: members,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) {
       ClassMemberFeature()
     }
 
@@ -303,7 +451,7 @@ struct ClassMemberTests {
 
   @Test
   func 지원하지_않는_필터와_정렬은_선택해도_적용되지_않는다() async {
-    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0])) {
+    let store = TestStore(initialState: ClassMemberFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())) {
       ClassMemberFeature()
     }
 

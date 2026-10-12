@@ -13,87 +13,33 @@ import Testing
 @MainActor
 struct ClassTests {
   @Test
-  func 참여하기_탭하면_코드_입력_모달을_띄운다() async {
+  func 참여하기_탭하면_참가_경로_델리게이트를_보낸다() async {
     let store = TestStore(initialState: ClassIntroFeature.State()) {
       ClassIntroFeature()
     }
 
-    await store.send(.view(.joinTapped)) {
-      $0.join = ClassJoinFeature.State()
-    }
+    await store.send(.view(.joinTapped))
+    await store.receive(\.delegate.join)
   }
 
   @Test
-  func 코드_확인에_성공하면_코드_모달을_닫고_이름_입력_모달을_띄운다() async {
-    let clock = TestClock()
-    let room = ClassRoom.mockJoinable
-    var state = ClassIntroFeature.State()
-    state.join = ClassJoinFeature.State()
-    let store = TestStore(initialState: state) {
-      ClassIntroFeature()
-    } withDependencies: {
-      $0.continuousClock = clock
-    }
-
-    await store.send(.join(.presented(.delegate(.found(room))))) {
-      $0.join = nil
-    }
-    await clock.advance(by: .seconds(0.3))
-    #expect(store.state.join == nil)
-    await clock.advance(by: .seconds(0.1))
-    await store.receive(\.inner.nicknameModalPresented, room) {
-      $0.join = ClassJoinFeature.State(mode: .nickname, preview: room)
-    }
-  }
-
-  @Test
-  func 이름으로_참여하면_입력한_이름을_상위_델리게이트에_전달한다() async {
-    let room = ClassRoom.mockJoinable
-    var state = ClassIntroFeature.State()
-    state.join = ClassJoinFeature.State(mode: .nickname, preview: room)
-    let store = TestStore(initialState: state) {
+  func 뒤로가면_홈_이동_델리게이트를_보낸다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
       ClassIntroFeature()
     }
 
-    await store.send(.join(.presented(.delegate(.joined(room, nickname: "민지"))))) {
-      $0.join = nil
-    }
-    await store.receive(\.delegate, .joined(room, nickname: "민지"))
-  }
-
-  @Test
-  func 이름_입력_모달의_바인딩은_자식_리듀서에_전달된다() async {
-    let room = ClassRoom.mockJoinable
-    var state = ClassIntroFeature.State()
-    state.join = ClassJoinFeature.State(mode: .nickname, preview: room)
-    let store = TestStore(initialState: state) {
-      ClassIntroFeature()
-    }
-
-    await store.send(.join(.presented(.binding(.set(\.nickname, "로이"))))) {
-      $0.join?.nickname = "로이"
-    }
-    #expect(store.state.join?.canJoin == true)
-  }
-
-  @Test
-  func 이름_입력_모달_대기_중_뒤로가면_예약된_모달을_취소한다() async {
-    let clock = TestClock()
-    let room = ClassRoom.mockJoinable
-    var state = ClassIntroFeature.State()
-    state.join = ClassJoinFeature.State()
-    let store = TestStore(initialState: state) {
-      ClassIntroFeature()
-    } withDependencies: {
-      $0.continuousClock = clock
-    }
-
-    await store.send(.join(.presented(.delegate(.found(room))))) {
-      $0.join = nil
-    }
     await store.send(.view(.backTapped))
     await store.receive(\.delegate.backToHome)
-    await clock.advance(by: .seconds(0.4))
+  }
+
+  @Test
+  func 내_클래스_탭하면_내_클래스_델리게이트를_보낸다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    }
+
+    await store.send(.view(.myClassesTapped))
+    await store.receive(\.delegate.myClasses)
   }
 
   @Test

@@ -18,8 +18,6 @@ public struct ClassDetailFeature {
   @ObservableState
   public struct State: Equatable {
     public var room: ClassRoom
-    public var deadline: Date
-    public var draftDeadline: Date
     @Presents public var modal: ClassModalFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var isLoading = false
@@ -27,14 +25,12 @@ public struct ClassDetailFeature {
 
     public init(room: ClassRoom) {
       self.room = room
-      deadline = room.deadline
-      draftDeadline = room.deadline
     }
 
     /// 마감일을 끈 클래스는 `.distantFuture` 로 만들어지므로 날짜 대신 안내 문구를 보여준다.
     public var deadlineText: String {
-      guard deadline != .distantFuture else { return "마감일 없음" }
-      return deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
+      guard room.deadline != .distantFuture else { return "마감일 없음" }
+      return room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
     }
 
     public var canParticipateInBattle: Bool {
@@ -42,8 +38,7 @@ public struct ClassDetailFeature {
     }
   }
 
-  public enum Action: ViewAction, BindableAction {
-    case binding(BindingAction<State>)
+  public enum Action: ViewAction {
     case view(View)
     case async(AsyncAction)
     case inner(InnerAction)
@@ -63,7 +58,6 @@ public struct ClassDetailFeature {
     case codeTapped
     case codeDismissed
     case deadlineTapped
-    case deadlineSaved
     case deleteTapped
     case deleteConfirmed
   }
@@ -74,16 +68,15 @@ public struct ClassDetailFeature {
     case openBattle(ClassRoom)
     case openClosedBattle(ClassRoom)
     case openReport(ClassRoom)
+    case openDeadline(ClassRoom)
     case deleted(Int)
   }
 
   public enum AsyncAction: Equatable {
-    case updateDeadline(Int, Date)
     case delete(Int)
   }
 
   public enum InnerAction: Equatable {
-    case deadlineUpdated(Result<ClassRoom, ClassError>)
     case deleted(Int, ClassError?)
   }
 
@@ -91,11 +84,8 @@ public struct ClassDetailFeature {
   @Dependency(\.classMockRepository) private var classMockRepository
 
   public var body: some Reducer<State, Action> {
-    BindingReducer()
     Reduce { state, action in
       switch action {
-      case .binding:
-        return .none
       case let .view(viewAction):
         return handleViewAction(state: &state, action: viewAction)
       case let .async(asyncAction):
@@ -108,8 +98,6 @@ public struct ClassDetailFeature {
         return handleCustomAlertAction(state: &state, action: alertAction)
       case let .dataUpdated(room):
         state.room = room
-        state.deadline = room.deadline
-        state.draftDeadline = room.deadline
         return .none
       case .delegate:
         return .none
@@ -196,12 +184,8 @@ extension ClassDetailFeature {
       return .none
     case .deadlineTapped:
       guard state.room.role == .owner else { return .none }
-      state.modal = .init(kind: .deadline)
-      state.draftDeadline = state.deadline
-      return .none
-    case .deadlineSaved:
-      guard !state.isLoading else { return .none }
-      return .send(.async(.updateDeadline(state.room.id, state.draftDeadline)))
+      state.modal = nil
+      return .send(.delegate(.openDeadline(state.room)))
     case .deleteTapped:
       guard state.room.role == .owner else { return .none }
       state.modal = nil
@@ -227,12 +211,6 @@ extension ClassDetailFeature {
     state.isLoading = true
     state.errorMessage = nil
     switch action {
-    case let .updateDeadline(id, deadline):
-      return .run { [classUseCase] send in
-        let result = await Result { try await classUseCase.updateDeadline(id: id, deadline: deadline) }
-          .mapError(ClassError.from)
-        await send(.inner(.deadlineUpdated(result)))
-      }
     case let .delete(id):
       return .run { [classUseCase] send in
         do {
@@ -251,12 +229,7 @@ extension ClassDetailFeature {
   ) -> Effect<Action> {
     state.isLoading = false
     switch action {
-    case let .deadlineUpdated(.success(room)):
-      state.room = room
-      state.deadline = room.deadline
-      state.modal = nil
-      return .none
-    case let .deadlineUpdated(.failure(error)), let .deleted(_, .some(error)):
+    case let .deleted(_, .some(error)):
       state.errorMessage = error.localizedDescription
       state.customAlert = .alert(
         title: "요청을 완료하지 못했어요",
