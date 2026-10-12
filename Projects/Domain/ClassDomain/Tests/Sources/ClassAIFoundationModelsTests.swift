@@ -26,7 +26,11 @@ final class ClassAIFoundationModelsTests: XCTestCase {
         opponentStance: "예술이 아니다",
         opponentPhilosopherName: "플라톤"
       ))
-      let reply = try await client.respond(conversationID, "평범한 물건도 새로운 의미를 부여하면 예술이 될 수 있어요.")
+      let reply = try await client.respond(
+        conversationID,
+        "평범한 물건도 새로운 의미를 부여하면 예술이 될 수 있어요.",
+        isFinalRound: false
+      )
       await client.end(conversationID)
 
       let attachment = XCTAttachment(string: reply)

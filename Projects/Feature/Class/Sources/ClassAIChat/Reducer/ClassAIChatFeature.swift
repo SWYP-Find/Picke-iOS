@@ -8,6 +8,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeCoreUtility
 import PickeSharedUI
 
 @Reducer
@@ -61,6 +62,34 @@ public struct ClassAIChatFeature {
 
     public var quickReplies: [String] {
       ["저는 \(selectedStanceTitle)에 동의해요", "그 입장의 근거는 무엇인가요?", "다른 관점도 생각해 볼게요"]
+    }
+
+    public var totalRounds: Int {
+      3
+    }
+
+    public var roundTitle: String {
+      "ROUND \(min(round, totalRounds)) · 입장에 반박해보세요"
+    }
+
+    public var thinkingText: String {
+      "\(opponentName)\(opponentName.josa("이", "가")) 답변을 생각하고 있어요"
+    }
+
+    /// 안내 박스 문구 — 피그마 기준으로 선택한 입장과 `반대 입장의 상대` 만 강조한다.
+    public var stanceNoticeSegments: [(text: String, isHighlighted: Bool)] {
+      [
+        ("사전투표에서 ", false),
+        ("‘\(selectedStanceTitle)’", true),
+        ("\(selectedStanceTitle.josa("을", "를")) 선택하셨네요.\n", false),
+        ("반대 입장의 \(opponentName)", true),
+        ("\(opponentName.josa("과", "와")) \(totalRounds)라운드 토론을 시작해보세요.", false),
+      ]
+    }
+
+    public var canSend: Bool {
+      hasStarted && !isGenerating && !isCompleted && isModelAvailable
+        && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
   }
 
@@ -164,7 +193,8 @@ extension ClassAIChatFeature {
           }
           let opening = try await chatUseCase.respond(
             id,
-            "토론을 시작합니다. 상대의 입장에서 제가 선택한 입장에 반박하는 짧은 첫 질문을 한국어로 해 주세요."
+            "토론을 시작합니다. 상대의 입장에서 제가 선택한 입장에 반박하는 짧은 첫 질문을 한국어로 해 주세요.",
+            isFinalRound: false
           )
           guard !Task.isCancelled else { return }
           let bubbles = ClassAIChatMessageUseCase.bubbles(from: opening)
@@ -224,10 +254,9 @@ extension ClassAIChatFeature {
       return .none
 
     case .sendTapped:
+      guard state.canSend else { return .none }
       let text = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard state.hasStarted, !state.isGenerating, !state.isCompleted,
-            state.isModelAvailable, !text.isEmpty
-      else { return .none }
+      let isFinalRound = state.round == state.totalRounds
       state.isGenerating = true
       state.errorMessage = nil
       state.pendingText = text
@@ -238,7 +267,11 @@ extension ClassAIChatFeature {
       let id = state.conversationID
       return .run { send in
         do {
-          let reply = try await chatUseCase.respond(id, text)
+          let reply = try await chatUseCase.respond(
+            id,
+            text,
+            isFinalRound: isFinalRound
+          )
           let bubbles = ClassAIChatMessageUseCase.bubbles(from: reply)
           if bubbles.isEmpty {
             await send(.inner(.responseFailed(requestID, "답변을 만들지 못했어요. 다시 시도해 주세요.")))
@@ -292,7 +325,7 @@ extension ClassAIChatFeature {
       state.isGenerating = false
       state.pendingText = nil
       state.messages.append(contentsOf: bubbles.map { .init(speaker: .opponent, text: $0) })
-      if state.round == 3 {
+      if state.round == state.totalRounds {
         state.isCompleted = true
         state.customAlert = .finalVote()
       } else {

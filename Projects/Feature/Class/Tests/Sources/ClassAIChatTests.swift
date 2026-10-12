@@ -40,6 +40,18 @@ struct ClassAIChatTests {
     }
   }
 
+  private actor FinalRoundRecorder {
+    private var flags: [Bool] = []
+
+    func record(_ isFinalRound: Bool) {
+      flags.append(isFinalRound)
+    }
+
+    func values() -> [Bool] {
+      flags
+    }
+  }
+
   private actor StartStub {
     private var attempts = 0
     private let firstError: ClassAIChatError
@@ -104,7 +116,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, context in await recorder.record(context) },
-        respond: { _, _ in "첫 질문입니다." }
+        respond: { _, _, _ in "첫 질문입니다." }
       )
     }
     store.exhaustivity = .off
@@ -153,7 +165,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in },
-        respond: { _, _ in "당신이 택한 입장의 근거는 무엇인가요?" }
+        respond: { _, _, _ in "당신이 택한 입장의 근거는 무엇인가요?" }
       )
     }
     store.exhaustivity = .off
@@ -173,7 +185,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in try await stub.start() },
-        respond: { _, _ in "첫 질문입니다." }
+        respond: { _, _, _ in "첫 질문입니다." }
       )
     }
     store.exhaustivity = .off
@@ -197,7 +209,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in try await stub.start() },
-        respond: { _, _ in "첫 질문입니다." }
+        respond: { _, _, _ in "첫 질문입니다." }
       )
     }
     store.exhaustivity = .off
@@ -216,7 +228,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in },
-        respond: { _, _ in "첫 질문입니다." }
+        respond: { _, _, _ in "첫 질문입니다." }
       )
     }
     store.exhaustivity = .off
@@ -252,6 +264,87 @@ struct ClassAIChatTests {
   }
 
   @Test
+  func 숫자와_연속_문장부호는_말풍선을_자르지_않는다() {
+    #expect(ClassAIChatMessageUseCase.bubbles(from: "음... 그렇군요. 하지만 왜죠?") == [
+      "음...", "그렇군요.", "하지만 왜죠?",
+    ])
+    #expect(ClassAIChatMessageUseCase.bubbles(from: "지지율이 3.5% 올랐어요. 그래도 부족해요.") == [
+      "지지율이 3.5% 올랐어요.", "그래도 부족해요.",
+    ])
+    #expect(ClassAIChatMessageUseCase.bubbles(from: "정말요?! 저는 반대예요.") == [
+      "정말요?!", "저는 반대예요.",
+    ])
+  }
+
+  @Test
+  func 너무_긴_응답은_문장_경계에서_자른다() {
+    let first = String(repeating: "가", count: 200) + "."
+    let second = String(repeating: "나", count: 150) + "."
+    #expect(ClassAIChatMessageUseCase.bubbles(from: first + " " + second) == [first])
+  }
+
+  @Test
+  func 한_문장이_길어도_중간에서_자르지_않는다() {
+    let sentence = String(repeating: "가", count: 350) + "."
+    #expect(ClassAIChatMessageUseCase.bubbles(from: sentence) == [sentence])
+  }
+
+  @Test
+  func 합친_말풍선도_공백을_포함해_길이_한도를_지킨다() {
+    let response = Array(repeating: "반대.", count: 100).joined(separator: " ")
+    let bubbles = ClassAIChatMessageUseCase.bubbles(from: response)
+
+    #expect(bubbles.count == 3)
+    #expect(bubbles.joined(separator: " ").count <= 300)
+    #expect(bubbles.allSatisfy { $0.hasSuffix(".") })
+  }
+
+  @Test
+  func 마지막_라운드_응답만_마무리_요청으로_보낸다() async throws {
+    let recorder = FinalRoundRecorder()
+    let store = TestStore(initialState: ClassAIChatFeature.State(
+      room: aiRoom,
+      battleID: -1,
+      selectedOptionID: 1
+    )) {
+      ClassAIChatFeature()
+    } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, _, isFinalRound in
+          await recorder.record(isFinalRound)
+          return "답변입니다."
+        },
+        end: { _ in }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let sessionRequestID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .sessionReady(sessionRequestID, ["답변입니다."]))
+    for _ in 1 ... 3 {
+      await store.send(.view(.draftChanged("제 생각")))
+      await store.send(.view(.sendTapped))
+      let responseRequestID = try #require(store.state.responseRequestID)
+      await store.receive(\.inner, .responseReceived(responseRequestID, ["답변입니다."]))
+    }
+
+    #expect(await recorder.values() == [false, false, false, true])
+  }
+
+  @Test
+  func 안내_문구는_상대_이름에_맞는_조사를_붙인다() {
+    let room = aiRoom
+    let platoSide = ClassAIChatFeature.State(room: room, battleID: -1, selectedOptionID: 1)
+    let sartreSide = ClassAIChatFeature.State(room: room, battleID: -1, selectedOptionID: 2)
+
+    #expect(platoSide.stanceNoticeSegments.map(\.text).joined().contains("반대 입장의 플라톤과 3라운드"))
+    #expect(sartreSide.stanceNoticeSegments.map(\.text).joined().contains("반대 입장의 사르트르와 3라운드"))
+    #expect(sartreSide.thinkingText == "사르트르가 답변을 생각하고 있어요")
+  }
+
+  @Test
   func 세_번의_성공_응답_뒤에만_최종투표를_연다() async throws {
     let room = aiRoom
     let store = TestStore(initialState: ClassAIChatFeature.State(
@@ -263,7 +356,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in },
-        respond: { _, _ in "첫 답변. 두 번째 답변." },
+        respond: { _, _, _ in "첫 답변. 두 번째 답변." },
         end: { _ in }
       )
     }
@@ -301,7 +394,7 @@ struct ClassAIChatTests {
     } withDependencies: {
       $0.classAIChatUseCase = MockClassAIChatUseCase(
         start: { _, _ in },
-        respond: { _, text in try await stub.respond(text) },
+        respond: { _, text, _ in try await stub.respond(text) },
         end: { _ in }
       )
     }
@@ -348,7 +441,7 @@ struct ClassAIChatTests {
     let store = TestStore(initialState: initialState) {
       ClassAIChatFeature()
     } withDependencies: {
-      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, _ in }, respond: { _, _ in "" }, end: { _ in })
+      $0.classAIChatUseCase = MockClassAIChatUseCase(start: { _, _ in }, respond: { _, _, _ in "" }, end: { _ in })
     }
     store.exhaustivity = .off
 

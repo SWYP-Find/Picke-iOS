@@ -14,6 +14,9 @@ import SwiftUI
 @ViewAction(for: ClassAIChatFeature.self)
 public struct ClassAIChatView: View {
   @Bindable public var store: StoreOf<ClassAIChatFeature>
+  @FocusState private var isInputFocused: Bool
+  /// 보낼 때 입력창에 포커스가 있었으면 응답이 끝난 뒤 다시 포커스를 준다.
+  @State private var refocusesAfterReply = false
 
   public init(store: StoreOf<ClassAIChatFeature>) {
     self.store = store
@@ -21,163 +24,256 @@ public struct ClassAIChatView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      header
-      conversation
-      composer
+      header()
+      conversation()
+      composer()
     }
-    .background(Color.beige50.ignoresSafeArea())
+    .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
     .onDisappear { send(.onDisappear) }
+    .onChange(of: store.isGenerating) { _, isGenerating in
+      restoreFocusIfNeeded(isGenerating: isGenerating)
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
 private extension ClassAIChatView {
-  var header: some View {
-    VStack(spacing: 12) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.battle.title)
-        .foregroundStyle(.gray800)
+  static let bottomAnchorID = "conversation-bottom"
 
-      HStack(spacing: 16) {
-        Text("ROUND \(min(store.round, 3)) · 입장에 반박해보세요")
-          .pretendardFont(.semiBold11)
-          .foregroundStyle(.gray300)
-          .lineLimit(1)
+  // MARK: - Header
 
-        HStack(spacing: 5) {
-          ForEach(1 ... 3, id: \.self) { step in
-            Capsule()
-              .fill(step <= store.round ? Color.primary500 : Color.beige600)
-              .frame(width: 50, height: 4)
-          }
-        }
-      }
-      .padding(.horizontal, 16)
-      .padding(.bottom, 12)
+  @ViewBuilder
+  func header() -> some View {
+    VStack(spacing: 6) {
+      navigationBar
+      roundProgress()
     }
-    .background(Color.beige50)
+    .padding(.bottom, 12)
   }
 
-  var conversation: some View {
+  /// `ClassCommentView` 처럼 제목을 덧씌우되, 피그마대로 뒤로가기 오른쪽에 왼쪽 정렬한다.
+  /// 긴 배틀 제목은 뒤로가기 영역(16 + 24 + 16)을 피해 한 줄로 말줄임한다.
+  var navigationBar: some View {
+    PickeNavigationBar(onBack: { send(.backTapped) })
+      .overlay {
+        Text(store.room.battle.title)
+          .pretendardFont(.headingMedium)
+          .foregroundStyle(.gray500)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(.leading, 56)
+          .padding(.trailing, 16)
+          .allowsHitTesting(false)
+      }
+      .foregroundStyle(.gray900)
+  }
+
+  @ViewBuilder
+  func roundProgress() -> some View {
+    HStack(spacing: 10) {
+      Text(store.roundTitle)
+        .pretendardFont(family: .Bold, size: 12)
+        .foregroundStyle(.gray300)
+        .lineLimit(1)
+      Spacer(minLength: 0)
+      roundBars()
+    }
+    .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  func roundBars() -> some View {
+    HStack(spacing: 5) {
+      ForEach(1 ... store.totalRounds, id: \.self) { step in
+        Capsule()
+          .fill(step <= store.round ? .primary500 : .beige600)
+          .frame(width: 50, height: 4)
+      }
+    }
+  }
+
+  // MARK: - Conversation
+
+  @ViewBuilder
+  func conversation() -> some View {
     ScrollViewReader { proxy in
       ScrollView {
         VStack(alignment: .leading, spacing: 6) {
           stanceNotice
             .padding(.bottom, 14)
 
-          ForEach(store.messages.indices, id: \.self) { index in
-            let message = store.messages[index]
+          ForEach(Array(store.messages.enumerated()), id: \.element.id) { index, message in
             let beginsTurn = index == 0 || store.messages[index - 1].speaker != message.speaker
             messageRow(message, beginsTurn: beginsTurn)
-              .id(message.id)
               .padding(.top, beginsTurn && index > 0 ? 14 : 0)
           }
 
           if store.isGenerating {
-            HStack(spacing: 7) {
-              ProgressView()
-                .tint(.gray300)
-              Text("\(store.opponentName)이(가) 답변을 생각하고 있어요")
-                .pretendardFont(.regular13)
-                .foregroundStyle(.gray300)
-            }
-            .padding(.leading, 46)
+            thinkingIndicator()
           }
 
           if let errorMessage = store.errorMessage {
-            Text(errorMessage)
-              .pretendardFont(.regular13)
-              .foregroundStyle(.primary500)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(12)
-              .background(.white)
+            errorBox(errorMessage)
           }
+
+          Color.clear
+            .frame(height: 1)
+            .id(Self.bottomAnchorID)
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
         .padding(.bottom, 20)
       }
       .scrollIndicators(.hidden)
-      .onChange(of: store.messages.count) { _, _ in
-        if let lastMessage = store.messages.last {
-          withAnimation { proxy.scrollTo(lastMessage.id, anchor: .bottom) }
-        }
-      }
+      .onChange(of: store.messages.count) { _, _ in scrollToBottom(proxy) }
+      .onChange(of: store.isGenerating) { _, _ in scrollToBottom(proxy) }
+      .onChange(of: store.errorMessage) { _, _ in scrollToBottom(proxy) }
     }
   }
 
   var stanceNotice: some View {
-    VStack(spacing: 2) {
-      Text("사전투표에서 '\(store.selectedStanceTitle)'를 선택하셨네요.")
-      Text("반대 입장의 \(store.opponentName)과 3라운드 토론을 시작해보세요.")
-        .fontWeight(.semibold)
-    }
-    .pretendardFont(.regular11)
-    .foregroundStyle(.gray700)
-    .multilineTextAlignment(.center)
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, 14)
-    .padding(.horizontal, 8)
-    .background(Color.beige300)
+    Text(stanceNoticeText)
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 12)
+      .roundedBackground(.beige500)
   }
 
-  func messageRow(_ message: ClassAIChatMessage, beginsTurn: Bool) -> some View {
-    let isUser = message.speaker == .user
-    return HStack(alignment: .top, spacing: 8) {
-      if isUser {
-        Spacer(minLength: 46)
-      } else if beginsTurn {
+  var stanceNoticeText: AttributedString {
+    store.stanceNoticeSegments.reduce(into: AttributedString()) { text, segment in
+      var run = AttributedString(segment.text)
+      run.font = .pretendardFontFamily(family: segment.isHighlighted ? .Bold : .Medium, size: 11)
+      run.foregroundColor = segment.isHighlighted ? .gray800 : .gray400
+      text += run
+    }
+  }
+
+  @ViewBuilder
+  func messageRow(
+    _ message: ClassAIChatMessage,
+    beginsTurn: Bool
+  ) -> some View {
+    if message.speaker == .user {
+      userRow(message.text, beginsTurn: beginsTurn)
+    } else {
+      opponentRow(message.text, beginsTurn: beginsTurn)
+    }
+  }
+
+  @ViewBuilder
+  func opponentRow(
+    _ text: String,
+    beginsTurn: Bool
+  ) -> some View {
+    HStack(alignment: .top, spacing: 6) {
+      if beginsTurn {
         opponentAvatar
       } else {
-        Color.clear.frame(width: 38, height: 1)
+        Color.clear.frame(width: 40, height: 1)
       }
 
-      VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: 6) {
         if beginsTurn {
-          Text(isUser ? "나" : store.opponentName)
-            .pretendardFont(.semiBold13)
+          opponentName()
+        }
+        bubble(text, isUser: false)
+      }
+      .frame(maxWidth: 272, alignment: .leading)
+
+      Spacer(minLength: 0)
+    }
+  }
+
+  @ViewBuilder
+  func userRow(
+    _ text: String,
+    beginsTurn: Bool
+  ) -> some View {
+    HStack(alignment: .top, spacing: 6) {
+      Spacer(minLength: 0)
+
+      VStack(alignment: .trailing, spacing: 6) {
+        if beginsTurn {
+          Text("나")
+            .pretendardFont(.headingSmall)
             .foregroundStyle(.gray800)
         }
-
-        Text(message.text)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.gray500)
-          .fixedSize(horizontal: false, vertical: true)
-          .padding(.horizontal, 9)
-          .padding(.vertical, 7)
-          .background(isUser ? Color.beige300 : Color.white)
-          .overlay(Rectangle().stroke(Color.beige600, lineWidth: 1))
+        bubble(text, isUser: true)
       }
+      .frame(maxWidth: 272, alignment: .trailing)
 
-      if isUser, beginsTurn {
+      if beginsTurn {
         userAvatar
-      } else if isUser {
-        Color.clear.frame(width: 38, height: 1)
       } else {
-        Spacer(minLength: 46)
+        Color.clear.frame(width: 40, height: 1)
       }
     }
   }
 
   @ViewBuilder
+  func opponentName() -> some View {
+    HStack(spacing: 4) {
+      Text(store.opponentName)
+        .pretendardFont(.headingSmall)
+        .foregroundStyle(.gray800)
+      Text("AI")
+        .pickePill()
+    }
+  }
+
+  func bubble(
+    _ text: String,
+    isUser: Bool
+  ) -> some View {
+    Text(text)
+      .pretendardFont(.regular13)
+      .foregroundStyle(.gray400)
+      .fixedSize(horizontal: false, vertical: true)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 8)
+      .padding(.vertical, isUser ? 8 : 6)
+      .pickeCard(isUser ? .beige400 : .cardBaseBackgroundDefault)
+  }
+
+  @ViewBuilder
+  func thinkingIndicator() -> some View {
+    HStack(spacing: 7) {
+      ProgressView()
+        .tint(.gray300)
+      Text(store.thinkingText)
+        .pretendardFont(.regular13)
+        .foregroundStyle(.gray300)
+    }
+    .padding(.leading, 46)
+  }
+
+  func errorBox(_ message: String) -> some View {
+    Text(message)
+      .pretendardFont(.regular13)
+      .foregroundStyle(.primary500)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(12)
+      .background(.white)
+  }
+
+  // MARK: - Avatar
+
+  @ViewBuilder
   var opponentAvatar: some View {
-    if let imageURL = store.opponentAvatarURL {
-      AsyncImage(url: imageURL) { image in
-        image.resizable().scaledToFill()
-      } placeholder: {
-        avatarFallback(store.opponentName)
-      }
-      .frame(width: 38, height: 38)
-      .clipShape(Circle())
-    } else if let asset = opponentAvatarAsset {
+    if let asset = opponentAvatarAsset, store.opponentAvatarURL == nil {
       Image(asset: asset)
         .resizable()
         .scaledToFill()
-        .frame(width: 38, height: 38)
-        .clipShape(Circle())
+        .pickeAvatar(size: 40)
     } else {
-      avatarFallback(store.opponentName)
+      PickeAvatarView(
+        imageURL: store.opponentAvatarURL?.absoluteString,
+        fallback: store.opponentName,
+        size: 40
+      )
     }
   }
 
@@ -191,91 +287,139 @@ private extension ClassAIChatView {
   }
 
   var userAvatar: some View {
-    avatarFallback("나")
+    PickeAvatarView(
+      imageURL: nil,
+      fallback: "나",
+      size: 40
+    )
   }
 
-  func avatarFallback(_ text: String) -> some View {
-    Text(String(text.prefix(1)))
-      .pretendardFont(.semiBold15)
-      .foregroundStyle(.gray700)
-      .frame(width: 38, height: 38)
-      .background(Color.beige600, in: Circle())
-  }
+  // MARK: - Composer
 
-  var composer: some View {
-    VStack(spacing: 10) {
+  @ViewBuilder
+  func composer() -> some View {
+    VStack(spacing: 12) {
       if store.isCompleted || !store.isModelAvailable {
-        if store.canRetrySession {
-          Button("AI 토론 다시 시도하기") { send(.retryTapped) }
-            .ctaButtonStyle(.primary, size: .large, height: 52)
-            .padding(.horizontal, 16)
-        }
-        Button("최종투표하기") { send(.finalVoteTapped) }
-          .ctaButtonStyle(.primary, size: .large, height: 52)
-          .padding(.horizontal, 16)
+        sessionEndActions()
       } else {
         if !store.quickReplies.isEmpty {
-          ScrollView(.horizontal) {
-            HStack(spacing: 8) {
-              ForEach(store.quickReplies, id: \.self) { reply in
-                Button(reply) { send(.quickReplyTapped(reply)) }
-                  .pretendardFont(.regular11)
-                  .foregroundStyle(.gray500)
-                  .padding(.horizontal, 9)
-                  .padding(.vertical, 7)
-                  .background(Color.white, in: Capsule())
-                  .overlay(Capsule().stroke(Color.beige600, lineWidth: 1))
-                  .disabled(store.isGenerating)
-              }
-            }
-            .padding(.horizontal, 16)
-          }
-          .scrollIndicators(.hidden)
+          quickReplies()
         }
 
-        HStack(spacing: 8) {
-          TextField(
-            "내 생각을 입력해보세요",
-            text: Binding(
-              get: { store.draft },
-              set: { send(.draftChanged($0)) }
-            ),
-            axis: .vertical
-          )
-          .lineLimit(1 ... 3)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.gray700)
-          .padding(.horizontal, 9)
-          .frame(minHeight: 44)
-          .background(Color.white)
-          .overlay(Rectangle().stroke(Color.beige600, lineWidth: 1))
-          .disabled(store.isGenerating)
-
-          Button { send(.sendTapped) } label: {
-            Image(systemName: "paperplane")
-              .font(.system(size: 19))
-              .foregroundStyle(.white)
-              .frame(width: 38, height: 38)
-              .background(Color.primary500, in: Circle())
-          }
-          .buttonStyle(.plain)
-          .disabled(store.isGenerating || store.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-          .opacity(store.isGenerating || store.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
-          .accessibilityLabel("메시지 보내기")
-        }
-        .padding(.horizontal, 16)
+        inputRow()
 
         if store.errorMessage != nil {
-          Button("최종투표로 이동하기") { send(.finalVoteTapped) }
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray500)
-            .padding(.vertical, 6)
+          finalVoteLink
         }
       }
     }
-    .padding(.vertical, 14)
+    .padding(.top, 16)
+    .padding(.bottom, 12)
     .frame(maxWidth: .infinity)
-    .background(Color.beige50)
-    .overlay(alignment: .top) { Color.beige600.frame(height: 1) }
+    .background(.beige300)
+    .topDivider()
+  }
+
+  @ViewBuilder
+  func sessionEndActions() -> some View {
+    if store.canRetrySession {
+      Button("AI 토론 다시 시도하기") { send(.retryTapped) }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+        .padding(.horizontal, 16)
+    }
+    Button("최종투표하기") { send(.finalVoteTapped) }
+      .ctaButtonStyle(.primary, size: .large, height: 52)
+      .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  func quickReplies() -> some View {
+    ScrollView(.horizontal) {
+      HStack(spacing: 6) {
+        ForEach(store.quickReplies, id: \.self) { reply in
+          quickReplyChip(reply)
+        }
+      }
+      .padding(.horizontal, 16)
+    }
+    .scrollIndicators(.hidden)
+  }
+
+  func quickReplyChip(_ reply: String) -> some View {
+    Button { send(.quickReplyTapped(reply)) } label: {
+      Text(reply)
+        .pretendardFont(.semiBold12)
+        .foregroundStyle(.gray400)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .pickeCard(.white, border: .beige600, radius: .radiusMax)
+    }
+    .buttonStyle(.plain)
+    .disabled(store.isGenerating)
+  }
+
+  @ViewBuilder
+  func inputRow() -> some View {
+    HStack(spacing: 8) {
+      inputField
+      sendButton
+    }
+    .padding(.horizontal, 16)
+  }
+
+  var inputField: some View {
+    TextField(
+      "내 생각을 입력해보세요",
+      text: Binding(
+        get: { store.draft },
+        set: { send(.draftChanged($0)) }
+      ),
+      prompt: Text("내 생각을 입력해보세요").foregroundStyle(.gray300),
+      axis: .vertical
+    )
+    .pretendardFont(.medium13)
+    .lineLimit(1 ... 2)
+    .focused($isInputFocused)
+    .pickeTextField(height: 44)
+    .disabled(store.isGenerating)
+  }
+
+  var sendButton: some View {
+    Button {
+      refocusesAfterReply = isInputFocused
+      send(.sendTapped)
+    } label: {
+      Image(systemName: "paperplane.fill")
+        .font(.system(size: 16, weight: .semibold))
+        .foregroundStyle(.iconGrayInverse)
+        .frame(width: 36, height: 36)
+        .background(
+          store.canSend ? .buttonIconBackgroundDefault : .buttonIconBackgroundDisabled,
+          in: Circle()
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(!store.canSend)
+    .accessibilityLabel("메시지 보내기")
+  }
+
+  var finalVoteLink: some View {
+    Button("최종투표로 이동하기") { send(.finalVoteTapped) }
+      .pretendardFont(.regular13)
+      .foregroundStyle(.gray500)
+      .padding(.vertical, 6)
+  }
+
+  // MARK: - Helpers
+
+  func scrollToBottom(_ proxy: ScrollViewProxy) {
+    withAnimation { proxy.scrollTo(Self.bottomAnchorID, anchor: .bottom) }
+  }
+
+  func restoreFocusIfNeeded(isGenerating: Bool) {
+    guard !isGenerating, refocusesAfterReply else { return }
+    refocusesAfterReply = false
+    guard !store.isCompleted else { return }
+    isInputFocused = true
   }
 }
