@@ -356,6 +356,21 @@ struct ClassAIChatTests {
   }
 
   @Test
+  func 최종_요약의_세_문장은_각_60자여도_마지막_문장까지_남는다() {
+    let userReason = String(repeating: "가", count: 59) + "."
+    let opposingReason = String(repeating: "나", count: 59) + "."
+    let closing = String(repeating: "다", count: 59) + "."
+    let output = [userReason, opposingReason, closing].joined(separator: "\n")
+
+    #expect(output.count == 182)
+    #expect(ClassAIChatMessageUseCase.bubbles(from: output) == [
+      userReason,
+      opposingReason,
+      closing,
+    ])
+  }
+
+  @Test
   func 마지막_라운드_응답만_마무리_요청으로_보낸다() async throws {
     let recorder = FinalRoundRecorder()
     let store = TestStore(initialState: ClassAIChatFeature.State(
@@ -813,6 +828,50 @@ struct ClassAIChatTests {
     await store.send(.view(.onDisappear))
     await store.send(.view(.onAppear))
     #expect(store.state.sessionRequestID == nil)
+  }
+
+  @Test
+  func 최종_요약_검증_실패는_세번째_라운드와_초안을_보존하고_수동_재전송한다() async throws {
+    let requestID = UUID()
+    let calls = CallCounter()
+    var state = ClassAIChatFeature.State(room: aiRoom, battleID: -1, selectedOptionID: 1)
+    state.round = 3
+    state.hasStarted = true
+    state.isGenerating = true
+    state.responseRequestID = requestID
+    state.pendingText = "마지막 주장"
+    state.messages = [
+      .init(speaker: .opponent, text: "앞선 반론"),
+      .init(speaker: .user, text: "마지막 주장"),
+    ]
+    let store = TestStore(initialState: state) { ClassAIChatFeature() } withDependencies: {
+      $0.classAIChatUseCase = MockClassAIChatUseCase(
+        start: { _, _ in },
+        respond: { _, _, _ in
+          await calls.record()
+          return "근거를 반영해 정리했습니다."
+        }
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.responseFailed(requestID, .finalSummaryInvalid)))
+    #expect(await calls.value() == 0)
+    #expect(store.state.draft == "마지막 주장")
+    #expect(store.state.messages.map(\.text) == ["앞선 반론"])
+    #expect(store.state.pendingText == nil)
+    #expect(store.state.responseRequestID == nil)
+    #expect(!store.state.isGenerating)
+    #expect(!store.state.isTerminal)
+    #expect(store.state.round == 3)
+    #expect(store.state.canSend)
+    #expect(store.state.errorMessage == ClassAIChatError.finalSummaryInvalid.localizedDescription)
+
+    await store.send(.view(.sendTapped))
+    let retryID = try #require(store.state.responseRequestID)
+    await store.receive(\.inner, .responseReceived(retryID, ["근거를 반영해 정리했습니다."]))
+    #expect(await calls.value() == 1)
+    #expect(store.state.isCompleted)
   }
 
   @Test

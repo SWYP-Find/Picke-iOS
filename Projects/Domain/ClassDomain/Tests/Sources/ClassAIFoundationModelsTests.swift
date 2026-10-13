@@ -124,8 +124,9 @@ final class ClassAIFoundationModelsTests: XCTestCase {
           let instructionTokens = try await model
             .tokenCount(for: Instructions(ClassAIChatInstructions.make(context: resumed)))
           let exactPromptTokens = try await model.tokenCount(for: Prompt(exactPrompt))
-          let reserve = 384 + 128
-          audit += "; instructionTokens=\(instructionTokens); exactPromptTokens=\(exactPromptTokens); outputAndHeadroomReserve=\(reserve); contextSize=\(model.contextSize); retainedTranscriptTokens=unavailable"
+          let schemaTokens = try await model.tokenCount(for: ClassAIChatFinalSynthesis.generationSchema)
+          let reserve = 768 + 128
+          audit += "; instructionTokens=\(instructionTokens); exactPromptTokens=\(exactPromptTokens); schemaTokens=\(schemaTokens); outputAndHeadroomReserve=\(reserve); contextSize=\(model.contextSize); retainedTranscriptTokens=unavailable"
         }
         audit += "\nprompts=\(prompts)\nroundReplies=\(replies)"
         let attachment = XCTAttachment(string: audit)
@@ -135,10 +136,72 @@ final class ClassAIFoundationModelsTests: XCTestCase {
 
         XCTAssertEqual(replies.count, 3)
         XCTAssertTrue(replies.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+        XCTAssertFalse(third.contains("?"))
+        XCTAssertFalse(third.contains("정리해 주세요"))
+        XCTAssertFalse(third.contains("주시겠습니까"))
+        XCTAssertTrue(third.contains("해석"), "마지막 사용자 근거를 반영해야 합니다.")
+        XCTAssertTrue(third.contains("형식") || third.contains("기술"), "반대 입장의 근거를 반영해야 합니다.")
       } catch {
         await client.end(id)
         throw error
       }
+    }
+
+    @available(iOS 26.0, *)
+    func testRejectedFinalCanRestoreTranscriptAndManuallyRetryOnDevice() async throws {
+      guard ProcessInfo.processInfo.environment["PICKE_CLASS_FOUNDATION_AUDIT"] == "1" else {
+        throw XCTSkip("실기 Foundation Models 감사는 명시적으로 켠 경우에만 실행합니다.")
+      }
+      let model = SystemLanguageModel.default
+      guard case .available = model.availability, model.supportsLocale(Locale(identifier: "ko_KR")) else {
+        throw XCTSkip("기기에서 한국어 Foundation Models를 사용할 수 없습니다.")
+      }
+
+      let session = LanguageModelSession(model: model, instructions: "한국어로 짧게 답하세요.")
+      _ = try await session.respond(to: "예술에는 형식도 중요할까요?")
+      let beforeFinal = Array(session.transcript)
+      XCTAssertFalse(beforeFinal.isEmpty)
+
+      _ = try await session.respond(
+        to: "두 입장의 근거를 간단히 마무리하세요.",
+        generating: ClassAIChatFinalSynthesis.self,
+        options: GenerationOptions(maximumResponseTokens: 768)
+      )
+      let rejected = ClassAIChatFinalSynthesis(
+        userReason: "사용자는 해석이 중요하다고 봅니다.",
+        opposingReason: "반대 입장은 형식을 강조합니다.",
+        closing: "다시 정리해 주세요. 두 관점이 있습니다."
+      )
+      XCTAssertThrowsError(try rejected.validatedContent()) { error in
+        XCTAssertEqual(error as? ClassAIChatError, .finalSummaryInvalid)
+      }
+
+      let stale = LanguageModelSession(model: model, instructions: "다른 대화")
+      XCTAssertThrowsError(try ClassAIChatFoundationEngine.restoredSession(
+        current: stale,
+        captured: session,
+        model: model,
+        entries: beforeFinal
+      )) { error in
+        XCTAssertTrue(error is CancellationError)
+      }
+      let restored = try ClassAIChatFoundationEngine.restoredSession(
+        current: session,
+        captured: session,
+        model: model,
+        entries: beforeFinal
+      )
+      XCTAssertEqual(restored.transcript, Transcript(entries: beforeFinal))
+      let retry = try await restored.respond(to: "형식과 해석의 차이를 한 문장으로 말해 주세요.")
+      XCTAssertFalse(retry.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      let afterRetry = Array(restored.transcript)
+      let addedPrompts = afterRetry.dropFirst(beforeFinal.count).filter { entry in
+        if case .prompt = entry {
+          return true
+        }
+        return false
+      }
+      XCTAssertEqual(addedPrompts.count, 1)
     }
   #endif
 }

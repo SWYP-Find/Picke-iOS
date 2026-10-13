@@ -18,6 +18,7 @@ public enum ClassAIChatError: Error, Equatable, LocalizedError {
   case contentRejected
   case contextExhausted
   case invalidOutput
+  case finalSummaryInvalid
   case emptyResponse
   case temporarilyUnavailable
   case unexpectedFailure
@@ -28,7 +29,8 @@ public enum ClassAIChatError: Error, Equatable, LocalizedError {
 
   public var canRetryOpening: Bool {
     switch self {
-    case .appleIntelligenceNotEnabled, .modelNotReady, .emptyResponse, .temporarilyUnavailable:
+    case .appleIntelligenceNotEnabled, .modelNotReady, .emptyResponse, .finalSummaryInvalid,
+         .temporarilyUnavailable:
       return true
     default:
       return false
@@ -67,6 +69,8 @@ public enum ClassAIChatError: Error, Equatable, LocalizedError {
       return "대화가 길어져 AI 토론을 계속할 수 없어요. 최종투표로 계속해 주세요."
     case .invalidOutput:
       return "AI 응답을 처리할 수 없어요. 최종투표로 계속해 주세요."
+    case .finalSummaryInvalid:
+      return "마지막 답변을 정리하지 못했어요. 다시 보내 주세요."
     case .emptyResponse:
       return "AI 답변이 비어 있어요. 다시 시도해 주세요."
     case .temporarilyUnavailable:

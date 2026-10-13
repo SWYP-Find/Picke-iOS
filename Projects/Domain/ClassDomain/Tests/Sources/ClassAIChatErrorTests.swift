@@ -25,6 +25,9 @@ struct ClassAIChatErrorTests {
     #expect(ClassAIChatError.contextExhausted.isTerminal)
     #expect(ClassAIChatError.invalidOutput.isTerminal)
     #expect(!ClassAIChatError.emptyResponse.isTerminal)
+    #expect(ClassAIChatError.finalSummaryInvalid.canRetryOpening)
+    #expect(!ClassAIChatError.finalSummaryInvalid.isTerminal)
+    #expect(!ClassAIChatError.finalSummaryInvalid.requiresChangedInput)
   }
 
   #if canImport(FoundationModels)
@@ -46,6 +49,12 @@ struct ClassAIChatErrorTests {
       for (error, expected) in cases {
         #expect(ClassAIChatFoundationEngine.mapped(error) == expected)
       }
+      #expect(
+        ClassAIChatFoundationEngine.mapped(
+          LanguageModelSession.GenerationError.decodingFailure(context),
+          isFinalRound: true
+        ) == .finalSummaryInvalid
+      )
     }
 
     @available(iOS 27.0, *)
@@ -94,6 +103,12 @@ struct ClassAIChatErrorTests {
       for (error, expected) in cases {
         #expect(ClassAIChatFoundationEngine.mapped(error) == expected)
       }
+      #expect(
+        ClassAIChatFoundationEngine.mapped(
+          GeneratedContent.ParsingError(rawContent: "", debugDescription: "test"),
+          isFinalRound: true
+        ) == .finalSummaryInvalid
+      )
     }
   #endif
 }

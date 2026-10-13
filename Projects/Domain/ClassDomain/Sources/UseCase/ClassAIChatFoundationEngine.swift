@@ -16,6 +16,7 @@ import Foundation
     static let shared = ClassAIChatFoundationEngine()
 
     private static let responseTokens = 384
+    private static let finalResponseTokens = 768
     private static let headroomTokens = 128
 
     private var sessions: [UUID: LanguageModelSession] = [:]
@@ -77,12 +78,23 @@ import Foundation
         )
         try requireCurrent(id: id, session: session)
         beforeTranscript = Array(session.transcript)
-        let response = try await session.respond(
-          to: prompt,
-          options: GenerationOptions(maximumResponseTokens: Self.responseTokens)
-        )
-        try requireCurrent(id: id, session: session)
-        let content = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let content: String
+        if isFinalRound {
+          let response = try await session.respond(
+            to: prompt,
+            generating: ClassAIChatFinalSynthesis.self,
+            options: GenerationOptions(maximumResponseTokens: Self.finalResponseTokens)
+          )
+          try requireCurrent(id: id, session: session)
+          content = try response.content.validatedContent()
+        } else {
+          let response = try await session.respond(
+            to: prompt,
+            options: GenerationOptions(maximumResponseTokens: Self.responseTokens)
+          )
+          try requireCurrent(id: id, session: session)
+          content = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         guard !content.isEmpty else {
           if history.emptyResponse(id: id) {
             needsReset.insert(id)
@@ -92,9 +104,20 @@ import Foundation
         history.succeeded(id: id, response: content)
         return content
       } catch {
+        try Task.checkCancellation()
         try requireCurrent(id: id, session: session)
         let isCancellation = error is CancellationError
-        let mapped = isCancellation ? nil : Self.mapped(error)
+        let mapped = isCancellation ? nil : Self.mapped(error, isFinalRound: isFinalRound)
+        if mapped == .finalSummaryInvalid, let beforeTranscript {
+          sessions[id] = try Self.restoredSession(
+            current: sessions[id],
+            captured: session,
+            model: SystemLanguageModel.default,
+            entries: beforeTranscript
+          )
+          respondingSessions[id] = nil
+          throw ClassAIChatError.finalSummaryInvalid
+        }
         // iOS 26 post-error transcript retention remains unverified on an eligible device.
         // Only a pending re-entry history prompt is reset when it was actually recorded.
         if mapped != .emptyResponse, let beforeTranscript, #unavailable(iOS 27.0) {
@@ -158,6 +181,21 @@ import Foundation
       return session
     }
 
+    static func restoredSession(
+      current: LanguageModelSession?,
+      captured: LanguageModelSession,
+      model: SystemLanguageModel,
+      entries: [Transcript.Entry]
+    ) throws -> LanguageModelSession {
+      guard current === captured else { throw CancellationError() }
+      let session = LanguageModelSession(model: model, transcript: Transcript(entries: entries))
+      if #available(iOS 27.0, *) {
+        session.transcriptErrorHandlingPolicy = .revertTranscript
+      }
+      session.prewarm()
+      return session
+    }
+
     private func fittingPrompt(
       id: UUID,
       session: LanguageModelSession,
@@ -175,7 +213,15 @@ import Foundation
         let prompt = history.prompt(id: id, userText: text, isFinalRound: isFinalRound)
         let promptTokens = try await model.tokenCount(for: Prompt(prompt))
         try requireCurrent(id: id, session: session)
-        if transcriptTokens + promptTokens + Self.responseTokens + Self.headroomTokens <= model.contextSize {
+        let schemaTokens: Int
+        if isFinalRound {
+          schemaTokens = try await model.tokenCount(for: ClassAIChatFinalSynthesis.generationSchema)
+          try requireCurrent(id: id, session: session)
+        } else {
+          schemaTokens = 0
+        }
+        let responseTokens = isFinalRound ? Self.finalResponseTokens : Self.responseTokens
+        if transcriptTokens + promptTokens + schemaTokens + responseTokens + Self.headroomTokens <= model.contextSize {
           return prompt
         }
         guard history.dropOldestPendingTurn(id: id) else {
@@ -191,13 +237,16 @@ import Foundation
       guard sessions[id] === session else { throw CancellationError() }
     }
 
-    static func mapped(_ error: Error) -> ClassAIChatError {
+    static func mapped(
+      _ error: Error,
+      isFinalRound: Bool = false
+    ) -> ClassAIChatError {
       if let chatError = error as? ClassAIChatError {
         return chatError
       }
       if #available(iOS 27.0, *) {
         if error is GeneratedContent.ParsingError {
-          return .invalidOutput
+          return isFinalRound ? .finalSummaryInvalid : .invalidOutput
         }
         if let modelError = error as? LanguageModelError {
           switch modelError {
@@ -228,7 +277,8 @@ import Foundation
         switch modelError {
         case .guardrailViolation, .refusal: return .contentRejected
         case .exceededContextWindowSize: return .contextExhausted
-        case .unsupportedGuide, .decodingFailure: return .invalidOutput
+        case .unsupportedGuide: return .invalidOutput
+        case .decodingFailure: return isFinalRound ? .finalSummaryInvalid : .invalidOutput
         case .unsupportedLanguageOrLocale: return .unsupportedLanguage
         case .assetsUnavailable: return .modelNotReady
         case .rateLimited, .concurrentRequests: return .temporarilyUnavailable
