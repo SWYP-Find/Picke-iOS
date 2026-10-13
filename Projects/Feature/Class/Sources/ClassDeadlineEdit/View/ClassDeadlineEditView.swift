@@ -19,18 +19,18 @@ public struct ClassDeadlineEditView: View {
   }
 
   public var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 24) {
-        headerSection()
-        deadlineSection()
-        saveButton
+    VStack(spacing: 0) {
+      ScrollView {
+        pickerSection()
+          .padding(.horizontal, 16)
+          .padding(.top, 8)
       }
-      .padding(.horizontal, 16)
-      .padding(.top, 24)
-      .padding(.bottom, 40)
+      .scrollIndicators(.hidden)
     }
-    .scrollIndicators(.hidden)
-    .background(.beige50)
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      footerSection()
+    }
+    .background(.white)
     .environment(\.timeZone, AppDateFormat.timeZone)
     .environment(\.calendar, AppDateFormat.calendar)
   }
@@ -38,78 +38,84 @@ public struct ClassDeadlineEditView: View {
 
 private extension ClassDeadlineEditView {
   @ViewBuilder
-  func headerSection() -> some View {
-    HStack(alignment: .top, spacing: 16) {
-      VStack(alignment: .leading, spacing: 8) {
-        Text("참여 마감일 수정")
-          .pretendardFont(.semiBold24)
-          .foregroundStyle(.gray800)
-        Text(store.room.name)
+  func pickerSection() -> some View {
+    VStack(spacing: 0) {
+      HStack(spacing: 8) {
+        Text(store.selectedDeadlineText)
           .pretendardFont(.regular13)
           .foregroundStyle(.gray500)
+        Spacer(minLength: 0)
+        optionsMenu
       }
-      Spacer(minLength: 0)
-      Button { send(.backTapped) } label: {
-        Image(systemName: "xmark")
-          .foregroundStyle(.gray800)
-          .frame(width: 44, height: 44)
+
+      if store.isDeadlineEnabled {
+        deadlinePicker
+      } else {
+        enableDeadlineButton
+          .frame(height: 216)
       }
-      .accessibilityLabel("닫기")
-      .disabled(store.isSaving)
     }
   }
 
-  @ViewBuilder
-  func deadlineSection() -> some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Toggle("참여 마감일 설정", isOn: Binding(
-        get: { store.isDeadlineEnabled },
-        set: { send(.deadlineEnabledChanged($0)) }
-      ))
-      .pretendardFont(.semiBold15)
-      .tint(.primary500)
-      .disabled(store.isSaving)
-
-      Text(store.selectedDeadlineText)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray500)
-
-      if store.isDeadlineEnabled {
-        DatePicker(
-          "날짜",
-          selection: $store.draftDeadline,
-          in: store.minimumSelectableDate...,
-          displayedComponents: .date
-        )
-        .datePickerStyle(.graphical)
-        .disabled(store.isSaving)
-
-        DatePicker(
-          "시간",
-          selection: $store.draftDeadline,
-          in: store.minimumSelectableDate...,
-          displayedComponents: .hourAndMinute
-        )
-        .datePickerStyle(.compact)
-        .disabled(store.isSaving)
-      }
-
-      if let validationMessage = store.validationMessage {
-        Text(validationMessage)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.red)
-      }
-      if let errorMessage = store.errorMessage {
-        Text(errorMessage)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.red)
-      }
+  var optionsMenu: some View {
+    Menu {
+      Button("마감일 없음") { send(.deadlineEnabledChanged(false)) }
+      Button("마감일 설정") { send(.deadlineEnabledChanged(true)) }
+      Button("닫기", role: .cancel) { send(.backTapped) }
+    } label: {
+      Image(systemName: "ellipsis")
+        .foregroundStyle(.gray800)
+        .frame(width: 44, height: 44)
+        .contentShape(Rectangle())
     }
+    .accessibilityLabel("마감일 옵션")
+    .disabled(store.isSaving)
+  }
+
+  var deadlinePicker: some View {
+    DatePicker(
+      "참여 마감일",
+      selection: $store.draftDeadline,
+      in: store.minimumSelectableDate...,
+      displayedComponents: [.date, .hourAndMinute]
+    )
+    .datePickerStyle(.wheel)
+    .labelsHidden()
+    .frame(maxWidth: .infinity)
+    .frame(height: 216)
+    .disabled(store.isSaving)
+  }
+
+  var enableDeadlineButton: some View {
+    Button("마감일 설정하기") { send(.deadlineEnabledChanged(true)) }
+      .pretendardFont(.semiBold15)
+      .foregroundStyle(.primary500)
+      .frame(minHeight: 44)
+      .disabled(store.isSaving)
+  }
+
+  @ViewBuilder
+  func footerSection() -> some View {
+    VStack(spacing: 8) {
+      if let message = store.errorMessage ?? store.validationMessage {
+        Text(message)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.red)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .accessibilityIdentifier("class-deadline-error")
+      }
+      saveButton
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 16)
+    .padding(.bottom, 8)
+    .background(.white)
   }
 
   var saveButton: some View {
     Button("수정하기") { send(.saveTapped) }
       .ctaButtonStyle(.primary, size: .large, height: 52)
+      .accessibilityIdentifier("class-deadline-save")
       .disabled(!store.canSave)
   }
 }

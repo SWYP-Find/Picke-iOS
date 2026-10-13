@@ -12,6 +12,7 @@ import TCAFlow
 
 public struct ClassCoordinatorView: View {
   @Bindable private var store: StoreOf<ClassCoordinator>
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   public init(store: StoreOf<ClassCoordinator>) {
     self.store = store
@@ -86,7 +87,12 @@ public struct ClassCoordinatorView: View {
     .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
     .sheet(item: $store.scope(state: \.deadlineEdit, action: \.deadlineEdit)) { editorStore in
       ClassDeadlineEditView(store: editorStore)
-        .presentationDetents([.medium, .large])
+        .presentationDetents(
+          dynamicTypeSize.isAccessibilitySize
+            || editorStore.validationMessage != nil
+            || editorStore.errorMessage != nil
+            ? [.large] : [.height(360), .large]
+        )
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(editorStore.isSaving)
     }

@@ -957,27 +957,53 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-    func save(_ name: String, store: StoreOf<ClassCoordinator>) async throws {
+    func save(
+      _ name: String,
+      store: StoreOf<ClassCoordinator>,
+      width: CGFloat = 402,
+      expectedMessage: String? = nil
+    ) async throws {
       let (image, _) = try await capture(
         AnyView(ClassCoordinatorView(store: store)),
-        ready: { store.deadlineEdit?.room.id == room.id },
+        ready: {
+          store.deadlineEdit?.room.id == room.id
+            && (expectedMessage == nil
+              || (store.deadlineEdit?.errorMessage ?? store.deadlineEdit?.validationMessage) == expectedMessage)
+        },
         includeScrollBottom: false,
-        viewport: CGSize(width: 402, height: 874)
+        viewport: CGSize(width: width, height: 874)
       )
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
       let attachment = XCTAttachment(image: image)
       attachment.name = name
       attachment.lifetime = .keepAlways
       add(attachment)
+      let text = try recognizedAuditText(
+        in: image,
+        name: name,
+        regionOfInterest: CGRect(x: 0, y: 0, width: 1, height: 0.5)
+      )
+      XCTAssertTrue(text.contains("수정하기"), "Save must be visible without scrolling: \(name)")
+      XCTAssertFalse(text.contains("참여마감일수정"), "Large form header should not displace the wheel")
+      if let expectedMessage {
+        XCTAssertTrue(
+          text.contains(expectedMessage.replacingOccurrences(of: " ", with: "")),
+          "The error and save action must be visible together: \(name)"
+        )
+      }
     }
 
-    func makeStore(_ state: ClassCoordinator.State) -> StoreOf<ClassCoordinator> {
+    func makeStore(
+      _ state: ClassCoordinator.State,
+      failsSave: Bool = false,
+      referenceNow: Date = Date(timeIntervalSince1970: 1_760_000_000)
+    ) -> StoreOf<ClassCoordinator> {
       withDependencies {
         $0.uuid = .incrementing
-        $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+        $0.date.now = referenceNow
       } operation: {
         Store(initialState: state) {
-          ClassCoordinator().dependency(\.classUseCase, repository)
+          ClassCoordinator().dependency(\.classUseCase, failsSave ? MockClassRepository(rooms: []) : repository)
         }
       }
     }
@@ -990,7 +1016,11 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     let listStore = makeStore(listState)
     listStore.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
     XCTAssertEqual(listStore.routes.count, 2)
-    try await save("deadline-sheet-list-medium", store: listStore)
+    try await save("deadline-sheet-list-compact", store: listStore)
+    listStore.send(.deadlineEdit(.presented(.binding(.set(
+      \.draftDeadline, room.deadline.addingTimeInterval(3600)
+    )))))
+    try await save("deadline-sheet-changed-375", store: listStore, width: 375)
     listStore.send(.deadlineEdit(.presented(.view(.deadlineEnabledChanged(false)))))
     try await save("deadline-sheet-toggle-off", store: listStore)
 
@@ -999,13 +1029,33 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     let detailStore = makeStore(detailState)
     detailStore.send(.router(.routeAction(id: 1, action: .detail(.delegate(.openDeadline(room))))))
     XCTAssertEqual(detailStore.routes.count, 2)
-    try await save("deadline-sheet-detail-medium", store: detailStore)
+    try await save("deadline-sheet-detail-compact", store: detailStore)
 
     detailState.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
     let dashboardStore = makeStore(detailState)
     dashboardStore.send(.router(.routeAction(id: 2, action: .ownerDashboard(.delegate(.editClass)))))
     XCTAssertEqual(dashboardStore.routes.count, 3)
-    try await save("deadline-sheet-dashboard-medium", store: dashboardStore)
+    try await save("deadline-sheet-dashboard-compact", store: dashboardStore)
+
+    let pastStore = makeStore(listState, referenceNow: room.deadline.addingTimeInterval(86400))
+    pastStore.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    try await save(
+      "deadline-sheet-validation",
+      store: pastStore,
+      expectedMessage: "현재 이후 시간을 선택해 주세요."
+    )
+
+    let failingStore = makeStore(listState, failsSave: true)
+    failingStore.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    failingStore.send(.deadlineEdit(.presented(.binding(.set(
+      \.draftDeadline, room.deadline.addingTimeInterval(3600)
+    )))))
+    failingStore.send(.deadlineEdit(.presented(.view(.saveTapped))))
+    try await save(
+      "deadline-sheet-save-error",
+      store: failingStore,
+      expectedMessage: ClassError.invalidCode.message
+    )
   }
 
   @MainActor
