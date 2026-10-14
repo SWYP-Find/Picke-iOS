@@ -1610,12 +1610,35 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       text: opinion.text,
       replyCount: 0
     )
+    let replies: [ClassReplyDetailFeature.State.Reply] = [
+      .init(
+        id: 1,
+        author: "다른 관점도 꼼꼼하게 생각하는 나무늘보",
+        body: "감정을 표현하는 방식이 다르다는 점에 동의해요. 다만 함께 살아가는 사회에서는 상대가 어떻게 받아들일지도 생각해야 하지 않을까요? 서로의 상황을 이해하려는 노력이 중요하다고 생각합니다.",
+        date: "2026.10.14"
+      ),
+    ]
+    let loadedOpinion = ClassOwnerOpinion(
+      id: 3,
+      author: member.name,
+      text: opinion.text,
+      replyCount: replies.count,
+      recommendationCount: 1340
+    )
     var feedback = ClassFeedbackComposeFeature.State(room: room, memberName: member.name)
     feedback.feedback = "다른 관점의 근거도 비교해 보세요."
     let screens: [(String, ClassCoordinator.ClassScreen.State)] = [
       ("owner-member-detail-unavailable", .ownerMemberDetail(.init(room: room, member: member))),
       ("owner-reply-detail-unavailable", .ownerReplyDetail(.init(room: room, opinion: opinion))),
       ("owner-reply-detail-empty", .ownerReplyDetail(.init(room: room, opinion: emptyOpinion))),
+      (
+        "owner-reply-detail-loaded",
+        .ownerReplyDetail(.init(
+          room: room,
+          opinion: loadedOpinion,
+          replies: replies
+        ))
+      ),
       ("owner-feedback-empty", .ownerFeedback(.init(room: room, memberName: member.name))),
       ("owner-feedback-filled", .ownerFeedback(feedback)),
     ]
