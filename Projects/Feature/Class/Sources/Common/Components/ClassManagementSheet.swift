@@ -55,9 +55,6 @@ struct ClassManagementSheet: View {
           row("클래스 나가기", detail: "나간 후에는 데이터를 복구할 수 없어요.", icon: "rectangle.portrait.and.arrow.right", action: onLeave)
         }
       }
-      .overlay(alignment: .top) {
-        Rectangle().fill(.beige600).frame(height: 1)
-      }
     }
     .padding(.top, 12)
     .padding(.horizontal, 16)

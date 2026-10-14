@@ -49,6 +49,20 @@ public struct ClassJoinFeature {
       mode == .code && joinCode.count == 6 && !isLoading
     }
 
+    public var primaryButtonTitle: String {
+      switch mode {
+      case .code, .nickname: return "클래스 참여하기"
+      case .ownerName: return "입장하기"
+      }
+    }
+
+    public var nicknamePlaceholder: String {
+      switch mode {
+      case .nickname: return "내용을 입력하세요"
+      case .code, .ownerName: return "이름을 입력해주세요"
+      }
+    }
+
     public var nicknameCharacterCount: Int {
       nickname.trimmingCharacters(in: .whitespacesAndNewlines).count
     }

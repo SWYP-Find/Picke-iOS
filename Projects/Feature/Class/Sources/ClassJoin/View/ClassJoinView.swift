@@ -145,7 +145,7 @@ private extension ClassJoinView {
   }
 
   var nicknameInput: some View {
-    TextField("", text: $store.nickname, prompt: Text("이름을 입력해주세요").foregroundStyle(.gray300))
+    TextField("", text: $store.nickname, prompt: Text(store.nicknamePlaceholder).foregroundStyle(.gray300))
       .textInputAutocapitalization(.never)
       .autocorrectionDisabled()
       .accessibilityLabel("클래스에서 사용할 이름")
@@ -167,7 +167,7 @@ private extension ClassJoinView {
 
   var primaryButton: some View {
     Button { send(store.mode == .code ? .findTapped : .joinTapped) } label: {
-      Text(store.mode == .code ? "클래스 참여하기" : "입장하기")
+      Text(store.primaryButtonTitle)
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(store.mode == .code ? !store.canFindClass : !store.canJoin)
