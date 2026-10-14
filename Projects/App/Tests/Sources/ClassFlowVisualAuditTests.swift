@@ -963,6 +963,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       width: CGFloat = 402,
       expectedMessage: String? = nil
     ) async throws {
+      var bottomInset: CGFloat = 0
       let (image, _) = try await capture(
         AnyView(ClassCoordinatorView(store: store)),
         ready: {
@@ -971,8 +972,10 @@ final class ClassFlowVisualAuditTests: XCTestCase {
               || (store.deadlineEdit?.errorMessage ?? store.deadlineEdit?.validationMessage) == expectedMessage)
         },
         includeScrollBottom: false,
-        viewport: CGSize(width: width, height: 874)
+        viewport: CGSize(width: width, height: 874),
+        inspectWindow: { bottomInset = $0.safeAreaInsets.bottom }
       )
+      try assertDeadlinePanelGeometry(image, bottomInset: bottomInset)
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
       let attachment = XCTAttachment(image: image)
       attachment.name = name
@@ -1056,6 +1059,89 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       store: failingStore,
       expectedMessage: ClassError.invalidCode.message
     )
+
+    var tabState = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    tabState.classState = listState
+    let tabStore = withDependencies {
+      $0.context = .test
+      $0.uuid = .incrementing
+      $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+    } operation: {
+      Store(initialState: tabState) {
+        MainTabCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+          .dependency(\.classMockChatSession, ClassMockChatSession())
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+      }
+    }
+    var tabBottomInset: CGFloat = 0
+    let (tabImage, _) = try await capture(
+      AnyView(MainTabView(store: tabStore).task {
+        tabStore.send(.classroom(.router(.routeAction(
+          id: 1, action: .myClasses(.delegate(.openInformation(room)))
+        ))))
+      }),
+      ready: { tabStore.classState.deadlineEdit != nil && tabStore.shouldHideTabBar },
+      includeScrollBottom: false,
+      inspectWindow: { tabBottomInset = $0.safeAreaInsets.bottom }
+    )
+    XCTAssertTrue(tabStore.shouldHideTabBar)
+    try assertDeadlinePanelGeometry(tabImage, bottomInset: tabBottomInset)
+    let tabAttachment = XCTAttachment(image: tabImage)
+    tabAttachment.name = "deadline-sheet-tab-hosted"
+    tabAttachment.lifetime = .keepAlways
+    add(tabAttachment)
+  }
+
+  private func assertDeadlinePanelGeometry(
+    _ image: UIImage,
+    bottomInset: CGFloat
+  ) throws {
+    let top = image.size.height - bottomInset - 300
+    func pixel(
+      _ x: CGFloat,
+      _ y: CGFloat
+    ) throws -> [UInt8] {
+      let source = try XCTUnwrap(image.cgImage)
+      let crop = try XCTUnwrap(source.cropping(to: CGRect(
+        x: x * image.scale, y: y * image.scale, width: 1, height: 1
+      )))
+      var bytes = [UInt8](repeating: 0, count: 4)
+      try bytes.withUnsafeMutableBytes { buffer in
+        let context = try XCTUnwrap(CGContext(
+          data: buffer.baseAddress, width: 1, height: 1,
+          bitsPerComponent: 8, bytesPerRow: 4,
+          space: CGColorSpaceCreateDeviceRGB(),
+          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.draw(crop, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+      }
+      return bytes
+    }
+    func white(
+      _ x: CGFloat,
+      _ y: CGFloat
+    ) throws {
+      let color = try pixel(x, y)
+      XCTAssertTrue(color.prefix(3).allSatisfy { $0 > 245 }, "Expected sheet white at \(x),\(y): \(color)")
+    }
+    try white(0, top + 40)
+    try white(image.size.width - 1 / image.scale, top + 40)
+    try white(0, image.size.height - 1 / image.scale)
+    try white(image.size.width / 2, image.size.height - 1 / image.scale)
+    try white(image.size.width / 2, top + 2)
+    let dim = try pixel(image.size.width / 2, top - 2)
+    XCTAssertTrue(dim.prefix(3).contains { $0 < 230 }, "Panel must not extend above its specified height")
+    // CTA is y240...292 from panel top, with 16pt side padding in every state.
+    for y in [top + 241, top + 291] {
+      let fill = try pixel(20, y)
+      XCTAssertGreaterThan(Int(fill[0]) - Int(fill[1]), 10, "Expected CTA fill at y=\(y)")
+    }
+    try white(8, top + 266)
+    try white(image.size.width - 8, top + 266)
+    try white(20, top + 238)
+    try white(20, top + 294)
   }
 
   @MainActor
@@ -1611,7 +1697,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     ready: (@MainActor () -> Bool)?,
     includeScrollBottom: Bool,
     viewport: CGSize? = nil,
-    focusTextField: Bool = false
+    focusTextField: Bool = false,
+    inspectWindow: ((UIWindow) -> Void)? = nil
   ) async throws -> (UIImage, UIImage?) {
     let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
     let window = UIWindow(windowScene: scene)
@@ -1649,6 +1736,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     host.view.layoutIfNeeded()
     CATransaction.flush()
 
+    inspectWindow?(window)
     let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
     let image = renderer.image { _ in
       window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)

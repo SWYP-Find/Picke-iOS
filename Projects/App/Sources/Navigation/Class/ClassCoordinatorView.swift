@@ -84,14 +84,47 @@ public struct ClassCoordinatorView: View {
         ClassAIChatView(store: chatStore)
       }
     }
+    .allowsHitTesting(store.deadlineEdit == nil)
+    .accessibilityHidden(store.deadlineEdit != nil)
+    .overlay {
+      if let editorStore = store.scope(state: \.deadlineEdit, action: \.deadlineEdit.presented) {
+        deadlinePanel(editorStore)
+      }
+    }
     .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
-    .sheet(item: $store.scope(state: \.deadlineEdit, action: \.deadlineEdit)) { editorStore in
-      ClassDeadlineEditView(store: editorStore)
-        .presentationDetents(
-          dynamicTypeSize.isAccessibilitySize ? [.large] : [.height(300)]
-        )
-        .presentationDragIndicator(.visible)
-        .interactiveDismissDisabled(editorStore.isSaving)
+  }
+}
+
+private extension ClassCoordinatorView {
+  @ViewBuilder
+  func deadlinePanel(_ editorStore: StoreOf<ClassDeadlineEditFeature>) -> some View {
+    GeometryReader { geometry in
+      ZStack(alignment: .bottom) {
+        Color.black.opacity(0.4)
+          .ignoresSafeArea()
+          .contentShape(Rectangle())
+          .onTapGesture { editorStore.send(.view(.backTapped)) }
+          .allowsHitTesting(!editorStore.isSaving)
+          .accessibilityHidden(true)
+
+        ClassDeadlineEditView(store: editorStore)
+          .frame(height: dynamicTypeSize.isAccessibilitySize ? max(300, geometry.size.height - 44) : 300)
+          .padding(.bottom, geometry.safeAreaInsets.bottom)
+          .background(.white)
+          .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
+          .overlay(alignment: .top) {
+            Capsule()
+              .fill(.gray.opacity(0.35))
+              .frame(width: 40, height: 4)
+              .padding(.top, 12)
+              .allowsHitTesting(false)
+              .accessibilityHidden(true)
+          }
+          .accessibilityAddTraits(.isModal)
+          .accessibilityAction(.escape) { editorStore.send(.view(.backTapped)) }
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+      .ignoresSafeArea(.container, edges: .bottom)
     }
   }
 }

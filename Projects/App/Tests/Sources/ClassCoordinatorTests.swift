@@ -950,6 +950,28 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 마감일_패널을_열면_탭바를_숨기고_닫으면_복구한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassCoordinator.State()
+    var list = MyClassFeature.State()
+    list.rooms = [room]
+    list.viewState = .loaded
+    state.routes.push(.myClasses(list))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+        .dependency(\.uuid, .incrementing)
+        .dependency(\.date.now, Date(timeIntervalSince1970: 1_760_000_000))
+    }
+    store.exhaustivity = .off
+    #expect(store.state.showsTabBar)
+    await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    #expect(!store.state.showsTabBar)
+    await store.send(.deadlineEdit(.presented(.view(.backTapped))))
+    await store.receive(\.deadlineEdit.presented.delegate.dismiss)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
   func 마감_배틀_결과_화면에서는_탭바를_숨긴다() {
     var state = ClassCoordinator.State()
     state.routes.push(.closedBattle(.init(room: .mockClosedSociety)))

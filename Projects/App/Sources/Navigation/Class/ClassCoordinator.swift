@@ -47,6 +47,7 @@ public struct ClassCoordinator {
 
     /// 클래스 목록과 상세에서만 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
+      guard deadlineEdit == nil else { return false }
       switch routes.last?.screen {
       case let .detail(detail)?:
         return detail.modal == nil && detail.customAlert == nil
