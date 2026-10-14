@@ -82,8 +82,13 @@ private extension ClassRecommendView {
         HStack(spacing: 6) {
           ForEach(Array(store.conditionTitles.enumerated()), id: \.offset) { item in
             Text(item.element)
+              .pretendardFont(.semiBold12)
+              .foregroundStyle(.primary500)
+              .lineLimit(1)
               .frame(minHeight: 17)
-              .pickePill()
+              .padding(.horizontal, 4)
+              .frame(height: 20)
+              .roundedBackground(.primary50)
           }
         }
         .padding(.trailing, 60)
