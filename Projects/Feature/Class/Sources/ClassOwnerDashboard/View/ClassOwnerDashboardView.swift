@@ -570,6 +570,21 @@ private extension ClassOwnerDashboardView {
     }
   }
 
+  var opinionLinePadding: CGFloat {
+    max(0, 13 * 1.4 - UIFont.pretendardFontFamily(family: .Regular, size: 13).lineHeight)
+  }
+
+  private func opinionBadge(_ title: String) -> some View {
+    Text(title)
+      .pretendardFont(.semiBold12)
+      .foregroundStyle(.primary500)
+      .lineLimit(1)
+      .frame(minHeight: 17)
+      .padding(.horizontal, 4)
+      .padding(.vertical, 1.5)
+      .roundedBackground(.badgeFilledBackground)
+  }
+
   @ViewBuilder
   func topOpinionCard(_ opinions: [ClassOwnerOpinion]) -> some View {
     VStack(spacing: 0) {
@@ -579,11 +594,12 @@ private extension ClassOwnerDashboardView {
           Rectangle().fill(.beige600).frame(height: 1)
         }
         VStack(alignment: .leading, spacing: 8) {
-          Text(index == 0 ? "BEST 댓글" : "HOT 댓글")
-            .pickeBadge(.filled)
+          opinionBadge(index == 0 ? "BEST 댓글" : "HOT 댓글")
           Text("“\(opinion.text)”")
             .pretendardFont(.regular13)
-            .foregroundStyle(.gray700)
+            .foregroundStyle(.textBody)
+            .lineSpacing(opinionLinePadding)
+            .padding(.vertical, opinionLinePadding / 2)
             .multilineTextAlignment(.leading)
             .lineLimit(3)
         }
