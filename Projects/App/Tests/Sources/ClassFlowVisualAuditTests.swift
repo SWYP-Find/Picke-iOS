@@ -1592,6 +1592,58 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureOwnerDetailRoutes() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture owner detail routes")
+    }
+    let room = ClassRoom.mocks[0]
+    let member = ClassOwnerMember(id: 1, name: "생각하는 나무늘보", participationCount: 1)
+    let opinion = ClassOwnerOpinion(
+      id: 1,
+      author: member.name,
+      text: "감정을 표현하는 방식은 사람마다 다를 수 있다고 생각해요.",
+      replyCount: 1
+    )
+    let emptyOpinion = ClassOwnerOpinion(
+      id: 2,
+      author: member.name,
+      text: opinion.text,
+      replyCount: 0
+    )
+    var feedback = ClassFeedbackComposeFeature.State(room: room, memberName: member.name)
+    feedback.feedback = "다른 관점의 근거도 비교해 보세요."
+    let screens: [(String, ClassCoordinator.ClassScreen.State)] = [
+      ("owner-member-detail-unavailable", .ownerMemberDetail(.init(room: room, member: member))),
+      ("owner-reply-detail-unavailable", .ownerReplyDetail(.init(room: room, opinion: opinion))),
+      ("owner-reply-detail-empty", .ownerReplyDetail(.init(room: room, opinion: emptyOpinion))),
+      ("owner-feedback-empty", .ownerFeedback(.init(room: room, memberName: member.name))),
+      ("owner-feedback-filled", .ownerFeedback(feedback)),
+    ]
+    for (name, screen) in screens {
+      var state = ClassCoordinator.State()
+      state.routes.push(screen)
+      let repository = MockClassRepository(rooms: [room], availableRooms: [])
+      let store = Store(initialState: state) {
+        ClassCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+          .dependency(\.classMockChatSession, ClassMockChatSession())
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+          .dependency(\.classAIFeedbackUseCase, Self.visualAIFeedbackUseCase())
+      }
+      let (image, _) = try await capture(
+        AnyView(ClassCoordinatorView(store: store)),
+        ready: nil,
+        includeScrollBottom: false
+      )
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name + ".png"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")
