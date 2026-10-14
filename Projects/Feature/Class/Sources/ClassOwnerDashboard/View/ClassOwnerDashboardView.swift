@@ -11,6 +11,7 @@ import Foundation
 import PickeDesignKit
 import PickeSharedUI
 import SwiftUI
+import UIKit
 
 @ViewAction(for: ClassOwnerDashboardFeature.self)
 public struct ClassOwnerDashboardView: View {
@@ -187,17 +188,26 @@ private extension ClassOwnerDashboardView {
     }
   }
 
+  var insightLinePadding: CGFloat {
+    max(0, 12 * 1.4 - UIFont.pretendardFontFamily(family: .Regular, size: 12).lineHeight)
+  }
+
   @ViewBuilder
   func homePage() -> some View {
     VStack(alignment: .leading, spacing: 24) {
       if case let .ready(insight) = store.insightViewState {
-        VStack(alignment: .leading, spacing: 8) {
-          ClassAIInsightHeading(title: "AI 인사이트")
+        VStack(alignment: .leading, spacing: 6) {
+          ClassAIInsightHeading(
+            title: "AI 인사이트",
+            isCompact: true
+          )
           Text(insight)
-            .pretendardFont(.regular13)
+            .pretendardFont(.bodySmall)
+            .lineSpacing(insightLinePadding)
+            .padding(.vertical, insightLinePadding / 2)
         }
         .foregroundStyle(.primary500)
-        .padding(16)
+        .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
         .overlay(RoundedRectangle(cornerRadius: 2).stroke(.primary100, lineWidth: 1))
