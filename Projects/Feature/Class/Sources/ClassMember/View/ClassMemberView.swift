@@ -121,7 +121,7 @@ private extension ClassMemberView {
       Image(systemName: "magnifyingglass")
         .font(.system(size: 18))
         .foregroundStyle(.gray300)
-      TextField("이름을 입력해주세요.", text: $store.searchText)
+      TextField("검색어를 입력해주세요.", text: $store.searchText)
         .pretendardFont(family: .Medium, size: 13)
         .foregroundStyle(.gray800)
     }
@@ -136,6 +136,11 @@ private extension ClassMemberView {
     HStack(spacing: 8) {
       if let avatar = member.avatar {
         memberAvatar(avatar)
+      } else {
+        Color.clear
+          .frame(width: 36, height: 36)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
       }
 
       Text(member.name)
@@ -167,7 +172,7 @@ private extension ClassMemberView {
         .accessibilityLabel("\(member.name) 내보내기")
       }
     }
-    .frame(height: member.avatar == nil ? 56 : 68)
+    .frame(height: 68)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
   }
 
