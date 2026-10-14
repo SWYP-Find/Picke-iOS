@@ -21,8 +21,7 @@ public struct ClassIntroView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(
-        onBack: { send(.backTapped) },
-        centerTitle: "클래스"
+        onBack: { send(.backTapped) }
       )
       .foregroundStyle(.beige50)
 
