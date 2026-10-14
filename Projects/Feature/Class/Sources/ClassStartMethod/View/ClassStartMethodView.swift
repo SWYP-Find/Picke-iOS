@@ -55,7 +55,7 @@ public struct ClassStartMethodView: View {
         .ctaButtonStyle(.primary, size: .large, height: 52)
       }
       .padding(.horizontal, 16)
-      .padding(.top, 24)
+      .padding(.top, 16)
       .padding(.bottom, 16)
     }
     .screenBackground()
