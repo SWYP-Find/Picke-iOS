@@ -27,6 +27,7 @@ public struct ChatRoomFeature {
     public var bundle: ChatRoomBundle = .mock
     public var scenario: BattleScenario?
     public var isPlaying: Bool = false
+    public var playbackRate: Float = 1
     public var currentTime: TimeInterval = 0
     public var playerDuration: TimeInterval = 0
     public var battleId: Int = 0
@@ -59,6 +60,18 @@ public struct ChatRoomFeature {
     /// 수동 seek(분기 선택·구간 이동) 직후 목표 시간. iOS 는 seek 반영 전 stale tick 을
     /// 흘리므로, 목표 시간 근처에 도달하기 전까지 옵저버 tick 을 무시해 오디오-텍스트 불일치를 막는다.
     public var pendingSeekTime: TimeInterval?
+
+    public static let supportedPlaybackRates: [Float] = [1, 1.25, 1.5, 2]
+
+    public var playbackRateTitle: String {
+      switch playbackRate {
+      case 1: return "1.0"
+      case 1.25: return "1.25"
+      case 1.5: return "1.5"
+      case 2: return "2.0"
+      default: return "1.0"
+      }
+    }
 
     public var totalDuration: TimeInterval {
       if playerDuration > 0 {
@@ -174,6 +187,7 @@ public struct ChatRoomFeature {
     case refreshTapped
     case retryTapped
     case togglePlayTapped
+    case playbackRateSelected(Float)
     case seekBackwardTapped
     case seekForwardTapped
     case replayTapped
@@ -296,6 +310,13 @@ extension ChatRoomFeature {
         }
       }
 
+    case let .playbackRateSelected(rate):
+      guard rate.isFinite, State.supportedPlaybackRates.contains(rate) else { return .none }
+      state.playbackRate = rate
+      return .run { [player = audioPlayer] _ in
+        await player.setPlaybackRate(rate)
+      }
+
     case .seekBackwardTapped:
       analyticsUseCase.track(.uiAction(action: .chatroomSeekBackward, screen: .chatroom))
       // 15초 되감기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
@@ -394,7 +415,8 @@ extension ChatRoomFeature {
       state.playerDuration = 0
       state.isPlaying = true
       state.hasAudioError = false
-      return .run { [player = audioPlayer] send in
+      return .run { [player = audioPlayer, rate = state.playbackRate] send in
+        await player.setPlaybackRate(rate)
         let isPlayable = await player.load(url: url)
         guard isPlayable else {
           await send(.inner(.audioLoadFailed))
@@ -408,7 +430,8 @@ extension ChatRoomFeature {
       }
 
     case .subscribePlayer:
-      return .run { [player = audioPlayer] send in
+      return .run { [player = audioPlayer, rate = state.playbackRate] send in
+        await player.setPlaybackRate(rate)
         for await time in player.currentTimes() {
           guard !Task.isCancelled else { return }
           await send(.inner(.playerTimeUpdated(time)))
@@ -458,7 +481,7 @@ extension ChatRoomFeature {
       // 수동 seek(분기 선택·구간 이동) 직후, iOS 는 seek 반영 전 stale tick 을 흘린다.
       // 목표 시간 근처에 도달하기 전까지 tick 을 무시해 노드가 어긋나지 않게 한다(오디오-텍스트 동기).
       if let pending = state.pendingSeekTime {
-        guard abs(time - pending) < 0.5 else { return .none }
+        guard abs(time - pending) < 0.5 * max(1, Double(state.playbackRate)) else { return .none }
         state.pendingSeekTime = nil
       }
       state.currentTime = time

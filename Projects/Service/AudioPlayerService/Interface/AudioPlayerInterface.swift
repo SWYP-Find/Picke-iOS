@@ -14,6 +14,7 @@ public protocol AudioPlayerInterface: Sendable {
   func load(url: URL) async -> Bool
   func play() async
   func pause() async
+  func setPlaybackRate(_ rate: Float) async
   func seek(to time: TimeInterval) async
   func duration() async -> TimeInterval
   func currentTimes() -> AsyncStream<TimeInterval>
@@ -24,6 +25,7 @@ public struct DefaultAudioPlayerImpl: AudioPlayerInterface {
   public func load(url _: URL) async -> Bool { true }
   public func play() async {}
   public func pause() async {}
+  public func setPlaybackRate(_: Float) async {}
   public func seek(to _: TimeInterval) async {}
   public func duration() async -> TimeInterval { 0 }
   public func currentTimes() -> AsyncStream<TimeInterval> { AsyncStream { _ in } }

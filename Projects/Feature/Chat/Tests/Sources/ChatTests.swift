@@ -6,7 +6,9 @@
 //
 
 @testable import Chat
+import AudioPlayerServiceInterface
 import ComposableArchitecture
+import Foundation
 import HomeDomainInterface
 import Testing
 
@@ -93,6 +95,112 @@ struct ChatTests {
     #expect(state.messages.last?.speaker.side == .center)
   }
 
+  @Test @MainActor
+  func playbackRateSelectionForwardsWithoutStartingPausedAudio() async {
+    let player = RecordingChatAudioPlayer()
+    let store = TestStore(initialState: ChatRoomFeature.State(battleId: 904)) {
+      ChatRoomFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    #expect(ChatRoomFeature.State.supportedPlaybackRates == [1, 1.25, 1.5, 2])
+    #expect(store.state.playbackRateTitle == "1.0")
+    await store.send(.view(.playbackRateSelected(1.25))) {
+      $0.playbackRate = 1.25
+    }
+    await store.finish()
+    #expect(store.state.playbackRateTitle == "1.25")
+    #expect(store.state.isPlaying == false)
+    #expect(await player.events == [.rate(1.25)])
+  }
+
+  @Test @MainActor
+  func unsupportedPlaybackRatesAreIgnored() async {
+    let player = RecordingChatAudioPlayer()
+    let store = TestStore(initialState: ChatRoomFeature.State(battleId: 905)) {
+      ChatRoomFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    for rate in [Float(0), 1.75, .nan, .infinity, -.infinity] {
+      await store.send(.view(.playbackRateSelected(rate)))
+    }
+    await store.finish()
+    #expect(store.state.playbackRate == 1)
+    #expect(await player.events.isEmpty)
+  }
+
+  @Test @MainActor
+  func newChatLoadRestoresDefaultRateBeforeLoading() async {
+    let player = RecordingChatAudioPlayer()
+    let previousStore = TestStore(initialState: ChatRoomFeature.State(battleId: 906)) {
+      ChatRoomFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await previousStore.send(.view(.playbackRateSelected(2))) {
+      $0.playbackRate = 2
+    }
+    await previousStore.finish()
+
+    let newStore = TestStore(initialState: ChatRoomFeature.State(battleId: 907)) {
+      ChatRoomFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await newStore.send(.async(.loadAudio(URL(string: "https://example.com/audio.mp3")!))) {
+      $0.isPlaying = true
+    }
+    await newStore.finish()
+
+    #expect(newStore.state.playbackRate == 1)
+    #expect(await player.events == [.rate(2), .rate(1), .load, .play])
+  }
+
+  @Test @MainActor
+  func existingChatSubscriptionRestoresSelectedRate() async {
+    let player = RecordingChatAudioPlayer()
+    var state = ChatRoomFeature.State(battleId: 908)
+    state.playbackRate = 1.5
+    let store = TestStore(initialState: state) {
+      ChatRoomFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    let subscription = await store.send(.async(.subscribePlayer))
+    await player.waitForSubscription()
+    #expect(await player.events == [.rate(1.5), .subscribe])
+    await subscription.cancel()
+    await store.finish()
+  }
+
+  @Test @MainActor
+  func doubleSpeedSeekAcceptsTheNextTickWithoutAdvancingOnStaleTime() async {
+    let player = RecordingChatAudioPlayer()
+    var state = ChatRoomFeature.State(battleId: 909)
+    state.playbackRate = 2
+    state.pendingSeekTime = 15
+    state.currentTime = 15
+    let store = TestStore(initialState: state) {
+      ChatRoomFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.inner(.playerTimeUpdated(2)))
+    await store.send(.inner(.playerTimeUpdated(15.6))) {
+      $0.pendingSeekTime = nil
+      $0.currentTime = 15.6
+    }
+    await store.send(.inner(.playerTimeUpdated(16.1))) {
+      $0.currentTime = 16.1
+    }
+    await store.finish()
+  }
+
   private func makeScenario(scripts: [ScenarioScript]? = nil) -> BattleScenario {
     BattleScenario(
       battleId: 901,
@@ -121,5 +229,53 @@ struct ChatTests {
         ),
       ]
     )
+  }
+}
+
+private actor RecordingChatAudioPlayer: AudioPlayerInterface {
+  enum Event: Equatable {
+    case rate(Float)
+    case load
+    case play
+    case subscribe
+  }
+
+  private(set) var events: [Event] = []
+  private var subscriptionContinuation: CheckedContinuation<Void, Never>?
+  private var hasSubscribed = false
+
+  func setPlaybackRate(_ rate: Float) async {
+    events.append(.rate(rate))
+  }
+
+  func load(url _: URL) async -> Bool {
+    events.append(.load)
+    return true
+  }
+
+  func play() async {
+    events.append(.play)
+  }
+
+  func pause() async {}
+  func seek(to _: TimeInterval) async {}
+  func duration() async -> TimeInterval { 0 }
+
+  nonisolated func currentTimes() -> AsyncStream<TimeInterval> {
+    AsyncStream { _ in
+      Task { await self.recordSubscription() }
+    }
+  }
+
+  func waitForSubscription() async {
+    if hasSubscribed { return }
+    await withCheckedContinuation { subscriptionContinuation = $0 }
+  }
+
+  private func recordSubscription() {
+    events.append(.subscribe)
+    hasSubscribed = true
+    subscriptionContinuation?.resume()
+    subscriptionContinuation = nil
   }
 }

@@ -1644,6 +1644,60 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureSharedAudioPlaybackRates() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 for shared audio captures")
+    }
+    for rate: Float in [1, 1.25, 2] {
+      // Plain ChatRoomView uses its ordinary preview scenario, without Class routing or mocks.
+      var state = ChatRoomFeature.State(battleId: 901)
+      state.scenario = BattleScenario(
+        battleId: 901,
+        title: "뒤샹의 변기, 예술인가 도발인가",
+        philosophers: [],
+        isInteractive: false,
+        startNodeId: 1,
+        recommendedPathKey: .common,
+        audios: [:],
+        nodes: [ScenarioNode(
+          nodeId: 1,
+          nodeName: "START",
+          audioDuration: 268,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(
+            scriptId: 1,
+            startTimeMs: 0,
+            speakerType: .a,
+            speakerName: "플라톤",
+            text: "하늘 아래 모든 사물은 그에 걸맞은 목적과 형상을 가지고 있습니다."
+          )],
+          interactiveOptions: []
+        )]
+      )
+      state.currentNodeId = 1
+      state.visibleNodeIds = [1]
+      state.currentTime = 24
+      state.playbackRate = rate
+      let store = Store(initialState: state) {
+        ChatRoomFeature()
+          .dependency(\.audioPlayer, DefaultAudioPlayerImpl())
+          .dependency(\.analyticsUseCase, .testValue)
+      }
+      let (image, _) = try await capture(
+        AnyView(ChatRoomView(store: store)),
+        ready: { store.scenario != nil && !store.scenarioLoadFailed },
+        includeScrollBottom: false,
+        viewport: CGSize(width: 375, height: 812)
+      )
+      XCTAssertEqual(store.playbackRate, rate)
+      let attachment = XCTAttachment(image: image)
+      attachment.name = "shared-chat-audio-\(rate)x-375"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")

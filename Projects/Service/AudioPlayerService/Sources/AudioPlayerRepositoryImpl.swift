@@ -29,6 +29,10 @@ public final class AudioPlayerRepositoryImpl: AudioPlayerInterface, @unchecked S
     await service.pause()
   }
 
+  public func setPlaybackRate(_ rate: Float) async {
+    await service.setPlaybackRate(rate)
+  }
+
   public func seek(to time: TimeInterval) async {
     await service.seek(to: time)
   }
@@ -54,16 +58,22 @@ public final class AudioPlayerRepositoryImpl: AudioPlayerInterface, @unchecked S
 final class AudioPlayerService {
   static let shared = AudioPlayerService()
 
-  private let player = AVPlayer()
+  private let player: AVPlayer
   private var timeContinuations: [UUID: AsyncStream<TimeInterval>.Continuation] = [:]
   private var timeObserverToken: Any?
 
-  private init() {
+  init(
+    player: AVPlayer = AVPlayer(),
+    configuresSession: Bool = true
+  ) {
+    self.player = player
     // setActive 는 메인 스레드에서 호출하면 UI 가 멈출 수 있어(Hang Risk) 백그라운드에서 처리한다.
-    Task.detached(priority: .userInitiated) {
-      let session = AVAudioSession.sharedInstance()
-      try? session.setCategory(.playback, mode: .default)
-      try? session.setActive(true)
+    if configuresSession {
+      Task.detached(priority: .userInitiated) {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .default)
+        try? session.setActive(true)
+      }
     }
     installPeriodicObserver()
   }
@@ -95,6 +105,14 @@ final class AudioPlayerService {
 
   func play() { player.play() }
   func pause() { player.pause() }
+
+  func setPlaybackRate(_ rate: Float) {
+    guard [1, 1.25, 1.5, 2].contains(rate) else { return }
+    player.defaultRate = rate
+    if player.rate != 0 {
+      player.rate = rate
+    }
+  }
 
   func seek(to time: TimeInterval) async {
     await player.seek(

@@ -11,7 +11,11 @@ import Foundation
 
 /// 클래스 목 시나리오를 기기 음원 없이 재생하는 8초 타이머.
 struct ClassMockAudioPlayer: AudioPlayerInterface {
-  private let clock = Clock()
+  private let clock: Clock
+
+  init(now: @escaping @Sendable () -> Date = { Date() }) {
+    clock = Clock(now: now)
+  }
 
   func load(url: URL) async -> Bool {
     guard url.scheme == "picke-class-mock" else { return false }
@@ -27,12 +31,20 @@ struct ClassMockAudioPlayer: AudioPlayerInterface {
     await clock.pause()
   }
 
+  func setPlaybackRate(_ rate: Float) async {
+    await clock.setPlaybackRate(rate)
+  }
+
   func seek(to time: TimeInterval) async {
     await clock.seek(to: time)
   }
 
   func duration() async -> TimeInterval {
     8
+  }
+
+  func currentTime() async -> TimeInterval {
+    await clock.currentTime()
   }
 
   func currentTimes() -> AsyncStream<TimeInterval> {
@@ -51,8 +63,14 @@ struct ClassMockAudioPlayer: AudioPlayerInterface {
 
 private actor Clock {
   private let duration: TimeInterval = 8
+  private let now: @Sendable () -> Date
   private var elapsed: TimeInterval = 0
   private var startedAt: Date?
+  private var rate: Float = 1
+
+  init(now: @escaping @Sendable () -> Date) {
+    self.now = now
+  }
 
   func reset() {
     elapsed = 0
@@ -61,7 +79,7 @@ private actor Clock {
 
   func play() {
     guard startedAt == nil else { return }
-    startedAt = Date()
+    startedAt = now()
   }
 
   func pause() {
@@ -69,15 +87,24 @@ private actor Clock {
     startedAt = nil
   }
 
+  func setPlaybackRate(_ newRate: Float) {
+    guard [1, 1.25, 1.5, 2].contains(newRate) else { return }
+    if startedAt != nil {
+      elapsed = currentTime()
+      startedAt = now()
+    }
+    rate = newRate
+  }
+
   func seek(to time: TimeInterval) {
     elapsed = min(max(0, time), duration)
     if startedAt != nil {
-      startedAt = Date()
+      startedAt = now()
     }
   }
 
   func currentTime() -> TimeInterval {
-    let running = startedAt.map { Date().timeIntervalSince($0) } ?? 0
+    let running = startedAt.map { now().timeIntervalSince($0) * Double(rate) } ?? 0
     return min(duration, elapsed + running)
   }
 }

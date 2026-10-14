@@ -17,6 +17,35 @@ import Testing
 @MainActor
 struct ClassCoordinatorTests {
   @Test
+  func 클래스_목_오디오_속도_변경은_재생시간을_이어가고_로드해도_속도를_유지한다() async {
+    let now = LockIsolated(Date(timeIntervalSince1970: 1_760_000_000))
+    let player = ClassMockAudioPlayer(now: { now.value })
+    let url = URL(string: "picke-class-mock://audio")!
+
+    #expect(await player.load(url: url))
+    await player.play()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 1)
+
+    await player.setPlaybackRate(2)
+    #expect(await player.currentTime() == 1)
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 3)
+
+    await player.pause()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 3)
+    await player.play()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 5)
+
+    #expect(await player.load(url: url))
+    await player.play()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 2)
+  }
+
+  @Test
   func 클래스_표시정보는_배틀별로_보관하고_이전_화면의_등록응답은_무시한다() async {
     let first = ClassRoom.mocks[0]
     let second = ClassRoom.mockJoinable
@@ -1983,6 +2012,7 @@ struct ChatPlayerLifecycleTests {
       }())
     }
     #expect(await player.waitForSubscriptions(1))
+    #expect(await player.recordedPlaybackRates() == [1])
     #expect(await player.yield(1.25, to: 0))
     await store.receive {
       if case .router(.routeAction(id: 2, action: .chat(.router(.routeAction(
@@ -2192,9 +2222,18 @@ private actor ControlledClassAudioPlayer: AudioPlayerInterface {
 
   func play() async {}
   func pause() async {}
+  func setPlaybackRate(_ rate: Float) async {
+    playbackRates.append(rate)
+  }
   func seek(to _: TimeInterval) async {}
   func duration() async -> TimeInterval {
     0
+  }
+
+  private var playbackRates: [Float] = []
+
+  func recordedPlaybackRates() -> [Float] {
+    playbackRates
   }
 
   func waitForSubscriptions(_ count: Int) async -> Bool {

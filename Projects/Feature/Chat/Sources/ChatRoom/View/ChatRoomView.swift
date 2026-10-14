@@ -412,7 +412,9 @@ extension ChatRoomView {
         onForward: { send(.seekForwardTapped) },
         onReplay: { send(.replayTapped) },
         isReplayEnabled: store.canScrub,
-        tint: .neutral900
+        tint: .neutral900,
+        playbackRateTitle: store.playbackRateTitle,
+        onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
       )
     }
     .padding(.horizontal, 24)
