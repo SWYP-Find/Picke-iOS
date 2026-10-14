@@ -21,8 +21,7 @@ public struct ClassMemberView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 멤버")
-        .foregroundStyle(.gray500)
+      navigationBar()
 
       searchField
         .padding(.horizontal, 16)
@@ -69,6 +68,9 @@ public struct ClassMemberView: View {
     ) { editNameStore in
       nameSheet(store: editNameStore)
     }
+    .pickeModal($store.scope(state: \.management, action: \.management), dimOpacity: 0.28) { _ in
+      managementSheet()
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
@@ -82,6 +84,44 @@ public struct ClassMemberView: View {
 #endif
 
 private extension ClassMemberView {
+  @ViewBuilder
+  func navigationBar() -> some View {
+    PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 멤버") {
+      if store.room.role == .owner {
+        Button { send(.managementTapped) } label: {
+          Image(systemName: "ellipsis")
+            .pretendardFont(family: .SemiBold, size: 20)
+            .frame(width: 24, height: 24)
+            .foregroundStyle(.gray800)
+        }
+        .disabled(store.isSaving)
+        .accessibilityLabel("클래스 관리")
+      }
+    }
+    .foregroundStyle(.gray500)
+  }
+
+  @ViewBuilder
+  func managementSheet() -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { send(.managementDismissed) }
+      ClassManagementSheet(
+        room: store.room,
+        onEdit: { send(.managementEditTapped) },
+        onDelete: { send(.managementDeleteTapped) }
+      )
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
+  }
+
   @ViewBuilder
   func memberSkeleton() -> some View {
     ForEach(0 ..< 5, id: \.self) { _ in

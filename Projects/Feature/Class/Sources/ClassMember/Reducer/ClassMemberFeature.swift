@@ -39,6 +39,7 @@ public struct ClassMemberFeature {
     public var isSaving = false
     public var appliedFilter = ClassMemberFilterFeature.State()
     public var hasAppliedSort = false
+    @Presents public var management: ClassModalFeature.State?
     @Presents public var filter: ClassMemberFilterFeature.State?
     @Presents public var editName: ClassMemberEditNameFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
@@ -97,6 +98,7 @@ public struct ClassMemberFeature {
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
+    case management(PresentationAction<ClassModalFeature.Action>)
     case filter(PresentationAction<ClassMemberFilterFeature.Action>)
     case editName(PresentationAction<ClassMemberEditNameFeature.Action>)
     case customAlert(PresentationAction<CustomAlertAction>)
@@ -110,6 +112,10 @@ public struct ClassMemberFeature {
 
   public enum View {
     case backTapped
+    case managementTapped
+    case managementDismissed
+    case managementEditTapped
+    case managementDeleteTapped
     case retryTapped
     case filterTapped
     case editNameTapped(Int)
@@ -120,6 +126,8 @@ public struct ClassMemberFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case editClass
+    case deleteClass
     case retryMembers(roomID: Int)
     case removeMember(roomID: Int, memberID: Int, currentMemberID: Int)
     case updateDisplayName(roomID: Int, memberID: Int, currentMemberID: Int, name: String)
@@ -191,9 +199,12 @@ public struct ClassMemberFeature {
         state.errorMessage = message
         state.customAlert = .alert(title: "요청을 완료하지 못했어요", message: message)
         return .none
-      case .delegate:
+      case .management, .delegate:
         return .none
       }
+    }
+    .ifLet(\.$management, action: \.management) {
+      ClassModalFeature()
     }
     .ifLet(\.$filter, action: \.filter) {
       ClassMemberFilterFeature()
@@ -291,6 +302,21 @@ extension ClassMemberFeature {
         .cancel(id: CancelID.load(state.instanceID)),
         .send(.delegate(.dismiss))
       )
+    case .managementTapped:
+      guard state.room.role == .owner, !state.isSaving else { return .none }
+      state.management = .init(kind: .management)
+      return .none
+    case .managementDismissed:
+      state.management = nil
+      return .none
+    case .managementEditTapped:
+      guard state.room.role == .owner, !state.isSaving else { return .none }
+      state.management = nil
+      return .send(.delegate(.editClass))
+    case .managementDeleteTapped:
+      guard state.room.role == .owner, !state.isSaving else { return .none }
+      state.management = nil
+      return .send(.delegate(.deleteClass))
     case .retryTapped:
       guard !state.isLoading else { return .none }
       return .send(.delegate(.retryMembers(roomID: state.room.id)))

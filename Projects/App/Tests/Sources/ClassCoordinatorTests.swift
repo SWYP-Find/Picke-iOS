@@ -838,6 +838,92 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 운영자_멤버_관리에서_마감일_시트를_열어도_멤버_경로를_유지한다() async {
+    let room = ClassRoom.mocks[0]
+    let instanceID = UUID()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.members(.init(room: room, instanceID: instanceID, preloadedViewState: .loaded)))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .members(.delegate(.editClass)))))
+    await store.finish()
+
+    #expect(store.state.routes.count == 3)
+    guard case let .members(current)? = store.state.routes.last?.screen else {
+      Issue.record("편집 시 멤버 경로가 유지되어야 합니다.")
+      return
+    }
+    #expect(current.instanceID == instanceID)
+    #expect(store.state.deadlineEdit?.room == room)
+  }
+
+  @Test
+  func 운영자_멤버_관리의_삭제는_같은_클래스_상세의_확인창으로_돌아간다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.members(.init(room: room, instanceID: UUID(), preloadedViewState: .loaded)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .members(.delegate(.deleteClass)))))
+    await store.receive {
+      guard case .router(.routeAction(id: 1, action: .detail(.view(.deleteTapped)))) = $0 else { return false }
+      return true
+    }
+    await store.finish()
+
+    #expect(store.state.routes.count == 2)
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("삭제 확인을 위한 상세 경로가 유지되어야 합니다.")
+      return
+    }
+    #expect(detail.customAlert != nil)
+  }
+
+  @Test
+  func 운영자_멤버_관리는_현재_경로와_운영자와_같은_방_상세가_있을_때만_이동한다() async {
+    let ownerRoom = ClassRoom.mocks[0]
+    let memberRoom = ClassRoom.mockJoinable
+    var nonOwnerState = ClassCoordinator.State()
+    nonOwnerState.routes.push(.detail(.init(room: ownerRoom)))
+    nonOwnerState.routes.push(.members(.init(room: memberRoom, instanceID: UUID(), preloadedViewState: .loaded)))
+    let nonOwnerStore = TestStore(initialState: nonOwnerState) { ClassCoordinator() }
+    nonOwnerStore.exhaustivity = .off
+
+    await nonOwnerStore.send(.router(.routeAction(id: 2, action: .members(.delegate(.editClass)))))
+    await nonOwnerStore.send(.router(.routeAction(id: 2, action: .members(.delegate(.deleteClass)))))
+    #expect(nonOwnerStore.state.deadlineEdit == nil)
+    #expect(nonOwnerStore.state.routes.count == 3)
+
+    let owner = ClassMemberFeature.State(room: ownerRoom, instanceID: UUID(), preloadedViewState: .loaded)
+    var oldRouteState = ClassCoordinator.State()
+    oldRouteState.routes.push(.detail(.init(room: ownerRoom)))
+    oldRouteState.routes.push(.members(owner))
+    oldRouteState.routes.push(.detail(.init(room: memberRoom)))
+    let oldRouteStore = TestStore(initialState: oldRouteState) { ClassCoordinator() }
+    oldRouteStore.exhaustivity = .off
+    await oldRouteStore.send(.router(.routeAction(id: 2, action: .members(.delegate(.editClass)))))
+    await oldRouteStore.send(.router(.routeAction(id: 2, action: .members(.delegate(.deleteClass)))))
+    #expect(oldRouteStore.state.deadlineEdit == nil)
+    #expect(oldRouteStore.state.routes.count == 4)
+
+    var noDetailState = ClassCoordinator.State()
+    noDetailState.routes.push(.detail(.init(room: memberRoom)))
+    noDetailState.routes.push(.members(owner))
+    let noDetailStore = TestStore(initialState: noDetailState) { ClassCoordinator() }
+    noDetailStore.exhaustivity = .off
+    await noDetailStore.send(.router(.routeAction(id: 2, action: .members(.delegate(.deleteClass)))))
+    #expect(noDetailStore.state.routes.count == 3)
+    #expect(noDetailStore.state.deadlineEdit == nil)
+  }
+
+  @Test
   func 운영자_마감일_수정_후_다시_연_보고서는_갱신된_방과_주입된_데이터를_표시한다() async throws {
     let room = ClassRoom.mocks[0]
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
@@ -1809,6 +1895,65 @@ struct ClassParticipantPushTests {
 
 @MainActor
 struct ClassDeadlineSheetCoordinatorTests {
+  @Test
+  func 마감일_저장_후_늦은_멤버_조회는_새_마감일과_화면_인스턴스를_보존한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let updated = try await repository.updateDeadline(
+      id: room.id,
+      deadline: room.deadline.addingTimeInterval(86400)
+    )
+    let memberInstanceID = UUID()
+    let loadRequestID = UUID()
+    var member = ClassMemberFeature.State(room: room, instanceID: memberInstanceID)
+    member.activeLoadRequestID = loadRequestID
+    member.isLoading = true
+    var editor = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    let saveRequestID = UUID()
+    editor.activeRequestID = saveRequestID
+    editor.isSaving = true
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.members(member))
+    state.deadlineEdit = editor
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.deadlineEdit(.presented(.delegate(.saved(
+      updated,
+      instanceID: editor.instanceID,
+      requestID: saveRequestID
+    )))))
+    await store.send(.inner(.membersLoaded(
+      routeID: 2,
+      roomID: room.id,
+      instanceID: memberInstanceID,
+      requestID: loadRequestID,
+      room: room,
+      members: MockClassRepository.figmaOwnerMembers,
+      currentMemberID: 1
+    )))
+    await store.receive {
+      guard case .router(.routeAction(id: 2, action: .members(.membersLoaded))) = $0 else { return false }
+      return true
+    }
+    await store.finish()
+
+    guard case let .members(current)? = store.state.routes.last?.screen else {
+      Issue.record("늦은 응답 뒤에도 멤버 화면이 유지되어야 합니다.")
+      return
+    }
+    #expect(current.instanceID == memberInstanceID)
+    #expect(current.room == updated)
+    #expect(current.members == MockClassRepository.figmaOwnerMembers)
+    #expect(current.activeLoadRequestID == nil)
+    #expect(store.state.deadlineEdit == nil)
+  }
+
   @Test
   func 세_화면에서_현재_경로를_유지하며_마감일_시트를_연다() async {
     let room = ClassRoom.mocks[0]

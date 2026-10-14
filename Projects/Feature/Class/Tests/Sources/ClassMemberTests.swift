@@ -15,6 +15,46 @@ import Testing
 @MainActor
 struct ClassMemberTests {
   @Test
+  func 운영자_관리_메뉴는_닫기와_편집과_삭제를_전달한다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: ClassMemberFeature.State(
+      room: room,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) { ClassMemberFeature() }
+
+    await store.send(.view(.managementTapped)) { $0.management = .init(kind: .management) }
+    await store.send(.view(.managementDismissed)) { $0.management = nil }
+    await store.send(.view(.managementTapped)) { $0.management = .init(kind: .management) }
+    await store.send(.view(.managementEditTapped)) { $0.management = nil }
+    await store.receive(\.delegate, .editClass)
+    await store.send(.view(.managementTapped)) { $0.management = .init(kind: .management) }
+    await store.send(.view(.managementDeleteTapped)) { $0.management = nil }
+    await store.receive(\.delegate, .deleteClass)
+  }
+
+  @Test
+  func 학생과_저장중인_운영자는_관리_메뉴를_열거나_이동할_수_없다() async {
+    let memberStore = TestStore(initialState: ClassMemberFeature.State(
+      room: .mockJoinable,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) { ClassMemberFeature() }
+    await memberStore.send(.view(.managementTapped))
+    await memberStore.send(.view(.managementEditTapped))
+    await memberStore.send(.view(.managementDeleteTapped))
+    #expect(memberStore.state.management == nil)
+
+    var saving = ClassMemberFeature.State(room: .mocks[0], instanceID: UUID(), preloadedViewState: .loaded)
+    saving.isSaving = true
+    let ownerStore = TestStore(initialState: saving) { ClassMemberFeature() }
+    await ownerStore.send(.view(.managementTapped))
+    await ownerStore.send(.view(.managementEditTapped))
+    await ownerStore.send(.view(.managementDeleteTapped))
+    #expect(ownerStore.state.management == nil)
+  }
+
+  @Test
   func 운영자는_확인_후에만_다른_멤버를_내보낸다() async {
     let member = ClassMember(id: 2, name: "김민지")
     let room = ClassRoom.mocks[0]

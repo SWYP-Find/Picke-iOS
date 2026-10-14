@@ -188,6 +188,43 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureOwnerMemberManagement() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture owner member management")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    var state = ClassMemberFeature.State(
+      room: ClassRoom.mocks[0],
+      members: [ClassMember(id: 1, name: "김선생", isOwner: true)],
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )
+    state.management = .init(kind: .management)
+    let store = Store(initialState: state) { ClassMemberFeature() }
+    let (image, _) = try await capture(
+      AnyView(ClassMemberView(store: store)),
+      ready: nil,
+      includeScrollBottom: false
+    )
+    let name = "owner-member-management"
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    let text = try recognizedAuditText(in: image, name: name)
+    for label in ["클래스관리", "클래스정보수정", "참여코드공유", "클래스삭제"] {
+      XCTAssertTrue(text.contains(label), "Missing \(label): \(text)")
+    }
+  }
+
+  @MainActor
   func testClassAIFeedbackStatusFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture generated-feedback statuses")

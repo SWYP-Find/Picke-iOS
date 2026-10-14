@@ -216,6 +216,9 @@ private extension ClassCoordinator {
         case var .closedBattle(closed) where closed.room.id == room.id:
           closed.room = room
           state.routes[screenAt: index] = .closedBattle(closed)
+        case var .members(member) where member.room.id == room.id:
+          member.room = room
+          state.routes[screenAt: index] = .members(member)
         case var .report(report) where report.room.id == room.id:
           report.room = room
           state.routes[screenAt: index] = .report(report)
@@ -701,6 +704,20 @@ private extension ClassCoordinator {
          .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(routeID, action: .members(.delegate(.editClass))):
+      guard routeID == state.routes.count - 1,
+            case let .members(member)? = state.routes.last?.screen,
+            member.room.role == .owner, !member.isSaving
+      else { return .none }
+      return openDeadlineEditor(state: &state, room: member.room)
+
+    case let .routeAction(routeID, action: .members(.delegate(.deleteClass))):
+      guard routeID == state.routes.count - 1,
+            case let .members(member)? = state.routes.last?.screen,
+            member.room.role == .owner, !member.isSaving
+      else { return .none }
+      return returnToClassDetail(state: &state, action: .deleteTapped)
+
     case let .routeAction(routeID, action: .ownerDashboard(.delegate(.editClass))):
       guard routeID == state.routes.count - 1,
             case let .ownerDashboard(dashboard)? = state.routes.last?.screen
@@ -807,13 +824,21 @@ private extension ClassCoordinator {
     state: inout State,
     action: ClassDetailFeature.View
   ) -> Effect<Action> {
-    guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen,
-          let detailIndex = state.routes.lastIndex(where: {
-            if case let .detail(detail) = $0.screen {
-              return detail.room.id == dashboard.room.id
-            }
-            return false
-          })
+    let room: ClassRoom
+    switch state.routes.last?.screen {
+    case let .ownerDashboard(dashboard):
+      room = dashboard.room
+    case let .members(member) where member.room.role == .owner:
+      room = member.room
+    default:
+      return .none
+    }
+    guard let detailIndex = state.routes.lastIndex(where: {
+      if case let .detail(detail) = $0.screen {
+        return detail.room.id == room.id
+      }
+      return false
+    })
     else { return .none }
 
     for _ in (detailIndex + 1) ..< state.routes.count {
@@ -931,7 +956,7 @@ private extension ClassCoordinator {
       }
       return .none
 
-    case let .membersLoaded(routeID, roomID, instanceID, requestID, room, members, currentMemberID):
+    case let .membersLoaded(routeID, roomID, instanceID, requestID, _, members, currentMemberID):
       guard state.routes.indices.contains(routeID),
             case let .members(member) = state.routes[routeID].screen,
             member.room.id == roomID,
@@ -941,7 +966,7 @@ private extension ClassCoordinator {
       return .send(.router(.routeAction(
         id: routeID,
         action: .members(.membersLoaded(
-          room: room,
+          room: member.room,
           members: members,
           currentMemberID: currentMemberID,
           requestID: requestID
