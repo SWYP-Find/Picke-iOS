@@ -347,6 +347,10 @@ private extension ClassOwnerDashboardView {
               reportInsight("생각의 흐름", title: feedback.points[0].title, detail: feedback.points[0].detail)
               Rectangle().fill(.beige600).frame(height: 1)
               reportInsight("내가 더한 관점", title: feedback.points[1].title, detail: feedback.points[1].detail)
+              if store.report != nil {
+                Rectangle().fill(.beige600).frame(height: 1)
+                myOpinionsSection()
+              }
             }
             .padding(16)
           }
@@ -354,9 +358,12 @@ private extension ClassOwnerDashboardView {
           .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
         } else {
           feedbackStatus()
-        }
-        if store.report != nil {
-          myOpinionsSection()
+          if store.report != nil {
+            myOpinionsSection()
+              .padding(16)
+              .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+              .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+          }
         }
       }
 
@@ -410,9 +417,6 @@ private extension ClassOwnerDashboardView {
         }
       }
     }
-    .padding(16)
-    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
   }
 
   func reportActivity(_ count: String, label: String) -> some View {
