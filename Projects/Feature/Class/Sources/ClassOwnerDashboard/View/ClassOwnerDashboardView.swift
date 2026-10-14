@@ -127,12 +127,7 @@ private extension ClassOwnerDashboardView {
     PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
       switch store.selectedTab {
       case .home:
-        Button { send(.backTapped) } label: {
-          Image(systemName: "xmark")
-            .font(.system(size: 20, weight: .light))
-            .frame(width: 24, height: 24)
-        }
-        .accessibilityLabel("닫기")
+        EmptyView()
       case .report:
         Button { send(.managementTapped) } label: {
           Image(systemName: "ellipsis")
@@ -149,8 +144,7 @@ private extension ClassOwnerDashboardView {
   func titleHeader() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
-        Text(store.room.status == .closed ? "마감" : "진행 중")
-          .pickeBadge(.filled, size: .tag)
+        statusBadge()
         Text("#\(store.room.battle.categoryDisplayTitle)")
           .pickeBadge(.filled, size: .tag)
       }
@@ -165,6 +159,22 @@ private extension ClassOwnerDashboardView {
     }
     .padding(.horizontal, 16)
     .frame(height: 118, alignment: .center)
+  }
+
+  @ViewBuilder
+  func statusBadge() -> some View {
+    switch store.room.status {
+    case .open:
+      Text("진행 중")
+        .pickeBadge(.filled, size: .tag)
+    case .closed:
+      Text("종료")
+        .pretendardFont(.semiBold12)
+        .foregroundStyle(.gray300)
+        .padding(.horizontal, 4)
+        .frame(height: 20)
+        .roundedBackground(.gray50, radius: 2)
+    }
   }
 
   @ViewBuilder
