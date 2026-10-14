@@ -13,6 +13,7 @@ import SwiftUI
 @ViewAction(for: ClassDeadlineEditFeature.self)
 public struct ClassDeadlineEditView: View {
   @Bindable public var store: StoreOf<ClassDeadlineEditFeature>
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   public init(store: StoreOf<ClassDeadlineEditFeature>) {
     self.store = store
@@ -40,14 +41,6 @@ private extension ClassDeadlineEditView {
   @ViewBuilder
   func pickerSection() -> some View {
     VStack(spacing: 0) {
-      HStack(spacing: 8) {
-        Text(store.selectedDeadlineText)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.gray500)
-        Spacer(minLength: 0)
-        optionsMenu
-      }
-
       if store.isDeadlineEnabled {
         deadlinePicker
       } else {
@@ -55,21 +48,6 @@ private extension ClassDeadlineEditView {
           .frame(height: 216)
       }
     }
-  }
-
-  var optionsMenu: some View {
-    Menu {
-      Button("마감일 없음") { send(.deadlineEnabledChanged(false)) }
-      Button("마감일 설정") { send(.deadlineEnabledChanged(true)) }
-      Button("닫기", role: .cancel) { send(.backTapped) }
-    } label: {
-      Image(systemName: "ellipsis")
-        .foregroundStyle(.gray800)
-        .frame(width: 44, height: 44)
-        .contentShape(Rectangle())
-    }
-    .accessibilityLabel("마감일 옵션")
-    .disabled(store.isSaving)
   }
 
   var deadlinePicker: some View {
@@ -101,6 +79,7 @@ private extension ClassDeadlineEditView {
         Text(message)
           .pretendardFont(.regular13)
           .foregroundStyle(.red)
+          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
           .frame(maxWidth: .infinity, alignment: .leading)
           .accessibilityIdentifier("class-deadline-error")
       }

@@ -88,10 +88,7 @@ public struct ClassCoordinatorView: View {
     .sheet(item: $store.scope(state: \.deadlineEdit, action: \.deadlineEdit)) { editorStore in
       ClassDeadlineEditView(store: editorStore)
         .presentationDetents(
-          dynamicTypeSize.isAccessibilitySize
-            || editorStore.validationMessage != nil
-            || editorStore.errorMessage != nil
-            ? [.large] : [.height(360), .large]
+          dynamicTypeSize.isAccessibilitySize ? [.large] : [.height(300)]
         )
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(editorStore.isSaving)
