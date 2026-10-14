@@ -209,7 +209,10 @@ private extension ClassOwnerDashboardView {
         VStack(alignment: .leading, spacing: 6) {
           ClassAIInsightHeading(
             title: "AI 인사이트",
-            isCompact: true
+            titleFont: .bold11,
+            titleLineHeight: 15.4,
+            iconSize: 20,
+            spacing: 6
           )
           Text(insight)
             .pretendardFont(.bodySmall)
@@ -330,10 +333,11 @@ private extension ClassOwnerDashboardView {
             HStack(spacing: 8) {
               reportChoice("사전 선택", value: content[.initialChoice])
               Text("입장 변경")
-                .pretendardFont(.semiBold13)
+                .pretendardFont(family: .SemiBold, size: 10)
                 .foregroundStyle(.beige50)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .frame(minHeight: 14)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
                 .background(.primary500, in: Capsule())
               reportChoice("사후 선택", value: content[.finalChoice])
             }
@@ -359,9 +363,18 @@ private extension ClassOwnerDashboardView {
       dashboardSection("AI 피드백") {
         if case let .ready(feedback) = store.feedbackViewState {
           VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 8) {
-              ClassAIInsightHeading(title: feedback.summaryTitle)
-              Text(feedback.summaryDetail).pretendardFont(.regular13)
+            VStack(alignment: .leading, spacing: 6) {
+              ClassAIInsightHeading(
+                title: "내 판단의 기준",
+                titleFont: .semiBold12,
+                titleLineHeight: 17,
+                iconSize: 20,
+                spacing: 6
+              )
+              Text(feedback.summaryDetail)
+                .pretendardFont(.bodySmall)
+                .lineSpacing(insightLinePadding)
+                .padding(.vertical, insightLinePadding / 2)
             }
             .foregroundStyle(.primary500)
             .padding(16)
@@ -369,9 +382,20 @@ private extension ClassOwnerDashboardView {
             .background(.primary50)
 
             VStack(alignment: .leading, spacing: 16) {
-              reportInsight("생각의 흐름", title: feedback.points[0].title, detail: feedback.points[0].detail)
+              reportInsight(
+                "이번에 잘한 점",
+                detail: feedback.points[0].detail
+              )
               Rectangle().fill(.beige600).frame(height: 1)
-              reportInsight("내가 더한 관점", title: feedback.points[1].title, detail: feedback.points[1].detail)
+              reportInsight(
+                "한 가지 더 살펴볼 점",
+                detail: feedback.points[1].detail
+              )
+              Rectangle().fill(.beige600).frame(height: 1)
+              reportInsight(
+                "다음 생각 한 걸음",
+                detail: feedback.points[2].detail
+              )
               if store.report != nil {
                 Rectangle().fill(.beige600).frame(height: 1)
                 myOpinionsSection()
@@ -392,28 +416,17 @@ private extension ClassOwnerDashboardView {
         }
       }
 
-      if case let .ready(feedback) = store.feedbackViewState {
-        dashboardSection("다음 생각 해보기") {
-          VStack(alignment: .leading, spacing: 12) {
-            Text(feedback.nextQuestion)
-              .pretendardFont(family: .SemiBold, size: 18)
-              .foregroundStyle(.gray800)
-            Text(feedback.nextHint)
-              .pretendardFont(.regular13)
-              .foregroundStyle(.gray500)
-          }
-          .padding(16)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
-        }
-      }
     }
   }
 
-  func reportChoice(_ label: String, value: String) -> some View {
+  @ViewBuilder
+  func reportChoice(
+    _ label: String,
+    value: String
+  ) -> some View {
     VStack(spacing: 4) {
-      Text(label).pretendardFont(.regular10).foregroundStyle(.gray500)
-      Text(value).pretendardFont(.semiBold13).foregroundStyle(.gray800)
+      Text(label).pretendardFont(.medium11).foregroundStyle(.gray300).frame(minHeight: 15)
+      Text(value).pretendardFont(.semiBold12).foregroundStyle(.gray800).frame(minHeight: 17)
     }
     .frame(maxWidth: .infinity)
   }
@@ -425,7 +438,7 @@ private extension ClassOwnerDashboardView {
         HStack {
           Text("내가 남긴 의견 \(store.myOpinionCount)개 보기")
           Spacer()
-          Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.down")
+          Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
         }
         .pretendardFont(.semiBold13)
         .foregroundStyle(.primary500)
@@ -444,19 +457,30 @@ private extension ClassOwnerDashboardView {
     }
   }
 
-  func reportActivity(_ count: String, label: String) -> some View {
-    VStack(spacing: 4) {
-      Text(count).pretendardFont(.semiBold24).foregroundStyle(.gray800)
-      Text(label).pretendardFont(.regular13).foregroundStyle(.gray500)
+  @ViewBuilder
+  func reportActivity(
+    _ count: String,
+    label: String
+  ) -> some View {
+    VStack(spacing: 0) {
+      Text(count).pretendardFont(.labelLarge).foregroundStyle(.gray800).frame(minHeight: 24)
+      Text(label).pretendardFont(.medium10).foregroundStyle(.gray300).frame(minHeight: 14)
     }
     .frame(maxWidth: .infinity)
   }
 
-  func reportInsight(_ label: String, title: String, detail: String) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(label).pretendardFont(.semiBold13).foregroundStyle(.primary500)
-      Text(title).pretendardFont(.semiBold15).foregroundStyle(.gray800)
-      Text(detail).pretendardFont(.regular13).foregroundStyle(.gray500)
+  @ViewBuilder
+  func reportInsight(
+    _ label: String,
+    detail: String
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(label).pretendardFont(.semiBold12).foregroundStyle(.primary500).frame(minHeight: 17)
+      Text(detail)
+        .pretendardFont(.regular13)
+        .foregroundStyle(.textSubtler)
+        .lineSpacing(opinionLinePadding)
+        .padding(.vertical, opinionLinePadding / 2)
     }
   }
 

@@ -20,7 +20,7 @@ enum ClassAIFeedbackInstructions {
     case .studentPersonal:
       lines.append("본인의 의견 변화를 설명하고 다음 탐구 방향을 제안하세요.")
     case .ownerPersonal:
-      lines.append("본인의 의견을 설명하세요. 첫 번째 포인트는 생각의 흐름, 두 번째는 내가 더한 관점, 세 번째는 다음 단계에 맞추세요.")
+      lines.append("본인이 작성한 의견을 근거로 설명하세요. 첫 번째 포인트는 이번에 잘한 점, 두 번째는 한 가지 더 살펴볼 점, 세 번째는 다음 생각 한 걸음에 맞추세요. 잘한 점은 기록에서 확인되는 주장이나 근거를 짚고, 보완점과 다음 단계는 추가로 비교하거나 탐구할 내용을 제안하세요.")
     case .classInsight:
       lines.append("수업 전체의 의견 흐름만 설명하세요. 개별 학생의 특성을 추론하거나 평가하지 마세요.")
     }

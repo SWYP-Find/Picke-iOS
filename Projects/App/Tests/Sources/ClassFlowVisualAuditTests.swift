@@ -281,6 +281,74 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       })),
       unavailableText: "피드백을사용할수없어요"
     )
+
+    let openRoom = ClassRoom.mocks[0]
+    let closedRoom = ClassRoom(
+      id: openRoom.id,
+      name: openRoom.name,
+      joinCode: openRoom.joinCode,
+      battle: openRoom.battle,
+      deadline: openRoom.deadline,
+      memberCount: openRoom.memberCount,
+      role: openRoom.role,
+      status: .closed,
+      allowsAnonymousOpinion: openRoom.allowsAnonymousOpinion,
+      requiresComment: openRoom.requiresComment,
+      ownerParticipates: openRoom.ownerParticipates
+    )
+    var closedOwner = ClassOwnerDashboardFeature.State(room: closedRoom, instanceID: UUID())
+    closedOwner.selectedTab = .home
+    closedOwner.dashboard = dashboard
+    closedOwner.report = dashboard.report
+    closedOwner.members = dashboard.members
+    closedOwner.opinions = dashboard.opinions
+    closedOwner.metrics = dashboard.metrics
+    closedOwner.sourceViewState = .ready
+    let multilineInsight = """
+    서로 다른 의견을 비교하며 근거를 살펴봤어요.
+    대화를 통해 다양한 관점을 이해했어요.
+    다음 토론에서도 자신의 생각을 구체적으로 표현해 보세요.
+    """
+    closedOwner.generatedInsight = multilineInsight
+    XCTAssertEqual(closedOwner.room.status, .closed)
+    XCTAssertEqual(closedOwner.insightViewState, .ready(multilineInsight))
+    try await saveStatus(
+      "owner-closed-insight-multiline",
+      view: AnyView(ClassOwnerDashboardView(store: Store(initialState: closedOwner) {
+        ClassOwnerDashboardFeature()
+      })),
+      unavailableText: "다음토론에서도자신의생각을구체적으로표현해보세요"
+    )
+    let closedImage = try XCTUnwrap(UIImage(contentsOfFile: directory
+      .appendingPathComponent("owner-closed-insight-multiline.png").path))
+    let closedText = try recognizedAuditText(in: closedImage, name: "owner-closed-insight-multiline")
+    XCTAssertTrue(closedText.contains("종료"), "Closed badge missing from pixels: \(closedText)")
+
+    var reportOwner = ClassOwnerDashboardFeature.State(room: closedRoom, instanceID: UUID())
+    reportOwner.selectedTab = .report
+    reportOwner.sourceViewState = .ready
+    reportOwner.report = dashboard.report
+    reportOwner.generatedFeedback = Self.visualPersonalFeedback
+    XCTAssertEqual(reportOwner.feedbackViewState, .ready(Self.visualPersonalFeedback))
+    let (_, reportBottom) = try await capture(
+      AnyView(ClassOwnerDashboardView(store: Store(initialState: reportOwner) {
+        ClassOwnerDashboardFeature()
+      })),
+      ready: nil,
+      includeScrollBottom: true,
+      viewport: CGSize(width: 402, height: 640)
+    )
+    let reportImage = try XCTUnwrap(reportBottom)
+    let reportName = "owner-report-final-bottom"
+    try XCTUnwrap(reportImage.pngData()).write(to: directory.appendingPathComponent(reportName + ".png"))
+    let reportAttachment = XCTAttachment(image: reportImage)
+    reportAttachment.name = reportName + " (seeded AI feedback; no model call)"
+    reportAttachment.lifetime = .keepAlways
+    add(reportAttachment)
+    let reportText = try recognizedAuditText(in: reportImage, name: reportName)
+    XCTAssertTrue(reportText.contains("다음생각한걸음"), "In-card next step missing: \(reportText)")
+    XCTAssertTrue(reportText.contains("내가남긴의견\(reportOwner.myOpinionCount)개보기"), "Owner footer missing: \(reportText)")
+    XCTAssertFalse(reportText.contains("다음생각해보기"), "Duplicate external next-step heading remains: \(reportText)")
   }
 
   @MainActor

@@ -120,6 +120,11 @@ struct ClassAIFeedbackInstructionsTests {
     #expect(a.roomID != b.roomID)
     #expect(a.kind == .studentPersonal)
     #expect(b.kind == .ownerPersonal)
-    #expect(ClassAIFeedbackInstructions.make(context: b).contains("생각의 흐름"))
+    let instructions = ClassAIFeedbackInstructions.make(context: b)
+    #expect(instructions.contains("첫 번째 포인트는 이번에 잘한 점"))
+    #expect(instructions.contains("두 번째는 한 가지 더 살펴볼 점"))
+    #expect(instructions.contains("세 번째는 다음 생각 한 걸음"))
+    #expect(instructions.contains("본인이 작성한 의견을 근거로"))
+    #expect(instructions.contains("개인의 성향 판단을 만들지 마세요"))
   }
 }

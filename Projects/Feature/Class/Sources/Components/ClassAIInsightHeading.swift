@@ -10,18 +10,21 @@ import SwiftUI
 
 struct ClassAIInsightHeading: View {
   let title: String
-  var isCompact: Bool = false
+  var titleFont: CustomSizeFont = .semiBold15
+  var titleLineHeight: CGFloat? = nil
+  var iconSize: CGFloat = 24
+  var spacing: CGFloat = 8
 
   var body: some View {
-    HStack(spacing: isCompact ? 6 : 8) {
+    HStack(spacing: spacing) {
       Image(systemName: "sparkle")
         .font(.system(size: 12, weight: .bold))
         .foregroundStyle(.beige50)
-        .frame(width: isCompact ? 20 : 24, height: isCompact ? 20 : 24)
+        .frame(width: iconSize, height: iconSize)
         .background(.primary500, in: RoundedRectangle(cornerRadius: 6))
       Text(title)
-        .pretendardFont(isCompact ? .bold11 : .semiBold15)
-        .frame(minHeight: isCompact ? 15.4 : nil)
+        .pretendardFont(titleFont)
+        .frame(minHeight: titleLineHeight)
     }
   }
 }
