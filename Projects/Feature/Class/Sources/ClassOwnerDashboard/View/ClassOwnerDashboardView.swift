@@ -273,8 +273,13 @@ private extension ClassOwnerDashboardView {
               )
               .stroke(.secondary500, style: StrokeStyle(lineWidth: 11, lineCap: .butt))
               VStack(spacing: 0) {
-                Text("\(total)명").pretendardFont(.semiBold24)
-                Text("총 참여").pretendardFont(.regular10).foregroundStyle(.gray500)
+                Text("\(total)명")
+                  .pretendardFont(.labelLarge)
+                  .frame(minHeight: 24)
+                Text("총 참여")
+                  .pretendardFont(.medium10)
+                  .foregroundStyle(.gray300)
+                  .frame(minHeight: 14)
               }
             }
             .frame(width: 92, height: 92)
@@ -461,7 +466,10 @@ private extension ClassOwnerDashboardView {
     @ViewBuilder content: () -> some View
   ) -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text(title).pretendardFont(.semiBold15).foregroundStyle(.gray800)
+      Text(title)
+        .pretendardFont(.headingSmall)
+        .foregroundStyle(.gray800)
+        .frame(minHeight: 20)
       content()
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -511,17 +519,19 @@ private extension ClassOwnerDashboardView {
   ) -> some View {
     VStack(spacing: 4) {
       HStack {
-        Text(title).pretendardFont(.medium13)
+        Text(title).pretendardFont(.semiBold12)
         Spacer()
-        Text(value).pretendardFont(.semiBold15)
+        Text(value).pretendardFont(.headingSmall)
       }
+      .frame(minHeight: 20)
       HStack {
         Text(detail)
         Spacer()
         Text(count)
       }
-      .pretendardFont(.regular10)
-      .foregroundStyle(.gray500)
+      .pretendardFont(.regular11)
+      .foregroundStyle(.gray300)
+      .frame(minHeight: 16)
       GeometryReader { geometry in
         ZStack(alignment: .leading) {
           Capsule().fill(.beige600)
@@ -543,13 +553,19 @@ private extension ClassOwnerDashboardView {
   ) -> some View {
     HStack(alignment: .center, spacing: 8) {
       Circle().fill(tint).frame(width: 8, height: 8)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title).pretendardFont(.medium13).foregroundStyle(.gray800)
-        Text("\(count)명").pretendardFont(.regular10).foregroundStyle(.gray500)
+      VStack(alignment: .leading, spacing: 0) {
+        Text(title)
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.gray800)
+          .frame(minHeight: 17)
+        Text("\(count)명")
+          .pretendardFont(.medium11)
+          .foregroundStyle(.gray300)
+          .frame(minHeight: 16)
       }
       Spacer(minLength: 8)
       Text(roundedPercentage(count, of: total))
-        .pretendardFont(.semiBold13)
+        .pretendardFont(family: .Bold, size: 12)
         .foregroundStyle(.gray800)
     }
   }
