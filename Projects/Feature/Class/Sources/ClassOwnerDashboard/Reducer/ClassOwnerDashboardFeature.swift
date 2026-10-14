@@ -158,11 +158,23 @@ public struct ClassOwnerDashboardFeature {
       canSortOpinions(opinionFilter) ? opinionFilter : nil
     }
 
+    /// 첫 항목은 추천 1위, 두 번째 항목은 대댓글 1위이며 같은 의견일 수 있다.
     public var topOpinionViewState: TopOpinionViewState {
       guard !opinions.isEmpty else { return .empty }
       guard canSortOpinions(.popular) else { return .unavailable }
-      let top = Array(opinions.sorted { ($0.recommendationCount ?? 0) > ($1.recommendationCount ?? 0) }.prefix(2))
-      return .loaded(top)
+      let recommended = opinions.sorted {
+        let lhs = $0.recommendationCount ?? 0
+        let rhs = $1.recommendationCount ?? 0
+        return lhs == rhs ? $0.id < $1.id : lhs > rhs
+      }
+      guard let best = recommended.first else { return .empty }
+      let discussed = opinions.sorted {
+        return $0.replyCount == $1.replyCount ? $0.id < $1.id : $0.replyCount > $1.replyCount
+      }
+      guard opinions.count > 1, let mostDiscussed = discussed.first, mostDiscussed.replyCount > 0 else {
+        return .loaded([best])
+      }
+      return .loaded([best, mostDiscussed])
     }
 
     public var memberViewState: MemberViewState {

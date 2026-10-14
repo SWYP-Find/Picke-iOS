@@ -120,11 +120,70 @@ struct ClassOwnerDashboardTests {
     let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() }
 
     #expect(store.state.visibleOpinions.map(\.id) == [2, 1])
-    #expect(store.state.topOpinionViewState == .loaded([state.opinions[1], state.opinions[0]]))
+    #expect(store.state.topOpinionViewState == .loaded([state.opinions[1], state.opinions[1]]))
     await store.send(.view(.opinionFilterSelected(.latest))) {
       $0.opinionFilter = .latest
     }
     #expect(store.state.visibleOpinions.map(\.id) == [1, 2])
+  }
+
+  @Test
+  func 주요_의견은_추천과_대댓글의_서로_다른_일위를_보여준다() {
+    var state = fixtureState()
+    let best = highlightOpinion(id: 1, recommendations: 10, replies: 1)
+    let discussed = highlightOpinion(id: 2, recommendations: 2, replies: 8)
+    let runnerUp = highlightOpinion(id: 3, recommendations: 9, replies: 3)
+    state.opinions = [runnerUp, discussed, best]
+    #expect(state.topOpinionViewState == .loaded([best, discussed]))
+  }
+
+  @Test
+  func 두_기준의_일위가_같으면_각_역할에_같은_의견을_보여준다() {
+    var state = fixtureState()
+    let winner = highlightOpinion(id: 1, recommendations: 10, replies: 8)
+    state.opinions = [highlightOpinion(id: 2, recommendations: 2, replies: 3), winner]
+    #expect(state.topOpinionViewState == .loaded([winner, winner]))
+  }
+
+  @Test
+  func 주요_의견_동률은_입력_순서와_무관하게_작은_ID를_선택한다() {
+    var state = fixtureState()
+    let first = highlightOpinion(id: 1, recommendations: 10, replies: 8)
+    let second = highlightOpinion(id: 2, recommendations: 10, replies: 8)
+    state.opinions = [second, first]
+    #expect(state.topOpinionViewState == .loaded([first, first]))
+    state.opinions.reverse()
+    #expect(state.topOpinionViewState == .loaded([first, first]))
+  }
+
+  @Test
+  func 대댓글이_없으면_논쟁_카드를_보여주지_않는다() {
+    var state = fixtureState()
+    let best = highlightOpinion(id: 1, recommendations: 10, replies: 0)
+    state.opinions = [best, highlightOpinion(id: 2, recommendations: 2, replies: 0)]
+    #expect(state.topOpinionViewState == .loaded([best]))
+  }
+
+  @Test
+  func 의견이_하나면_BEST만_보여준다() {
+    var state = fixtureState()
+    let only = highlightOpinion(id: 1, recommendations: 10, replies: 8)
+    state.opinions = [only]
+    #expect(state.topOpinionViewState == .loaded([only]))
+  }
+
+  private func highlightOpinion(
+    id: Int,
+    recommendations: Int,
+    replies: Int
+  ) -> ClassOwnerOpinion {
+    return ClassOwnerOpinion(
+      id: id,
+      author: "참여자",
+      text: "의견 \(id)",
+      replyCount: replies,
+      recommendationCount: recommendations
+    )
   }
 
   @Test

@@ -614,11 +614,11 @@ private extension ClassOwnerDashboardView {
     VStack(spacing: 0) {
       ForEach(opinions.indices, id: \.self) { index in
         let opinion = opinions[index]
-        if opinion.id != opinions.first?.id {
+        if index > 0 {
           Rectangle().fill(.beige600).frame(height: 1)
         }
         VStack(alignment: .leading, spacing: 8) {
-          opinionBadge(index == 0 ? "BEST 댓글" : "HOT 댓글")
+          opinionBadge(index == 0 ? "BEST 댓글" : "가장 논쟁이 활발했던 댓글")
           Text("“\(opinion.text)”")
             .pretendardFont(.regular13)
             .foregroundStyle(.textBody)
