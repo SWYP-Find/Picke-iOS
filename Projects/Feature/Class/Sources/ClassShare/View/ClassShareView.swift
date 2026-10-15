@@ -121,7 +121,7 @@ private extension ClassShareView {
       UIPasteboard.general.string = store.room.joinCode
       UIAccessibility.post(notification: .announcement, argument: "참여 코드를 복사했어요")
     } label: {
-      Image(systemName: "doc.on.doc")
+      Image(systemName: "square.on.square")
         .resizable()
         .scaledToFit()
         .frame(width: 18, height: 18)

@@ -79,11 +79,14 @@ private extension ClassStartMethodView {
         .pretendardFont(.semiBold24)
         .lineSpacing(2.4)
         .foregroundStyle(.gray800)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 62, alignment: .topLeading)
 
       Text("준비된 콘텐츠를 쓰거나, 내 주제로 직접 시작할 수 있어요")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
         .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 23, alignment: .leading)
     }
   }
 

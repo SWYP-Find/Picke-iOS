@@ -54,10 +54,14 @@ private extension ClassTopicView {
         .pretendardFont(.semiBold24)
         .lineSpacing(2.4)
         .foregroundStyle(.gray800)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 62, alignment: .topLeading)
 
       Text("관심 있는 주제나 배틀 조건을 선택해 주세요.")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 23, alignment: .leading)
     }
   }
 

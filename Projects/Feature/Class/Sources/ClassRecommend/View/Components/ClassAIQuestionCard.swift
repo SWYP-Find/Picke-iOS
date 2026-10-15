@@ -29,7 +29,7 @@ struct ClassAIQuestionCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      VStack(alignment: .leading, spacing: showsSelection ? 16 : 12) {
+      VStack(alignment: .leading, spacing: 16) {
         HStack {
           Text("#\(question.category)")
             .pickeBadge(.filled, size: .tag)
@@ -39,6 +39,7 @@ struct ClassAIQuestionCard: View {
               .pickeCheckbox(isChecked: isSelected)
           }
         }
+        .frame(minHeight: showsSelection ? nil : 24)
 
         VStack(alignment: .leading, spacing: 4) {
           Text(question.title)
