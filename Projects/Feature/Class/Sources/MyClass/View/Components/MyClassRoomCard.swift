@@ -38,6 +38,7 @@ struct MyClassRoomCard: View {
           .font(.pretendardFontFamily(family: .Bold, size: 14))
           .foregroundStyle(.gray900)
           .frame(width: 24, height: 24)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .accessibilityLabel("클래스 관리")

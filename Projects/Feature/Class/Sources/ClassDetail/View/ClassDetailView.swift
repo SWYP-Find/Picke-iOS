@@ -143,6 +143,7 @@ private extension ClassDetailView {
       }
     }
     .frame(height: 64)
+    .contentShape(Rectangle())
   }
 
   @ViewBuilder

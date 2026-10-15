@@ -22,7 +22,10 @@ struct PickeClassAuditApp: App {
 
   var body: some Scene {
     WindowGroup {
-      if let scenario = ProcessInfo.processInfo.environment["PICKE_DEADLINE_SCENARIO"],
+      if let scenario = ProcessInfo.processInfo.environment["PICKE_MEMBER_SCENARIO"],
+         ["owner-remove", "member-leave"].contains(scenario) {
+        MemberAuditView(scenario: scenario)
+      } else if let scenario = ProcessInfo.processInfo.environment["PICKE_DEADLINE_SCENARIO"],
          ["normal", "minimum", "cycle"].contains(scenario) {
         DeadlineAuditView(scenario: scenario)
       } else {

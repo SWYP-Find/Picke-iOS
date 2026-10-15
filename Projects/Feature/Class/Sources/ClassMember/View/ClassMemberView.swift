@@ -124,17 +124,19 @@ private extension ClassMemberView {
 
   @ViewBuilder
   func memberSkeleton() -> some View {
-    ForEach(0 ..< 5, id: \.self) { _ in
-      HStack(spacing: 12) {
-        SkeletonView(.circle)
-          .frame(width: 36, height: 36)
-        SkeletonView(.round(cornerRadius: 2))
-          .frame(width: 112, height: 18)
-        Spacer(minLength: 0)
+    VStack(spacing: 0) {
+      ForEach(0 ..< 5, id: \.self) { _ in
+        HStack(spacing: 12) {
+          SkeletonView(.circle)
+            .frame(width: 36, height: 36)
+          SkeletonView(.round(cornerRadius: 2))
+            .frame(width: 112, height: 18)
+          Spacer(minLength: 0)
+        }
+        .frame(height: 68)
+        .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
+        .accessibilityHidden(true)
       }
-      .frame(height: 68)
-      .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
-      .accessibilityHidden(true)
     }
   }
 
