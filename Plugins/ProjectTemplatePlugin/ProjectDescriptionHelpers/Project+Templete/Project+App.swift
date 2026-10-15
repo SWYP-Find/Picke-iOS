@@ -53,7 +53,8 @@ extension Project {
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
-    hasTests: Bool = false
+    hasTests: Bool = false,
+    additionalTargets: [Target] = []
   ) -> Project {
     let appTarget: Target = .target(
       name: name,
@@ -94,7 +95,7 @@ extension Project {
       ),
       packages: packages,
       settings: settings,
-      targets: targets,
+      targets: targets + additionalTargets,
       schemes: schemes,
       fileHeaderTemplate: .default
     )

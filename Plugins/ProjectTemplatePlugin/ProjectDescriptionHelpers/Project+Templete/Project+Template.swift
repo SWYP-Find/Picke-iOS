@@ -161,7 +161,8 @@ public extension Project {
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
-    hasTests: Bool = false
+    hasTests: Bool = false,
+    additionalTargets: [Target] = []
   ) -> Project {
     return configureApp(
       name: name,
@@ -178,7 +179,8 @@ public extension Project {
       infoPlist: infoPlist,
       entitlements: entitlements,
       schemes: schemes,
-      hasTests: hasTests
+      hasTests: hasTests,
+      additionalTargets: additionalTargets
     )
   }
 }

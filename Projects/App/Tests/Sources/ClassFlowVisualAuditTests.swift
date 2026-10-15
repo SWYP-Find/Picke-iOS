@@ -775,6 +775,73 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testInteractWithClassDeadlineSheet() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_DEADLINE_INTERACTIVE_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_DEADLINE_INTERACTIVE_AUDIT=1 for manual deadline interaction")
+    }
+    let now = Date(timeIntervalSince1970: floor(Date().timeIntervalSince1970 / 60) * 60)
+    let room = ClassRoom(
+      id: 1,
+      name: "마감일 조작 검증용 클래스",
+      joinCode: "AUDIT1",
+      battle: ClassBattleSummary.mocks[0],
+      deadline: now.addingTimeInterval(3 * 86400),
+      memberCount: 1,
+      role: .owner,
+      status: .open,
+      allowsAnonymousOpinion: false,
+      requiresComment: false
+    )
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    var list = MyClassFeature.State()
+    list.rooms = [room]
+    list.viewState = .loaded
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(list))
+    let store = withDependencies {
+      $0.date.now = now
+      $0.uuid = .incrementing
+    } operation: {
+      Store(initialState: state) {
+        ClassCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+      }
+    }
+    store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    XCTAssertNotNil(store.deadlineEdit)
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    window.rootViewController = UIHostingController(rootView: ClassCoordinatorView(store: store))
+    window.frame = scene.coordinateSpace.bounds
+    window.makeKeyAndVisible()
+    defer { window.isHidden = true }
+
+    let clock = ContinuousClock()
+    let timeout = clock.now.advanced(by: .seconds(180))
+    while clock.now < timeout {
+      let savedRooms = try await repository.fetchMyClasses()
+      if store.deadlineEdit == nil,
+         let saved = savedRooms.first(where: { $0.id == room.id }),
+         saved.deadline != room.deadline,
+         saved.deadline >= now,
+         case let .myClasses(updatedList)? = store.routes.last?.screen,
+         updatedList.rooms.first(where: { $0.id == room.id })?.deadline == saved.deadline {
+        let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+          window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        let attachment = XCTAttachment(image: image)
+        attachment.name = "deadline-interactive-saved"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        return
+      }
+      try await Task.sleep(for: .milliseconds(250))
+    }
+    XCTFail("No changed deadline was saved and propagated to the class list within 180 seconds")
+  }
+
+  @MainActor
   func testPresentClassTabForInteractiveAudit() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_INTERACTIVE_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_INTERACTIVE_AUDIT=1 for a manual Class tab session")

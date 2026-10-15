@@ -8,7 +8,7 @@
 
 import ProjectDescription
 
-let suppressWarningsSettings: ProjectDescription.Settings = .settings(
+public let suppressWarningsSettings: ProjectDescription.Settings = .settings(
   base: [
     // Xcode 26 의 XCTest 가 먼저 로드하는 애플 private `Sharing` 모듈과 충돌해 xctest 부팅이 깨진다.
     // Point-Free 구현은 `PickePointFreeSharing` 이름으로 빌드하고(Tuist/Package.swift),
