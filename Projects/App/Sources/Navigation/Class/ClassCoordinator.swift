@@ -30,6 +30,9 @@ public struct ClassCoordinator {
     public var completedAIBattles: [Int: Bool] = [:]
     public var chatRoomsByBattleID: [Int: ClassRoom] = [:]
     @Presents public var deadlineEdit: ClassDeadlineEditFeature.State?
+    @Presents public var deadlineSelection: ClassDeadlineSelectionFeature.State?
+
+    public var isDeadlinePanelPresented: Bool { deadlineEdit != nil || deadlineSelection != nil }
     var pendingJoinID: UUID?
     var completingJoinCodeInstanceID: UUID?
     var completingJoinNicknameInstanceID: UUID?
@@ -47,7 +50,7 @@ public struct ClassCoordinator {
 
     /// 클래스 목록과 상세에서만 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
-      guard deadlineEdit == nil else { return false }
+      guard !isDeadlinePanelPresented else { return false }
       switch routes.last?.screen {
       case let .detail(detail)?:
         return detail.modal == nil && detail.customAlert == nil
@@ -67,6 +70,7 @@ public struct ClassCoordinator {
     case inner(InnerAction)
     case navigation(NavigationAction)
     case deadlineEdit(PresentationAction<ClassDeadlineEditFeature.Action>)
+    case deadlineSelection(PresentationAction<ClassDeadlineSelectionFeature.Action>)
   }
 
   @CasePathable
@@ -124,7 +128,15 @@ public struct ClassCoordinator {
           break
         }
       }
-      return routedBody.reduce(into: &state, action: action)
+      let effect = routedBody.reduce(into: &state, action: action)
+      if let selection = state.deadlineSelection {
+        if case let .setting(setting)? = state.routes.last?.screen,
+           setting.instanceID == selection.settingInstanceID, setting.canEditDeadline {
+          return effect
+        }
+        state.deadlineSelection = nil
+      }
+      return effect
     }
   }
 
@@ -135,6 +147,9 @@ public struct ClassCoordinator {
     .forEachRoute(\.routes, action: \.router)
     .ifLet(\.$deadlineEdit, action: \.deadlineEdit) {
       ClassDeadlineEditFeature()
+    }
+    .ifLet(\.$deadlineSelection, action: \.deadlineSelection) {
+      ClassDeadlineSelectionFeature()
     }
   }
 
@@ -151,6 +166,8 @@ public struct ClassCoordinator {
       handleInnerAction(state: &state, action: innerAction)
     case let .deadlineEdit(deadlineAction):
       handleDeadlineEditAction(state: &state, action: deadlineAction)
+    case let .deadlineSelection(selectionAction):
+      handleDeadlineSelectionAction(state: &state, action: selectionAction)
     case .async, .navigation:
       .none
     }
@@ -170,6 +187,33 @@ public struct ClassCoordinator {
 }
 
 private extension ClassCoordinator {
+  func handleDeadlineSelectionAction(
+    state: inout State,
+    action: PresentationAction<ClassDeadlineSelectionFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss, .presented(.delegate(.dismiss)):
+      state.deadlineSelection = nil
+    case let .presented(.delegate(.confirmed(deadline, settingInstanceID: instanceID))):
+      guard state.deadlineSelection?.settingInstanceID == instanceID,
+            case var .setting(setting)? = state.routes.last?.screen,
+            setting.instanceID == instanceID, setting.canEditDeadline
+      else { return .none }
+      let now = date.now
+      guard deadline >= now else {
+        state.deadlineSelection?.minimumDate = now
+        return .none
+      }
+      setting.deadline = deadline
+      setting.deadlineValidationMessage = nil
+      state.routes[screenAt: state.routes.count - 1] = .setting(setting)
+      state.deadlineSelection = nil
+    case .presented:
+      break
+    }
+    return .none
+  }
+
   func openDeadlineEditor(
     state: inout State,
     room: ClassRoom
@@ -512,11 +556,27 @@ private extension ClassCoordinator {
       return .send(.view(.backAction))
 
     case let .routeAction(_, action: .recommend(.delegate(.select(battle)))):
-      state.routes.push(.setting(.init(battle: battle)))
+      state.routes.push(.setting(.init(battle: battle, instanceID: uuid())))
       return .none
 
     case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question, filter)))):
-      state.routes.push(.setting(.init(aiQuestion: question, filter: filter)))
+      state.routes.push(.setting(.init(aiQuestion: question, filter: filter, instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .setting(.delegate(.editDeadline(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            state.deadlineEdit == nil,
+            case let .setting(setting)? = state.routes.last?.screen,
+            setting.instanceID == instanceID, setting.canEditDeadline
+      else { return .none }
+      var selection = ClassDeadlineSelectionFeature.State()
+      selection.settingInstanceID = instanceID
+      let now = date.now
+      selection.minimumDate = now
+      let nextMinute = AppDateFormat.calendar.dateInterval(of: .minute, for: now)?.end
+        ?? now.addingTimeInterval(60)
+      selection.draftDeadline = setting.deadline > now ? setting.deadline : nextMinute
+      state.deadlineSelection = selection
       return .none
 
     case .routeAction(_, action: .setting(.delegate(.dismiss))):
@@ -853,6 +913,10 @@ private extension ClassCoordinator {
   ) -> Effect<Action> {
     switch action {
     case .backAction:
+      if state.deadlineSelection != nil {
+        state.deadlineSelection = nil
+        return .none
+      }
       if let editor = state.deadlineEdit {
         guard !editor.isSaving else { return .none }
         state.deadlineEdit = nil
@@ -869,6 +933,7 @@ private extension ClassCoordinator {
       return .none
 
     case .backToRootAction:
+      state.deadlineSelection = nil
       if let editor = state.deadlineEdit {
         guard !editor.isSaving else { return .none }
         state.deadlineEdit = nil

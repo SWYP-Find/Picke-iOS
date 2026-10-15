@@ -58,6 +58,8 @@ struct ClassSettingTests {
     state.name = "2학년 3반"
     let store = TestStore(initialState: state) {
       ClassSettingFeature()
+    } withDependencies: {
+      $0.date.now = deadline.addingTimeInterval(-3600)
     }
     store.exhaustivity = .off
 
@@ -79,6 +81,8 @@ struct ClassSettingTests {
 
     let store = TestStore(initialState: state) {
       ClassSettingFeature()
+    } withDependencies: {
+      $0.date.now = deadline.addingTimeInterval(-3600)
     }
     await store.send(.view(.createTapped)) {
       $0.unavailableNotice = .init()
@@ -86,6 +90,62 @@ struct ClassSettingTests {
     await store.send(.unavailableNotice(.presented(.dismissTapped))) {
       $0.unavailableNotice = nil
     }
+  }
+
+  @Test
+  func 지난_마감일은_생성_IO_전에_차단한다() async {
+    var state = ClassSettingFeature.State(battle: battle, deadline: deadline)
+    state.name = "토론 클래스"
+    let store = TestStore(initialState: state) {
+      ClassSettingFeature()
+    } withDependencies: {
+      $0.date.now = deadline.addingTimeInterval(1)
+      $0.classUseCase = FailingClassUseCase()
+    }
+
+    await store.send(.view(.createTapped)) {
+      $0.deadlineValidationMessage = "현재 이후 시간을 선택해 주세요."
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 마감일이_꺼져_있으면_지난_날짜여도_생성_단계로_진행한다() async {
+    var state = ClassSettingFeature.State(
+      aiQuestion: ClassAIQuestion.examples[0],
+      filter: .init(),
+      deadline: deadline
+    )
+    state.name = "AI 토론"
+    state.isDeadlineEnabled = false
+    let store = TestStore(initialState: state) {
+      ClassSettingFeature()
+    } withDependencies: {
+      $0.date.now = deadline.addingTimeInterval(1)
+      $0.classMockRepository = nil
+      $0.classUseCase = FailingClassUseCase()
+    }
+
+    await store.send(.view(.createTapped)) {
+      $0.unavailableNotice = .init()
+    }
+    await store.finish()
+  }
+
+  @Test(arguments: [true, false])
+  func 마감일_편집은_활성화되고_저장중이_아닐_때만_위임한다(enabled: Bool) async {
+    var state = ClassSettingFeature.State(battle: battle, deadline: deadline)
+    state.isDeadlineEnabled = enabled
+    let store = TestStore(initialState: state) { ClassSettingFeature() }
+    await store.send(.view(.deadlineFieldTapped))
+    if enabled {
+      await store.receive(\.delegate.editDeadline, state.instanceID)
+    }
+    await store.send(.binding(.set(\.isLoading, true))) {
+      $0.isLoading = true
+    }
+    await store.send(.view(.deadlineFieldTapped))
+    await store.finish()
   }
 
   @Test
@@ -155,6 +215,7 @@ struct ClassSettingTests {
     let store = TestStore(initialState: state) {
       ClassSettingFeature()
     } withDependencies: {
+      $0.date.now = deadline.addingTimeInterval(-3600)
       $0.classMockRepository = repository
       $0.classUseCase = FailingClassUseCase()
     }

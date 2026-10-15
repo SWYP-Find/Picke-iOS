@@ -51,16 +51,10 @@ private extension ClassDeadlineEditView {
   }
 
   var deadlinePicker: some View {
-    DatePicker(
-      "참여 마감일",
+    ClassDeadlinePicker(
       selection: $store.draftDeadline,
-      in: store.minimumSelectableDate...,
-      displayedComponents: [.date, .hourAndMinute]
+      minimumDate: store.minimumSelectableDate
     )
-    .datePickerStyle(.wheel)
-    .labelsHidden()
-    .frame(maxWidth: .infinity)
-    .frame(height: 216)
     .disabled(store.isSaving)
   }
 

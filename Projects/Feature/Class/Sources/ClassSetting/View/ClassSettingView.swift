@@ -15,6 +15,7 @@ import SwiftUI
 @ViewAction(for: ClassSettingFeature.self)
 public struct ClassSettingView: View {
   @Bindable public var store: StoreOf<ClassSettingFeature>
+  @FocusState private var isNameFocused: Bool
 
   public init(store: StoreOf<ClassSettingFeature>) {
     self.store = store
@@ -22,30 +23,8 @@ public struct ClassSettingView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(
-        onBack: { send(.backTapped) },
-        centerTitle: "클래스 설정"
-      )
-      .foregroundStyle(.gray500)
-
-      ScrollView {
-        VStack(alignment: .leading, spacing: 32) {
-          Text(store.heading)
-            .pretendardFont(.semiBold24)
-            .lineSpacing(2.4)
-            .foregroundStyle(.gray800)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(minHeight: 62, alignment: .leading)
-
-          nameSection()
-          deadlineSection()
-          contentSection()
-          participationSection()
-        }
-        .padding(16)
-      }
-      .scrollIndicators(.hidden)
-      .scrollBounceBehavior(.basedOnSize)
+      navigationBar
+      settingsScroll
 
       createButton
         .padding(.horizontal, 16)
@@ -64,6 +43,35 @@ public struct ClassSettingView: View {
 }
 
 private extension ClassSettingView {
+  var navigationBar: some View {
+    PickeNavigationBar(
+      onBack: { send(.backTapped) },
+      centerTitle: "클래스 설정"
+    )
+    .foregroundStyle(.gray500)
+  }
+
+  var settingsScroll: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 32) {
+        Text(store.heading)
+          .pretendardFont(.semiBold24)
+          .lineSpacing(2.4)
+          .foregroundStyle(.gray800)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 62, alignment: .leading)
+
+        nameSection()
+        deadlineSection()
+        contentSection()
+        participationSection()
+      }
+      .padding(16)
+    }
+    .scrollIndicators(.hidden)
+    .scrollBounceBehavior(.basedOnSize)
+  }
+
   @ViewBuilder
   func nameSection() -> some View {
     VStack(alignment: .leading, spacing: 8) {
@@ -87,6 +95,7 @@ private extension ClassSettingView {
           .foregroundStyle(.gray300)
       )
       .pickeTextField()
+      .focused($isNameFocused)
     }
   }
 
@@ -109,24 +118,17 @@ private extension ClassSettingView {
         deadlineField
       }
 
-      if store.isDeadlineEnabled, store.isDatePickerPresented {
-        DatePicker(
-          "",
-          selection: $store.deadline,
-          in: Date()...,
-          displayedComponents: [.date, .hourAndMinute]
-        )
-        .datePickerStyle(.graphical)
-        .environment(\.timeZone, AppDateFormat.timeZone)
-        .environment(\.calendar, AppDateFormat.calendar)
-        .tint(.primary500)
-        .pickeCard(.beige50, border: .beige600)
+      if let message = store.deadlineValidationMessage {
+        Text(message)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.red)
       }
     }
   }
 
   var deadlineField: some View {
     Button {
+      isNameFocused = false
       send(.deadlineFieldTapped)
     } label: {
       Text(store.deadlineText)

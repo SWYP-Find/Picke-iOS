@@ -23,7 +23,10 @@ public struct ClassSettingFeature {
     public var name = ""
     public var deadline: Date
     public var isDeadlineEnabled = true
-    public var isDatePickerPresented = false
+    public var instanceID = UUID()
+    public var deadlineValidationMessage: String?
+
+    public var canEditDeadline: Bool { isDeadlineEnabled && !isLoading }
     public var requiresComment = false
     public var ownerParticipates = false
     public var isLoading = false
@@ -33,20 +36,24 @@ public struct ClassSettingFeature {
 
     public init(
       battle: ClassBattleSummary,
-      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60)
+      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60),
+      instanceID: UUID = UUID()
     ) {
       self.battle = battle
       self.deadline = deadline
+      self.instanceID = instanceID
     }
 
     public init(
       aiQuestion: ClassAIQuestion,
       filter: ClassTopicFilter,
-      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60)
+      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60),
+      instanceID: UUID = UUID()
     ) {
       self.aiQuestion = aiQuestion
       self.filter = filter
       self.deadline = deadline
+      self.instanceID = instanceID
     }
 
     public var deadlineText: String {
@@ -158,12 +165,14 @@ public struct ClassSettingFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case created(ClassRoom)
+    case editDeadline(instanceID: UUID)
   }
 
   nonisolated enum CancelID: Hashable {
     case create
   }
 
+  @Dependency(\.date) private var date
   @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.classMockRepository) private var classMockRepository
 
@@ -171,6 +180,10 @@ public struct ClassSettingFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
+      case .binding(\.deadline), .binding(\.isDeadlineEnabled):
+        state.deadlineValidationMessage = nil
+        return .none
+
       case .binding:
         return .none
 
@@ -241,11 +254,15 @@ extension ClassSettingFeature {
       return .send(.delegate(.dismiss))
 
     case .deadlineFieldTapped:
-      state.isDatePickerPresented.toggle()
-      return .none
+      guard state.canEditDeadline else { return .none }
+      return .send(.delegate(.editDeadline(instanceID: state.instanceID)))
 
     case .createTapped:
       guard state.canCreate else { return .none }
+      guard !state.isDeadlineEnabled || state.deadline >= date.now else {
+        state.deadlineValidationMessage = "현재 이후 시간을 선택해 주세요."
+        return .none
+      }
       if state.aiQuestion != nil {
         guard classMockRepository != nil,
               let creation = state.aiCreation,

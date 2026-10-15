@@ -7,6 +7,7 @@
 
 import ComposableArchitecture
 import FeatureAssembly
+import PickeDesignKit
 import SwiftUI
 import TCAFlow
 
@@ -84,11 +85,21 @@ public struct ClassCoordinatorView: View {
         ClassAIChatView(store: chatStore)
       }
     }
-    .allowsHitTesting(store.deadlineEdit == nil)
-    .accessibilityHidden(store.deadlineEdit != nil)
+    .allowsHitTesting(!store.isDeadlinePanelPresented)
+    .accessibilityHidden(store.isDeadlinePanelPresented)
     .overlay {
       if let editorStore = store.scope(state: \.deadlineEdit, action: \.deadlineEdit.presented) {
-        deadlinePanel(editorStore)
+        deadlinePanel(isDismissDisabled: editorStore.isSaving, onDismiss: {
+          editorStore.send(.view(.backTapped))
+        }) {
+          ClassDeadlineEditView(store: editorStore)
+        }
+      } else if let selectionStore = store.scope(state: \.deadlineSelection, action: \.deadlineSelection.presented) {
+        deadlinePanel(isDismissDisabled: false, onDismiss: {
+          selectionStore.send(.view(.backTapped))
+        }) {
+          ClassDeadlineSelectionView(store: selectionStore)
+        }
       }
     }
     .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
@@ -106,31 +117,35 @@ private extension ClassCoordinatorView {
   }
 
   @ViewBuilder
-  func deadlinePanel(_ editorStore: StoreOf<ClassDeadlineEditFeature>) -> some View {
+  func deadlinePanel<Content: View>(
+    isDismissDisabled: Bool,
+    onDismiss: @escaping () -> Void,
+    @ViewBuilder content: @escaping () -> Content
+  ) -> some View {
     GeometryReader { geometry in
       ZStack(alignment: .bottom) {
         Color.black.opacity(0.4)
           .ignoresSafeArea()
           .contentShape(Rectangle())
-          .onTapGesture { editorStore.send(.view(.backTapped)) }
-          .allowsHitTesting(!editorStore.isSaving)
+          .onTapGesture(perform: onDismiss)
+          .allowsHitTesting(!isDismissDisabled)
           .accessibilityHidden(true)
 
-        ClassDeadlineEditView(store: editorStore)
+        content()
           .frame(height: dynamicTypeSize.isAccessibilitySize ? max(300, geometry.size.height - 44) : 300)
           .padding(.bottom, geometry.safeAreaInsets.bottom)
           .background(.white)
           .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
           .overlay(alignment: .top) {
             Capsule()
-              .fill(.gray.opacity(0.35))
+              .fill(.gray50)
               .frame(width: 40, height: 4)
               .padding(.top, 12)
               .allowsHitTesting(false)
               .accessibilityHidden(true)
           }
           .accessibilityAddTraits(.isModal)
-          .accessibilityAction(.escape) { editorStore.send(.view(.backTapped)) }
+          .accessibilityAction(.escape, onDismiss)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
       .ignoresSafeArea(.container, edges: .bottom)
