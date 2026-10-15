@@ -17,6 +17,33 @@ import Testing
 @MainActor
 struct ClassCoordinatorTests {
   @Test
+  func AI_투표_등장_이벤트는_현재_화면_인스턴스에만_전달한다() {
+    let room = ClassRoom.mockClosedSociety
+    let instanceID = UUID()
+    let vote = ClassAIVoteFeature.State(
+      room: room,
+      battleID: -1_000_000 - room.id,
+      instanceID: instanceID
+    )
+    var state = ClassCoordinator.State()
+    state.routes.push(.aiVote(vote))
+    #expect(ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+
+    state.routes.goBack()
+    #expect(!ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+
+    state.routes.push(.report(.init(room: room)))
+    #expect(!ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+
+    state.routes[screenAt: 1] = .aiVote(.init(
+      room: room,
+      battleID: vote.battleID,
+      instanceID: UUID()
+    ))
+    #expect(!ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+  }
+
+  @Test
   func 클래스_목_오디오_속도_변경은_재생시간을_이어가고_로드해도_속도를_유지한다() async {
     let now = LockIsolated(Date(timeIntervalSince1970: 1_760_000_000))
     let player = ClassMockAudioPlayer(now: { now.value })

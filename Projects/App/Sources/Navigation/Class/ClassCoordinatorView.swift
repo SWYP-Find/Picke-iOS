@@ -78,7 +78,7 @@ public struct ClassCoordinatorView: View {
         }
 
       case let .aiVote(voteStore):
-        ClassAIVoteView(store: voteStore)
+        aiVoteScreen(voteStore)
 
       case let .aiChat(chatStore):
         ClassAIChatView(store: chatStore)
@@ -96,6 +96,15 @@ public struct ClassCoordinatorView: View {
 }
 
 private extension ClassCoordinatorView {
+  func aiVoteScreen(_ voteStore: StoreOf<ClassAIVoteFeature>) -> some View {
+    let instanceID = voteStore.instanceID
+    return ClassAIVoteView(store: voteStore) {
+      // A popped view can appear again during the navigation transition.
+      guard Self.isActiveAIVote(instanceID, in: store.routes) else { return }
+      voteStore.send(.view(.onAppear))
+    }
+  }
+
   @ViewBuilder
   func deadlinePanel(_ editorStore: StoreOf<ClassDeadlineEditFeature>) -> some View {
     GeometryReader { geometry in
@@ -125,6 +134,18 @@ private extension ClassCoordinatorView {
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
       .ignoresSafeArea(.container, edges: .bottom)
+    }
+  }
+}
+
+extension ClassCoordinatorView {
+  static func isActiveAIVote(
+    _ instanceID: UUID,
+    in routes: [Route<ClassCoordinator.ClassScreen.State>]
+  ) -> Bool {
+    return routes.contains { route in
+      guard case let .aiVote(vote) = route.screen else { return false }
+      return vote.instanceID == instanceID
     }
   }
 }

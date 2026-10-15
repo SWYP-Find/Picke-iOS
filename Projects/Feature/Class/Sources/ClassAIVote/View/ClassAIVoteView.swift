@@ -14,9 +14,14 @@ import SwiftUI
 @ViewAction(for: ClassAIVoteFeature.self)
 public struct ClassAIVoteView: View {
   @Bindable public var store: StoreOf<ClassAIVoteFeature>
+  private let onAppear: (@MainActor () -> Void)?
 
-  public init(store: StoreOf<ClassAIVoteFeature>) {
+  public init(
+    store: StoreOf<ClassAIVoteFeature>,
+    onAppear: (@MainActor () -> Void)? = nil
+  ) {
     self.store = store
+    self.onAppear = onAppear
   }
 
   public var body: some View {
@@ -37,7 +42,13 @@ public struct ClassAIVoteView: View {
       }
     }
     .toolbar(.hidden, for: .navigationBar)
-    .onAppear { send(.onAppear) }
+    .onAppear {
+      if let onAppear {
+        onAppear()
+      } else {
+        send(.onAppear)
+      }
+    }
   }
 }
 
