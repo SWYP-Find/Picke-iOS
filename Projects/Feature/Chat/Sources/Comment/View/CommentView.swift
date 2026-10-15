@@ -24,50 +24,9 @@ public struct CommentView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      // Figma 8661-8291: 네비바·투표요약·필터탭은 고정, 아래 List 영역만 스크롤한다.
-      VStack(spacing: 4) {
-        navigationBar()
-        summarySection()
-        filterTabs()
-      }
-      .background(.beige200)
-
-      ScrollView(showsIndicators: false) {
-        commentList()
-      }
-      .background(.surfaceBeigeDefault)
-      .scrollDismissesKeyboard(.interactively)
-      .simultaneousGesture(
-        DragGesture(minimumDistance: 24)
-          .onEnded { value in
-            // 좌우 스와이프로 필터 탭(전체/옵션A/옵션B) 전환
-            guard abs(value.translation.width) > abs(value.translation.height),
-                  abs(value.translation.width) > 50,
-                  let next = adjacentFilter(forward: value.translation.width < 0)
-            else { return }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-              send(.filterTapped(next))
-            }
-          }
-      )
-      .overlay(alignment: .bottomTrailing) {
-        if !store.isComposerExpanded {
-          Button { send(.composeTapped) } label: {
-            Image(systemName: "paperplane")
-              .font(.system(size: 22, weight: .medium))
-              .foregroundStyle(.beige50)
-              .frame(width: 36, height: 36)
-              .background(.primary500, in: Circle())
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("댓글 작성")
-          .padding(.trailing, 16)
-          .padding(.bottom, 16)
-        }
-      }
-      if store.isComposerExpanded {
-        inputBar()
-      }
+      headerSection()
+      commentScroll
+      inputBar()
     }
     .screenBackground()
     .contentShape(Rectangle())
@@ -82,15 +41,49 @@ public struct CommentView: View {
         hasAnimatedVoteProgress = true
       }
     }
-    .onChange(of: store.isComposerExpanded) { _, isExpanded in
-      isCommentFocused = isExpanded
+    .onChange(of: store.editingPerspectiveId) { _, editingID in
+      isCommentFocused = editingID != nil
     }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
+}
 
-  /// 댓글 카드 바로 아래에 뜨는 인라인 메뉴 (pill 형태).
+private extension CommentView {
   @ViewBuilder
-  private func inlineMenu(for comment: CommentItem) -> some View {
+  func headerSection() -> some View {
+    // Figma 8661-8291: 네비바·투표요약·필터탭은 고정, 아래 List 영역만 스크롤한다.
+    VStack(spacing: 4) {
+      navigationBar()
+      summarySection()
+      filterTabs()
+    }
+    .background(.beige200)
+  }
+
+  var commentScroll: some View {
+    ScrollView(showsIndicators: false) {
+      commentList()
+    }
+    .background(.surfaceBeigeDefault)
+    .scrollDismissesKeyboard(.interactively)
+    .simultaneousGesture(
+      DragGesture(minimumDistance: 24)
+        .onEnded { value in
+          // 좌우 스와이프로 필터 탭(전체/옵션A/옵션B) 전환
+          guard abs(value.translation.width) > abs(value.translation.height),
+                abs(value.translation.width) > 50,
+                let next = (value.translation.width < 0 ? store.nextFilter : store.previousFilter)
+          else { return }
+          withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            send(.filterTapped(next))
+          }
+        }
+    )
+  }
+
+  /// 행 안쪽에서 위로 열리는 댓글 메뉴.
+  @ViewBuilder
+  func inlineMenu(for comment: CommentItem) -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       ForEach(menuItems(for: comment)) { item in
         Button { item.action() } label: {
@@ -112,7 +105,7 @@ public struct CommentView: View {
   }
 
   /// "…" 메뉴 항목 — 내 글: 수정/삭제, 남 글: 신고.
-  private func menuItems(for comment: CommentItem) -> [BottomActionItem] {
+  func menuItems(for comment: CommentItem) -> [BottomActionItem] {
     if comment.isMine {
       return [
         BottomActionItem(title: "수정", systemImage: "pencil") { send(.commentMenu(id: comment.id, action: .edit)) },
@@ -128,15 +121,6 @@ public struct CommentView: View {
         },
       ]
     }
-  }
-
-  /// 현재 선택된 필터 기준 인접 필터(스와이프 방향). 범위를 벗어나면 nil.
-  private func adjacentFilter(forward: Bool) -> CommentFilter? {
-    let all = CommentFilter.allCases
-    guard let idx = all.firstIndex(of: store.selectedFilter) else { return nil }
-    let nextIdx = forward ? idx + 1 : idx - 1
-    guard all.indices.contains(nextIdx) else { return nil }
-    return all[nextIdx]
   }
 }
 
@@ -282,7 +266,6 @@ private extension CommentView {
       sortButton(.latest)
       Spacer()
     }
-    .padding(.vertical, 4) // Figma 8661-8320: sort 행 py4
   }
 
   @ViewBuilder
@@ -318,21 +301,25 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func commentList() -> some View {
-    // Figma 8661-8318: List 컨테이너 p16 / 댓글모음 gap6 pb24.
-    VStack(spacing: 6) {
+    VStack(spacing: 0) {
       sortRow()
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
 
       if store.isLoadingComments, store.comments.isEmpty {
         CommentSkeletonView()
+          .padding(.horizontal, 16)
       } else if store.comments.isEmpty {
         emptyState()
+          .padding(.horizontal, 16)
       } else {
         ForEach(store.comments) { comment in
           commentCard(comment)
             .overlay(alignment: .bottomTrailing) {
               if store.menuTargetCommentID == comment.id {
                 inlineMenu(for: comment)
-                  .offset(y: 34)
+                  .padding(.bottom, 28)
+                  .padding(.trailing, 16)
                   .zIndex(1)
               }
             }
@@ -341,7 +328,7 @@ private extension CommentView {
         .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
       }
     }
-    .padding(16)
+    .padding(.vertical, 16)
     .padding(.bottom, 24)
   }
 
@@ -364,6 +351,7 @@ private extension CommentView {
 
       commentActions(comment)
     }
+    .padding(.horizontal, 16)
     .pickeListRowCard()
   }
 
@@ -374,8 +362,8 @@ private extension CommentView {
         .pretendardFont(.regular13)
         .foregroundStyle(.cardBaseTextBody)
         .lineSpacing(13 * 0.4)
-        // 3줄 초과 시 … 줄임 — 전체 내용은 답글 화면에서 확인.
-        .lineLimit(3)
+        // 전체 내용은 답글 화면에서 확인한다.
+        .lineLimit(2)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -500,25 +488,26 @@ private extension CommentView {
   @ViewBuilder
   func inputBar() -> some View {
     VStack(spacing: 0) {
-      HStack {
-        Spacer()
-        Button { send(.composeDismissed) } label: {
-          Image(systemName: "xmark")
-            .font(.system(size: 14, weight: .semibold))
+      if store.isEditingComment {
+        HStack {
+          Spacer()
+          Button("수정 취소") { send(.composeDismissed) }
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.gray500)
-            .frame(width: 36, height: 32)
+            .padding(12)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("댓글 입력 닫기")
+        .background(.surfaceBeigeStrong)
       }
-      .padding(.horizontal, 12)
-      .background(.surfaceBeigeStrong)
       PickeCommentInputBar(
         text: $store.commentText,
         focus: $isCommentFocused,
-        placeholder: "댓글을 입력해주세요",
+        placeholder: "내용을 입력하세요",
         isSendEnabled: store.isSendEnabled,
-        onSend: { send(.sendTapped) }
+        isCompact: true,
+        onSend: {
+          isCommentFocused = false
+          send(.sendTapped)
+        }
       )
     }
   }

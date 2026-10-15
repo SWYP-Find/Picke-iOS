@@ -14,6 +14,7 @@ public struct PickeCommentInputBar: View {
   @Binding private var text: String
   private let placeholder: String
   private let isSendEnabled: Bool
+  private let isCompact: Bool
   private let onSend: () -> Void
   private var focus: FocusState<Bool>.Binding
 
@@ -22,19 +23,73 @@ public struct PickeCommentInputBar: View {
     focus: FocusState<Bool>.Binding,
     placeholder: String,
     isSendEnabled: Bool,
+    isCompact: Bool = false,
     onSend: @escaping () -> Void
   ) {
     _text = text
     self.focus = focus
     self.placeholder = placeholder
     self.isSendEnabled = isSendEnabled
+    self.isCompact = isCompact
     self.onSend = onSend
   }
 
   public var body: some View {
+    if isCompact {
+      compactBar()
+    } else {
+      expandedBar()
+    }
+  }
+}
+
+private extension PickeCommentInputBar {
+  @ViewBuilder
+  func compactBar() -> some View {
     HStack(spacing: 8) {
-      textBox()
-      sendButton()
+      compactTextBox
+      compactSendButton
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 16)
+    .padding(.bottom, 6)
+    .background(.surfaceBeigeStrong, ignoresSafeAreaEdges: .bottom)
+    .topDivider(.beige800)
+  }
+
+  var compactTextBox: some View {
+    TextField(placeholder, text: $text, axis: .vertical)
+      .pretendardFont(.regular13)
+      .foregroundStyle(.gray400)
+      .focused(focus)
+      .lineLimit(1 ... 4)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 8)
+      .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+      .background(.inputTextareaBackgroundDefault)
+  }
+
+  var compactSendButton: some View {
+    Button(action: onSend) {
+      Image(systemName: "paperplane")
+        .pretendardFont(family: .Medium, size: 22)
+        .foregroundStyle(.iconGrayInverse)
+        .frame(width: 40, height: 40)
+        .background(
+          isSendEnabled ? .buttonIconBackgroundDefault : .buttonIconBackgroundDisabled,
+          in: Circle()
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(!isSendEnabled)
+    .accessibilityLabel("보내기")
+  }
+
+  @ViewBuilder
+  func expandedBar() -> some View {
+    HStack(spacing: 8) {
+      textBox
+      sendButton
     }
     .padding(.top, 12)
     .padding(.horizontal, 16)
@@ -45,8 +100,7 @@ public struct PickeCommentInputBar: View {
     .shadow(color: .black.opacity(0.08), radius: 6, y: -4)
   }
 
-  @ViewBuilder
-  private func textBox() -> some View {
+  var textBox: some View {
     TextField(placeholder, text: $text, axis: .vertical)
       .pretendardFont(.regular13)
       .foregroundStyle(.gray400)
@@ -58,8 +112,7 @@ public struct PickeCommentInputBar: View {
       .background(.inputTextareaBackgroundDefault)
   }
 
-  @ViewBuilder
-  private func sendButton() -> some View {
+  var sendButton: some View {
     Button { onSend() } label: {
       Image(systemName: "paperplane.fill")
         .font(.system(size: 16, weight: .semibold))

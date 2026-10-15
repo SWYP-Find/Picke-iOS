@@ -288,7 +288,6 @@ private extension ClassCommentView {
       sortButton(.latest)
       Spacer()
     }
-    .padding(.vertical, 4)
   }
 
   @ViewBuilder
@@ -324,20 +323,25 @@ private extension ClassCommentView {
 private extension ClassCommentView {
   @ViewBuilder
   func commentList() -> some View {
-    VStack(spacing: 6) {
+    VStack(spacing: 0) {
       sortRow()
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
 
       if store.isLoadingComments, store.comments.isEmpty {
         loadingComments()
+          .padding(.horizontal, 16)
       } else if store.comments.isEmpty {
         emptyState()
+          .padding(.horizontal, 16)
       } else {
         ForEach(store.comments) { comment in
           commentCard(comment)
             .overlay(alignment: .bottomTrailing) {
               if store.menuTargetCommentID == comment.id {
                 inlineMenu(for: comment)
-                  .offset(y: 34)
+                  .padding(.bottom, 28)
+                  .padding(.trailing, 16)
                   .zIndex(1)
               }
             }
@@ -346,7 +350,7 @@ private extension ClassCommentView {
         .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
       }
     }
-    .padding(16)
+    .padding(.vertical, 16)
     .padding(.bottom, 24)
   }
 
@@ -378,6 +382,7 @@ private extension ClassCommentView {
 
       commentActions(comment)
     }
+    .padding(.horizontal, 16)
     .pickeListRowCard()
   }
 
@@ -388,8 +393,8 @@ private extension ClassCommentView {
         .pretendardFont(.regular13)
         .foregroundStyle(.cardBaseTextBody)
         .lineSpacing(13 * 0.4)
-        // 3줄 초과 시 … 줄임 — 전체 내용은 답글 화면에서 확인.
-        .lineLimit(3)
+        // 전체 내용은 답글 화면에서 확인한다.
+        .lineLimit(2)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
         .frame(maxWidth: .infinity, alignment: .leading)

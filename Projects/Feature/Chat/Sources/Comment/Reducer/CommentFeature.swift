@@ -53,6 +53,24 @@ public struct CommentFeature {
     public var commentText: String = ""
     public var isComposerExpanded: Bool = false
 
+    public var isEditingComment: Bool { editingPerspectiveId != nil }
+
+    public var previousFilter: CommentFilter? {
+      switch selectedFilter {
+      case .all: return nil
+      case .optionA: return .all
+      case .optionB: return .optionA
+      }
+    }
+
+    public var nextFilter: CommentFilter? {
+      switch selectedFilter {
+      case .all: return .optionA
+      case .optionA: return .optionB
+      case .optionB: return nil
+      }
+    }
+
     public var filteredComments: [CommentItem] {
       switch selectedFilter {
       case .all:
