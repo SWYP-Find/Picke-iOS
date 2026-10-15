@@ -358,13 +358,13 @@ private extension ClassMemberView {
             .pretendardFont(.semiBold24)
             .foregroundStyle(.gray800)
           Text("이 클래스에서만 보이는 이름이에요.")
-            .pretendardFont(.regular13)
+            .pretendardFont(.bodyMedium)
             .foregroundStyle(.gray300)
         }
 
         TextField("이름을 입력해주세요", text: $store.draftName)
           .textInputAutocapitalization(.never)
-          .pickeTextField(height: 52)
+          .pickeTextField(height: 44)
 
         Button("수정하기") { send(.nameSaved) }
           .disabled(store.isSaving)
