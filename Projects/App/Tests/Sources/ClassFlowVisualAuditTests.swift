@@ -188,6 +188,56 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureMemberNameSheet() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture member name sheet")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    var state = ClassMemberFeature.State(
+      room: ClassRoom.mocks[0],
+      members: [ClassMember(id: 1, name: "김선생", isOwner: true)],
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )
+    state.draftName = "김선생"
+    state.editName = .init()
+    let store = Store(initialState: state) { ClassMemberFeature() }
+    let (image, _) = try await capture(
+      AnyView(ClassMemberView(store: store)),
+      ready: nil,
+      includeScrollBottom: false,
+      inspectWindow: { window in
+        func nameFields(in view: UIView) -> [UITextField] {
+          if let field = view as? UITextField,
+             field.placeholder == "이름을 입력해주세요" {
+            return [field]
+          }
+          return view.subviews.flatMap { nameFields(in: $0) }
+        }
+        let fields = nameFields(in: window)
+        XCTAssertEqual(fields.count, 1, "Expected exactly one name input in the sheet")
+        XCTAssertEqual(fields.first?.text, "김선생")
+      }
+    )
+    let name = "member-name-sheet"
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    let text = try recognizedAuditText(in: image, name: name)
+    for label in ["이름을입력해주세요", "이클래스에서만보이는이름이에요", "수정하기"] {
+      XCTAssertTrue(text.contains(label), "Missing \(label): \(text)")
+    }
+  }
+
+  @MainActor
   func testCaptureOwnerMemberManagement() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture owner member management")
