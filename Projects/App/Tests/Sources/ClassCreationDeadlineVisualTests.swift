@@ -26,6 +26,61 @@ final class ClassCreationDeadlineVisualTests: XCTestCase {
   }
 
   @MainActor
+  func testEditDeadlineLongErrorAndDisabledPanel() async throws {
+    for enabled in [true, false] {
+      try await captureEditDeadlinePanel(enabled: enabled)
+    }
+  }
+
+  @MainActor
+  private func captureEditDeadlinePanel(enabled: Bool) async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Enable PICKE_CLASS_VISUAL_AUDIT for mounted captures")
+    }
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let previousKeyWindow = scene.windows.first { $0.isKeyWindow }
+    let room = ClassRoom.mocks[0]
+    let now = room.deadline.addingTimeInterval(-86400)
+    var state = ClassCoordinator.State()
+    var edit = ClassDeadlineEditFeature.State(room: room, instanceID: UUID(), referenceNow: now)
+    edit.isDeadlineEnabled = enabled
+    edit.errorMessage = "마감일 변경 결과를 확인하지 못했어요. 네트워크 연결을 확인하고 다시 시도해 주세요. 입력한 날짜는 유지됩니다."
+    state.deadlineEdit = edit
+    let store = Store(initialState: state) { ClassCoordinator().dependency(\.date.now, now) }
+    let window = UIWindow(windowScene: scene)
+    window.frame = CGRect(x: 0, y: 0, width: 402, height: 874)
+    window.rootViewController = UIHostingController(rootView: ClassCoordinatorView(store: store)
+      .environment(\.dynamicTypeSize, .medium))
+    window.makeKeyAndVisible()
+    defer {
+      window.isHidden = true
+      window.rootViewController = nil
+      previousKeyWindow?.makeKey()
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+    ).appendingPathComponent("ClassCreationDeadlineAudit")
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    try await Task.sleep(for: .milliseconds(500))
+    let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+      window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+    }
+    let name = (enabled ? "edit-long-error" : "edit-disabled-long-error") + pickerCaptureSuffix
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    try assertDeadlinePanelGeometry(
+      image,
+      bottomInset: window.safeAreaInsets.bottom,
+      hasWheel: enabled,
+      hasError: true
+    )
+    XCTAssertEqual(store.deadlineEdit?.draftDeadline, room.deadline)
+  }
+
+  @MainActor
   private func captureCreationDeadlinePanel(ai: Bool) async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Enable PICKE_CLASS_VISUAL_AUDIT for mounted captures")
@@ -60,6 +115,7 @@ final class ClassCreationDeadlineVisualTests: XCTestCase {
     store.send(.router(.routeAction(id: 1, action: .setting(.view(.deadlineFieldTapped)))))
     try await Task.sleep(for: .milliseconds(400))
     XCTAssertNotNil(store.deadlineSelection)
+    XCTAssertEqual(store.deadlineSelection?.draftDeadline, now.addingTimeInterval(86400))
     for invalid in [false, true] {
       if invalid {
         store.send(.deadlineSelection(.presented(.binding(.set(\.draftDeadline, now.addingTimeInterval(-1))))))
@@ -70,7 +126,7 @@ final class ClassCreationDeadlineVisualTests: XCTestCase {
       let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
         window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
       }
-      let name = "creation-\(ai ? "ai" : "regular")-\(invalid ? "validation" : "wheel")"
+      let name = "creation-\(ai ? "ai" : "regular")-\(invalid ? "validation" : "wheel")" + pickerCaptureSuffix
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
       let attachment = XCTAttachment(image: image)
       attachment.name = name
@@ -82,7 +138,9 @@ final class ClassCreationDeadlineVisualTests: XCTestCase {
 
   private func assertDeadlinePanelGeometry(
     _ image: UIImage,
-    bottomInset: CGFloat
+    bottomInset: CGFloat,
+    hasWheel: Bool = true,
+    hasError: Bool = false
   ) throws {
     let top = image.size.height - bottomInset - 300
     func pixel(
@@ -119,6 +177,26 @@ final class ClassCreationDeadlineVisualTests: XCTestCase {
     try white(image.size.width / 2, top + 2)
     let dim = try pixel(image.size.width / 2, top - 2)
     XCTAssertTrue(dim.prefix(3).contains { $0 < 230 }, "Panel must not extend above its specified height")
+    if hasError {
+      var containsErrorText = false
+      for x in stride(from: CGFloat(16), through: image.size.width - 16, by: 3) {
+        for y in stride(from: top + 18, through: top + 43, by: 3) {
+          let color = try pixel(x, y)
+          if Int(color[0]) - Int(color[1]) > 20 { containsErrorText = true }
+        }
+        try white(x, top + 45)
+      }
+      XCTAssertTrue(containsErrorText, "Error text must remain inside the reserved error slot")
+    }
+    // Figma12772:36346: full-width32pt highlight at y117...149.
+    if #available(iOS 18, *), hasWheel {
+      for y in [top + 118, top + 148] {
+        let fill = try pixel(30, y)
+        XCTAssertTrue(fill.prefix(3).allSatisfy { abs(Int($0) - 245) <= 2 }, "Expected selection fill: \(fill)")
+      }
+      try white(30, top + 115)
+      try white(30, top + 151)
+    }
     // CTA is y240...292 from panel top, with 16pt side padding in every state.
     for y in [top + 241, top + 291] {
       let fill = try pixel(20, y)
@@ -130,4 +208,8 @@ final class ClassCreationDeadlineVisualTests: XCTestCase {
     try white(20, top + 294)
   }
 
+  private var pickerCaptureSuffix: String {
+    if #available(iOS 18, *) { return "" }
+    return "-native17"
+  }
 }

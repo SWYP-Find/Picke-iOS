@@ -13,27 +13,19 @@ import SwiftUI
 @ViewAction(for: ClassDeadlineEditFeature.self)
 public struct ClassDeadlineEditView: View {
   @Bindable public var store: StoreOf<ClassDeadlineEditFeature>
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  @State private var isAdjusting = false
 
   public init(store: StoreOf<ClassDeadlineEditFeature>) {
     self.store = store
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      ScrollView {
-        pickerSection()
-          .padding(.horizontal, 16)
-          .padding(.top, 8)
-      }
-      .scrollIndicators(.hidden)
+    ClassDeadlinePanelContent(message: store.errorMessage ?? store.validationMessage) {
+      pickerSection()
+    } button: {
+      saveButton
     }
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      footerSection()
-    }
-    .background(.white)
-    .environment(\.timeZone, AppDateFormat.timeZone)
-    .environment(\.calendar, AppDateFormat.calendar)
   }
 }
 
@@ -45,7 +37,7 @@ private extension ClassDeadlineEditView {
         deadlinePicker
       } else {
         enableDeadlineButton
-          .frame(height: 216)
+          .frame(height: 174)
       }
     }
   }
@@ -53,7 +45,8 @@ private extension ClassDeadlineEditView {
   var deadlinePicker: some View {
     ClassDeadlinePicker(
       selection: $store.draftDeadline,
-      minimumDate: store.minimumSelectableDate
+      minimumDate: store.minimumSelectableDate,
+      isAdjusting: $isAdjusting
     )
     .disabled(store.isSaving)
   }
@@ -66,29 +59,10 @@ private extension ClassDeadlineEditView {
       .disabled(store.isSaving)
   }
 
-  @ViewBuilder
-  func footerSection() -> some View {
-    VStack(spacing: 8) {
-      if let message = store.errorMessage ?? store.validationMessage {
-        Text(message)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.red)
-          .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .accessibilityIdentifier("class-deadline-error")
-      }
-      saveButton
-    }
-    .padding(.horizontal, 16)
-    .padding(.top, 16)
-    .padding(.bottom, 8)
-    .background(.white)
-  }
-
   var saveButton: some View {
     Button("수정하기") { send(.saveTapped) }
       .ctaButtonStyle(.primary, size: .large, height: 52)
       .accessibilityIdentifier("class-deadline-save")
-      .disabled(!store.canSave)
+      .disabled(!store.canSave || isAdjusting)
   }
 }

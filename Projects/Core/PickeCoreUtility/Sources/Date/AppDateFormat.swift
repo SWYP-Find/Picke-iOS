@@ -17,6 +17,7 @@ public enum AppDateFormat: String, CaseIterable, Sendable {
   case yearMonthDayDotShort = "yyyy.M.d"
   /// 한국어 요일 포함 (예: 2026. 10. 05. 월요일 14:00)
   case dottedDateTimeWithWeekday = "yyyy. MM. dd. EEEE HH:mm"
+  case pickerDay = "M월 d일 E"
   /// 타임존 없이 내려오는 서버 시각 (LocalDateTime)
   case serverDateTime = "yyyy-MM-dd'T'HH:mm:ss"
   case serverDateTimeMillis = "yyyy-MM-dd'T'HH:mm:ss.SSS"
@@ -24,6 +25,15 @@ public enum AppDateFormat: String, CaseIterable, Sendable {
 
   public static var timeZone: TimeZone {
     TimeZone(identifier: "Asia/Seoul") ?? .gmt
+  }
+
+  public var locale: Locale {
+    switch self {
+    case .dottedDateTimeWithWeekday, .pickerDay:
+      return Locale(identifier: "ko_KR")
+    default:
+      return Locale(identifier: "en_US_POSIX")
+    }
   }
 
   public static var calendar: Calendar {
@@ -52,7 +62,7 @@ enum AppDateFormatter {
   private static let formatters: [AppDateFormat: DateFormatter] = Dictionary(
     uniqueKeysWithValues: AppDateFormat.allCases.map { format in
       let formatter = DateFormatter()
-      formatter.locale = format == .dottedDateTimeWithWeekday ? Locale(identifier: "ko_KR") : locale
+      formatter.locale = format.locale
       formatter.timeZone = timeZone
       formatter.calendar = calendar
       formatter.dateFormat = format.rawValue
@@ -80,7 +90,7 @@ enum AppDateFormatter {
     timeZone: TimeZone
   ) -> Date? {
     let formatter = DateFormatter()
-    formatter.locale = locale
+    formatter.locale = format.locale
     formatter.timeZone = timeZone
     formatter.calendar = calendar
     formatter.dateFormat = format.rawValue
@@ -119,7 +129,7 @@ public extension Date {
 
   func formatted(_ format: AppDateFormat, timeZone: TimeZone) -> String {
     let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.locale = format.locale
     formatter.timeZone = timeZone
     formatter.calendar = Calendar(identifier: .gregorian)
     formatter.dateFormat = format.rawValue
