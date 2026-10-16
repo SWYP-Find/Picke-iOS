@@ -23,7 +23,7 @@ public struct ClassMemberView: View {
     VStack(spacing: 0) {
       navigationBar()
 
-      searchField
+      searchField()
         .padding(.horizontal, 16)
         .padding(.top, 12)
 
@@ -158,19 +158,26 @@ private extension ClassMemberView {
       .padding(.top, 72)
   }
 
-  var searchField: some View {
+  @ViewBuilder
+  func searchField() -> some View {
     HStack(spacing: 8) {
       Image(systemName: "magnifyingglass")
-        .font(.system(size: 18))
-        .foregroundStyle(.gray300)
-      TextField("검색어를 입력해주세요.", text: $store.searchText)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 18, height: 18)
+        .foregroundStyle(.gray800)
+      TextField(
+        "이름을 입력해주세요.",
+        text: $store.searchText,
+        prompt: Text("이름을 입력해주세요.").foregroundStyle(.gray300)
+      )
         .pretendardFont(family: .Medium, size: 13)
         .foregroundStyle(.gray800)
     }
     .padding(.horizontal, 12)
     .frame(height: 44)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.gray100, lineWidth: 1))
   }
 
   @ViewBuilder
@@ -178,11 +185,6 @@ private extension ClassMemberView {
     HStack(spacing: 8) {
       if let avatar = member.avatar {
         memberAvatar(avatar)
-      } else {
-        Color.clear
-          .frame(width: 36, height: 36)
-          .allowsHitTesting(false)
-          .accessibilityHidden(true)
       }
 
       Text(member.name)
@@ -214,7 +216,8 @@ private extension ClassMemberView {
         .accessibilityLabel("\(member.name) 내보내기")
       }
     }
-    .frame(height: 68)
+    .frame(minHeight: 24)
+    .padding(.vertical, 16)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
   }
 

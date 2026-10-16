@@ -44,7 +44,7 @@ final class ClassMemberInteractionTests: XCTestCase {
     waitForLoadedMembers(in: app)
 
     let search = app.textFields.matching(NSPredicate(
-      format: "placeholderValue == %@", "검색어를 입력해주세요."
+      format: "placeholderValue == %@", "이름을 입력해주세요."
     ))
     XCTAssertEqual(search.count, 1)
     let initialSearchValue = search.firstMatch.value as? String
