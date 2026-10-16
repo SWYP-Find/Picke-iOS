@@ -39,6 +39,27 @@ final class ClassMemberInteractionTests: XCTestCase {
     continueAfterFailure = false
   }
 
+  func testOwnerHeaderManagementRespondsOutsideVisibleDots() throws {
+    let app = launch(scenario: "owner-remove")
+    waitUntil("owner fixture ready") {
+      self.audit(in: app)?.status == "ready" && self.audit(in: app)?.route == "list"
+    }
+    try targetCard(in: app).tap()
+    waitUntil("class detail opened") { self.audit(in: app)?.route == "detail" }
+    uniqueButton(beginning: "클래스 멤버", in: app).tap()
+    waitForLoadedMembers(in: app)
+
+    let menu = uniqueButton(label: "클래스 관리", in: app)
+    XCTAssertGreaterThanOrEqual(menu.frame.width, 24)
+    XCTAssertGreaterThanOrEqual(menu.frame.height, 24)
+    menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+
+    let edit = uniqueButton(beginning: "클래스 정보 수정", in: app)
+    XCTAssertTrue(edit.isHittable)
+    XCTAssertEqual(try requireAudit(in: app).route, "members")
+    attach(app, name: "owner-member-header-management")
+  }
+
   func testOwnerNameSheetRejectsWhitespaceAndPersistsAfterReentry() throws {
     let app = launch(scenario: "owner-remove")
     waitUntil("owner fixture ready") {

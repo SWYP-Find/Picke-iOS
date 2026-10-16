@@ -97,19 +97,56 @@ private extension ClassMemberView {
 
   @ViewBuilder
   func navigationBar() -> some View {
-    PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 멤버") {
+    PickeNavigationBar(centerTitle: "클래스 멤버") {
       if store.room.role == .owner {
-        Button { send(.managementTapped) } label: {
-          Image(systemName: "ellipsis")
-            .pretendardFont(family: .SemiBold, size: 20)
-            .frame(width: 24, height: 24)
-            .foregroundStyle(.gray800)
-        }
-        .disabled(store.isSaving)
-        .accessibilityLabel("클래스 관리")
+        managementButton
       }
     }
     .foregroundStyle(.gray500)
+    .overlay(alignment: .leading) {
+      backButton
+        .padding(.leading, 6)
+    }
+  }
+
+  var backButton: some View {
+    Button { send(.backTapped) } label: {
+      Path { path in
+        path.move(to: CGPoint(x: 16.5, y: 2.5))
+        path.addLine(to: CGPoint(x: 6.5, y: 12))
+        path.addLine(to: CGPoint(x: 16.5, y: 21.5))
+      }
+      .stroke(.gray500, style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+      .frame(width: 24, height: 24)
+      .frame(width: 44, height: 44)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("뒤로")
+    .accessibilityIdentifier("chevron.left")
+    .accessibilitySortPriority(1)
+  }
+
+  var managementButton: some View {
+    Button { send(.managementTapped) } label: {
+      managementIcon()
+        .frame(width: 24, height: 24)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(store.isSaving)
+    .accessibilityLabel("클래스 관리")
+  }
+
+  @ViewBuilder
+  func managementIcon() -> some View {
+    HStack(spacing: 3.5) {
+      ForEach(0 ..< 3, id: \.self) { _ in
+        Circle()
+          .fill(.gray800)
+          .frame(width: 2.5, height: 2.5)
+      }
+    }
   }
 
   @ViewBuilder
