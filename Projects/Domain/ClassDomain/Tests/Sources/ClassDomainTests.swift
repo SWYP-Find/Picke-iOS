@@ -48,6 +48,7 @@ struct ClassDomainTests {
     )
 
     #expect(created.role == .owner)
+    #expect(created.memberCapacity == nil)
     #expect(created.battle.id == 101)
     #expect(try await repository.fetchMyClasses() == [created])
     #expect(try await repository.fetchClass(joinCode: created.joinCode) == created)
@@ -68,6 +69,7 @@ struct ClassDomainTests {
     let created = try await repository.createClass(creation)
     #expect(created.ownerParticipates == false)
     #expect(created.role == .owner)
+    #expect(created.memberCapacity == nil)
     #expect(created.memberCount == 1)
     #expect(try await repository.fetchMembers(roomID: created.id).first?.isOwner == true)
     #expect(try await repository.currentMemberID(roomID: created.id) == 1)
@@ -104,6 +106,7 @@ struct ClassDomainTests {
     let created = try await repository.createClass(creation, battle: battle)
     #expect(created.battle == battle)
     #expect(created.role == .owner)
+    #expect(created.memberCapacity == nil)
     #expect(try await repository.fetchMyClasses() == [created])
     #expect(try await repository.fetchClass(joinCode: created.joinCode) == created)
 
@@ -117,20 +120,29 @@ struct ClassDomainTests {
     }
   }
 
-  @Test
-  func 참여하면_학생_역할로_목록에_추가되고_중복_참여는_거부한다() async throws {
-    let repository = MockClassRepository(rooms: [], availableRooms: [.mockJoinable])
+  @Test(arguments: [nil, 30] as [Int?])
+  func 참여하면_학생_역할로_목록에_추가되고_중복_참여는_거부한다(memberCapacity: Int?) async throws {
+    let room = copyRoom(ClassRoom.mockJoinable, memberCapacity: memberCapacity)
+    let repository = MockClassRepository(rooms: [], availableRooms: [room])
     let joined = try await repository.joinClass(joinCode: "PK9T3S", nickname: "민지")
 
     #expect(joined.role == .member)
-    #expect(joined.memberCount == ClassRoom.mockJoinable.memberCount + 1)
+    #expect(joined.memberCount == room.memberCount + 1)
+    #expect(joined.memberCapacity == memberCapacity)
     #expect(try await repository.fetchMyClasses() == [joined])
+    #expect(try await repository.fetchClass(joinCode: room.joinCode).memberCapacity == memberCapacity)
     do {
       _ = try await repository.joinClass(joinCode: "PK9T3S", nickname: "민지")
       Issue.record("중복 참여가 허용됨")
     } catch {
       #expect(ClassError.from(error) == .alreadyJoined)
     }
+    try await repository.leaveClass(id: room.id)
+    #expect(try await repository.fetchMyClasses().isEmpty)
+    let available = try await repository.fetchClass(joinCode: room.joinCode)
+    #expect(available.memberCapacity == memberCapacity)
+    #expect(available.memberCount == room.memberCount)
+    #expect(try await repository.fetchMembers(roomID: room.id).map(\.id) == Array(1 ... room.memberCount))
   }
 
   @Test
@@ -173,16 +185,20 @@ struct ClassDomainTests {
     #expect(battles.map(\.id) == [101, 105])
   }
 
-  @Test
-  func 마감일_변경은_목록과_참여코드_조회에_반영된다() async throws {
-    let repository = MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: [])
+  @Test(arguments: [nil, 30] as [Int?])
+  func 마감일_변경은_목록과_참여코드_조회에_반영된다(memberCapacity: Int?) async throws {
+    let room = copyRoom(ClassRoom.mocks[0], memberCapacity: memberCapacity)
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let deadline = Date(timeIntervalSince1970: 1_801_000_000)
 
     let updated = try await repository.updateDeadline(id: 1, deadline: deadline)
 
     #expect(updated.deadline == deadline)
+    #expect(updated.memberCapacity == memberCapacity)
     #expect(try await repository.fetchMyClasses()[0].deadline == deadline)
+    #expect(try await repository.fetchMyClasses()[0].memberCapacity == memberCapacity)
     #expect(try await repository.fetchClass(joinCode: updated.joinCode).deadline == deadline)
+    #expect(try await repository.fetchClass(joinCode: updated.joinCode).memberCapacity == memberCapacity)
   }
 
   @Test
@@ -224,32 +240,41 @@ struct ClassDomainTests {
     #expect(members.prefix(10).map(\.avatar) == avatars)
   }
 
-  @Test
-  func 주입한_멤버는_인원수와_다음_ID에_반영되고_알_수_없는_방은_무시한다() async throws {
-    let room = ClassRoom.mockJoinable
+  @Test(arguments: [nil, 30] as [Int?])
+  func 주입한_멤버는_인원수와_다음_ID에_반영되고_알_수_없는_방은_무시한다(memberCapacity: Int?) async throws {
+    let room = copyRoom(ClassRoom.mockJoinable, memberCapacity: memberCapacity)
     let repository = MockClassRepository(
       rooms: [],
       availableRooms: [room],
       members: [
         room.id: [
           ClassMember(id: 1, name: "운영자", isOwner: true),
-          ClassMember(id: 37, name: "기존 참여자"),
+          ClassMember(id: 37, name: "기존 참여자", avatar: .koala),
         ],
         999: [ClassMember(id: 1, name: "무관한 방", isOwner: true)],
       ]
     )
 
     #expect(try await repository.fetchClass(joinCode: room.joinCode).memberCount == 2)
+    #expect(try await repository.fetchClass(joinCode: room.joinCode).memberCapacity == memberCapacity)
     let joined = try await repository.joinClass(joinCode: room.joinCode, nickname: "새 참여자")
     #expect(joined.memberCount == 3)
+    #expect(joined.memberCapacity == memberCapacity)
     #expect(try await repository.currentMemberID(roomID: room.id) == 38)
     #expect(try await repository.fetchMembers(roomID: room.id).map(\.id) == [1, 37, 38])
+    #expect(try await repository.fetchMembers(roomID: room.id).first(where: { $0.id == 37 })?.avatar == .koala)
     do {
       _ = try await repository.fetchMembers(roomID: 999)
       Issue.record("알 수 없는 방의 멤버를 반환했습니다")
     } catch {
       #expect(error as? ClassError == .invalidCode)
     }
+    try await repository.leaveClass(id: room.id)
+    let available = try await repository.fetchClass(joinCode: room.joinCode)
+    #expect(available.memberCapacity == memberCapacity)
+    #expect(available.memberCount == 2)
+    #expect(try await repository.fetchMembers(roomID: room.id).map(\.id) == [1, 37])
+    #expect(try await repository.fetchMembers(roomID: room.id).last?.avatar == .koala)
   }
 
   @Test
@@ -265,6 +290,7 @@ struct ClassDomainTests {
       )
     )
     #expect(try await repository.fetchMembers(roomID: created.id).count == 1)
+    #expect(created.memberCapacity == nil)
     #expect(try await repository.currentMemberID(roomID: created.id) == 1)
 
     let joined = try await repository.joinClass(joinCode: "PK9T3S", nickname: "민지")
@@ -274,17 +300,23 @@ struct ClassDomainTests {
     #expect(try await repository.currentMemberID(roomID: joined.id) == members.last?.id)
   }
 
-  @Test
-  func 목_멤버_제거는_운영자만_가능하고_목록과_마감일_변경에도_인원수가_유지된다() async throws {
-    let repository = MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: [])
+  @Test(arguments: [nil, 30] as [Int?])
+  func 목_멤버_제거는_운영자만_가능하고_목록과_마감일_변경에도_인원수가_유지된다(memberCapacity: Int?) async throws {
+    let room = copyRoom(ClassRoom.mocks[0], memberCapacity: memberCapacity)
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let updated = try await repository.removeMember(roomID: 1, memberID: 2, currentMemberID: 1)
-    #expect(updated.memberCount == ClassRoom.mocks[0].memberCount - 1)
+    #expect(updated.memberCount == room.memberCount - 1)
+    #expect(updated.memberCapacity == memberCapacity)
     #expect(try await repository.fetchMembers(roomID: 1).count == updated.memberCount)
+    #expect(try await repository.fetchMembers(roomID: 1).first?.avatar == .lion)
     #expect(try await repository.fetchMyClasses()[0].memberCount == updated.memberCount)
+    #expect(try await repository.fetchMyClasses()[0].memberCapacity == memberCapacity)
 
     let deadline = try await repository.updateDeadline(id: 1, deadline: Date(timeIntervalSince1970: 1_801_000_000))
     #expect(deadline.memberCount == updated.memberCount)
+    #expect(deadline.memberCapacity == memberCapacity)
     #expect(try await repository.fetchClass(joinCode: updated.joinCode).memberCount == updated.memberCount)
+    #expect(try await repository.fetchClass(joinCode: updated.joinCode).memberCapacity == memberCapacity)
 
     for (memberID, currentMemberID) in [(1, 1), (3, 3), (3, 2)] {
       do {
@@ -318,5 +350,25 @@ struct ClassDomainTests {
     let repository = MockClassRepository()
     let battles = try await repository.fetchRecommendedBattles(filter: .init(level: .adult))
     #expect(battles.map(\.id) == [103])
+  }
+
+  private func copyRoom(
+    _ room: ClassRoom,
+    memberCapacity: Int?
+  ) -> ClassRoom {
+    ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: memberCapacity
+    )
   }
 }

@@ -42,7 +42,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         id: original.id, name: original.name, joinCode: original.joinCode, battle: battle,
         deadline: original.deadline, memberCount: original.memberCount, role: .member,
         status: original.status, allowsAnonymousOpinion: original.allowsAnonymousOpinion,
-        requiresComment: original.requiresComment
+        requiresComment: original.requiresComment,
+        memberCapacity: original.memberCapacity
       )
       let session = ClassMockChatSession()
       let battleID = await session.register(room: room)
@@ -184,6 +185,93 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         XCTAssertTrue(text.contains("클래스결과"), "Tabbed page links missing: \(text)")
         XCTAssertTrue(text.contains("피드백"), "Tabbed page links missing: \(text)")
       }
+    }
+  }
+
+  @MainActor
+  func testCaptureOwnerMembersCapacity() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture owner members in the tab shell")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let members = MockClassRepository.figmaOwnerMembers + (11 ... 22).map {
+      ClassMember(id: $0, name: "참여자\($0)")
+    }
+    let source = ClassRoom.mocks[0]
+    let room = ClassRoom(
+      id: source.id,
+      name: source.name,
+      joinCode: source.joinCode,
+      battle: source.battle,
+      deadline: source.deadline,
+      memberCount: members.count,
+      role: source.role,
+      status: source.status,
+      allowsAnonymousOpinion: source.allowsAnonymousOpinion,
+      requiresComment: source.requiresComment,
+      ownerParticipates: source.ownerParticipates,
+      memberCapacity: 30
+    )
+    let repository = MockClassRepository(
+      rooms: [room],
+      availableRooms: [],
+      members: [room.id: members]
+    )
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    state.classState.routes.push(.detail(.init(room: room)))
+    state.classState.routes.push(.members(.init(
+      room: room,
+      members: members,
+      currentMemberID: 1,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )))
+    let store = withDependencies {
+      $0.context = .test
+      $0.uuid = .incrementing
+    } operation: {
+      Store(initialState: state) {
+        MainTabCoordinator()
+          .dependency(\.classUseCase, repository)
+          .dependency(\.classMockRepository, repository)
+          .dependency(\.classMockChatSession, ClassMockChatSession())
+          .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+      }
+    }
+    let (image, _) = try await capture(
+      AnyView(MainTabView(store: store)),
+      ready: {
+        guard case let .members(memberState)? = store.classState.routes.last?.screen else { return false }
+        return memberState.members.count == 22 && memberState.room.memberCount == 22
+          && memberState.room.memberCapacity == 30 && memberState.viewState == .loaded
+          && store.classState.showsTabBar && !store.shouldHideTabBar
+      },
+      includeScrollBottom: false,
+      viewport: CGSize(width: 402, height: 874)
+    )
+    guard case let .members(memberState)? = store.classState.routes.last?.screen else {
+      return XCTFail("Owner member route disappeared during mounted capture")
+    }
+    XCTAssertEqual(memberState.members.count, 22)
+    XCTAssertEqual(memberState.room.memberCount, 22)
+    XCTAssertEqual(memberState.room.memberCapacity, 30)
+    XCTAssertTrue(store.classState.showsTabBar)
+    XCTAssertFalse(store.shouldHideTabBar)
+    let name = "owner-members-capacity-tab-hosted"
+    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    let text = try recognizedAuditText(in: image, name: name)
+    for label in ["멤버22/30", "홈", "탐색", "빠른배틀", "클래스", "마이"] {
+      XCTAssertTrue(text.contains(label), "Missing \(label) from tab-hosted owner capture: \(text)")
     }
   }
 
@@ -381,7 +469,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       status: .closed,
       allowsAnonymousOpinion: openRoom.allowsAnonymousOpinion,
       requiresComment: openRoom.requiresComment,
-      ownerParticipates: openRoom.ownerParticipates
+      ownerParticipates: openRoom.ownerParticipates,
+      memberCapacity: openRoom.memberCapacity
     )
     var closedOwner = ClassOwnerDashboardFeature.State(room: closedRoom, instanceID: UUID())
     closedOwner.selectedTab = .home
@@ -963,7 +1052,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         id: room.id, name: room.name, joinCode: room.joinCode, battle: room.battle,
         deadline: Date(timeIntervalSince1970: 1_790_154_000),
         memberCount: room.memberCount, role: .member, status: room.status,
-        allowsAnonymousOpinion: room.allowsAnonymousOpinion, requiresComment: room.requiresComment
+        allowsAnonymousOpinion: room.allowsAnonymousOpinion, requiresComment: room.requiresComment,
+        memberCapacity: room.memberCapacity
       )
     }
   }
@@ -2223,7 +2313,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
-      ownerParticipates: room.ownerParticipates
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
     )
   }
 

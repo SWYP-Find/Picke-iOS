@@ -50,7 +50,8 @@ struct MemberAuditView: View {
       role: owner ? .owner : .member,
       status: .open,
       allowsAnonymousOpinion: source.allowsAnonymousOpinion,
-      requiresComment: source.requiresComment
+      requiresComment: source.requiresComment,
+      memberCapacity: source.memberCapacity
     )
     let survivor = ClassRoom(
       id: 2,
@@ -62,7 +63,8 @@ struct MemberAuditView: View {
       role: .member,
       status: .open,
       allowsAnonymousOpinion: source.allowsAnonymousOpinion,
-      requiresComment: source.requiresComment
+      requiresComment: source.requiresComment,
+      memberCapacity: source.memberCapacity
     )
     let rooms = owner ? [target] : [target, survivor]
     let repository = MockClassRepository(
@@ -123,6 +125,7 @@ private extension MemberAuditView {
     guard let field = notification.object as? UITextField,
           field.placeholder == "이름을 입력해주세요" else { return }
     nativeNameObserved = true
+    // Focus sampled at the last native field event, not a continuously observed value.
     nativeNameFocused = field.isFirstResponder
     nativeNameValue = field.text ?? ""
     switch kind {

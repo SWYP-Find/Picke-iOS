@@ -21,6 +21,8 @@ struct ClassMemberEditIcon: Shape {
       control2: CGPoint(x: 16.25, y: 0)
     )
     path.closeSubpath()
+    path.move(to: CGPoint(x: 11.25, y: 5))
+    path.addLine(to: CGPoint(x: 15, y: 8.75))
     return path.applying(CGAffineTransform(scaleX: rect.width / 20, y: rect.height / 20))
   }
 }

@@ -660,7 +660,8 @@ private extension ClassReportView {
       role: .member,
       status: .closed,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
     )
     var state = ClassReportFeature.State(room: completedRoom)
     state.selectedTab = tab

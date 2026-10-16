@@ -48,7 +48,7 @@ public struct ClassCoordinator {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
 
-    /// 클래스 목록과 상세에서만 모달이 닫힌 동안 탭바를 보여준다.
+    /// 클래스 목록·상세·운영자 멤버 목록에서 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
       guard !isDeadlinePanelPresented else { return false }
       switch routes.last?.screen {
@@ -56,6 +56,9 @@ public struct ClassCoordinator {
         return detail.modal == nil && detail.customAlert == nil
       case let .myClasses(myClasses)?:
         return myClasses.modal == nil && myClasses.customAlert == nil && !myClasses.isLeaving
+      case let .members(members)?:
+        return members.room.role == .owner && members.management == nil && members.filter == nil
+          && members.editName == nil && members.customAlert == nil && !members.isSaving
       default:
         return false
       }

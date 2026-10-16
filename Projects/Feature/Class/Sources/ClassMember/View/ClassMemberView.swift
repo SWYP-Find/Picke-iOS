@@ -27,32 +27,7 @@ public struct ClassMemberView: View {
         .padding(.horizontal, 16)
         .padding(.top, 16)
 
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 0) {
-          Text("멤버 \(store.room.memberCount)")
-            .pretendardFont(family: .Medium, size: 14)
-            .foregroundStyle(.gray300)
-            .padding(.bottom, 4)
-
-          switch store.viewState {
-          case .loading:
-            memberSkeleton()
-          case .error:
-            loadError()
-          case .empty:
-            emptyMessage("아직 참여한 멤버가 없어요.")
-          case .noSearchResults:
-            emptyMessage("검색 결과가 없어요.")
-          case .loaded:
-            ForEach(store.visibleMembers) { member in
-              memberRow(member)
-            }
-          }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 20)
-      }
-      .scrollIndicators(.hidden)
+      memberList()
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
@@ -84,6 +59,42 @@ public struct ClassMemberView: View {
 #endif
 
 private extension ClassMemberView {
+  @ViewBuilder
+  func memberList() -> some View {
+    ScrollView {
+      LazyVStack(alignment: .leading, spacing: 0) {
+        Text(store.memberCountTitle)
+          .pretendardFont(family: .Medium, size: 14)
+          .foregroundStyle(.gray300)
+          .frame(height: 20)
+          .padding(.bottom, 4)
+
+        memberContent()
+      }
+      .padding(.horizontal, 16)
+      .padding(.top, 20)
+    }
+    .scrollIndicators(.hidden)
+  }
+
+  @ViewBuilder
+  func memberContent() -> some View {
+    switch store.viewState {
+    case .loading:
+      memberSkeleton()
+    case .error:
+      loadError()
+    case .empty:
+      emptyMessage("아직 참여한 멤버가 없어요.")
+    case .noSearchResults:
+      emptyMessage("검색 결과가 없어요.")
+    case .loaded:
+      ForEach(store.visibleMembers) { member in
+        memberRow(member)
+      }
+    }
+  }
+
   @ViewBuilder
   func navigationBar() -> some View {
     PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 멤버") {
@@ -238,8 +249,8 @@ private extension ClassMemberView {
     Text(title)
       .pretendardFont(family: .SemiBold, size: 12)
       .foregroundStyle(.primary500)
-      .padding(.horizontal, 8)
-      .padding(.vertical, 4)
+      .padding(.horizontal, 4)
+      .padding(.vertical, 3)
       .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
   }
 

@@ -59,6 +59,13 @@ public struct ClassMemberFeature {
       viewState = preloadedViewState ?? .loading
     }
 
+    public var memberCountTitle: String {
+      guard let capacity = room.memberCapacity, capacity > 0 else {
+        return "멤버 \(room.memberCount)"
+      }
+      return "멤버 \(room.memberCount) / \(capacity)"
+    }
+
     public var visibleMembers: [ClassMember] {
       let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
       let filteredMembers = query.isEmpty

@@ -68,7 +68,6 @@ final class ClassMemberInteractionTests: XCTestCase {
 
     clearNameField(nameField)
     attachNameDiagnostics(app, field: nameField, name: "member-name-after-clear")
-    attachNameDiagnostics(app, field: nameField, name: "member-name-before-whitespace")
     nameField.typeText(" ")
     waitUntil("whitespace cannot be saved") {
       nameFields.count == 1 && nameField.value as? String == " " && !save.isEnabled
@@ -241,7 +240,7 @@ private extension ClassMemberInteractionTests {
       .matching(NSPredicate(format: "hasKeyboardFocus == YES")).count
     let details = """
     native observed: \(String(describing: state?.nativeNameObserved))
-    native focused: \(String(describing: state?.nativeNameFocused))
+    native focus at last event: \(String(describing: state?.nativeNameFocused))
     native begin/end/change: \(String(describing: state?.nativeNameBeginCount))/\(String(describing: state?.nativeNameEndCount))/\(String(describing: state?.nativeNameChangeCount))
     native value: \(String(describing: state?.nativeNameValue))
     AX focus predicate count: \(focusCount)

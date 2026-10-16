@@ -42,7 +42,8 @@ struct ClassDetailTests {
       status: source.status,
       allowsAnonymousOpinion: source.allowsAnonymousOpinion,
       requiresComment: source.requiresComment,
-      ownerParticipates: false
+      ownerParticipates: false,
+      memberCapacity: source.memberCapacity
     )
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
@@ -156,7 +157,8 @@ struct ClassDetailTests {
       role: original.role,
       status: original.status,
       allowsAnonymousOpinion: original.allowsAnonymousOpinion,
-      requiresComment: original.requiresComment
+      requiresComment: original.requiresComment,
+      memberCapacity: original.memberCapacity
     )
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
@@ -193,7 +195,8 @@ struct ClassDetailTests {
       role: room.role,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
     )
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
       ClassDetailFeature()
@@ -218,7 +221,8 @@ struct ClassDetailTests {
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
-      ownerParticipates: room.ownerParticipates
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
     )
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
       ClassDetailFeature()

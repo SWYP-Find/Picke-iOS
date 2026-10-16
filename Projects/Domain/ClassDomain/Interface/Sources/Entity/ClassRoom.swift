@@ -14,6 +14,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
   public let battle: ClassBattleSummary
   public let deadline: Date
   public let memberCount: Int
+  public let memberCapacity: Int?
   public let role: ClassRole
   public let status: ClassStatus
   public let allowsAnonymousOpinion: Bool
@@ -31,7 +32,8 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     status: ClassStatus,
     allowsAnonymousOpinion: Bool,
     requiresComment: Bool,
-    ownerParticipates: Bool = true
+    ownerParticipates: Bool = true,
+    memberCapacity: Int? = nil
   ) {
     self.id = id
     self.name = name
@@ -39,6 +41,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     self.battle = battle
     self.deadline = deadline
     self.memberCount = memberCount
+    self.memberCapacity = memberCapacity
     self.role = role
     self.status = status
     self.allowsAnonymousOpinion = allowsAnonymousOpinion

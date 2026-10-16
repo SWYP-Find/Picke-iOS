@@ -277,7 +277,8 @@ public actor MockClassRepository: ClassInterface {
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
-      ownerParticipates: room.ownerParticipates
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
     )
     rooms.append(joined)
     availableRooms.remove(at: index)
@@ -306,7 +307,8 @@ public actor MockClassRepository: ClassInterface {
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
-      ownerParticipates: room.ownerParticipates
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
     )
     rooms[index] = updated
     return updated
@@ -366,7 +368,8 @@ private extension ClassRoom {
       status: status,
       allowsAnonymousOpinion: allowsAnonymousOpinion,
       requiresComment: requiresComment,
-      ownerParticipates: ownerParticipates
+      ownerParticipates: ownerParticipates,
+      memberCapacity: memberCapacity
     )
   }
 }

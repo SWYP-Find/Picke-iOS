@@ -34,7 +34,8 @@ struct ClassShareTests {
       role: room.role,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
     )
     #expect(ClassShareFeature.State(room: noDeadline).deadlineText == nil)
     #expect(ClassShareFeature.State(room: room).deadlineText?.hasPrefix("참여 마감 · ") == true)

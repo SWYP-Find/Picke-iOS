@@ -292,7 +292,8 @@ struct ClassDeadlineEditTests {
       status: source.status,
       allowsAnonymousOpinion: source.allowsAnonymousOpinion,
       requiresComment: source.requiresComment,
-      ownerParticipates: source.ownerParticipates
+      ownerParticipates: source.ownerParticipates,
+      memberCapacity: source.memberCapacity
     )
   }
 }

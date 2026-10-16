@@ -15,6 +15,59 @@ import Testing
 @MainActor
 struct ClassMemberTests {
   @Test
+  func 정원은_알려진_양수일_때만_표시하고_초과_인원도_그대로_보여준다() {
+    let cases: [(Int?, String)] = [
+      (nil, "멤버 22"),
+      (0, "멤버 22"),
+      (-1, "멤버 22"),
+      (30, "멤버 22 / 30"),
+    ]
+    for (capacity, expected) in cases {
+      let state = ClassMemberFeature.State(
+        room: room(memberCount: 22, capacity: capacity),
+        instanceID: UUID()
+      )
+      #expect(state.memberCountTitle == expected)
+    }
+
+    let overCapacity = ClassMemberFeature.State(
+      room: room(memberCount: 31, capacity: 30),
+      instanceID: UUID()
+    )
+    #expect(overCapacity.memberCountTitle == "멤버 31 / 30")
+  }
+
+  @Test
+  func 검색은_전체_인원_표시를_바꾸지_않고_자료_갱신은_정원을_보존한다() async {
+    let members = (1 ... 22).map {
+      ClassMember(id: $0, name: $0 == 1 ? "김선생" : "참여자\($0)", isOwner: $0 == 1)
+    }
+    let store = TestStore(initialState: ClassMemberFeature.State(
+      room: room(memberCount: 22, capacity: 30),
+      members: members,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )) {
+      ClassMemberFeature()
+    }
+
+    await store.send(.binding(.set(\.searchText, "김선생"))) {
+      $0.searchText = "김선생"
+    }
+    #expect(store.state.visibleMembers.count == 1)
+    #expect(store.state.memberCountTitle == "멤버 22 / 30")
+
+    let updatedRoom = room(memberCount: 21, capacity: 30)
+    let updatedMembers = Array(members.dropLast())
+    await store.send(.dataUpdated(room: updatedRoom, members: updatedMembers)) {
+      $0.room = updatedRoom
+      $0.members = updatedMembers
+    }
+    #expect(store.state.memberCountTitle == "멤버 21 / 30")
+    #expect(store.state.visibleMembers.count == 1)
+  }
+
+  @Test
   func 운영자_관리_메뉴는_닫기와_편집과_삭제를_전달한다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassMemberFeature.State(
@@ -505,5 +558,28 @@ struct ClassMemberTests {
       $0.hasAppliedSort = true
     }
     #expect(store.state.appliedFilter == .init())
+  }
+}
+
+private extension ClassMemberTests {
+  func room(
+    memberCount: Int,
+    capacity: Int?
+  ) -> ClassRoom {
+    let source = ClassRoom.mocks[0]
+    return ClassRoom(
+      id: source.id,
+      name: source.name,
+      joinCode: source.joinCode,
+      battle: source.battle,
+      deadline: source.deadline,
+      memberCount: memberCount,
+      role: source.role,
+      status: source.status,
+      allowsAnonymousOpinion: source.allowsAnonymousOpinion,
+      requiresComment: source.requiresComment,
+      ownerParticipates: source.ownerParticipates,
+      memberCapacity: capacity
+    )
   }
 }

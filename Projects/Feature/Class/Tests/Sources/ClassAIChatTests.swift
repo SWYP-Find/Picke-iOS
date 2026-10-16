@@ -138,7 +138,8 @@ struct ClassAIChatTests {
       role: room.role,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
     )
   }
 
@@ -154,7 +155,8 @@ struct ClassAIChatTests {
       role: room.role,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
     )
   }
 

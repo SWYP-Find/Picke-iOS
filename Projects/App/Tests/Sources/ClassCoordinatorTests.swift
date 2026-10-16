@@ -474,7 +474,8 @@ struct ClassCoordinatorTests {
       role: original.role,
       status: original.status,
       allowsAnonymousOpinion: original.allowsAnonymousOpinion,
-      requiresComment: original.requiresComment
+      requiresComment: original.requiresComment,
+      memberCapacity: original.memberCapacity
     )
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let session = ClassMockChatSession()
@@ -586,7 +587,8 @@ struct ClassCoordinatorTests {
       role: original.role,
       status: original.status,
       allowsAnonymousOpinion: original.allowsAnonymousOpinion,
-      requiresComment: original.requiresComment
+      requiresComment: original.requiresComment,
+      memberCapacity: original.memberCapacity
     )
     let session = ClassMockChatSession()
     let battleAPI: any BattleInterface = session
@@ -1046,29 +1048,64 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 멤버_화면은_시트_상태에_관계없이_탭바를_숨긴다() {
+  func 운영자_멤버_목록은_모달과_저장중에만_탭바를_숨긴다() {
     var state = ClassCoordinator.State()
     #expect(!state.showsTabBar)
     state.routes.push(.detail(.init(room: .mocks[0])))
     var members = ClassMemberFeature.State(room: .mocks[0], instanceID: UUID())
     state.routes.push(.members(members))
+    #expect(state.showsTabBar)
+
+    members.management = .init(kind: .management)
+    state.routes[screenAt: 2] = .members(members)
     #expect(!state.showsTabBar)
+
+    members.management = nil
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
 
     members.filter = .init()
     state.routes[screenAt: 2] = .members(members)
     #expect(!state.showsTabBar)
 
     members.filter = nil
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
     members.editName = .init()
     state.routes[screenAt: 2] = .members(members)
     #expect(!state.showsTabBar)
 
     members.editName = nil
     state.routes[screenAt: 2] = .members(members)
-    #expect(!state.showsTabBar)
+    #expect(state.showsTabBar)
 
     members.customAlert = .alert(title: "확인", message: "안내")
     state.routes[screenAt: 2] = .members(members)
+    #expect(!state.showsTabBar)
+
+    members.customAlert = nil
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
+    members.isSaving = true
+    state.routes[screenAt: 2] = .members(members)
+    #expect(!state.showsTabBar)
+
+    members.isSaving = false
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
+    state.routes.goBack()
+    #expect(state.showsTabBar)
+  }
+
+  @Test
+  func 참가자_멤버_목록은_기존처럼_탭바를_숨긴다() {
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: .mockJoinable)))
+    #expect(state.showsTabBar)
+    state.routes.push(.members(.init(room: .mockJoinable, instanceID: UUID())))
     #expect(!state.showsTabBar)
 
     state.routes.goBack()
@@ -2109,7 +2146,8 @@ struct ClassDeadlineSheetCoordinatorTests {
       status: .closed,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
-      ownerParticipates: room.ownerParticipates
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
     )
     var list = MyClassFeature.State()
     list.rooms = [room]
