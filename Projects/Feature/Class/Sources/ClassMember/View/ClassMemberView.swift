@@ -358,9 +358,11 @@ private extension ClassMemberView {
         VStack(alignment: .leading, spacing: 6) {
           Text("이름을 입력해주세요")
             .pretendardFont(.semiBold24)
+            .frame(minHeight: 31, alignment: .leading)
             .foregroundStyle(.gray800)
           Text("이 클래스에서만 보이는 이름이에요.")
             .pretendardFont(.bodyMedium)
+            .frame(minHeight: 20, alignment: .leading)
             .foregroundStyle(.gray300)
         }
 
