@@ -670,10 +670,10 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           XCTAssertTrue(text.contains(expectedText), "Expected load-state message in pixels: \(text)")
         }
         for expected in additionalExpectedText {
-          XCTAssertTrue(text.contains(expected), "Expected vote control in load-state pixels: \(text)")
+          XCTAssertTrue(text.contains(expected), "Expected content in load-state pixels: \(text)")
         }
         for excluded in excludedText {
-          XCTAssertFalse(text.contains(excluded), "Unexpected vote option in load-state pixels: \(text)")
+          XCTAssertFalse(text.contains(excluded), "Unexpected content in load-state pixels: \(text)")
         }
       }
     }
@@ -1631,14 +1631,15 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     for viewport in [CGSize(width: 402, height: 874), CGSize(width: 375, height: 667)] {
-      let store = Store(initialState: ClassShareFeature.State(room: ClassRoom.mocks[0])) {
+      let room = ClassRoom.mocks[0]
+      let store = Store(initialState: ClassShareFeature.State(room: room)) {
         ClassShareFeature()
       }
       let name = "share-controls-\(Int(viewport.width))"
-      let (image, _) = try await capture(
+      let (image, bottomImage) = try await capture(
         AnyView(ClassShareView(store: store)),
         ready: nil,
-        includeScrollBottom: false,
+        includeScrollBottom: viewport.width == 375,
         viewport: viewport
       )
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
@@ -1649,6 +1650,25 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       let text = try recognizedAuditText(in: image, name: name)
       XCTAssertTrue(text.contains("멤버들에게공유해주세요"))
       XCTAssertTrue(text.contains("클래스로이동하기"))
+      if viewport.width == 375 {
+        let bottom = try XCTUnwrap(bottomImage)
+        let bottomName = name + "-bottom"
+        try XCTUnwrap(bottom.pngData()).write(to: directory.appendingPathComponent(bottomName + ".png"))
+        let bottomAttachment = XCTAttachment(image: bottom)
+        bottomAttachment.name = bottomName
+        bottomAttachment.lifetime = .keepAlways
+        add(bottomAttachment)
+        let bottomText = try recognizedAuditText(in: bottom, name: bottomName)
+        XCTAssertTrue(
+          bottomText.contains(room.battle.optionATitle.filter { !$0.isWhitespace }),
+          "First option missing: \(bottomText)"
+        )
+        XCTAssertTrue(
+          bottomText.contains(room.battle.optionBTitle.filter { !$0.isWhitespace }),
+          "Second option missing: \(bottomText)"
+        )
+        XCTAssertTrue(bottomText.contains("클래스로이동하기"), "Fixed class CTA missing: \(bottomText)")
+      }
     }
   }
 
@@ -2209,6 +2229,13 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         includeScrollBottom: needsBottomCapture,
         viewport: needsBottomCapture ? CGSize(width: 402, height: 640) : nil
       )
+      if frame.number == 3 {
+        XCTAssertTrue(frame.ready?() == true, "Home must retain its loaded, attendance-completed state after capture")
+        let homeText = try recognizedAuditText(in: image, name: "03-home")
+        XCTAssertTrue(homeText.contains("지금뜨는배틀"), "Home battle section missing: \(homeText)")
+        XCTAssertFalse(homeText.contains("오늘의출석체크성공"), "Attendance success overlay appeared: \(homeText)")
+        XCTAssertFalse(homeText.contains("픽케에매일출석하고포인트를모아보세요"), "Attendance prompt appeared: \(homeText)")
+      }
       let name = String(format: "%02d", frame.number) + "-" + frame.slug + ".png"
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name))
       imageCount += 1
@@ -2686,6 +2713,32 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     var ownerReport = ClassOwnerDashboardFeature.State(room: owner, instanceID: UUID())
     ownerReport.selectedTab = .report
 
+    var homeState = MainTabCoordinator.State()
+    guard case var .home(home) = homeState.homeState.routes[0].screen else {
+      XCTFail("Home root is missing")
+      throw CaptureError.contentNotReady
+    }
+    let homeBundle = HomeBundle.mock
+    home.newNotice = homeBundle.newNotice
+    home.heroes = homeBundle.heroes
+    home.hotBattles = homeBundle.hotBattles
+    home.bestBattles = homeBundle.bestBattles
+    home.quizzes = homeBundle.quizzes
+    home.votes = homeBundle.votes
+    home.newBattles = homeBundle.newBattles
+    home.viewState = .loaded
+    home.hasLoadedHome = true
+    home.hasTriedAttendance = true
+    home.attendanceModal = nil
+    homeState.homeState.routes[screenAt: 0] = .home(home)
+    let expectedHome = home
+    let homeStore = Store(initialState: homeState) { MainTabCoordinator() }
+    let homeReady: @MainActor () -> Bool = {
+      guard case let .home(current)? = homeStore.homeState.routes.first?.screen else { return false }
+      return current == expectedHome && current.viewState == .loaded && current.hasLoadedHome
+        && current.hasTriedAttendance && current.attendanceModal == nil
+    }
+
     func frame(_ number: Int, _ title: String, _ slug: String, _ detail: String, _ view: AnyView?) -> Frame {
       Frame(number: number, title: title, slug: slug, detail: detail, view: view, ready: nil)
     }
@@ -2707,12 +2760,13 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           ClassSettingFeature()
         }))
       ),
-      frame(
-        3,
-        "홈",
-        "home",
-        "real Home tab; login and async data may limit content",
-        AnyView(MainTabView(store: Store(initialState: .init()) { MainTabCoordinator() }))
+      Frame(
+        number: 3,
+        title: "홈",
+        slug: "home",
+        detail: "real Home tab; loaded mock bundle; attendance already completed",
+        view: AnyView(MainTabView(store: homeStore)),
+        ready: homeReady
       ),
       frame(
         4,

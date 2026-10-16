@@ -37,6 +37,8 @@ struct PickeClassAuditApp: App {
                 ["owner-remove", "member-leave"].contains(scenario)
       {
         MemberAuditView(scenario: scenario)
+      } else if ProcessInfo.processInfo.environment["PICKE_SHARE_SCENARIO"] == "final-vote" {
+        ClassShareAuditView()
       } else if let scenario = ProcessInfo.processInfo.environment["PICKE_DEADLINE_SCENARIO"],
                 ["normal", "minimum", "cycle"].contains(scenario)
       {
