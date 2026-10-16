@@ -121,11 +121,7 @@ private extension ClassShareView {
       UIPasteboard.general.string = store.room.joinCode
       UIAccessibility.post(notification: .announcement, argument: "참여 코드를 복사했어요")
     } label: {
-      Image(systemName: "square.on.square")
-        .resizable()
-        .scaledToFit()
-        .frame(width: 18, height: 18)
-        .foregroundStyle(.primary500)
+      copyIcon
         .frame(width: 52, height: 52)
         .background(.beige50, in: RoundedRectangle(cornerRadius: .radiusDefault))
         .overlay {
@@ -136,6 +132,37 @@ private extension ClassShareView {
     }
     .buttonStyle(.plain)
     .accessibilityLabel("참여 코드 복사")
+  }
+
+  var copyIcon: some View {
+    Path { path in
+      path.move(to: CGPoint(x: 3, y: 12))
+      path.addLine(to: CGPoint(x: 2.5, y: 12))
+      path.addQuadCurve(
+        to: CGPoint(x: 1, y: 10.5),
+        control: CGPoint(x: 1, y: 12)
+      )
+      path.addLine(to: CGPoint(x: 1, y: 2.5))
+      path.addQuadCurve(
+        to: CGPoint(x: 2.5, y: 1),
+        control: CGPoint(x: 1, y: 1)
+      )
+      path.addLine(to: CGPoint(x: 10.5, y: 1))
+      path.addQuadCurve(
+        to: CGPoint(x: 12, y: 2.5),
+        control: CGPoint(x: 12, y: 1)
+      )
+      path.addLine(to: CGPoint(x: 12, y: 3))
+      path.addRoundedRect(
+        in: CGRect(x: 6, y: 6, width: 11, height: 11),
+        cornerSize: CGSize(width: 1.5, height: 1.5)
+      )
+    }
+    .stroke(
+      .primary500,
+      style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+    )
+    .frame(width: 18, height: 18)
   }
 
   var shareButton: some View {
