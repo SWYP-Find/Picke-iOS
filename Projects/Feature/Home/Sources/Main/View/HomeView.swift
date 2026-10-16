@@ -74,7 +74,6 @@ public struct HomeView: View {
     }
     .onAppear { send(.onAppear) }
     .navigationBarHidden(true)
-    .toolbar(store.attendanceModal == nil ? .automatic : .hidden, for: .tabBar)
     .scrollIndicators(.hidden)
     .scrollBounceBehavior(.basedOnSize)
   }

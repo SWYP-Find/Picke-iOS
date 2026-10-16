@@ -102,7 +102,7 @@ public struct ClassCoordinatorView: View {
         }
       }
     }
-    .toolbar(store.showsTabBar ? .visible : .hidden, for: .tabBar)
+    .toolbar(.hidden, for: .tabBar)
   }
 }
 

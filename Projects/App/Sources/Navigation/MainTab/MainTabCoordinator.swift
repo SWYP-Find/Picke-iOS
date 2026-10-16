@@ -51,6 +51,7 @@ public struct MainTabCoordinator {
   public struct State: Equatable {
     public var selectedTab: Int
     public var previousTab: Int = Tab.home.rawValue
+    public var isKeyboardVisible = false
     public var homeState: HomeCoordinator.State
     public var exploreState: HifiCoordinator.State
     public var quickBattleState: BattleCoordinator.State
@@ -58,13 +59,17 @@ public struct MainTabCoordinator {
     public var myPageState: ProfileCoordinator.State
 
     public var shouldHideTabBar: Bool {
+      guard !isKeyboardVisible else { return true }
       switch Tab(rawValue: selectedTab) {
       case .home:
-        return homeState.routes.count > 1
+        return homeState.routes.count > 1 || homeState.routes.contains { route in
+          guard case let .home(home) = route.screen else { return false }
+          return home.attendanceModal != nil
+        }
       case .explore:
         return exploreState.routes.count > 1
       case .quickBattle:
-        return quickBattleState.routes.count > 1
+        return true
       case .classroom:
         return !classState.showsTabBar
       case .myPage:
@@ -72,6 +77,14 @@ public struct MainTabCoordinator {
       case .none:
         return false
       }
+    }
+
+    public func isSelected(_ tab: Tab) -> Bool {
+      return selectedTab == tab.rawValue
+    }
+
+    public var backDestinationTab: Int {
+      return previousTab == selectedTab ? Tab.home.rawValue : previousTab
     }
 
     public init(selectedTab: Int = Tab.home.rawValue) {
@@ -86,8 +99,10 @@ public struct MainTabCoordinator {
 
   @CasePathable
   public enum Action {
+    case tabTapped(Int)
     case selectTab(Int)
     case tabReselected(Int)
+    case keyboardVisibilityChanged(Bool)
     case home(HomeCoordinator.Action)
     case explore(HifiCoordinator.Action)
     case quickBattle(BattleCoordinator.Action)
@@ -129,6 +144,14 @@ public struct MainTabCoordinator {
 
     Reduce { state, action in
       switch action {
+      case let .tabTapped(tab):
+        guard Tab(rawValue: tab) != nil else { return .none }
+        return .send(tab == state.selectedTab ? .tabReselected(tab) : .selectTab(tab))
+
+      case let .keyboardVisibilityChanged(isVisible):
+        state.isKeyboardVisible = isVisible
+        return .none
+
       case let .selectTab(tab):
         if tab != state.selectedTab {
           state.previousTab = state.selectedTab
@@ -141,15 +164,15 @@ public struct MainTabCoordinator {
         return resetSelectedTabRoute(state: &state, tab: tab)
 
       case .quickBattle(.router(.routeAction(_, action: .battle(.delegate(.backToHome))))):
-        state.selectedTab = state.previousTab
+        state.selectedTab = state.backDestinationTab
         return .none
 
       case .myPage(.router(.routeAction(_, action: .profile(.delegate(.backToHome))))):
-        state.selectedTab = state.previousTab
+        state.selectedTab = state.backDestinationTab
         return .none
 
       case .classroom(.router(.routeAction(_, action: .intro(.delegate(.backToHome))))):
-        state.selectedTab = state.previousTab
+        state.selectedTab = state.backDestinationTab
         return .none
 
       case .myPage(.router(.routeAction(_, action: .settings(.delegate(.sessionEnded))))):

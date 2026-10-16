@@ -18,15 +18,28 @@ import TCAFlow
 struct PickeClassAuditApp: App {
   init() {
     PretendardFontFamily.registerFonts()
+    if ProcessInfo.processInfo.environment["PICKE_TAB_SCENARIO"] != nil {
+      prepareDependencies {
+        $0.context = .test
+        $0.feedAdUseCase = FeedAdUseCaseDependency.testValue
+        $0.analyticsUseCase = .testValue
+      }
+    }
   }
 
   var body: some Scene {
     WindowGroup {
-      if let scenario = ProcessInfo.processInfo.environment["PICKE_MEMBER_SCENARIO"],
-         ["owner-remove", "member-leave"].contains(scenario) {
+      if let scenario = ProcessInfo.processInfo.environment["PICKE_TAB_SCENARIO"],
+         ["members", "report", "keyboard-mount"].contains(scenario)
+      {
+        MainTabAuditView(scenario: scenario)
+      } else if let scenario = ProcessInfo.processInfo.environment["PICKE_MEMBER_SCENARIO"],
+                ["owner-remove", "member-leave"].contains(scenario)
+      {
         MemberAuditView(scenario: scenario)
       } else if let scenario = ProcessInfo.processInfo.environment["PICKE_DEADLINE_SCENARIO"],
-         ["normal", "minimum", "cycle"].contains(scenario) {
+                ["normal", "minimum", "cycle"].contains(scenario)
+      {
         DeadlineAuditView(scenario: scenario)
       } else {
         Text("Unknown deadline audit scenario")

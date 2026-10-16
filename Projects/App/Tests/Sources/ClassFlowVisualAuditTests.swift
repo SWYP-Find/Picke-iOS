@@ -244,7 +244,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
       }
     }
-    let (image, _) = try await capture(
+    let (image, bottomImage) = try await capture(
       AnyView(MainTabView(store: store)),
       ready: {
         guard case let .members(memberState)? = store.classState.routes.last?.screen else { return false }
@@ -252,7 +252,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           && memberState.room.memberCapacity == 30 && memberState.viewState == .loaded
           && store.classState.showsTabBar && !store.shouldHideTabBar
       },
-      includeScrollBottom: false,
+      includeScrollBottom: true,
       viewport: CGSize(width: 402, height: 874)
     )
     guard case let .members(memberState)? = store.classState.routes.last?.screen else {
@@ -272,6 +272,17 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     let text = try recognizedAuditText(in: image, name: name)
     for label in ["멤버22/30", "홈", "탐색", "빠른배틀", "클래스", "마이"] {
       XCTAssertTrue(text.contains(label), "Missing \(label) from tab-hosted owner capture: \(text)")
+    }
+    let bottom = try XCTUnwrap(bottomImage)
+    let bottomName = name + "-bottom"
+    try XCTUnwrap(bottom.pngData()).write(to: directory.appendingPathComponent(bottomName + ".png"))
+    let bottomAttachment = XCTAttachment(image: bottom)
+    bottomAttachment.name = bottomName
+    bottomAttachment.lifetime = .keepAlways
+    add(bottomAttachment)
+    let bottomText = try recognizedAuditText(in: bottom, name: bottomName)
+    for label in ["참여자22", "빠른배틀", "클래스", "마이"] {
+      XCTAssertTrue(bottomText.contains(label), "Missing \(label) at member list bottom: \(bottomText)")
     }
   }
 
@@ -2201,22 +2212,39 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         $0.bounds.height < $1.bounds.height
       },
       "Expected visible report content to have a vertical scroll view: \(scrollDiagnostics(in: host.view, window: window))")
-      let bottomOffset = max(
-        -scrollView.adjustedContentInset.top,
-        scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
-      )
-      guard bottomOffset > scrollView.contentOffset.y + 1 else {
+      let bottomOffset = {
+        max(
+          -scrollView.adjustedContentInset.top,
+          scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
+        )
+      }
+      guard bottomOffset() > scrollView.contentOffset.y + 1 else {
         XCTFail("Report scroll view has no uncaptured content below the current viewport")
         throw CaptureError.scrollDidNotReachBottom
       }
-      scrollView.setContentOffset(CGPoint(
-        x: scrollView.contentOffset.x,
-        y: bottomOffset
-      ), animated: false)
-      try await Task.sleep(for: .milliseconds(100))
-      host.view.layoutIfNeeded()
-      guard abs(scrollView.contentOffset.y - bottomOffset) <= 1 else {
-        XCTFail("Report scroll view did not reach its bottom offset")
+      var reachedBottom = false
+      // Lazy stacks revise their estimated content height when distant rows appear.
+      // Recompute after layout so the capture includes the actual final row.
+      for _ in 0 ..< 10 {
+        let target = bottomOffset()
+        scrollView.setContentOffset(CGPoint(
+          x: scrollView.contentOffset.x,
+          y: target
+        ), animated: false)
+        try await Task.sleep(for: .milliseconds(100))
+        host.view.layoutIfNeeded()
+        let updatedBottom = bottomOffset()
+        if abs(scrollView.contentOffset.y - updatedBottom) <= 1,
+           abs(target - updatedBottom) <= 1
+        {
+          reachedBottom = true
+          break
+        }
+      }
+      guard reachedBottom else {
+        XCTFail(
+          "Report scroll view did not reach its current bottom offset: \(scrollView.contentOffset.y) / \(bottomOffset())"
+        )
         throw CaptureError.scrollDidNotReachBottom
       }
       CATransaction.flush()

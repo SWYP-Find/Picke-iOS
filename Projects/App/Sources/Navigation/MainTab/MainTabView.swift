@@ -15,6 +15,7 @@ import TCAFlow
 
 public struct MainTabView: View {
   @Bindable private var store: StoreOf<MainTabCoordinator>
+  @State private var hasMeasuredKeyboard = false
 
   public init(store: StoreOf<MainTabCoordinator>) {
     PickeTabBarAppearance.configure()
@@ -22,6 +23,31 @@ public struct MainTabView: View {
   }
 
   public var body: some View {
+    ZStack {
+      tabLayout()
+
+      MainTabKeyboardObserver { isVisible in
+        if store.isKeyboardVisible != isVisible {
+          store.send(.keyboardVisibilityChanged(isVisible))
+        }
+        hasMeasuredKeyboard = true
+      }
+    }
+  }
+}
+
+private extension MainTabView {
+  @ViewBuilder
+  func tabLayout() -> some View {
+    VStack(spacing: 0) {
+      tabRouter
+      if hasMeasuredKeyboard, !store.shouldHideTabBar {
+        MainTabBar(store: store)
+      }
+    }
+  }
+
+  var tabRouter: some View {
     TCAFlowTabRouter(
       selectedTab: $store.selectedTab.sending(\.selectTab),
       tabs: MainTabCoordinator.Tab.allCases.map {
@@ -39,27 +65,27 @@ public struct MainTabView: View {
       }
     ) {
       tabContent(for: $0)
+        .toolbar(.hidden, for: .tabBar)
     }
     .tint(.neutral900)
-    .toolbar(store.shouldHideTabBar ? .hidden : .visible, for: .tabBar)
+    .toolbar(.hidden, for: .tabBar)
   }
-}
 
-private extension MainTabView {
   @ViewBuilder
   func tabLabel(for tab: TabItem) -> some View {
     let isSelected = store.selectedTab == tab.tag
     let asset = MainTabCoordinator.Tab(rawValue: tab.tag)?
       .iconAsset(isSelected: isSelected) ?? .none
 
-    PickeTabItemLabel(
-      title: tab.title,
-      icon: asset,
-      tag: tab.tag
-    )
+    Label {
+      Text(tab.title)
+        .pretendardFont(.labelSmall)
+    } icon: {
+      Image(asset: asset)
+    }
   }
 
-  /// TabView 는 네 탭의 콘텐츠를 한꺼번에 만들기 때문에, LazyView 로 감싸
+  /// TabView 는 다섯 탭의 콘텐츠를 한꺼번에 만들기 때문에, LazyView 로 감싸
   /// 각 탭이 처음 화면에 올라올 때까지 스토어 스코프와 뷰 생성을 미룬다.
   @ViewBuilder
   func tabContent(for tab: Int) -> some View {
