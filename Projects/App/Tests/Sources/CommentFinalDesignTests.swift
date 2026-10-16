@@ -149,7 +149,10 @@ final class CommentFinalDesignTests: XCTestCase {
     let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
     let window = UIWindow(windowScene: scene)
     window.frame = scene.coordinateSpace.bounds
-    window.rootViewController = UIHostingController(rootView: rootView)
+    window.rootViewController = UIHostingController(rootView: rootView.transaction { transaction in
+      transaction.animation = nil
+      transaction.disablesAnimations = true
+    })
     window.makeKeyAndVisible()
     return window
   }
@@ -217,13 +220,16 @@ final class CommentFinalDesignTests: XCTestCase {
     _ window: UIWindow,
     name: String
   ) async throws -> UIImage {
-    // The inline menu animates for 180 ms; capture only after its presentation settles.
+    // Static captures suppress SwiftUI transitions; still allow pending layout updates to render.
+    window.layoutIfNeeded()
     try await Task.sleep(for: .milliseconds(300))
     window.layoutIfNeeded()
     CATransaction.flush()
+    var didRenderHierarchy = false
     let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
-      window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+      didRenderHierarchy = window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
     }
+    XCTAssertTrue(didRenderHierarchy, "The full comment audit hierarchy must render before capture")
     let directory = try FileManager.default.url(
       for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: true
     ).appendingPathComponent("CommentFinalAudit", isDirectory: true)
