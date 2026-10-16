@@ -37,7 +37,7 @@ public struct ClassReportView: View {
       .foregroundStyle(.gray800)
 
       reportTitle()
-        .padding(.top, 16)
+        .padding(.vertical, 12)
       if store.sourceViewState == .failed {
         PickeRetryErrorView(message: "리포트를 불러오지 못했어요") { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -106,20 +106,27 @@ private extension ClassReportView {
   @ViewBuilder
   func reportTitle() -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      HStack(spacing: 8) {
+      HStack(spacing: 6) {
         Text(store.room.status == .closed ? "마감" : "진행 중")
+          .frame(minHeight: 17)
           .pickeBadge(.filled, size: .tag)
-        Text("#\(store.room.battle.categoryDisplayTitle)").pickeBadge(.filled, size: .tag)
+        Text("#\(store.room.battle.categoryDisplayTitle)")
+          .frame(minHeight: 17)
+          .pickeBadge(.filled, size: .tag)
       }
-      Text(store.room.battle.title)
-        .pretendardFont(.semiBold24)
-        .foregroundStyle(.gray800)
-        .lineLimit(2)
-      Text(store.room.deadline == .distantFuture
-        ? "마감일 없음"
-        : store.room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지")
-        .pretendardFont(.medium13)
-        .foregroundStyle(.gray300)
+      VStack(alignment: .leading, spacing: 8) {
+        Text(store.room.battle.title)
+          .pretendardFont(.semiBold24)
+          .foregroundStyle(.gray800)
+          .lineLimit(2)
+          .frame(minHeight: 31)
+        Text(store.room.deadline == .distantFuture
+          ? "마감일 없음"
+          : store.room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지")
+          .pretendardFont(.regular13)
+          .foregroundStyle(.gray300)
+          .frame(minHeight: 18)
+      }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 16)
@@ -198,14 +205,18 @@ private extension ClassReportView {
     VStack(alignment: .leading, spacing: 24) {
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("내 투표 결과")
-        reportCard(minHeight: store.report != nil ? 136 : 0) {
+        reportCard(
+          padding: 16,
+          spacing: 16,
+          minHeight: store.report != nil ? 146 : 0
+        ) {
           voteAndActivitySummary()
         }
       }
 
       VStack(alignment: .leading, spacing: 12) {
         sectionHeading("AI 피드백")
-        reportCard(padding: 0, horizontalPadding: 0, spacing: 0, minHeight: store.report != nil ? 350 : 0) {
+        reportCard(padding: 0, horizontalPadding: 0, spacing: 0) {
           VStack(alignment: .leading, spacing: 0) {
             switch store.feedbackViewState {
             case let .ready(feedback):
@@ -213,11 +224,16 @@ private extension ClassReportView {
             default:
               feedbackStatus()
                 .padding(16)
-            }
-            if store.report != nil {
-              myOpinionsSection()
+              if store.report != nil {
+                VStack(alignment: .leading, spacing: 16) {
+                  Rectangle().fill(.beige700).frame(height: 1)
+                  myOpinionsSection()
+                }
+                .padding(16)
+              }
             }
           }
+          .padding(1)
         }
       }
 
@@ -407,18 +423,27 @@ private extension ClassReportView {
 
   func sectionHeading(_ title: String) -> some View {
     Text(title)
-      .pretendardFont(.semiBold15)
+      .pretendardFont(.semiBold13)
       .foregroundStyle(.gray800)
+      .frame(minHeight: 18)
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   @ViewBuilder
   func aiFeedbackSummary(_ feedback: ClassAIPersonalFeedback) -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      VStack(alignment: .leading, spacing: 8) {
-        ClassAIInsightHeading(title: "내 판단의 기준")
+      VStack(alignment: .leading, spacing: 6) {
+        ClassAIInsightHeading(
+          title: "내 판단의 기준",
+          titleFont: .semiBold12,
+          titleLineHeight: 17,
+          iconSize: 20,
+          spacing: 6
+        )
         Text(feedback.summaryDetail)
-          .pretendardFont(.regular13)
+          .pretendardFont(.bodySmall)
+          .lineSpacing(feedbackSummaryLinePadding)
+          .padding(.vertical, feedbackSummaryLinePadding / 2)
       }
       .foregroundStyle(.primary500)
       .padding(16)
@@ -430,16 +455,20 @@ private extension ClassReportView {
           "이번에 잘한 점",
           detail: feedback.points[0].detail
         )
-        Rectangle().fill(.beige600).frame(height: 1)
+        Rectangle().fill(.beige700).frame(height: 1)
         insightPoint(
           "한 가지 더 살펴볼 점",
           detail: feedback.points[1].detail
         )
-        Rectangle().fill(.beige600).frame(height: 1)
+        Rectangle().fill(.beige700).frame(height: 1)
         insightPoint(
           "다음 생각 한 걸음",
           detail: feedback.points[2].detail
         )
+        if store.report != nil {
+          Rectangle().fill(.beige700).frame(height: 1)
+          myOpinionsSection()
+        }
       }
       .padding(16)
     }
@@ -448,15 +477,19 @@ private extension ClassReportView {
   @ViewBuilder
   func myOpinionsSection() -> some View {
     VStack(alignment: .leading, spacing: 16) {
-      Rectangle().fill(.beige600).frame(height: 1)
       Button { send(.myOpinionsTapped) } label: {
         HStack {
           Text("내가 남긴 의견 \(store.myOpinionCount)개 보기")
+            .pretendardFont(family: .Bold, size: 12)
+            .frame(minHeight: 17)
           Spacer()
           Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
+            .pretendardFont(.semiBold12)
+            .frame(width: 12, height: 12)
         }
-        .pretendardFont(.semiBold13)
         .foregroundStyle(.primary500)
+        .padding(.vertical, 6)
+        .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       if store.showsMyOpinions {
@@ -470,46 +503,58 @@ private extension ClassReportView {
         }
       }
     }
-    .padding(16)
   }
 
-  func insightPoint(_ label: String, detail: String) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
+  var feedbackSummaryLinePadding: CGFloat {
+    max(0, 12 * 1.4 - UIFont.pretendardFontFamily(family: .Regular, size: 12).lineHeight)
+  }
+
+  var feedbackDetailLinePadding: CGFloat {
+    max(0, 13 * 1.4 - UIFont.pretendardFontFamily(family: .Regular, size: 13).lineHeight)
+  }
+
+  @ViewBuilder
+  func insightPoint(
+    _ label: String,
+    detail: String
+  ) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
       Text(label)
-        .pretendardFont(.semiBold13)
+        .pretendardFont(.semiBold12)
         .foregroundStyle(.primary500)
+        .frame(minHeight: 17)
       Text(detail)
         .pretendardFont(.regular13)
-        .foregroundStyle(.gray800)
+        .foregroundStyle(.gray700)
+        .lineSpacing(feedbackDetailLinePadding)
+        .padding(.vertical, feedbackDetailLinePadding / 2)
     }
   }
 
   @ViewBuilder
   func voteAndActivitySummary() -> some View {
     if store.report != nil {
-      HStack(spacing: 8) {
+      HStack(spacing: 0) {
         voteChoice("사전 선택", value: reportText(.initialChoice))
-        VStack(spacing: 4) {
-          Text("입장 변경")
-            .pretendardFont(family: .SemiBold, size: 12)
-            .foregroundStyle(.beige50)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(.primary500, in: Capsule())
-        }
+        Text("입장 변경")
+          .pretendardFont(.labelXSmall)
+          .foregroundStyle(.beige50)
+          .frame(minHeight: 14)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .background(.primary500, in: Capsule())
         voteChoice("사후 선택", value: reportText(.finalChoice))
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 12)
-      .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+      .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       HStack(spacing: 0) {
         activityCount(reportText(.commentCount), label: "댓글")
-        Rectangle().fill(.beige600).frame(width: 1, height: 36)
+        Rectangle().fill(.beige600).frame(width: 1, height: 38)
         activityCount(reportText(.replyCount), label: "대댓글")
-        Rectangle().fill(.beige600).frame(width: 1, height: 36)
+        Rectangle().fill(.beige600).frame(width: 1, height: 38)
         activityCount(reportText(.receivedLikeCount), label: "받은 추천")
       }
-      .padding(.vertical, 4)
     } else {
       unavailableReport(
         title: "내 투표와 참여 기록을 불러올 수 없어요",
@@ -518,18 +563,26 @@ private extension ClassReportView {
     }
   }
 
-  func voteChoice(_ title: String, value: String) -> some View {
+  @ViewBuilder
+  func voteChoice(
+    _ title: String,
+    value: String
+  ) -> some View {
     VStack(spacing: 4) {
-      Text(title).pretendardFont(family: .Regular, size: 12).foregroundStyle(.gray300)
-      Text(value).pretendardFont(.semiBold13).foregroundStyle(.gray800)
+      Text(title).pretendardFont(.medium11).foregroundStyle(.gray300).frame(minHeight: 15)
+      Text(value).pretendardFont(.semiBold12).foregroundStyle(.gray800).frame(minHeight: 17)
     }
     .frame(maxWidth: .infinity)
   }
 
-  func activityCount(_ count: String, label: String) -> some View {
-    VStack(spacing: 2) {
-      Text(count).pretendardFont(family: .SemiBold, size: 18).foregroundStyle(.gray800)
-      Text(label).pretendardFont(.regular13).foregroundStyle(.gray300)
+  @ViewBuilder
+  func activityCount(
+    _ count: String,
+    label: String
+  ) -> some View {
+    VStack(spacing: 0) {
+      Text(count).pretendardFont(.labelLarge).foregroundStyle(.gray800).frame(minHeight: 24)
+      Text(label).pretendardFont(.medium10).foregroundStyle(.gray300).frame(minHeight: 14)
     }
     .frame(maxWidth: .infinity)
   }

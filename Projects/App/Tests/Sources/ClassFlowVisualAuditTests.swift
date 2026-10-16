@@ -15,6 +15,7 @@ import HomeDomainInterface
 @testable import Picke
 import PickeAnalyticsInterface
 import PickeCoreUtility
+import PickeDesignKit
 import SwiftUI
 import TCAFlow
 import UIKit
@@ -133,6 +134,97 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       XCTAssertTrue(detailText.contains("클래스상세"), "Detail title missing from rendered pixels: \(detailText)")
       XCTAssertTrue(detailText.contains("이번클래스배틀"), "Detail battle section missing: \(detailText)")
       XCTAssertFalse(containsReportHeadings(detailText), "Report must no longer be displayed after back")
+    }
+  }
+
+  @MainActor
+  func testCaptureMemberReportTypography() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture member report typography")
+    }
+    let fixture = MockClassReport.figma
+    var fontMetrics: [String] = []
+    for size: CGFloat in [12, 13] {
+      let font = try XCTUnwrap(UIFont(name: "PretendardVariable-Regular", size: size))
+      XCTAssertEqual(font.fontName, "PretendardVariable-Regular")
+      XCTAssertTrue(font.familyName.contains("Pretendard"))
+      XCTAssertEqual(UIFont.pretendardFontFamily(family: .Regular, size: size).lineHeight, font.lineHeight)
+      let width = (fixture[.aiSummaryDetail] as NSString).size(withAttributes: [.font: font]).width
+      fontMetrics.append(
+        "name=\(font.fontName), family=\(font.familyName), size=\(font.pointSize), lineHeight=\(font.lineHeight), summaryWidth=\(width)"
+      )
+    }
+    let metricsAttachment = XCTAttachment(string: fontMetrics.joined(separator: "\n"))
+    metricsAttachment.name = "member-report-runtime-font-metrics"
+    metricsAttachment.lifetime = .keepAlways
+    add(metricsAttachment)
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func save(
+      _ image: UIImage,
+      name: String
+    ) throws -> String {
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name + " (cached design copy; no model call)"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      return try recognizedAuditText(in: image, name: name)
+    }
+
+    for viewport in [CGSize(width: 402, height: 874), CGSize(width: 375, height: 667)] {
+      var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+      state.report = fixture
+      state.sourceViewState = .ready
+      state.feedback = ClassAIPersonalFeedback(
+        summaryTitle: fixture[.aiSummaryTitle],
+        summaryDetail: fixture[.aiSummaryDetail],
+        points: [
+          .init(title: fixture[.feedbackTitle1], detail: fixture[.feedbackDetail1]),
+          .init(title: fixture[.feedbackTitle2], detail: fixture[.feedbackDetail2]),
+          .init(title: fixture[.feedbackTitle3], detail: fixture[.feedbackDetail3]),
+        ],
+        nextQuestion: fixture[.nextQuestion],
+        nextHint: fixture[.nextHint]
+      )
+      let store = Store(initialState: state) { ClassReportFeature() }
+      let prefix = "member-report-typography-\(Int(viewport.width))"
+      let (top, bottom) = try await capture(
+        AnyView(ClassReportView(store: store)),
+        ready: nil,
+        includeScrollBottom: true,
+        viewport: viewport
+      )
+      let topText = try save(top, name: prefix + "-top")
+      XCTAssertTrue(topText.contains("내투표결과"), "Vote heading missing: \(topText)")
+      XCTAssertTrue(topText.contains("AI피드백"), "AI heading missing: \(topText)")
+      let bottomText = try save(XCTUnwrap(bottom), name: prefix + "-bottom")
+      XCTAssertTrue(bottomText.contains("다음생각한걸음"), "Final feedback point missing: \(bottomText)")
+      XCTAssertTrue(bottomText.contains("내가남긴의견3개보기"), "Opinion action missing: \(bottomText)")
+      XCTAssertFalse(bottomText.contains("다음생각해보기"), "Duplicate external footer remains: \(bottomText)")
+
+      store.send(.view(.myOpinionsTapped))
+      XCTAssertTrue(store.showsMyOpinions)
+      let (expandedTop, expandedBottom) = try await capture(
+        AnyView(ClassReportView(store: store)),
+        ready: nil,
+        includeScrollBottom: true,
+        viewport: viewport
+      )
+      _ = try save(expandedTop, name: prefix + "-expanded-top")
+      let expandedText = try save(XCTUnwrap(expandedBottom), name: prefix + "-expanded-bottom")
+      XCTAssertTrue(
+        expandedText.contains("교정의기준을세우는일이중요하다고느꼈어요"),
+        "Last opinion missing from the expanded scroll bottom: \(expandedText)"
+      )
+      store.send(.view(.myOpinionsTapped))
+      XCTAssertFalse(store.showsMyOpinions)
     }
   }
 
@@ -383,7 +475,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
-    func saveStatus(_ name: String, view: AnyView, unavailableText: String?) async throws {
+    func saveStatus(
+      _ name: String,
+      view: AnyView,
+      unavailableText: String?,
+      expectsOpinionAction: Bool = false
+    ) async throws {
       let (image, _) = try await capture(view, ready: nil, includeScrollBottom: false)
       try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
       let attachment = XCTAttachment(image: image)
@@ -393,6 +490,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       if let unavailableText {
         let text = try recognizedAuditText(in: image, name: name)
         XCTAssertTrue(text.contains(unavailableText), "Expected AI unavailable message in pixels: \(text)")
+        if expectsOpinionAction {
+          XCTAssertTrue(text.contains("내가남긴의견3개보기"), "Opinions must remain available: \(text)")
+        }
       }
     }
 
@@ -416,7 +516,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       view: AnyView(ClassReportView(store: Store(initialState: member) {
         ClassReportFeature()
       })),
-      unavailableText: "피드백을사용할수없어요"
+      unavailableText: "피드백을사용할수없어요",
+      expectsOpinionAction: true
     )
 
     var owner = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
