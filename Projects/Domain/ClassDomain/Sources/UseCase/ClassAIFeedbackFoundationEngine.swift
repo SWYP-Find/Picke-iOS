@@ -13,6 +13,8 @@ import Foundation
 
   @available(iOS 26.0, *)
   enum ClassAIFeedbackFoundationEngine {
+    @TaskLocal static var auditDiagnostic: (@Sendable (String) -> Void)?
+
     private static let responseTokens = 768
     private static let headroomTokens = 128
 
@@ -84,12 +86,13 @@ import Foundation
           case .classInsight:
             let response = try await session.respond(to: prompt, generating: InsightOutput.self, options: options)
             try Task.checkCancellation()
-            return try .classInsight(validated(response.content.paragraph, maximum: 100))
+            return try .classInsight(validated(response.content.paragraph, maximum: 100, field: "paragraph"))
           }
         } catch {
           if error is CancellationError {
             throw error
           }
+          auditDiagnostic?("attempt=\(attempt) error=\(diagnosticCategory(error))")
           if isContextOverflow(error) {
             guard attempt == 0 else { throw ClassAIFeedbackError.contextTooLong }
             context = try context.shrunkAfterContextOverflow()
@@ -130,32 +133,92 @@ import Foundation
 
     private static func validatedPersonal(_ value: PersonalOutput) throws -> ClassAIPersonalFeedback {
       try ClassAIPersonalFeedback(
-        summaryTitle: validated(value.summaryTitle, maximum: 12),
-        summaryDetail: validated(value.summaryDetail, maximum: 30),
+        summaryTitle: validated(value.summaryTitle, maximum: 12, field: "summaryTitle"),
+        summaryDetail: validated(value.summaryDetail, maximum: 30, field: "summaryDetail"),
         points: [
           ClassAIFeedbackPoint(
-            title: validated(value.point1Title, maximum: 10),
-            detail: validated(value.point1Detail, maximum: 20)
+            title: validated(value.point1Title, maximum: 10, field: "point1Title"),
+            detail: validated(value.point1Detail, maximum: 20, field: "point1Detail")
           ),
           ClassAIFeedbackPoint(
-            title: validated(value.point2Title, maximum: 10),
-            detail: validated(value.point2Detail, maximum: 20)
+            title: validated(value.point2Title, maximum: 10, field: "point2Title"),
+            detail: validated(value.point2Detail, maximum: 20, field: "point2Detail")
           ),
           ClassAIFeedbackPoint(
-            title: validated(value.point3Title, maximum: 10),
-            detail: validated(value.point3Detail, maximum: 20)
+            title: validated(value.point3Title, maximum: 10, field: "point3Title"),
+            detail: validated(value.point3Detail, maximum: 20, field: "point3Detail")
           ),
         ],
-        nextQuestion: validated(value.nextQuestion, maximum: 25),
-        nextHint: validated(value.nextHint, maximum: 15)
+        nextQuestion: validated(value.nextQuestion, maximum: 25, field: "nextQuestion"),
+        nextHint: validated(value.nextHint, maximum: 15, field: "nextHint")
       )
     }
 
-    static func validated(_ text: String, maximum: Int) throws -> String {
+    static func validated(
+      _ text: String,
+      maximum: Int,
+      field: String = "unspecified"
+    ) throws -> String {
       let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !trimmed.isEmpty else { throw ClassAIFeedbackError.generationFailed }
-      guard trimmed.count <= maximum else { throw ClassAIFeedbackError.temporarilyUnavailable }
+      guard !trimmed.isEmpty else {
+        auditDiagnostic?("validation=empty field=\(field) trimmedCount=0 maximum=\(maximum)")
+        throw ClassAIFeedbackError.generationFailed
+      }
+      guard trimmed.count <= maximum else {
+        auditDiagnostic?("validation=overlong field=\(field) trimmedCount=\(trimmed.count) maximum=\(maximum)")
+        throw ClassAIFeedbackError.temporarilyUnavailable
+      }
       return trimmed
+    }
+
+    static func diagnosticCategory(_ error: Error) -> String {
+      if error is ClassAIFeedbackError {
+        return "ClassAIFeedbackError"
+      }
+      if #available(iOS 27.0, *) {
+        if let error = error as? LanguageModelError {
+          switch error {
+          case .unsupportedLanguageOrLocale: return "LanguageModelError.unsupportedLanguageOrLocale"
+          case .rateLimited: return "LanguageModelError.rateLimited"
+          case .timeout: return "LanguageModelError.timeout"
+          case .contextSizeExceeded: return "LanguageModelError.contextSizeExceeded"
+          case .guardrailViolation: return "LanguageModelError.guardrailViolation"
+          case .refusal: return "LanguageModelError.refusal"
+          case .unsupportedCapability: return "LanguageModelError.unsupportedCapability"
+          case .unsupportedTranscriptContent: return "LanguageModelError.unsupportedTranscriptContent"
+          case .unsupportedGenerationGuide: return "LanguageModelError.unsupportedGenerationGuide"
+          @unknown default: return "LanguageModelError.unclassified"
+          }
+        }
+        if let error = error as? SystemLanguageModel.Error {
+          switch error {
+          case .assetsUnavailable: return "SystemLanguageModel.Error.assetsUnavailable"
+          @unknown default: return "SystemLanguageModel.Error.unclassified"
+          }
+        }
+        if let error = error as? LanguageModelSession.Error {
+          switch error {
+          case .concurrentRequests: return "LanguageModelSession.Error.concurrentRequests"
+          case .transcriptMutationWhileResponding: return "LanguageModelSession.Error.transcriptMutationWhileResponding"
+          @unknown default: return "LanguageModelSession.Error.unclassified"
+          }
+        }
+      }
+      if let error = error as? LanguageModelSession.GenerationError {
+        switch error {
+        case .unsupportedLanguageOrLocale: return "GenerationError.unsupportedLanguageOrLocale"
+        case .assetsUnavailable: return "GenerationError.assetsUnavailable"
+        case .rateLimited: return "GenerationError.rateLimited"
+        case .concurrentRequests: return "GenerationError.concurrentRequests"
+        case .exceededContextWindowSize: return "GenerationError.exceededContextWindowSize"
+        case .guardrailViolation: return "GenerationError.guardrailViolation"
+        case .unsupportedGuide: return "GenerationError.unsupportedGuide"
+        case .decodingFailure: return "GenerationError.decodingFailure"
+        case .refusal: return "GenerationError.refusal"
+        @unknown default: return "GenerationError.unclassified"
+        }
+      }
+      return "unclassified"
     }
 
     static func isContextOverflow(_ error: Error) -> Bool {

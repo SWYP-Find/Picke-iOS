@@ -10,10 +10,37 @@ import ClassDomainInterface
 import Foundation
 import XCTest
 
+#if canImport(FoundationModels)
+  import FoundationModels
+#endif
+
 final class ClassAIFeedbackFoundationModelsTests: XCTestCase {
   #if canImport(FoundationModels)
     @available(iOS 26.0, *)
     func testGeneratedFieldLengthValidationKeepsOnlyOverlengthRetryable() throws {
+      let diagnostics = FeedbackAuditDiagnostics()
+      try ClassAIFeedbackFoundationEngine.$auditDiagnostic.withValue({ diagnostics.append($0) }) {
+        XCTAssertThrowsError(
+          try ClassAIFeedbackFoundationEngine.validated("  가나다  ", maximum: 2, field: "summaryTitle")
+        )
+      }
+      XCTAssertEqual(diagnostics.messages, ["validation=overlong field=summaryTitle trimmedCount=3 maximum=2"])
+      XCTAssertNil(ClassAIFeedbackFoundationEngine.auditDiagnostic)
+      let errorContext = LanguageModelSession.GenerationError.Context(debugDescription: "private content")
+      XCTAssertEqual(
+        ClassAIFeedbackFoundationEngine.diagnosticCategory(
+          LanguageModelSession.GenerationError.rateLimited(errorContext)
+        ),
+        "GenerationError.rateLimited"
+      )
+      if #available(iOS 27.0, *) {
+        XCTAssertEqual(
+          ClassAIFeedbackFoundationEngine.diagnosticCategory(
+            LanguageModelError.timeout(.init(debugDescription: "private content"))
+          ),
+          "LanguageModelError.timeout"
+        )
+      }
       XCTAssertEqual(try ClassAIFeedbackFoundationEngine.validated("  토론  ", maximum: 2), "토론")
       XCTAssertThrowsError(try ClassAIFeedbackFoundationEngine.validated("가나다", maximum: 2)) { error in
         XCTAssertEqual(error as? ClassAIFeedbackError, .temporarilyUnavailable)
@@ -40,8 +67,29 @@ final class ClassAIFeedbackFoundationModelsTests: XCTestCase {
     )
     let context = try ClassAIFeedbackContext.personal(room: room, report: report, isOwner: false)
     let client = ClassAIFeedbackUseCaseDependency.liveValue
+    let diagnostics = FeedbackAuditDiagnostics()
+    defer {
+      let attachment = XCTAttachment(string: diagnostics.messages.joined(separator: "\n"))
+      attachment.name = "Class AI feedback 실패 원인 진단"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
     do {
-      let result = try await client.generate(context: context)
+      let result: ClassAIFeedbackResult
+      #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+          diagnostics.append("diagnosticSink=installed")
+          result = try await ClassAIFeedbackFoundationEngine.$auditDiagnostic.withValue({ diagnostics.append($0) }) {
+            try await client.generate(context: context)
+          }
+        } else {
+          diagnostics.append("diagnosticSink=unavailable")
+          result = try await client.generate(context: context)
+        }
+      #else
+        diagnostics.append("diagnosticSink=unavailable")
+        result = try await client.generate(context: context)
+      #endif
       let attachment =
         XCTAttachment(
           string: "OS \(ProcessInfo.processInfo.operatingSystemVersionString), evidence \(context.writtenEvidence.count), result \(result)"
@@ -58,5 +106,18 @@ final class ClassAIFeedbackFoundationModelsTests: XCTestCase {
     } catch let error as ClassAIFeedbackError where error.isUnavailable || error == .modelNotReady {
       throw XCTSkip("기기에서 한국어 Foundation Models를 사용할 수 없습니다: \(error)")
     }
+  }
+}
+
+private final class FeedbackAuditDiagnostics: @unchecked Sendable {
+  private let lock = NSLock()
+  private var entries: [String] = []
+
+  var messages: [String] {
+    lock.withLock { entries }
+  }
+
+  func append(_ message: String) {
+    lock.withLock { entries.append(message) }
   }
 }
