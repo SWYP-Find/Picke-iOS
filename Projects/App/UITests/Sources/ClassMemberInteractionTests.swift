@@ -33,6 +33,68 @@ final class ClassMemberInteractionTests: XCTestCase {
     continueAfterFailure = false
   }
 
+  func testOwnerNameSheetRejectsWhitespaceAndPersistsAfterReentry() throws {
+    let app = launch(scenario: "owner-remove")
+    waitUntil("owner fixture ready") {
+      self.audit(in: app)?.status == "ready" && self.audit(in: app)?.route == "list"
+    }
+    try targetCard(in: app).tap()
+    waitUntil("class detail opened") { self.audit(in: app)?.route == "detail" }
+    uniqueButton(beginning: "클래스 멤버", in: app).tap()
+    waitForLoadedMembers(in: app)
+
+    let search = app.textFields.matching(NSPredicate(
+      format: "placeholderValue == %@", "검색어를 입력해주세요."
+    ))
+    XCTAssertEqual(search.count, 1)
+    let initialSearchValue = search.firstMatch.value as? String
+    uniqueButton(label: "내 이름 수정", in: app).tap()
+    let nameFields = app.textFields.matching(NSPredicate(
+      format: "placeholderValue == %@", "이름을 입력해주세요"
+    ))
+    XCTAssertTrue(nameFields.firstMatch.waitForExistence(timeout: 5))
+    XCTAssertEqual(nameFields.count, 1)
+    let nameField = nameFields.firstMatch
+    XCTAssertEqual(nameField.value as? String, "김선생")
+    let save = uniqueButton(label: "수정하기", in: app)
+    waitUntil("prefilled name can be saved") { save.isEnabled && save.isHittable }
+    attach(app, name: "member-name-prefilled")
+
+    clearNameField(nameField)
+    nameField.typeText(" ")
+    waitUntil("whitespace cannot be saved") {
+      nameFields.count == 1 && nameField.value as? String == " " && !save.isEnabled
+    }
+    XCTAssertEqual(search.firstMatch.value as? String, initialSearchValue)
+    attach(app, name: "member-name-whitespace-disabled")
+
+    clearNameField(nameField)
+    nameField.typeText("검증이름")
+    waitUntil("valid replacement can be saved") {
+      nameField.value as? String == "검증이름" && save.isEnabled && save.isHittable
+    }
+    save.tap()
+    waitUntil("saved name is rendered and sheet is dismissed") {
+      nameFields.count == 0 && app.staticTexts["검증이름"].exists
+        && !app.staticTexts["김선생"].exists
+    }
+    XCTAssertEqual(search.firstMatch.value as? String, initialSearchValue)
+    attach(app, name: "member-name-saved")
+
+    try tapDiscoveredBack(in: app, title: "클래스 멤버")
+    waitUntil("returned to class detail") { self.audit(in: app)?.route == "detail" }
+    uniqueButton(beginning: "클래스 멤버", in: app).tap()
+    waitForLoadedMembers(in: app)
+    XCTAssertTrue(app.staticTexts["검증이름"].exists)
+    XCTAssertFalse(app.staticTexts["김선생"].exists)
+    uniqueButton(label: "내 이름 수정", in: app).tap()
+    waitUntil("repository name is prefilled after reentry") {
+      nameFields.count == 1 && nameFields.firstMatch.value as? String == "검증이름"
+        && save.isEnabled && save.isHittable
+    }
+    attach(app, name: "member-name-reentered")
+  }
+
   func testOwnerRemovesMemberAndUpdatedCountSurvivesBackNavigation() throws {
     let app = launch(scenario: "owner-remove")
     waitUntil("owner fixture ready") {
@@ -141,6 +203,26 @@ final class ClassMemberInteractionTests: XCTestCase {
 
 @MainActor
 private extension ClassMemberInteractionTests {
+  func waitForLoadedMembers(in app: XCUIApplication) {
+    waitUntil("ten member rows loaded without skeletons") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.status == "ready" && state.route == "members"
+        && state.visibleMemberIDs.count == 10
+        && app.buttons["공은지 내보내기"].isHittable
+        && !app.descendants(matching: .any)["skeleton_root"].exists
+    }
+  }
+
+  func clearNameField(_ field: XCUIElement) {
+    field.tap()
+    let current = field.value as? String ?? ""
+    field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
+    waitUntil("name input cleared") {
+      let value = field.value as? String
+      return value == "" || value == "이름을 입력해주세요"
+    }
+  }
+
   func launch(scenario: String) -> XCUIApplication {
     let app = XCUIApplication(bundleIdentifier: "com.picke.class-audit")
     app.launchEnvironment["PICKE_MEMBER_SCENARIO"] = scenario
