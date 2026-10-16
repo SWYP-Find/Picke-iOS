@@ -692,11 +692,33 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       ClassMemberFeature()
     })), expectedText: "멤버목록을불러올수없어요")
     member.loadErrorMessage = nil
+    member.room = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: 0,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
+    )
     member.viewState = .empty
     XCTAssertEqual(member.viewState, .empty)
-    try await saveState("member-empty", view: AnyView(ClassMemberView(store: Store(initialState: member) {
-      ClassMemberFeature()
-    })), expectedText: "아직참여한멤버가없어요")
+    XCTAssertEqual(member.room.memberCount, 0)
+    XCTAssertTrue(member.members.isEmpty)
+    try await saveState(
+      "member-empty",
+      view: AnyView(ClassMemberView(store: Store(initialState: member) {
+        ClassMemberFeature()
+      })),
+      expectedText: "아직참여한멤버가없어요",
+      additionalExpectedText: ["멤버0"],
+      excludedText: ["멤버12"]
+    )
 
     let voteRoom = room
     let battleID = 1001
