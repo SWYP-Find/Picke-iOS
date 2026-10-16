@@ -219,7 +219,7 @@ struct ClassDomainTests {
       "김선생", "공은지", "권동현", "김민지", "천다올", "유시영", "주천수", "김예은", "서원지", "현준혁",
     ])
     let avatars: [ClassMemberAvatar?] = [
-      nil, nil, nil, .penguin, .dog, .sloth, nil, .fox, .hamster, .raccoon,
+      .lion, .koala, .bear, .penguin, .dog, .sloth, .alpaca, .fox, .hamster, .raccoon,
     ]
     #expect(members.prefix(10).map(\.avatar) == avatars)
   }

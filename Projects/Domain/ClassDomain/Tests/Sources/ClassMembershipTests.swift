@@ -85,17 +85,16 @@ struct ClassMembershipTests {
       name: "새 이름"
     )
     #expect(renamed.name == "새 이름")
-    #expect(membersBefore[0].avatar == nil)
     #expect(renamed.id == membersBefore[0].id)
     #expect(renamed.isOwner == membersBefore[0].isOwner)
     #expect(renamed.avatar == membersBefore[0].avatar)
     #expect(try await repository.fetchMembers(roomID: room.id).first == renamed)
   }
 
-  @Test
-  func 주입한_운영자_아바타는_이름_변경_뒤에도_유지된다() async throws {
+  @Test(arguments: [nil, .penguin] as [ClassMemberAvatar?])
+  func 주입한_운영자_아바타는_이름_변경_뒤에도_유지된다(avatar: ClassMemberAvatar?) async throws {
     let room = ClassRoom.mocks[0]
-    let owner = ClassMember(id: 1, name: "김선생", isOwner: true, avatar: .penguin)
+    let owner = ClassMember(id: 1, name: "김선생", isOwner: true, avatar: avatar)
     let repository = MockClassRepository(
       rooms: [room],
       availableRooms: [],
@@ -109,7 +108,7 @@ struct ClassMembershipTests {
       name: "새 이름"
     )
 
-    #expect(renamed == ClassMember(id: 1, name: "새 이름", isOwner: true, avatar: .penguin))
+    #expect(renamed == ClassMember(id: 1, name: "새 이름", isOwner: true, avatar: avatar))
     #expect(try await repository.fetchMembers(roomID: room.id) == [renamed])
     #expect(try await repository.fetchMyClasses().first?.memberCount == 1)
   }

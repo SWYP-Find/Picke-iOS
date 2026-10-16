@@ -12,6 +12,7 @@ import Foundation
 import PickeDesignKit
 import SwiftUI
 import TCAFlow
+import UIKit
 
 /// Isolated fixture for tapping the production class list and member screens.
 struct MemberAuditView: View {
@@ -27,6 +28,12 @@ struct MemberAuditView: View {
   @State private var currentMemberID: Int?
   @State private var snapshotKey = ""
   @State private var snapshotError = ""
+  @State private var nativeNameObserved = false
+  @State private var nativeNameFocused = false
+  @State private var nativeNameBeginCount = 0
+  @State private var nativeNameEndCount = 0
+  @State private var nativeNameChangeCount = 0
+  @State private var nativeNameValue = ""
 
   init(scenario: String) {
     self.scenario = scenario
@@ -90,10 +97,41 @@ struct MemberAuditView: View {
     .task(id: routeSnapshotKey) {
       await refreshSnapshot(for: routeSnapshotKey)
     }
+    .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) {
+      recordNameFieldEvent($0, kind: .begin)
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidEndEditingNotification)) {
+      recordNameFieldEvent($0, kind: .end)
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidChangeNotification)) {
+      recordNameFieldEvent($0, kind: .change)
+    }
   }
 }
 
 private extension MemberAuditView {
+  enum NameFieldEvent {
+    case begin
+    case end
+    case change
+  }
+
+  func recordNameFieldEvent(
+    _ notification: Notification,
+    kind: NameFieldEvent
+  ) {
+    guard let field = notification.object as? UITextField,
+          field.placeholder == "이름을 입력해주세요" else { return }
+    nativeNameObserved = true
+    nativeNameFocused = field.isFirstResponder
+    nativeNameValue = field.text ?? ""
+    switch kind {
+    case .begin: nativeNameBeginCount += 1
+    case .end: nativeNameEndCount += 1
+    case .change: nativeNameChangeCount += 1
+    }
+  }
+
   var diagnostics: some View {
     Text("Member UI audit")
       .pretendardFont(family: .Regular, size: 10)
@@ -144,6 +182,12 @@ private extension MemberAuditView {
       "routeSnapshotKey": routeSnapshotKey,
       "status": snapshotError.isEmpty && snapshotKey == routeSnapshotKey ? "ready" : "pending",
       "error": snapshotError,
+      "nativeNameObserved": nativeNameObserved,
+      "nativeNameFocused": nativeNameFocused,
+      "nativeNameBeginCount": nativeNameBeginCount,
+      "nativeNameEndCount": nativeNameEndCount,
+      "nativeNameChangeCount": nativeNameChangeCount,
+      "nativeNameValue": nativeNameValue,
     ]
     guard let data = try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]),
           let json = String(data: data, encoding: .utf8) else { return "{}" }
@@ -163,8 +207,8 @@ private extension MemberAuditView {
       guard Set(roomIDs).count == roomIDs.count,
             Set(memberIDs).count == memberIDs.count,
             memberIDs.contains(1),
-            (!snapshotKey.isEmpty || (roomIDs == expectedInitialRooms && memberIDs.contains(2))),
-            (!snapshotKey.isEmpty || currentID == (scenario == "owner-remove" ? 1 : 2)),
+            !snapshotKey.isEmpty || (roomIDs == expectedInitialRooms && memberIDs.contains(2)),
+            !snapshotKey.isEmpty || currentID == (scenario == "owner-remove" ? 1 : 2),
             scenario == "owner-remove" || (survivorCurrentID == 2 && survivorMembers.contains(where: { $0.id == 2 }))
       else {
         snapshotError = "invalid fixture IDs or current member"

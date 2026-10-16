@@ -24,6 +24,12 @@ final class ClassMemberInteractionTests: XCTestCase {
     let routeSnapshotKey: String
     let status: String
     let error: String
+    let nativeNameObserved: Bool?
+    let nativeNameFocused: Bool?
+    let nativeNameBeginCount: Int?
+    let nativeNameEndCount: Int?
+    let nativeNameChangeCount: Int?
+    let nativeNameValue: String?
   }
 
   private let targetTitle = "회원 검증 대상 클래스"
@@ -43,15 +49,14 @@ final class ClassMemberInteractionTests: XCTestCase {
     uniqueButton(beginning: "클래스 멤버", in: app).tap()
     waitForLoadedMembers(in: app)
 
-    let search = app.textFields.matching(NSPredicate(
-      format: "placeholderValue == %@", "이름을 입력해주세요."
-    ))
+    let search = app.textFields.matching(identifier: "class-member-search")
     XCTAssertEqual(search.count, 1)
+    XCTAssertEqual(search.matching(NSPredicate(
+      format: "placeholderValue == %@", "검색어를 입력해주세요."
+    )).count, 1)
     let initialSearchValue = search.firstMatch.value as? String
     uniqueButton(label: "내 이름 수정", in: app).tap()
-    let nameFields = app.textFields.matching(NSPredicate(
-      format: "placeholderValue == %@", "이름을 입력해주세요"
-    ))
+    let nameFields = app.textFields.matching(identifier: "class-member-name")
     XCTAssertTrue(nameFields.firstMatch.waitForExistence(timeout: 5))
     XCTAssertEqual(nameFields.count, 1)
     let nameField = nameFields.firstMatch
@@ -59,8 +64,11 @@ final class ClassMemberInteractionTests: XCTestCase {
     let save = uniqueButton(label: "수정하기", in: app)
     waitUntil("prefilled name can be saved") { save.isEnabled && save.isHittable }
     attach(app, name: "member-name-prefilled")
+    attachNameDiagnostics(app, field: nameField, name: "member-name-before-clear")
 
     clearNameField(nameField)
+    attachNameDiagnostics(app, field: nameField, name: "member-name-after-clear")
+    attachNameDiagnostics(app, field: nameField, name: "member-name-before-whitespace")
     nameField.typeText(" ")
     waitUntil("whitespace cannot be saved") {
       nameFields.count == 1 && nameField.value as? String == " " && !save.isEnabled
@@ -221,6 +229,31 @@ private extension ClassMemberInteractionTests {
       let value = field.value as? String
       return value == "" || value == "이름을 입력해주세요"
     }
+  }
+
+  func attachNameDiagnostics(
+    _ app: XCUIApplication,
+    field: XCUIElement,
+    name: String
+  ) {
+    let state = audit(in: app)
+    let focusCount = app.textFields.matching(identifier: "class-member-name")
+      .matching(NSPredicate(format: "hasKeyboardFocus == YES")).count
+    let details = """
+    native observed: \(String(describing: state?.nativeNameObserved))
+    native focused: \(String(describing: state?.nativeNameFocused))
+    native begin/end/change: \(String(describing: state?.nativeNameBeginCount))/\(String(describing: state?.nativeNameEndCount))/\(String(describing: state?.nativeNameChangeCount))
+    native value: \(String(describing: state?.nativeNameValue))
+    AX focus predicate count: \(focusCount)
+    keyboard count: \(app.keyboards.count)
+    field frame: \(field.frame)
+    field value: \(String(describing: field.value))
+    """
+    let text = XCTAttachment(string: details)
+    text.name = "\(name)-diagnostics"
+    text.lifetime = .keepAlways
+    add(text)
+    attach(app, name: name)
   }
 
   func launch(scenario: String) -> XCUIApplication {

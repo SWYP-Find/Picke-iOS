@@ -25,7 +25,7 @@ public struct ClassMemberView: View {
 
       searchField()
         .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.top, 16)
 
       ScrollView {
         LazyVStack(alignment: .leading, spacing: 0) {
@@ -167,17 +167,18 @@ private extension ClassMemberView {
         .frame(width: 18, height: 18)
         .foregroundStyle(.gray800)
       TextField(
-        "이름을 입력해주세요.",
+        "검색어를 입력해주세요.",
         text: $store.searchText,
-        prompt: Text("이름을 입력해주세요.").foregroundStyle(.gray300)
+        prompt: Text("검색어를 입력해주세요.").foregroundStyle(.gray300)
       )
-        .pretendardFont(family: .Medium, size: 13)
-        .foregroundStyle(.gray800)
+      .pretendardFont(family: .Medium, size: 13)
+      .foregroundStyle(.gray800)
+      .accessibilityIdentifier("class-member-search")
     }
     .padding(.horizontal, 12)
     .frame(height: 44)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.gray100, lineWidth: 1))
+    .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
   }
 
   @ViewBuilder
@@ -194,9 +195,9 @@ private extension ClassMemberView {
 
       if member.id == store.currentMemberID {
         Button { send(.editNameTapped(member.id)) } label: {
-          Image(systemName: "pencil")
-            .font(.system(size: 14))
-            .foregroundStyle(.gray800)
+          ClassMemberEditIcon()
+            .stroke(.gray800, style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
+            .frame(width: 20, height: 20)
         }
         .accessibilityLabel("내 이름 수정")
       }
@@ -210,13 +211,16 @@ private extension ClassMemberView {
       } else if store.room.role == .owner, member.id != store.currentMemberID {
         Button { send(.removeTapped(member.id)) } label: {
           Image(systemName: "minus.circle.fill")
-            .font(.system(size: 18))
-            .foregroundStyle(.gray100)
+            .resizable()
+            .scaledToFit()
+            .symbolRenderingMode(.palette)
+            .foregroundStyle(.gray300, .gray100)
+            .frame(width: 20, height: 20)
         }
         .accessibilityLabel("\(member.name) 내보내기")
       }
     }
-    .frame(minHeight: 24)
+    .frame(minHeight: 36)
     .padding(.vertical, 16)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
   }
@@ -372,6 +376,7 @@ private extension ClassMemberView {
         TextField("이름을 입력해주세요", text: $store.draftName)
           .textInputAutocapitalization(.never)
           .pickeTextField(height: 44)
+          .accessibilityIdentifier("class-member-name")
 
         Button("수정하기") { send(.nameSaved) }
           .disabled(store.isSaving)
@@ -380,7 +385,7 @@ private extension ClassMemberView {
       }
       .padding(.top, 12)
       .padding(.horizontal, 16)
-      .padding(.bottom, 32)
+      .padding(.bottom, 16)
       .frame(maxWidth: .infinity)
       .background(
         UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)

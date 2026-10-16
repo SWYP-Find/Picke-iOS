@@ -9,33 +9,19 @@ import Foundation
 
 public actor MockClassRepository: ClassInterface {
   public static let figmaOwnerMembers: [ClassMember] = [
-    ClassMember(id: 1, name: "김선생", isOwner: true),
-    ClassMember(id: 2, name: "공은지"),
-    ClassMember(id: 3, name: "권동현"),
+    ClassMember(id: 1, name: "김선생", isOwner: true, avatar: .lion),
+    ClassMember(id: 2, name: "공은지", avatar: .koala),
+    ClassMember(id: 3, name: "권동현", avatar: .bear),
     ClassMember(id: 4, name: "김민지", avatar: .penguin),
     ClassMember(id: 5, name: "천다올", avatar: .dog),
     ClassMember(id: 6, name: "유시영", avatar: .sloth),
-    ClassMember(id: 7, name: "주천수"),
+    ClassMember(id: 7, name: "주천수", avatar: .alpaca),
     ClassMember(id: 8, name: "김예은", avatar: .fox),
     ClassMember(id: 9, name: "서원지", avatar: .hamster),
     ClassMember(id: 10, name: "현준혁", avatar: .raccoon),
   ]
 
-  public static let figmaParticipantMembers: [ClassMember] = figmaOwnerMembers.map { member in
-    let avatar: ClassMemberAvatar? = switch member.id {
-    case 1: .lion
-    case 2: .koala
-    case 3: .bear
-    case 7: .alpaca
-    default: member.avatar
-    }
-    return ClassMember(
-      id: member.id,
-      name: member.name,
-      isOwner: member.isOwner,
-      avatar: avatar
-    )
-  }
+  public static let figmaParticipantMembers: [ClassMember] = figmaOwnerMembers
 
   private var rooms: [ClassRoom]
   private var availableRooms: [ClassRoom]

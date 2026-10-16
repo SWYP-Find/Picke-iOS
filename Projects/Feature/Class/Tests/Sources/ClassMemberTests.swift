@@ -421,7 +421,7 @@ struct ClassMemberTests {
   }
 
   @Test
-  func 참가자_목_아바타는_운영자_프레임과_독립된_원본을_사용한다() {
+  func 운영자와_참가자_목록은_동일한_멤버_아바타를_유지한다() {
     let owner = MockClassRepository.figmaOwnerMembers
     let participant = MockClassRepository.figmaParticipantMembers
 
@@ -431,10 +431,8 @@ struct ClassMemberTests {
     #expect(participant[1].avatar == .koala)
     #expect(participant[2].avatar == .bear)
     #expect(participant[6].avatar == .alpaca)
-    #expect(owner[0].avatar == nil)
-    #expect(owner[1].avatar == nil)
-    #expect(owner[2].avatar == nil)
-    #expect(owner[6].avatar == nil)
+    #expect(owner.prefix(7).map(\.avatar) == [.lion, .koala, .bear, .penguin, .dog, .sloth, .alpaca])
+    #expect(participant == owner)
   }
 
   @Test
