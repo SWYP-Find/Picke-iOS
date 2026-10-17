@@ -45,6 +45,10 @@ struct PickeClassAuditApp: App {
         CommentInteractionAuditView(scenario: scenario)
       } else if ProcessInfo.processInfo.environment["PICKE_CLASS_JOIN_INTERACTION"] == "1" {
         ClassJoinInteractionAuditView()
+      } else if let scenario = ProcessInfo.processInfo.environment["PICKE_CREATION_DEADLINE_SCENARIO"],
+                ["regular", "ai"].contains(scenario)
+      {
+        ClassCreationDeadlineAuditView(scenario: scenario)
       } else if let scenario = ProcessInfo.processInfo.environment["PICKE_DEADLINE_SCENARIO"],
                 ["normal", "minimum", "cycle"].contains(scenario)
       {
