@@ -53,6 +53,8 @@ public struct ClassAIVoteView: View {
 }
 
 private extension ClassAIVoteView {
+  static let optionMinHeight: CGFloat = 57
+
   var navigationBar: some View {
     PickeNavigationBar(
       onBack: { send(.backTapped) },
@@ -152,7 +154,7 @@ private extension ClassAIVoteView {
         SkeletonView(.rect)
         SkeletonView(.rect)
       }
-      .frame(height: 78)
+      .frame(height: Self.optionMinHeight)
       .accessibilityLabel("투표 상태를 불러오는 중")
     case .error:
       VStack(spacing: 10) {
@@ -164,7 +166,7 @@ private extension ClassAIVoteView {
           .foregroundStyle(.primary500)
       }
       .frame(maxWidth: .infinity)
-      .frame(minHeight: 78)
+      .frame(minHeight: Self.optionMinHeight)
     case .loaded:
       voteOptions()
     }
@@ -180,10 +182,10 @@ private extension ClassAIVoteView {
           ?? store.room.battle.philosopherA
       )
       Text("vs")
-        .pretendardFont(.semiBold13)
-        .foregroundStyle(.gray500)
+        .pretendardFont(.semiBold11)
+        .foregroundStyle(.gray800)
         .frame(width: 28, height: 28)
-        .background(.beige600, in: Circle())
+        .background(.secondary200, in: Circle())
         .padding(.horizontal, -10)
         .zIndex(1)
       optionCard(
@@ -193,6 +195,7 @@ private extension ClassAIVoteView {
           ?? store.room.battle.philosopherB
       )
     }
+    .fixedSize(horizontal: false, vertical: true)
   }
 
   func optionCard(
@@ -202,27 +205,48 @@ private extension ClassAIVoteView {
   ) -> some View {
     let isSelected = store.selectedOptionID == id
     return Button { send(.optionTapped(id)) } label: {
-      VStack(spacing: 5) {
+      VStack(spacing: 2) {
         Text(title)
-          .pretendardFont(.semiBold15)
+          .pretendardFont(.headingSmall)
           .foregroundStyle(.gray800)
           .lineLimit(2)
+          .lineSpacing(optionTitleLinePadding)
+          .padding(.vertical, optionTitleLinePadding / 2)
+          .fixedSize(horizontal: false, vertical: true)
         Text(subtitle)
-          .pretendardFont(.regular13)
+          .pretendardFont(.labelSmall)
           .foregroundStyle(.gray300)
           .lineLimit(1)
+          .padding(.vertical, optionDescriptionLinePadding / 2)
       }
-      .frame(maxWidth: .infinity)
-      .frame(height: 78)
-      .pickeCard(
-        isSelected ? .primary50 : .beige300,
-        border: isSelected ? .primary500 : .beige600,
-        lineWidth: isSelected ? 2 : 1,
-        radius: 0
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 9)
+      .frame(
+        maxWidth: .infinity,
+        minHeight: Self.optionMinHeight,
+        maxHeight: .infinity
       )
+      .background(
+        isSelected ? Color.beige400 : .beige300,
+        in: RoundedRectangle(cornerRadius: 2)
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 2)
+          .strokeBorder(isSelected ? Color.secondary500 : .beige600, lineWidth: 1)
+      }
+      .opacity(isSelected ? 1 : 0.88)
     }
     .buttonStyle(.plain)
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  var optionTitleLinePadding: CGFloat {
+    max(0, 20 - UIFont.pretendardFontFamily(family: .SemiBold, size: 14).lineHeight)
+  }
+
+  var optionDescriptionLinePadding: CGFloat {
+    max(0, 17 - UIFont.pretendardFontFamily(family: .Medium, size: 12).lineHeight)
   }
 
   var deadlineLabel: some View {

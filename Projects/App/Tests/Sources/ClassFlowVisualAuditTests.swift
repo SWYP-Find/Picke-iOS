@@ -2542,6 +2542,103 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureSeededAIVoteReferenceFrames() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture AI vote reference states")
+    }
+    let variants: [(name: String, phase: ClassAIVoteFeature.State.ViewState, selected: Int?, longTitle: Bool)] = [
+      ("unselected", .loaded, nil, false),
+      ("selected", .loaded, 2, false),
+      ("long-title", .loaded, 2, true),
+      ("loading", .loading, nil, false),
+      ("error", .error, nil, false),
+    ]
+    for viewport in [CGSize(width: 375, height: 812), CGSize(width: 402, height: 874)] {
+      for variant in variants {
+        let room = ClassRoom(
+          id: 801,
+          name: "1학년 3반 사회 토론",
+          joinCode: "PKAI01",
+          battle: ClassBattleSummary(
+            id: -1,
+            title: "슬픔을 드러내지 않은 뫼르소를 비난할 수 있을까?",
+            summary: "감정을 표현하지 않는 태도를 도덕적으로 판단할 수 있는지 이야기해요.",
+            philosopherA: "사르트르",
+            optionATitle: variant.longTitle ? "사회적 공감과 책임이 중요하다" : "비난할 수 있다",
+            optionADescription: "사회적 공감도 중요하다",
+            philosopherB: "플라톤",
+            optionBTitle: "유지해야 한다",
+            optionBDescription: "연령과 교정 가능성 고려",
+            category: .art,
+            level: .high,
+            audioDuration: 0,
+            viewCount: 0,
+            commentCount: 23
+          ),
+          deadline: Date(timeIntervalSince1970: 1_790_154_000),
+          memberCount: 1,
+          role: .member,
+          status: .open,
+          allowsAnonymousOpinion: false,
+          requiresComment: false
+        )
+        // These are settled layout fixtures, not a substitute for reducer
+        // loading/error transition tests. Suppress lifecycle IO explicitly.
+        var state = ClassAIVoteFeature.State(room: room, battleID: -1_000_801)
+        state.viewState = variant.phase
+        state.selectedOptionID = variant.selected
+        state.errorMessage = variant.phase == .error ? "투표 상태를 불러오지 못했어요. 다시 시도해 주세요." : nil
+        let useCase = VoteCaptureBattleUseCase { _ in
+          throw NSError(domain: "UnexpectedAIVoteCaptureFetch", code: 1)
+        }
+        let store = Store(initialState: state) {
+          ClassAIVoteFeature().dependency(\.battleUseCase, useCase)
+        }
+        XCTAssertEqual(store.selectedOptionID, variant.selected)
+        XCTAssertEqual(store.canSubmit, variant.phase == .loaded && variant.selected != nil)
+        var checkedMountedState = false
+        let (image, _) = try await capture(
+          AnyView(ClassAIVoteView(store: store, onAppear: {})),
+          ready: { store.viewState == variant.phase },
+          includeScrollBottom: false,
+          viewport: viewport,
+          inspectWindow: { _ in
+            XCTAssertEqual(store.viewState, variant.phase)
+            XCTAssertEqual(store.selectedOptionID, variant.selected)
+            XCTAssertEqual(store.errorMessage, state.errorMessage)
+            XCTAssertNil(store.loadRequestID)
+            XCTAssertNil(store.submitRequestID)
+            XCTAssertFalse(store.isSubmitting)
+            XCTAssertEqual(store.canSubmit, variant.phase == .loaded && variant.selected != nil)
+            checkedMountedState = true
+          }
+        )
+        XCTAssertTrue(checkedMountedState)
+        XCTAssertEqual(useCase.fetchCalls.value.count, 0)
+        XCTAssertEqual(image.size, viewport)
+        let name = "ai-vote-reference-\(variant.name)-\(Int(viewport.width))"
+        let attachment = XCTAttachment(image: image)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        let text = try recognizedAuditText(in: image, name: name)
+        XCTAssertTrue(text.contains("투표하기"), "Missing CTA in \(name): \(text)")
+        if variant.phase == .loaded {
+          for fragment in [room.battle.optionATitle, room.battle.optionBTitle, "사회적 공감도 중요하다", "연령과 교정 가능성 고려"] {
+            XCTAssertTrue(text.contains(fragment.filter { !$0.isWhitespace }), "Missing \(fragment) in \(name): \(text)")
+          }
+        } else {
+          XCTAssertFalse(text.contains("유지해야한다"), "Unexpected loaded option in \(name)")
+          if variant.phase == .error {
+            XCTAssertTrue(text.contains("투표상태를불러오지못했어요"))
+            XCTAssertTrue(text.contains("다시시도"))
+          }
+        }
+      }
+    }
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")
