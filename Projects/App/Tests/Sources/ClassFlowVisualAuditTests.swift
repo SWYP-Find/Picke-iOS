@@ -2476,7 +2476,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         ready: { store.hasStarted && store.messages == messages && !store.isGenerating },
         includeScrollBottom: false,
         viewport: viewport,
-        inspectWindow: { _ in
+        inspectWindow: { window in
           // onDisappear resets identity, so inspect while the view is mounted.
           XCTAssertEqual(store.conversationID, conversationID)
           XCTAssertEqual(store.messages, messages)
@@ -2489,6 +2489,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
             "그 입장의 근거는 무엇인가요?",
             "다른 관점도 생각해 볼게요",
           ])
+          let insets = XCTAttachment(string: """
+          Viewport: \(viewport)
+          Window safe area: \(window.safeAreaInsets)
+          Host safe area: \(String(describing: window.rootViewController?.view.safeAreaInsets))
+          """)
+          insets.name = "ai-chat-safe-area-\(Int(viewport.width))"
+          insets.lifetime = .keepAlways
+          self.add(insets)
           checkedMountedState = true
         }
       )
@@ -2506,9 +2514,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       let text = try recognizedAuditText(in: image, name: name)
       for fragment in [
         "사전투표에서", "선택하셨네요", "반대입장의플라톤", "3라운드토론을시작해보세요",
-        "이건기만입니다", "존재할뿐입니다", "저는비난할수있다에동의해요", "내생각을입력해보세요",
+        "이건기만입니다", "존재할뿐입니다", "내용을입력하세요",
       ] {
         XCTAssertTrue(text.contains(fragment), "Missing \(fragment) at \(viewport.width): \(text)")
+      }
+      for fragment in [
+        "저는비난할수있다에동의해요", "그입장의근거는무엇인가요?", "다른관점도생각해볼게요", "동의해요",
+      ] {
+        XCTAssertFalse(text.contains(fragment), "Unexpected quick reply \(fragment) at \(viewport.width): \(text)")
       }
       // iPhone 18 Pro / iOS 27.0 audit scene (95B75F64-D81F-47A2-B130-DEF8EF93B032):
       // this fixture's speaker header occupies y=226...250pt at both sizes.

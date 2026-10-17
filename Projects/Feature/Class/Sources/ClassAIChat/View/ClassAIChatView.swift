@@ -220,7 +220,11 @@ private extension ClassAIChatView {
         .pretendardFont(.headingSmall)
         .foregroundStyle(.gray800)
       Text("AI")
-        .pickePill()
+        .pretendardFont(.semiBold12)
+        .foregroundStyle(.primary500)
+        .padding(.horizontal, 4)
+        .frame(height: 20)
+        .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
     }
   }
 
@@ -302,10 +306,6 @@ private extension ClassAIChatView {
       if store.isCompleted || !store.isModelAvailable {
         sessionEndActions()
       } else {
-        if !store.quickReplies.isEmpty {
-          quickReplies()
-        }
-
         inputRow()
 
         if store.errorMessage != nil {
@@ -314,10 +314,10 @@ private extension ClassAIChatView {
       }
     }
     .padding(.top, 16)
-    .padding(.bottom, 12)
+    .padding(.bottom, 6)
     .frame(maxWidth: .infinity)
-    .background(.beige300)
-    .topDivider()
+    .background(.beige600, ignoresSafeAreaEdges: .bottom)
+    .topDivider(.beige700)
   }
 
   @ViewBuilder
@@ -333,32 +333,6 @@ private extension ClassAIChatView {
   }
 
   @ViewBuilder
-  func quickReplies() -> some View {
-    ScrollView(.horizontal) {
-      HStack(spacing: 6) {
-        ForEach(store.quickReplies, id: \.self) { reply in
-          quickReplyChip(reply)
-        }
-      }
-      .padding(.horizontal, 16)
-    }
-    .scrollIndicators(.hidden)
-  }
-
-  func quickReplyChip(_ reply: String) -> some View {
-    Button { send(.quickReplyTapped(reply)) } label: {
-      Text(reply)
-        .pretendardFont(.semiBold12)
-        .foregroundStyle(.gray400)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .pickeCard(.white, border: .beige600, radius: .radiusMax)
-    }
-    .buttonStyle(.plain)
-    .disabled(store.isGenerating)
-  }
-
-  @ViewBuilder
   func inputRow() -> some View {
     HStack(spacing: 8) {
       inputField
@@ -369,18 +343,22 @@ private extension ClassAIChatView {
 
   var inputField: some View {
     TextField(
-      "내 생각을 입력해보세요",
+      "내용을 입력하세요",
       text: Binding(
         get: { store.draft },
         set: { send(.draftChanged($0)) }
       ),
-      prompt: Text("내 생각을 입력해보세요").foregroundStyle(.gray300),
+      prompt: Text("내용을 입력하세요").foregroundStyle(.gray300),
       axis: .vertical
     )
-    .pretendardFont(.medium13)
+    .pretendardFont(.regular13)
+    .foregroundStyle(.gray800)
     .lineLimit(1 ... 2)
     .focused($isInputFocused)
-    .pickeTextField(height: 44)
+    .padding(.horizontal, 12)
+    .frame(height: 52)
+    .frame(maxWidth: .infinity)
+    .pickeCard(.beige50, border: .beige600)
     .disabled(store.isGenerating)
   }
 
@@ -389,16 +367,17 @@ private extension ClassAIChatView {
       refocusesAfterReply = isInputFocused
       send(.sendTapped)
     } label: {
-      Image(systemName: "paperplane.fill")
-        .font(.system(size: 16, weight: .semibold))
+      Image(systemName: "paperplane")
+        .pretendardFont(family: .Medium, size: 22)
         .foregroundStyle(.iconGrayInverse)
-        .frame(width: 36, height: 36)
+        .frame(width: 24, height: 24)
+        .frame(width: 40, height: 40)
         .background(
           store.canSend ? .buttonIconBackgroundDefault : .buttonIconBackgroundDisabled,
           in: Circle()
         )
     }
-    .buttonStyle(.plain)
+    .buttonStyle(ClassAIChatSendButtonStyle())
     .disabled(!store.canSend)
     .accessibilityLabel("메시지 보내기")
   }
@@ -421,5 +400,13 @@ private extension ClassAIChatView {
     refocusesAfterReply = false
     guard !store.isCompleted else { return }
     isInputFocused = true
+  }
+}
+
+/// 비활성 색상은 버튼 토큰이 담당하므로 기본 스타일의 추가 흐림을 적용하지 않는다.
+private struct ClassAIChatSendButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .opacity(configuration.isPressed ? 0.8 : 1)
   }
 }
