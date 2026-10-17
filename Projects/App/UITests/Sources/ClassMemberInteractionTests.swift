@@ -39,7 +39,7 @@ final class ClassMemberInteractionTests: XCTestCase {
     continueAfterFailure = false
   }
 
-  func testOwnerHeaderManagementRespondsOutsideVisibleDots() throws {
+  func testOwnerManagementIsReachedFromClassDetail() throws {
     let app = launch(scenario: "owner-remove")
     waitUntil("owner fixture ready") {
       self.audit(in: app)?.status == "ready" && self.audit(in: app)?.route == "list"
@@ -49,15 +49,21 @@ final class ClassMemberInteractionTests: XCTestCase {
     uniqueButton(beginning: "클래스 멤버", in: app).tap()
     waitForLoadedMembers(in: app)
 
-    let menu = uniqueButton(label: "클래스 관리", in: app)
-    XCTAssertGreaterThanOrEqual(menu.frame.width, 24)
-    XCTAssertGreaterThanOrEqual(menu.frame.height, 24)
-    menu.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)).tap()
+    XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label == %@", "클래스 관리")).count, 0)
+    XCTAssertEqual(
+      app.buttons.matching(identifier: "ellipsis").allElementsBoundByIndex.filter(\.isHittable).count,
+      0
+    )
+    try tapDiscoveredBack(in: app, title: "클래스 멤버")
+    waitUntil("class detail returned") { self.audit(in: app)?.route == "detail" }
+    uniqueButton(label: "클래스 관리", in: app).tap()
 
     let edit = uniqueButton(beginning: "클래스 정보 수정", in: app)
     XCTAssertTrue(edit.isHittable)
-    XCTAssertEqual(try requireAudit(in: app).route, "members")
-    attach(app, name: "owner-member-header-management")
+    let delete = uniqueButton(beginning: "클래스 삭제", in: app)
+    XCTAssertTrue(delete.isHittable)
+    XCTAssertEqual(try requireAudit(in: app).route, "detail")
+    attach(app, name: "owner-detail-management")
   }
 
   func testOwnerNameSheetRejectsWhitespaceAndPersistsAfterReentry() throws {
@@ -73,7 +79,7 @@ final class ClassMemberInteractionTests: XCTestCase {
     let search = app.textFields.matching(identifier: "class-member-search")
     XCTAssertEqual(search.count, 1)
     XCTAssertEqual(search.matching(NSPredicate(
-      format: "placeholderValue == %@", "검색어를 입력해주세요."
+      format: "placeholderValue == %@", "이름을 입력해주세요."
     )).count, 1)
     let initialSearchValue = search.firstMatch.value as? String
     uniqueButton(label: "내 이름 수정", in: app).tap()

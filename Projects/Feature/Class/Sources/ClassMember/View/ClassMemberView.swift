@@ -25,7 +25,7 @@ public struct ClassMemberView: View {
 
       searchField()
         .padding(.horizontal, 16)
-        .padding(.top, 16)
+        .padding(.top, 12)
 
       memberList()
     }
@@ -42,9 +42,6 @@ public struct ClassMemberView: View {
       dimOpacity: 0.28
     ) { editNameStore in
       nameSheet(store: editNameStore)
-    }
-    .pickeModal($store.scope(state: \.management, action: \.management), dimOpacity: 0.28) { _ in
-      managementSheet()
     }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
@@ -97,11 +94,7 @@ private extension ClassMemberView {
 
   @ViewBuilder
   func navigationBar() -> some View {
-    PickeNavigationBar(centerTitle: "클래스 멤버") {
-      if store.room.role == .owner {
-        managementButton
-      }
-    }
+    PickeNavigationBar(centerTitle: "클래스 멤버")
     .foregroundStyle(.gray500)
     .overlay(alignment: .leading) {
       backButton
@@ -112,11 +105,11 @@ private extension ClassMemberView {
   var backButton: some View {
     Button { send(.backTapped) } label: {
       Path { path in
-        path.move(to: CGPoint(x: 16.5, y: 2.5))
-        path.addLine(to: CGPoint(x: 6.5, y: 12))
-        path.addLine(to: CGPoint(x: 16.5, y: 21.5))
+        path.move(to: CGPoint(x: 17, y: 2))
+        path.addLine(to: CGPoint(x: 7, y: 12))
+        path.addLine(to: CGPoint(x: 17, y: 22))
       }
-      .stroke(.gray500, style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+      .stroke(.gray500, style: StrokeStyle(lineWidth: 1.5, lineCap: .butt, lineJoin: .miter))
       .frame(width: 24, height: 24)
       .frame(width: 44, height: 44)
       .contentShape(Rectangle())
@@ -125,49 +118,6 @@ private extension ClassMemberView {
     .accessibilityLabel("뒤로")
     .accessibilityIdentifier("chevron.left")
     .accessibilitySortPriority(1)
-  }
-
-  var managementButton: some View {
-    Button { send(.managementTapped) } label: {
-      managementIcon()
-        .frame(width: 24, height: 24)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .disabled(store.isSaving)
-    .accessibilityLabel("클래스 관리")
-  }
-
-  @ViewBuilder
-  func managementIcon() -> some View {
-    HStack(spacing: 3.5) {
-      ForEach(0 ..< 3, id: \.self) { _ in
-        Circle()
-          .fill(.gray800)
-          .frame(width: 2.5, height: 2.5)
-      }
-    }
-  }
-
-  @ViewBuilder
-  func managementSheet() -> some View {
-    ZStack(alignment: .bottom) {
-      Color.clear
-        .ignoresSafeArea()
-        .contentShape(Rectangle())
-        .onTapGesture { send(.managementDismissed) }
-      ClassManagementSheet(
-        room: store.room,
-        onEdit: { send(.managementEditTapped) },
-        onDelete: { send(.managementDeleteTapped) }
-      )
-      .frame(maxWidth: .infinity)
-      .background(
-        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
-          .fill(.beige50)
-          .ignoresSafeArea(edges: .bottom)
-      )
-    }
   }
 
   @ViewBuilder
@@ -215,9 +165,9 @@ private extension ClassMemberView {
         .frame(width: 18, height: 18)
         .foregroundStyle(.gray800)
       TextField(
-        "검색어를 입력해주세요.",
+        "이름을 입력해주세요.",
         text: $store.searchText,
-        prompt: Text("검색어를 입력해주세요.").foregroundStyle(.gray300)
+        prompt: Text("이름을 입력해주세요.").foregroundStyle(.gray300)
       )
       .pretendardFont(family: .Medium, size: 13)
       .foregroundStyle(.gray800)
@@ -269,7 +219,7 @@ private extension ClassMemberView {
       }
     }
     .frame(minHeight: 36)
-    .padding(.vertical, 16)
+    .padding(.vertical, member.avatar == nil ? 10 : 16)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
   }
 

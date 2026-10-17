@@ -9,6 +9,19 @@ import Foundation
 
 public actor MockClassRepository: ClassInterface {
   public static let figmaOwnerMembers: [ClassMember] = [
+    ClassMember(id: 1, name: "김선생", isOwner: true),
+    ClassMember(id: 2, name: "공은지"),
+    ClassMember(id: 3, name: "권동현"),
+    ClassMember(id: 4, name: "김민지", avatar: .penguin),
+    ClassMember(id: 5, name: "천다올", avatar: .dog),
+    ClassMember(id: 6, name: "유시영", avatar: .sloth),
+    ClassMember(id: 7, name: "주천수"),
+    ClassMember(id: 8, name: "김예은", avatar: .fox),
+    ClassMember(id: 9, name: "서원지", avatar: .hamster),
+    ClassMember(id: 10, name: "현준혁", avatar: .raccoon),
+  ]
+
+  public static let figmaParticipantMembers: [ClassMember] = [
     ClassMember(id: 1, name: "김선생", isOwner: true, avatar: .lion),
     ClassMember(id: 2, name: "공은지", avatar: .koala),
     ClassMember(id: 3, name: "권동현", avatar: .bear),
@@ -20,8 +33,6 @@ public actor MockClassRepository: ClassInterface {
     ClassMember(id: 9, name: "서원지", avatar: .hamster),
     ClassMember(id: 10, name: "현준혁", avatar: .raccoon),
   ]
-
-  public static let figmaParticipantMembers: [ClassMember] = figmaOwnerMembers
 
   private var rooms: [ClassRoom]
   private var availableRooms: [ClassRoom]
@@ -45,7 +56,7 @@ public actor MockClassRepository: ClassInterface {
       uniqueKeysWithValues: initialRooms.map { room in
         let defaultMembers = (1 ... max(1, room.memberCount)).map { id in
           if room.id == ClassRoom.mocks[0].id,
-             let figmaMember = Self.figmaOwnerMembers.first(where: { $0.id == id })
+             let figmaMember = Self.figmaParticipantMembers.first(where: { $0.id == id })
           {
             return figmaMember
           }
