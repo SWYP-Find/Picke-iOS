@@ -26,7 +26,7 @@ public struct ClassReportView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      navigationBar()
+      navigationBar
 
       reportTitle()
         .padding(.vertical, 12)
@@ -46,47 +46,8 @@ public struct ClassReportView: View {
 }
 
 private extension ClassReportView {
-  @ViewBuilder
-  func navigationBar() -> some View {
-    ZStack {
-      Text(store.room.name)
-        .pretendardFont(.headingMedium)
-        .kerning(0)
-        .foregroundStyle(.gray500)
-        .lineLimit(1)
-        .padding(.horizontal, 56)
-
-      HStack(spacing: 0) {
-        backButton
-        Spacer()
-      }
-      .padding(.horizontal, 6)
-    }
-    .frame(height: 48)
-  }
-
-  var backButton: some View {
-    Button { send(.backTapped) } label: {
-      backIcon
-        .frame(width: 44, height: 44)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel("뒤로")
-    .accessibilityIdentifier("chevron.left")
-  }
-
-  var backIcon: some View {
-    Path { path in
-      path.move(to: CGPoint(x: 17, y: 2))
-      path.addLine(to: CGPoint(x: 7, y: 12))
-      path.addLine(to: CGPoint(x: 17, y: 22))
-    }
-    .stroke(
-      .gray900,
-      style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
-    )
-    .frame(width: 24, height: 24)
+  var navigationBar: some View {
+    ClassReportNavigationBar(title: store.room.name) { send(.backTapped) }
   }
 
   @ViewBuilder

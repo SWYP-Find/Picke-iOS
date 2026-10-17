@@ -26,6 +26,10 @@ final class MainTabInteractionTests: XCTestCase {
     let memberSearch: String
     let reportInstanceID: String
     let opinionCount: Int
+    let ownerInstanceID: String
+    let ownerSelectedTab: String
+    let ownerFeedbackSummary: String
+    let ownerRequestActive: Bool
   }
 
   override func setUpWithError() throws {
@@ -268,6 +272,94 @@ final class MainTabInteractionTests: XCTestCase {
     assertVisibleTabBar(in: app, selected: 4)
     attach(app, name: "tabs-returned-from-report")
   }
+  func testOwnerReportOpinionsPushPreservesFeedbackAndFiveTabs() throws {
+    let app = launch(scenario: "owner-report")
+    waitUntil("owner report with five tabs") {
+      self.audit(in: app)?.classRouteKind == "ownerDashboard"
+        && self.audit(in: app)?.ownerSelectedTab == "내 리포트"
+        && self.audit(in: app)?.shouldHideTabBar == false
+    }
+    let original = try XCTUnwrap(audit(in: app))
+    XCTAssertFalse(original.ownerInstanceID.isEmpty)
+    XCTAssertFalse(original.ownerFeedbackSummary.isEmpty)
+    XCTAssertFalse(original.ownerRequestActive)
+    XCTAssertFalse(app.buttons["클래스 관리"].exists)
+    XCTAssertTrue(app.staticTexts["종료"].exists)
+    assertVisibleTabBar(in: app, selected: 4)
+    attach(app, name: "tabs-owner-report-visible")
+
+    let disclosure = app.buttons["class-owner-my-opinions"]
+    let classTab = tabButton(4, in: app)
+    for _ in 0 ..< 6 {
+      if disclosure.exists, disclosure.isHittable, disclosure.frame.maxY <= classTab.frame.minY { break }
+      app.scrollViews.firstMatch.swipeUp()
+    }
+    XCTAssertTrue(disclosure.isHittable)
+    XCTAssertLessThanOrEqual(disclosure.frame.maxY, classTab.frame.minY)
+    attach(app, name: "tabs-owner-report-disclosure")
+    disclosure.tap()
+    waitUntil("owner opinions pushed") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.classRouteKind == "myOpinions" && state.opinionCount == 5
+        && state.classRouteCount == original.classRouteCount + 1
+        && state.ownerInstanceID == original.ownerInstanceID
+        && state.ownerSelectedTab == original.ownerSelectedTab
+        && state.ownerFeedbackSummary == original.ownerFeedbackSummary
+        && !state.ownerRequestActive && !state.shouldHideTabBar
+    }
+    let lastOpinion = app.descendants(matching: .any).matching(identifier: "class-my-opinion-4").firstMatch
+    for _ in 0 ..< 6 {
+      if lastOpinion.exists, lastOpinion.isHittable, lastOpinion.frame.maxY <= classTab.frame.minY { break }
+      app.scrollViews.firstMatch.swipeUp()
+    }
+    XCTAssertTrue(lastOpinion.isHittable)
+    XCTAssertLessThanOrEqual(lastOpinion.frame.maxY, classTab.frame.minY)
+    assertVisibleTabBar(in: app, selected: 4)
+    attach(app, name: "tabs-owner-opinions-bottom")
+
+    tabButton(0, in: app).tap()
+    waitUntil("home selected from owner opinions") { self.audit(in: app)?.selectedTab == 0 }
+    assertVisibleTabBar(in: app, selected: 0)
+    tabButton(4, in: app).tap()
+    waitUntil("owner opinions restored") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.selectedTab == 4 && state.classRouteKind == "myOpinions"
+        && state.ownerInstanceID == original.ownerInstanceID
+        && state.ownerFeedbackSummary == original.ownerFeedbackSummary
+        && state.ownerSelectedTab == original.ownerSelectedTab
+        && state.opinionCount == 5 && !state.ownerRequestActive && !state.shouldHideTabBar
+    }
+    assertVisibleTabBar(in: app, selected: 4)
+    app.buttons["class-my-opinions-back"].tap()
+    waitUntil("same owner report restored") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.classRouteKind == "ownerDashboard"
+        && state.classRouteCount == original.classRouteCount
+        && state.ownerInstanceID == original.ownerInstanceID
+        && state.ownerSelectedTab == original.ownerSelectedTab
+        && state.ownerFeedbackSummary == original.ownerFeedbackSummary
+        && !state.ownerRequestActive && !state.shouldHideTabBar
+    }
+    attach(app, name: "tabs-owner-report-restored")
+    for tab in ["클래스 요약", "내 리포트"] {
+      app.buttons["class-owner-tab." + tab].tap()
+      waitUntil("owner inner tab selected") {
+        self.audit(in: app)?.ownerSelectedTab == tab && self.audit(in: app)?.ownerRequestActive == false
+      }
+      assertVisibleTabBar(in: app, selected: 4)
+      XCTAssertEqual(try XCTUnwrap(audit(in: app)).ownerFeedbackSummary, original.ownerFeedbackSummary)
+      attach(app, name: "tabs-owner-" + tab)
+    }
+    app.buttons["class-owner-report-back"].tap()
+    waitUntil("owner returns to detail") {
+      self.audit(in: app)?.classRouteKind == "detail"
+        && self.audit(in: app)?.classRouteCount == original.classRouteCount - 1
+        && self.audit(in: app)?.shouldHideTabBar == false
+    }
+    assertVisibleTabBar(in: app, selected: 4)
+    attach(app, name: "tabs-owner-returned-to-detail")
+  }
+
 }
 
 @MainActor

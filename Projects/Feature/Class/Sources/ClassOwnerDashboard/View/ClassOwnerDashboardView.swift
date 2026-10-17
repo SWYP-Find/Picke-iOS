@@ -25,7 +25,7 @@ public struct ClassOwnerDashboardView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      navigationBar()
+      navigationBar
       titleHeader()
       dashboardTabs()
       if store.sourceViewState == .loading {
@@ -122,22 +122,12 @@ private extension ClassOwnerDashboardView {
     }
   }
 
-  @ViewBuilder
-  func navigationBar() -> some View {
-    PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
-      switch store.selectedTab {
-      case .home:
-        EmptyView()
-      case .report:
-        Button { send(.managementTapped) } label: {
-          Image(systemName: "ellipsis")
-            .font(.system(size: 20))
-            .frame(width: 24, height: 24)
-        }
-        .accessibilityLabel("클래스 관리")
-      }
-    }
-    .foregroundStyle(.gray800)
+  var navigationBar: some View {
+    ClassReportNavigationBar(
+      title: store.room.name,
+      backAccessibilityIdentifier: "class-owner-report-back",
+      onBack: { send(.backTapped) }
+    )
   }
 
   @ViewBuilder
@@ -194,6 +184,7 @@ private extension ClassOwnerDashboardView {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("class-owner-tab.\(tab.rawValue)")
       }
     }
   }
@@ -222,7 +213,7 @@ private extension ClassOwnerDashboardView {
         .foregroundStyle(.primary500)
         .padding(13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
+        .background(Color(hex: "FCF5F3"), in: RoundedRectangle(cornerRadius: 2))
         .overlay(RoundedRectangle(cornerRadius: 2).stroke(.primary100, lineWidth: 1))
       } else {
         dashboardSection("AI 인사이트") {
@@ -342,7 +333,7 @@ private extension ClassOwnerDashboardView {
               reportChoice("사후 선택", value: content[.finalChoice])
             }
             .padding(.vertical, 12)
-            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
+            .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
 
             HStack(spacing: 0) {
               reportActivity(content[.commentCount], label: "댓글")
@@ -379,7 +370,7 @@ private extension ClassOwnerDashboardView {
             .foregroundStyle(.primary500)
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.primary50)
+            .background(Color(hex: "FCF5F3"))
 
             VStack(alignment: .leading, spacing: 16) {
               reportInsight(
@@ -398,7 +389,7 @@ private extension ClassOwnerDashboardView {
               )
               if store.report != nil {
                 Rectangle().fill(.beige600).frame(height: 1)
-                myOpinionsSection()
+                myOpinionsButton
               }
             }
             .padding(16)
@@ -408,7 +399,7 @@ private extension ClassOwnerDashboardView {
         } else {
           feedbackStatus()
           if store.report != nil {
-            myOpinionsSection()
+            myOpinionsButton
               .padding(16)
               .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
               .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
@@ -431,30 +422,23 @@ private extension ClassOwnerDashboardView {
     .frame(maxWidth: .infinity)
   }
 
-  @ViewBuilder
-  func myOpinionsSection() -> some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Button { send(.myOpinionsTapped) } label: {
-        HStack {
-          Text("내가 남긴 의견 \(store.myOpinionCount)개 보기")
-          Spacer()
-          Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
-        }
-        .pretendardFont(.semiBold13)
-        .foregroundStyle(.primary500)
+  var myOpinionsButton: some View {
+    Button { send(.myOpinionsTapped) } label: {
+      HStack {
+        Text(store.myOpinionsTitle)
+          .pretendardFont(family: .Bold, size: 12)
+          .frame(minHeight: 17)
+        Spacer()
+        Image(systemName: "chevron.right")
+          .pretendardFont(.semiBold12)
+          .frame(width: 12, height: 12)
       }
-      .buttonStyle(.plain)
-      if store.showsMyOpinions {
-        ForEach(store.myOpinions, id: \.self) { opinion in
-          Text(opinion)
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray700)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
-        }
-      }
+      .foregroundStyle(.primary500)
+      .padding(.vertical, 6)
+      .contentShape(Rectangle())
     }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("class-owner-my-opinions")
   }
 
   @ViewBuilder

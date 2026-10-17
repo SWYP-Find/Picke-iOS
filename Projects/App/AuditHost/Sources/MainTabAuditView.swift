@@ -23,7 +23,8 @@ struct MainTabAuditView: View {
 
   init(scenario: String) {
     self.scenario = scenario
-    let source = scenario == "report" ? ClassRoom.mockClosedSociety : ClassRoom.mocks[0]
+    let isReport = scenario == "report" || scenario == "owner-report"
+    let source = isReport ? ClassRoom.mockClosedSociety : ClassRoom.mocks[0]
     let members = MockClassRepository.figmaOwnerMembers + (11 ... 22).map {
       ClassMember(id: $0, name: "검증 멤버 \($0)")
     }
@@ -34,7 +35,7 @@ struct MainTabAuditView: View {
       battle: source.battle,
       deadline: source.deadline,
       memberCount: members.count,
-      role: source.role,
+      role: scenario == "owner-report" ? .owner : source.role,
       status: source.status,
       allowsAnonymousOpinion: source.allowsAnonymousOpinion,
       requiresComment: source.requiresComment,
@@ -44,7 +45,7 @@ struct MainTabAuditView: View {
     let repository = MockClassRepository(
       rooms: [room],
       availableRooms: [],
-      reports: scenario == "report" ? [room.id: MockClassReport.figmaMyOpinions] : nil,
+      reports: isReport ? [room.id: MockClassReport.figmaMyOpinions] : nil,
       members: [room.id: members]
     )
     var state = MainTabCoordinator.State(
@@ -63,13 +64,10 @@ struct MainTabAuditView: View {
     list.viewState = .loaded
     state.classState.routes.push(.myClasses(list))
     state.classState.routes.push(.detail(.init(room: room)))
-    if scenario == "report" {
+    if isReport {
       // The participant comment flow replaces its route with a report above detail.
       let fixture = MockClassReport.figmaMyOpinions
-      var report = ClassReportFeature.State(room: room)
-      report.report = fixture
-      report.sourceViewState = .ready
-      report.feedback = ClassAIPersonalFeedback(
+      let feedback = ClassAIPersonalFeedback(
         summaryTitle: fixture[.aiSummaryTitle],
         summaryDetail: fixture[.aiSummaryDetail],
         points: [
@@ -80,7 +78,26 @@ struct MainTabAuditView: View {
         nextQuestion: fixture[.nextQuestion],
         nextHint: fixture[.nextHint]
       )
-      state.classState.routes.push(.report(report))
+      if scenario == "owner-report" {
+        let dashboard = MockClassOwnerDashboard.figma
+        var owner = ClassOwnerDashboardFeature.State(room: room)
+        owner.selectedTab = .report
+        owner.dashboard = dashboard
+        owner.members = dashboard.members
+        owner.opinions = dashboard.opinions
+        owner.metrics = dashboard.metrics
+        owner.report = fixture
+        owner.sourceViewState = .ready
+        owner.generatedFeedback = feedback
+        owner.generatedInsight = "서로 다른 관점을 비교하고 근거를 살펴봤어요."
+        state.classState.routes.push(.ownerDashboard(owner))
+      } else {
+        var report = ClassReportFeature.State(room: room)
+        report.report = fixture
+        report.sourceViewState = .ready
+        report.feedback = feedback
+        state.classState.routes.push(.report(report))
+      }
     } else if scenario == "opinions-empty" {
       state.classState.routes.push(.myOpinions(.init()))
     } else {
@@ -163,6 +180,12 @@ private extension MainTabAuditView {
       }
       return nil
     }()
+    let owner: ClassOwnerDashboardFeature.State? = {
+      for route in store.classState.routes.reversed() {
+        if case let .ownerDashboard(value) = route.screen { return value }
+      }
+      return nil
+    }()
     let opinions: ClassMyOpinionsFeature.State? = {
       guard case let .myOpinions(value)? = store.classState.routes.last?.screen else { return nil }
       return value
@@ -182,6 +205,12 @@ private extension MainTabAuditView {
       "memberSearch": members?.searchText ?? "",
       "reportInstanceID": report?.instanceID.uuidString ?? "",
       "opinionCount": opinions?.opinions.count ?? -1,
+      "ownerInstanceID": owner?.instanceID.uuidString ?? "",
+      "ownerSelectedTab": owner?.selectedTab.rawValue ?? "",
+      "ownerFeedbackSummary": owner?.generatedFeedback?.summaryDetail ?? "",
+      "ownerRequestActive": owner?.requestID != nil || owner?.insightRequestID != nil
+        || owner?.feedbackRequestID != nil || owner?.isGeneratingInsight == true
+        || owner?.isGeneratingFeedback == true,
     ]
     guard let data = try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]),
           let json = String(data: data, encoding: .utf8) else { return "{}" }
@@ -195,6 +224,7 @@ private extension MainTabAuditView {
     case .detail?: return "detail"
     case .members?: return "members"
     case .report?: return "report"
+    case .ownerDashboard?: return "ownerDashboard"
     case .myOpinions?: return "myOpinions"
     default: return "other"
     }

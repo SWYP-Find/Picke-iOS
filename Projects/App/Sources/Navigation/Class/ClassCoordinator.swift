@@ -48,7 +48,7 @@ public struct ClassCoordinator {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
 
-    /// 클래스 목록·상세·멤버 리포트·의견·운영자 멤버 목록에서 모달이 닫힌 동안 탭바를 보여준다.
+    /// 클래스 목록·상세·리포트·의견·운영자 화면에서 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
       guard !isDeadlinePanelPresented else { return false }
       switch routes.last?.screen {
@@ -59,6 +59,8 @@ public struct ClassCoordinator {
       case let .members(members)?:
         return members.room.role == .owner && members.management == nil && members.filter == nil
           && members.editName == nil && members.customAlert == nil && !members.isSaving
+      case let .ownerDashboard(dashboard)?:
+        return dashboard.management == nil
       case .report?, .myOpinions?:
         return true
       default:
@@ -772,6 +774,20 @@ private extension ClassCoordinator {
       state.routes.push(.myOpinions(opinions))
       return .none
 
+    case let .routeAction(routeID, action: .ownerDashboard(.delegate(.openMyOpinions(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            case let .ownerDashboard(dashboard)? = state.routes.last?.screen,
+            dashboard.instanceID == instanceID,
+            dashboard.selectedTab == .report,
+            dashboard.sourceViewState == .ready,
+            dashboard.management == nil,
+            let report = dashboard.report
+      else { return .none }
+      var opinions = ClassMyOpinionsFeature.State()
+      opinions.opinions = report.resolvedOpinions
+      state.routes.push(.myOpinions(opinions))
+      return .none
+
     case let .routeAction(routeID, action: .report(.delegate(.dismiss))):
       guard routeID == state.routes.count - 1,
             case .report? = state.routes.last?.screen
@@ -784,8 +800,13 @@ private extension ClassCoordinator {
       else { return .none }
       return .send(.view(.backAction))
 
-    case .routeAction(_, action: .ownerDashboard(.delegate(.dismiss))),
-         .routeAction(_, action: .ownerMemberDetail(.delegate(.dismiss))),
+    case let .routeAction(routeID, action: .ownerDashboard(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .ownerDashboard? = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .ownerMemberDetail(.delegate(.dismiss))),
          .routeAction(_, action: .ownerReplyDetail(.delegate(.dismiss))),
          .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
       return .send(.view(.backAction))

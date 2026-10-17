@@ -1238,6 +1238,99 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 운영자_내_의견은_push하고_돌아오면_리포트와_AI_상태를_보존한다() async {
+    let room = ClassRoom.mocks[0]
+    var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    dashboard.report = MockClassReport.figmaMyOpinions
+    dashboard.sourceViewState = .ready
+    dashboard.selectedTab = .report
+    dashboard.generatedFeedback = ClassAIPersonalFeedback(
+      summaryTitle: "보존할 피드백",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "질문",
+      nextHint: "힌트"
+    )
+    dashboard.generatedInsight = "보존할 인사이트"
+    var expectedOpinions = ClassMyOpinionsFeature.State()
+    expectedOpinions.opinions = MockClassReport.figmaMyOpinions.resolvedOpinions
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.ownerDashboard(dashboard))
+    state.dashboardInstanceIDs = [dashboard.instanceID]
+    let originalRoutes = state.routes
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.view(.myOpinionsTapped)))))
+    await store.receive(\.router.routeAction) {
+      $0.routes.push(.myOpinions(expectedOpinions))
+    }
+    #expect(store.state.routes.last == .push(.myOpinions(expectedOpinions)))
+    #expect(store.state.routes[2].screen == .ownerDashboard(dashboard))
+    #expect(store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.delegate(.dismiss)))))
+    await store.send(.router(.routeAction(id: 3, action: .myOpinions(.view(.backTapped)))))
+    await store.receive(\.router.routeAction)
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+    }
+    #expect(store.state.routes == originalRoutes)
+    #expect(store.state.showsTabBar)
+    await store.finish()
+  }
+
+  @Test
+  func 운영자_내_의견은_비활성_인스턴스와_준비되지_않은_리포트에서_열리지_않는다() async {
+    let room = ClassRoom.mocks[0]
+    var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    dashboard.report = MockClassReport.figmaMyOpinions
+    dashboard.sourceViewState = .ready
+    dashboard.selectedTab = .report
+    var state = ClassCoordinator.State()
+    state.routes.push(.ownerDashboard(dashboard))
+    state.dashboardInstanceIDs = [dashboard.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(UUID()))))))
+    await store.finish()
+
+    var inactiveState = state
+    inactiveState.routes.push(.myOpinions(.init()))
+    let inactiveStore = TestStore(initialState: inactiveState) { ClassCoordinator() }
+    await inactiveStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await inactiveStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.dismiss)))))
+    await inactiveStore.finish()
+
+    dashboard.selectedTab = .home
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let homeStore = TestStore(initialState: state) { ClassCoordinator() }
+    await homeStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await homeStore.finish()
+
+    dashboard.selectedTab = .report
+    dashboard.sourceViewState = .loading
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let loadingStore = TestStore(initialState: state) { ClassCoordinator() }
+    await loadingStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await loadingStore.finish()
+
+    dashboard.sourceViewState = .ready
+    dashboard.management = .init(kind: .management)
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let managementStore = TestStore(initialState: state) { ClassCoordinator() }
+    await managementStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await managementStore.finish()
+
+    dashboard.management = nil
+    dashboard.report = nil
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let missingStore = TestStore(initialState: state) { ClassCoordinator() }
+    await missingStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await missingStore.finish()
+  }
+
+  @Test
   func 클래스_댓글의_리포트는_상세를_보존하고_뒤로가면_탭바를_보인다() async {
     let room = ClassRoom.mockClosedSociety
     let battleID = -1_000_000 - room.id
@@ -1443,7 +1536,7 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 운영자_대시보드는_관리_시트와_관계없이_탭바를_숨기고_상세로_돌아오면_보인다() async {
+  func 운영자_대시보드는_관리_시트와_전역_마감일_패널에서만_탭바를_숨긴다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
     state.routes.push(.detail(.init(room: room)))
@@ -1456,11 +1549,33 @@ struct ClassCoordinatorTests {
       id: 1,
       action: .detail(.delegate(.openReport(room)))
     )))
-    #expect(!store.state.showsTabBar)
-    guard case .ownerDashboard? = store.state.routes.last?.screen else {
+    #expect(store.state.showsTabBar)
+    guard case var .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
       Issue.record("운영자 대시보드가 열리지 않음")
       return
     }
+
+    var tabBarState = store.state
+    dashboard.selectedTab = .report
+    tabBarState.routes[screenAt: 2] = .ownerDashboard(dashboard)
+    #expect(tabBarState.showsTabBar)
+
+    dashboard.management = .init(kind: .management)
+    tabBarState.routes[screenAt: 2] = .ownerDashboard(dashboard)
+    #expect(!tabBarState.showsTabBar)
+
+    dashboard.management = nil
+    tabBarState.routes[screenAt: 2] = .ownerDashboard(dashboard)
+    #expect(tabBarState.showsTabBar)
+
+    tabBarState.deadlineEdit = .init(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    #expect(!tabBarState.showsTabBar)
+    tabBarState.deadlineEdit = nil
+    #expect(tabBarState.showsTabBar)
 
     await store.send(.router(.routeAction(
       id: 2,

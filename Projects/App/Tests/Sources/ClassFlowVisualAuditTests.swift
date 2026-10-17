@@ -309,6 +309,132 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureOwnerReportShell() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the owner report shell")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func save(
+      _ image: UIImage,
+      name: String
+    ) throws -> String {
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      return try recognizedAuditText(in: image, name: name)
+    }
+
+    let source = ClassRoom.mocks[0]
+    let room = ClassRoom(
+      id: source.id,
+      name: source.name,
+      joinCode: source.joinCode,
+      battle: source.battle,
+      deadline: source.deadline,
+      memberCount: source.memberCount,
+      role: .owner,
+      status: .closed,
+      allowsAnonymousOpinion: source.allowsAnonymousOpinion,
+      requiresComment: source.requiresComment,
+      ownerParticipates: source.ownerParticipates,
+      memberCapacity: source.memberCapacity
+    )
+    let dashboard = MockClassOwnerDashboard.figma
+    let report = MockClassReport.figma
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: report[.aiSummaryTitle],
+      summaryDetail: report[.aiSummaryDetail],
+      points: [
+        .init(title: report[.feedbackTitle1], detail: report[.feedbackDetail1]),
+        .init(title: report[.feedbackTitle2], detail: report[.feedbackDetail2]),
+        .init(title: report[.feedbackTitle3], detail: report[.feedbackDetail3]),
+      ],
+      nextQuestion: report[.nextQuestion],
+      nextHint: report[.nextHint]
+    )
+    let variants: [(String, ClassOwnerTab, CGSize, Bool)] = [
+      ("home-402", .home, CGSize(width: 402, height: 874), false),
+      ("home-375", .home, CGSize(width: 375, height: 667), false),
+      ("personal-402", .report, CGSize(width: 402, height: 874), false),
+      ("personal-375", .report, CGSize(width: 375, height: 667), false),
+      ("unavailable-375", .report, CGSize(width: 375, height: 667), true),
+    ]
+    for (name, tab, viewport, unavailable) in variants {
+      var owner = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+      owner.selectedTab = tab
+      owner.sourceViewState = .ready
+      owner.dashboard = dashboard
+      owner.report = report
+      owner.members = dashboard.members
+      owner.opinions = dashboard.opinions
+      owner.metrics = dashboard.metrics
+      owner.generatedInsight = dashboard.insight
+      owner.generatedFeedback = unavailable ? nil : feedback
+      owner.feedbackError = unavailable ? .deviceNotEligible : nil
+      var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+      state.classState.routes.push(.ownerDashboard(owner))
+      let repository = MockClassRepository(rooms: [], availableRooms: [])
+      let store = withDependencies {
+        $0.context = .test
+        $0.uuid = .incrementing
+      } operation: {
+        Store(initialState: state) {
+          MainTabCoordinator()
+            .dependency(\.classUseCase, repository)
+            .dependency(\.classMockRepository, repository)
+            .dependency(\.classMockChatSession, ClassMockChatSession())
+            .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+        }
+      }
+      let prefix = "owner-shell-" + name
+      let (top, bottom) = try await capture(
+        AnyView(MainTabView(store: store)),
+        ready: { store.classState.showsTabBar && !store.shouldHideTabBar },
+        includeScrollBottom: true,
+        viewport: viewport
+      )
+      let topText = try save(top, name: prefix + "-top")
+      XCTAssertTrue(topText.contains("종료"), "Closed owner status missing: \(topText)")
+      XCTAssertTrue(topText.contains("클래스요약"), "Inner tabs missing: \(topText)")
+      XCTAssertFalse(topText.contains("클래스관리"), "Unexpected management header: \(topText)")
+      let bottomText = try save(bottom ?? top, name: prefix + "-bottom")
+      if tab == .report {
+        XCTAssertTrue(bottomText.contains("내가남긴의견3개보기"), "Disclosure clipped: \(bottomText)")
+        if unavailable {
+          XCTAssertTrue(topText.contains("피드백을사용할수없어요"), "Unavailable feedback missing: \(topText)")
+        } else {
+          XCTAssertTrue(bottomText.contains("다음생각한걸음"), "Final feedback point missing: \(bottomText)")
+        }
+      } else {
+        XCTAssertTrue(topText.contains("클래스참여현황"), "Participation summary missing: \(topText)")
+        XCTAssertTrue(bottomText.contains("주요의견"), "Last owner section missing: \(bottomText)")
+      }
+      let tabText = try recognizedAuditText(
+        in: top,
+        name: prefix + "-tabs",
+        regionOfInterest: CGRect(x: 0, y: 0, width: 1, height: 0.16)
+      )
+      XCTAssertTrue(tabText.contains("클래스"), "Selected main tab missing: \(tabText)")
+      guard case let .ownerDashboard(snapshot)? = store.classState.routes.last?.screen else {
+        return XCTFail("Owner route disappeared while capturing")
+      }
+      XCTAssertEqual(snapshot, owner)
+      XCTAssertNil(snapshot.requestID)
+      XCTAssertNil(snapshot.insightRequestID)
+      XCTAssertNil(snapshot.feedbackRequestID)
+    }
+  }
+
+  @MainActor
   func testClassReportLayoutFooters() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify report layout footers")

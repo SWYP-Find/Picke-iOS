@@ -42,7 +42,6 @@ public struct ClassOwnerDashboardFeature {
     public var room: ClassRoom
     public let instanceID: UUID
     public var selectedTab: ClassOwnerTab = .home
-    public var showsMyOpinions = false
     public var opinionFilter: ClassOwnerOpinionFilter = .popular
     public var memberSort: ClassOwnerMemberSort = .name
     public var memberFilter: MemberFilter = .all
@@ -115,11 +114,15 @@ public struct ClassOwnerDashboardFeature {
     }
 
     public var myOpinionCount: Int {
-      report?.myOpinions.count ?? 0
+      myOpinions.count
     }
 
-    public var myOpinions: [String] {
-      report?.myOpinions ?? []
+    public var myOpinions: [ClassReportOpinion] {
+      report?.resolvedOpinions ?? []
+    }
+
+    public var myOpinionsTitle: String {
+      "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
     public var searchedMembers: [ClassOwnerMember] {
@@ -285,6 +288,7 @@ public struct ClassOwnerDashboardFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case openMyOpinions(UUID)
     case editClass
     case deleteClass
     case openMemberDetail(ClassOwnerMember)
@@ -364,7 +368,12 @@ extension ClassOwnerDashboardFeature {
     case let .tabSelected(tab):
       state.selectedTab = tab
     case .myOpinionsTapped:
-      state.showsMyOpinions.toggle()
+      guard state.selectedTab == .report,
+            state.sourceViewState == .ready,
+            state.report != nil,
+            state.management == nil
+      else { return .none }
+      return .send(.delegate(.openMyOpinions(state.instanceID)))
     case let .opinionFilterSelected(filter):
       guard state.canSortOpinions(filter) else { return .none }
       state.opinionFilter = filter

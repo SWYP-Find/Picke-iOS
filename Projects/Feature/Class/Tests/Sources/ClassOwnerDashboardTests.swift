@@ -496,6 +496,67 @@ struct ClassOwnerDashboardTests {
   }
 
   @Test
+  func 구조화된_의견이_legacy_목록보다_우선하며_중복과_순서를_보존한다() {
+    var state = fixtureState()
+    let entries = [
+      ClassReportOpinion(id: "same", kind: .comment, body: "같은 글"),
+      ClassReportOpinion(id: "same", kind: .reply, body: "같은 글"),
+      ClassReportOpinion(id: "last", kind: .reply, body: "마지막 글"),
+    ]
+    state.report = ClassReport(
+      texts: [:],
+      myOpinions: ["legacy"],
+      initialVoteLeading: 0,
+      finalVoteLeading: 0,
+      layout: .summary,
+      opinionEntries: entries
+    )
+
+    #expect(state.myOpinions == entries)
+    #expect(state.myOpinionCount == 3)
+    #expect(state.myOpinionsTitle == "내가 남긴 의견 3개 보기")
+
+    state.report = ClassReport(
+      texts: [:],
+      myOpinions: ["legacy"],
+      initialVoteLeading: 0,
+      finalVoteLeading: 0,
+      layout: .summary,
+      opinionEntries: []
+    )
+    #expect(state.myOpinions.isEmpty)
+    #expect(state.myOpinionCount == 0)
+    #expect(state.myOpinionsTitle == "내가 남긴 의견 0개 보기")
+  }
+
+  @Test
+  func 준비된_운영자_리포트에서만_내_의견_이동을_요청한다() async {
+    var state = fixtureState()
+    state.selectedTab = .report
+    let instanceID = state.instanceID
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() }
+
+    await store.send(.view(.myOpinionsTapped))
+    await store.receive(\.delegate, .openMyOpinions(instanceID))
+    #expect(store.state == state)
+
+    let invalidStates: [(inout ClassOwnerDashboardFeature.State) -> Void] = [
+      { (state: inout ClassOwnerDashboardFeature.State) in state.selectedTab = .home },
+      { (state: inout ClassOwnerDashboardFeature.State) in state.sourceViewState = .loading },
+      { (state: inout ClassOwnerDashboardFeature.State) in state.sourceViewState = .failed },
+      { (state: inout ClassOwnerDashboardFeature.State) in state.report = nil },
+      { (state: inout ClassOwnerDashboardFeature.State) in state.management = .init(kind: .management) },
+    ]
+    for invalid in invalidStates {
+      var invalidState = state
+      invalid(&invalidState)
+      let invalidStore = TestStore(initialState: invalidState) { ClassOwnerDashboardFeature() }
+      await invalidStore.send(.view(.myOpinionsTapped))
+      await invalidStore.finish()
+    }
+  }
+
+  @Test
   func 서버_연동_전에는_피드백_등록을_전송하지_않는다() async {
     let store = TestStore(initialState: ClassFeedbackComposeFeature.State(
       room: ClassRoom.mocks[0],
