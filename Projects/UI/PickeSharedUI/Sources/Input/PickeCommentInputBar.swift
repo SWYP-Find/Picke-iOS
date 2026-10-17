@@ -14,6 +14,7 @@ public struct PickeCommentInputBar: View {
   @Binding private var text: String
   private let placeholder: String
   private let isSendEnabled: Bool
+  private let isSubmitting: Bool
   private let isCompact: Bool
   private let onSend: () -> Void
   private var focus: FocusState<Bool>.Binding
@@ -23,6 +24,7 @@ public struct PickeCommentInputBar: View {
     focus: FocusState<Bool>.Binding,
     placeholder: String,
     isSendEnabled: Bool,
+    isSubmitting: Bool = false,
     isCompact: Bool = false,
     onSend: @escaping () -> Void
   ) {
@@ -30,6 +32,7 @@ public struct PickeCommentInputBar: View {
     self.focus = focus
     self.placeholder = placeholder
     self.isSendEnabled = isSendEnabled
+    self.isSubmitting = isSubmitting
     self.isCompact = isCompact
     self.onSend = onSend
   }
@@ -76,11 +79,11 @@ private extension PickeCommentInputBar {
         .foregroundStyle(.iconGrayInverse)
         .frame(width: 40, height: 40)
         .background(
-          isSendEnabled ? .buttonIconBackgroundDefault : .buttonIconBackgroundDisabled,
+          isSubmitting ? .buttonIconBackgroundDisabled : .buttonIconBackgroundDefault,
           in: Circle()
         )
     }
-    .buttonStyle(.plain)
+    .buttonStyle(CompactSendButtonStyle())
     .disabled(!isSendEnabled)
     .accessibilityLabel("보내기")
   }
@@ -125,5 +128,12 @@ private extension PickeCommentInputBar {
     }
     .buttonStyle(.plain)
     .disabled(!isSendEnabled)
+  }
+}
+
+private struct CompactSendButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .opacity(configuration.isPressed ? 0.7 : 1)
   }
 }

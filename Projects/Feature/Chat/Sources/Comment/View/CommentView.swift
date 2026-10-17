@@ -495,6 +495,7 @@ private extension CommentView {
         focus: $isCommentFocused,
         placeholder: "내용을 입력하세요",
         isSendEnabled: store.isSendEnabled,
+        isSubmitting: store.isSubmitting,
         isCompact: true,
         onSend: {
           isCommentFocused = false
