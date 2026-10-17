@@ -47,11 +47,18 @@ public struct PickeNavigationBar<Trailing: View>: View {
   private var leadingArea: some View {
     if let onBack {
       Button { onBack() } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 18, weight: .semibold))
+        Path { path in
+          path.move(to: CGPoint(x: 17, y: 2))
+          path.addLine(to: CGPoint(x: 7, y: 12))
+          path.addLine(to: CGPoint(x: 17, y: 22))
+        }
+          .stroke(style: StrokeStyle(lineWidth: 1.5, lineCap: .butt, lineJoin: .miter))
           .frame(width: 24, height: 24)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("뒤로")
+      .accessibilityIdentifier("chevron.left")
     } else {
       Color.clear.frame(width: 24, height: 24)
     }
