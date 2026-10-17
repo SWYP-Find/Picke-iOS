@@ -20,6 +20,7 @@ public struct ClassReport: Equatable, Sendable {
 
   public let texts: [Key: String]
   public let myOpinions: [String]
+  public let opinionEntries: [ClassReportOpinion]?
   public let initialVoteLeading: Double
   public let finalVoteLeading: Double
   public let layout: ClassReportLayout
@@ -29,10 +30,12 @@ public struct ClassReport: Equatable, Sendable {
     myOpinions: [String],
     initialVoteLeading: Double,
     finalVoteLeading: Double,
-    layout: ClassReportLayout
+    layout: ClassReportLayout,
+    opinionEntries: [ClassReportOpinion]? = nil
   ) {
     self.texts = texts
     self.myOpinions = myOpinions
+    self.opinionEntries = opinionEntries
     self.initialVoteLeading = initialVoteLeading
     self.finalVoteLeading = finalVoteLeading
     self.layout = layout
@@ -40,5 +43,11 @@ public struct ClassReport: Equatable, Sendable {
 
   public subscript(_ key: Key) -> String {
     texts[key] ?? ""
+  }
+
+  public var resolvedOpinions: [ClassReportOpinion] {
+    opinionEntries ?? myOpinions.enumerated().map { index, body in
+      ClassReportOpinion(id: "legacy-\(index)", kind: .unspecified, body: body)
+    }
   }
 }

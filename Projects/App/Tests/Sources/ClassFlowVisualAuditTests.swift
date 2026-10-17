@@ -209,22 +209,102 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       XCTAssertTrue(bottomText.contains("내가남긴의견3개보기"), "Opinion action missing: \(bottomText)")
       XCTAssertFalse(bottomText.contains("다음생각해보기"), "Duplicate external footer remains: \(bottomText)")
 
-      store.send(.view(.myOpinionsTapped))
-      XCTAssertTrue(store.showsMyOpinions)
-      let (expandedTop, expandedBottom) = try await capture(
-        AnyView(ClassReportView(store: store)),
-        ready: nil,
-        includeScrollBottom: true,
+
+    }
+  }
+
+  @MainActor
+  func testCaptureMyOpinions() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the dedicated opinions screen")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    func save(
+      _ image: UIImage,
+      name: String
+    ) throws -> String {
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      return try recognizedAuditText(in: image, name: name)
+    }
+
+    let fixture = MockClassReport.figmaMyOpinions.resolvedOpinions
+    let repeated = Array(repeating: try XCTUnwrap(fixture.last), count: 6)
+    let long = [ClassReportOpinion(
+      id: "long-comment",
+      kind: .comment,
+      body: String(repeating: "서로 다른 관점을 함께 살펴보고 생각의 근거를 구체적으로 설명해요. ", count: 20),
+      stance: "다른 관점도 충분히 생각해 볼 수 있어요",
+      likeCount: 1_340,
+      replyCount: 23
+    )] + repeated
+    let variants: [(String, [ClassReportOpinion], CGSize, Bool)] = [
+      ("source-402", fixture, CGSize(width: 402, height: 874), true),
+      ("source-375", fixture, CGSize(width: 375, height: 667), true),
+      ("long-375", long, CGSize(width: 375, height: 667), true),
+      ("repeated-375", repeated, CGSize(width: 375, height: 667), true),
+      ("empty-375", [], CGSize(width: 375, height: 667), false),
+    ]
+    for (variant, entries, viewport, scrolls) in variants {
+      var opinions = ClassMyOpinionsFeature.State()
+      opinions.opinions = entries
+      var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+      state.classState.routes.push(.myOpinions(opinions))
+      let repository = MockClassRepository(rooms: [], availableRooms: [])
+      let store = withDependencies {
+        $0.context = .test
+        $0.uuid = .incrementing
+      } operation: {
+        Store(initialState: state) {
+          MainTabCoordinator()
+            .dependency(\.classUseCase, repository)
+            .dependency(\.classMockRepository, repository)
+            .dependency(\.classMockChatSession, ClassMockChatSession())
+            .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
+        }
+      }
+      let (top, bottom) = try await capture(
+        AnyView(MainTabView(store: store)),
+        ready: { store.classState.showsTabBar && !store.shouldHideTabBar },
+        includeScrollBottom: scrolls,
         viewport: viewport
       )
-      _ = try save(expandedTop, name: prefix + "-expanded-top")
-      let expandedText = try save(XCTUnwrap(expandedBottom), name: prefix + "-expanded-bottom")
-      XCTAssertTrue(
-        expandedText.contains("교정의기준을세우는일이중요하다고느꼈어요"),
-        "Last opinion missing from the expanded scroll bottom: \(expandedText)"
+      let prefix = "my-opinions-" + variant
+      let text = try save(top, name: prefix + "-top")
+      XCTAssertTrue(text.contains("내가남긴의견"), "Dedicated title missing: \(text)")
+      // Keep the bar pixels in the audit; individual small labels are not reliable OCR.
+      // MainTabInteractionTests verifies all five real buttons, including empty opinions.
+      let tabText = try recognizedAuditText(
+        in: top,
+        name: prefix + "-tabs",
+        regionOfInterest: CGRect(x: 0, y: 0, width: 1, height: 0.16)
       )
-      store.send(.view(.myOpinionsTapped))
-      XCTAssertFalse(store.showsMyOpinions)
+      XCTAssertTrue(tabText.contains("클래스"), "Selected tab missing: \(tabText)")
+      if entries.isEmpty {
+        XCTAssertTrue(text.contains("아직남긴의견이없어요"), "Empty state missing: \(text)")
+      } else {
+        XCTAssertTrue(text.contains("남긴대댓글"), "Reply heading missing: \(text)")
+        if entries.contains(where: { $0.kind == .comment }) {
+          XCTAssertTrue(text.contains("남긴댓글"), "Comment heading missing: \(text)")
+        }
+        let bottomText = try save(XCTUnwrap(bottom), name: prefix + "-bottom")
+        XCTAssertTrue(bottomText.contains("공은지의답글"), "Final reply missing: \(bottomText)")
+        XCTAssertTrue(bottomText.contains("빠른배틀"), "Bottom bar missing: \(bottomText)")
+      }
+      guard case let .myOpinions(snapshot)? = store.classState.routes.last?.screen else {
+        return XCTFail("Opinions route disappeared while capturing")
+      }
+      XCTAssertEqual(snapshot.opinions, entries)
     }
   }
 
@@ -246,7 +326,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         myOpinions: fixture.myOpinions,
         initialVoteLeading: fixture.initialVoteLeading,
         finalVoteLeading: fixture.finalVoteLeading,
-        layout: layout
+        layout: layout,
+        opinionEntries: fixture.opinionEntries
       )
       state.sourceViewState = .ready
       state.feedback = Self.visualPersonalFeedback

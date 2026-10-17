@@ -25,7 +25,7 @@ final class MainTabInteractionTests: XCTestCase {
     let memberCount: Int
     let memberSearch: String
     let reportInstanceID: String
-    let reportShowsMyOpinions: Bool
+    let opinionCount: Int
   }
 
   override func setUpWithError() throws {
@@ -168,6 +168,30 @@ final class MainTabInteractionTests: XCTestCase {
     attach(app, name: "tabs-after-initial-keyboard-dismissed")
   }
 
+  func testEmptyOpinionsKeepsAllFiveRealTabButtons() throws {
+    let app = launch(scenario: "opinions-empty")
+    waitUntil("empty opinions mounted with tabs") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.classRouteKind == "myOpinions" && state.opinionCount == 0
+        && !state.shouldHideTabBar
+    }
+    XCTAssertTrue(app.staticTexts["아직 남긴 의견이 없어요."].exists)
+    assertVisibleTabBar(in: app, selected: 4)
+    attach(app, name: "tabs-empty-my-opinions")
+    tabButton(0, in: app).tap()
+    waitUntil("home can be tapped from empty opinions") {
+      self.audit(in: app)?.selectedTab == 0
+    }
+    assertVisibleTabBar(in: app, selected: 0)
+    tabButton(4, in: app).tap()
+    waitUntil("empty opinions survives the tab roundtrip") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.selectedTab == 4 && state.classRouteKind == "myOpinions"
+        && state.opinionCount == 0 && !state.shouldHideTabBar
+    }
+    assertVisibleTabBar(in: app, selected: 4)
+  }
+
   func testReportShowsBarAndBackPreservesDetailBar() throws {
     let app = launch(scenario: "report")
     waitUntil("report route shows custom bar") {
@@ -181,7 +205,7 @@ final class MainTabInteractionTests: XCTestCase {
     XCTAssertTrue(app.staticTexts["종료"].exists)
     attach(app, name: "tabs-member-report-visible")
 
-    let disclosure = app.buttons.containing(.staticText, identifier: "내가 남긴 의견 3개 보기").firstMatch
+    let disclosure = app.buttons["class-report-my-opinions"]
     let classTab = tabButton(4, in: app)
     for _ in 0 ..< 6 {
       if disclosure.exists, disclosure.isHittable, disclosure.frame.maxY <= classTab.frame.minY {
@@ -193,8 +217,14 @@ final class MainTabInteractionTests: XCTestCase {
     XCTAssertLessThanOrEqual(disclosure.frame.maxY, classTab.frame.minY)
     attach(app, name: "tabs-member-report-disclosure")
     disclosure.tap()
-    waitUntil("report opinions expanded") { self.audit(in: app)?.reportShowsMyOpinions == true }
-    let lastOpinion = app.staticTexts["토론을 들으며 연령만 낮추는 것보다 교정의 기준을 세우는 일이 중요하다고 느꼈어요."]
+    waitUntil("opinions pushed above the report") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.classRouteKind == "myOpinions" && state.opinionCount == 5
+        && state.classRouteCount == original.classRouteCount + 1
+        && state.reportInstanceID == original.reportInstanceID && !state.shouldHideTabBar
+    }
+    XCTAssertTrue(app.staticTexts["내가 남긴 의견"].exists)
+    let lastOpinion = app.descendants(matching: .any).matching(identifier: "class-my-opinion-4").firstMatch
     for _ in 0 ..< 6 {
       if lastOpinion.exists, lastOpinion.isHittable, lastOpinion.frame.maxY <= classTab.frame.minY {
         break
@@ -204,20 +234,29 @@ final class MainTabInteractionTests: XCTestCase {
     XCTAssertTrue(lastOpinion.isHittable)
     XCTAssertLessThanOrEqual(lastOpinion.frame.maxY, classTab.frame.minY)
     assertVisibleTabBar(in: app, selected: 4)
-    attach(app, name: "tabs-member-report-expanded-bottom")
+    attach(app, name: "tabs-my-opinions-bottom")
 
     tabButton(0, in: app).tap()
-    waitUntil("home selected from report") { self.audit(in: app)?.selectedTab == 0 }
+    waitUntil("home selected from opinions") { self.audit(in: app)?.selectedTab == 0 }
     assertVisibleTabBar(in: app, selected: 0)
     tabButton(4, in: app).tap()
-    waitUntil("report state retained after tab roundtrip") {
+    waitUntil("opinions and report retained after tab roundtrip") {
       guard let state = self.audit(in: app) else { return false }
-      return state.selectedTab == 4 && state.classRouteKind == "report"
-        && state.reportInstanceID == original.reportInstanceID && state.reportShowsMyOpinions
+      return state.selectedTab == 4 && state.classRouteKind == "myOpinions"
+        && state.reportInstanceID == original.reportInstanceID && state.opinionCount == 5
+        && state.classRouteCount == original.classRouteCount + 1 && !state.shouldHideTabBar
+    }
+    assertVisibleTabBar(in: app, selected: 4)
+    attach(app, name: "tabs-my-opinions-restored")
+    app.buttons["class-my-opinions-back"].tap()
+    waitUntil("opinions back restores the same report") {
+      guard let state = self.audit(in: app) else { return false }
+      return state.classRouteKind == "report"
+        && state.reportInstanceID == original.reportInstanceID
         && state.classRouteCount == original.classRouteCount && !state.shouldHideTabBar
     }
     assertVisibleTabBar(in: app, selected: 4)
-    attach(app, name: "tabs-member-report-restored")
+    attach(app, name: "tabs-report-after-opinions-back")
     let back = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "chevron.left", "뒤로"))
     XCTAssertTrue(back.firstMatch.waitForExistence(timeout: 5))
     back.firstMatch.tap()

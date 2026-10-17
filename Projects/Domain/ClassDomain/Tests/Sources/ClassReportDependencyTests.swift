@@ -59,6 +59,11 @@ struct ClassReportDependencyTests {
     ])
     #expect(MockClassReport.figma.layout == .summary)
     #expect(MockClassReport.figma[.aiSummaryTitle] == "이번 토론에서 생각의 기준이 넓어졌어요")
+    #expect(MockClassReport.figma.resolvedOpinions.map(\.kind) == [.comment, .reply, .reply])
+    #expect(MockClassReport.figma.resolvedOpinions.map(\.body) == MockClassReport.figma.myOpinions)
+    // The activity totals are independent of the three opinions visible in this subset.
+    #expect(MockClassReport.figma[.commentCount] == "2")
+    #expect(MockClassReport.figma[.replyCount] == "3")
   }
 
   @Test
@@ -90,6 +95,7 @@ struct ClassReportDependencyTests {
     }
     #expect(ownerOtherTexts == memberOtherTexts)
     #expect(ownerReport.myOpinions == memberReport.myOpinions)
+    #expect(ownerReport.opinionEntries == memberReport.opinionEntries)
     #expect(ownerReport.initialVoteLeading == memberReport.initialVoteLeading)
     #expect(ownerReport.finalVoteLeading == memberReport.finalVoteLeading)
     #expect(ownerReport.layout == memberReport.layout)

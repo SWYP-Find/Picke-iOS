@@ -57,7 +57,8 @@ public enum MockClassOwnerDashboard {
       myOpinions: baseReport.myOpinions,
       initialVoteLeading: baseReport.initialVoteLeading,
       finalVoteLeading: baseReport.finalVoteLeading,
-      layout: baseReport.layout
+      layout: baseReport.layout,
+      opinionEntries: baseReport.opinionEntries
     )
     return ClassOwnerDashboardData(
       members: members,

@@ -277,7 +277,7 @@ private extension ClassReportView {
               if store.report != nil {
                 VStack(alignment: .leading, spacing: 16) {
                   Rectangle().fill(.beige700).frame(height: 1)
-                  myOpinionsSection()
+                  myOpinionsSection
                 }
                 .padding(16)
               }
@@ -517,42 +517,30 @@ private extension ClassReportView {
         )
         if store.report != nil {
           Rectangle().fill(.beige700).frame(height: 1)
-          myOpinionsSection()
+          myOpinionsSection
         }
       }
       .padding(16)
     }
   }
 
-  @ViewBuilder
-  func myOpinionsSection() -> some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Button { send(.myOpinionsTapped) } label: {
-        HStack {
-          Text("내가 남긴 의견 \(store.myOpinionCount)개 보기")
-            .pretendardFont(family: .Bold, size: 12)
-            .frame(minHeight: 17)
-          Spacer()
-          Image(systemName: store.showsMyOpinions ? "chevron.up" : "chevron.right")
-            .pretendardFont(.semiBold12)
-            .frame(width: 12, height: 12)
-        }
-        .foregroundStyle(.primary500)
-        .padding(.vertical, 6)
-        .contentShape(Rectangle())
+  var myOpinionsSection: some View {
+    Button { send(.myOpinionsTapped) } label: {
+      HStack {
+        Text(store.myOpinionsButtonTitle)
+          .pretendardFont(family: .Bold, size: 12)
+          .frame(minHeight: 17)
+        Spacer()
+        Image(systemName: "chevron.right")
+          .pretendardFont(.semiBold12)
+          .frame(width: 12, height: 12)
       }
-      .buttonStyle(.plain)
-      if store.showsMyOpinions {
-        ForEach(store.myOpinions, id: \.self) { opinion in
-          Text(opinion)
-            .pretendardFont(.regular13)
-            .foregroundStyle(.gray700)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(.beige100, in: RoundedRectangle(cornerRadius: 2))
-        }
-      }
+      .foregroundStyle(.primary500)
+      .padding(.vertical, 6)
+      .contentShape(Rectangle())
     }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("class-report-my-opinions")
   }
 
   var feedbackSummaryLinePadding: CGFloat {
@@ -774,7 +762,8 @@ private extension ClassReportView {
       myOpinions: fixture.myOpinions,
       initialVoteLeading: fixture.initialVoteLeading,
       finalVoteLeading: fixture.finalVoteLeading,
-      layout: tab == .summary ? .summary : .tabbed
+      layout: tab == .summary ? .summary : .tabbed,
+      opinionEntries: fixture.opinionEntries
     )
     let repository = MockClassRepository(
       rooms: [completedRoom],

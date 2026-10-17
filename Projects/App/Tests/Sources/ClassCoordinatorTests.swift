@@ -1158,6 +1158,86 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 내_의견은_push로_열고_뒤로가면_리포트_상태를_보존한다() async throws {
+    var report = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    report.report = MockClassReport.figmaMyOpinions
+    report.sourceViewState = .ready
+    report.selectedTab = .feedback
+    report.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "보존할 피드백",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "질문",
+      nextHint: "힌트"
+    )
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.opinions = MockClassReport.figmaMyOpinions.resolvedOpinions
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: .mockClosedSociety)))
+    state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
+    let originalRoutes = state.routes
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.view(.myOpinionsTapped)))))
+    await store.receive(\.router.routeAction) {
+      $0.routes.push(.myOpinions(opinions))
+    }
+    #expect(store.state.routes.last == .push(.myOpinions(opinions)))
+    #expect(store.state.showsTabBar)
+    #expect(store.state.routes[2].screen == .report(report))
+
+    // Repeated navigation and an underlying report's late dismiss must not pop or push.
+    await store.send(.router(.routeAction(id: 2, action: .report(.delegate(.openMyOpinions(report.instanceID))))))
+    await store.send(.router(.routeAction(id: 2, action: .report(.delegate(.dismiss)))))
+    await store.send(.router(.routeAction(id: 3, action: .myOpinions(.view(.backTapped)))))
+    await store.receive(\.router.routeAction)
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+    }
+    #expect(store.state.routes == originalRoutes)
+    #expect(store.state.showsTabBar)
+    await store.finish()
+  }
+
+  @Test
+  func 내_의견은_다른_리포트_인스턴스나_로딩_중에는_열리지_않는다() async {
+    var report = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    report.report = MockClassReport.figma
+    report.sourceViewState = .loading
+    var state = ClassCoordinator.State()
+    state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(report.instanceID))))))
+    await store.finish()
+
+    report.sourceViewState = .ready
+    state.routes[screenAt: 1] = .report(report)
+    let readyStore = TestStore(initialState: state) { ClassCoordinator() }
+    await readyStore.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(UUID()))))))
+    await readyStore.finish()
+  }
+
+  @Test
+  func 내_의견의_비활성_닫기는_무시하고_마감일_패널은_탭바를_숨긴다() async {
+    var state = ClassCoordinator.State()
+    state.routes.push(.myOpinions(.init()))
+    state.routes.push(.myOpinions(.init()))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .myOpinions(.delegate(.dismiss)))))
+    #expect(store.state.showsTabBar)
+    await store.finish()
+
+    state.deadlineEdit = .init(
+      room: .mockClosedSociety,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    #expect(!state.showsTabBar)
+  }
+
+  @Test
   func 클래스_댓글의_리포트는_상세를_보존하고_뒤로가면_탭바를_보인다() async {
     let room = ClassRoom.mockClosedSociety
     let battleID = -1_000_000 - room.id

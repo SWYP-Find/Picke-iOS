@@ -61,6 +61,7 @@ public enum ImageAsset: String {
   // MARK: - 댓글(관점)
 
   case heartPlus
+  case commentMessage
 
   // MARK: - 클래스
 

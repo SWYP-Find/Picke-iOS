@@ -19,7 +19,6 @@ public struct ClassReportFeature {
     public var room: ClassRoom
     public var report: ClassReport?
     public var selectedTab: ClassReportTab = .summary
-    public var showsMyOpinions = false
     public var sourceViewState: ClassReportSourceViewState = .loading
     public var requestID: UUID?
     public var feedback: ClassAIPersonalFeedback?
@@ -46,11 +45,11 @@ public struct ClassReportFeature {
     }
 
     public var myOpinionCount: Int {
-      report?.myOpinions.count ?? 0
+      report?.resolvedOpinions.count ?? 0
     }
 
-    public var myOpinions: [String] {
-      report?.myOpinions ?? []
+    public var myOpinionsButtonTitle: String {
+      "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
     public var showsSummaryLayout: Bool {
@@ -105,6 +104,7 @@ public struct ClassReportFeature {
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
+    case openMyOpinions(UUID)
   }
 
   public enum CancelID: Hashable, Sendable {
@@ -164,8 +164,8 @@ extension ClassReportFeature {
       state.selectedTab = tab
       return .none
     case .myOpinionsTapped:
-      state.showsMyOpinions.toggle()
-      return .none
+      guard state.sourceViewState == .ready, state.report != nil else { return .none }
+      return .send(.delegate(.openMyOpinions(state.instanceID)))
     }
   }
 

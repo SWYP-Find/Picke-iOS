@@ -54,6 +54,62 @@ public enum MockClassReport {
     ],
     initialVoteLeading: 0.64,
     finalVoteLeading: 0.50,
-    layout: .summary
+    layout: .summary,
+    opinionEntries: [
+      ClassReportOpinion(
+        id: "report-comment-1",
+        kind: .comment,
+        body: "처벌만으로 문제를 해결하기보다 교육과 보호의 역할도 함께 생각해야 한다고 봐요."
+      ),
+      ClassReportOpinion(
+        id: "report-reply-1",
+        kind: .reply,
+        body: "피해자의 안전을 지키면서도 다시 같은 일이 일어나지 않게 도울 방법이 필요해요."
+      ),
+      ClassReportOpinion(
+        id: "report-reply-2",
+        kind: .reply,
+        body: "토론을 들으며 연령만 낮추는 것보다 교정의 기준을 세우는 일이 중요하다고 느꼈어요."
+      ),
+    ]
   )
+
+  // Separate visual reference: one comment and four replies on the Figma opinions screen.
+  public static let figmaMyOpinions: ClassReport = {
+    let sourceBody = "제도화가 무서운 건, 사회적 압력이 '선택'을 '의무'로 바꿀 수 있다는 거예요. 네덜란드 사례를 보면 우려가 현실이 되고 있죠."
+    let parent = ClassReportReplyContext(
+      authorName: "김민지",
+      stance: "교정이 우선이다",
+      body: "제도화가 무서운 건, 사회적 압력이 '선택'을 '의무'로 바꿀 수 있다는 거예요."
+    )
+    var texts = figma.texts
+    texts[.commentCount] = "1"
+    texts[.replyCount] = "4"
+    let entries = [
+      ClassReportOpinion(
+        id: "figma-comment-1",
+        kind: .comment,
+        body: "\(sourceBody) \(sourceBody)",
+        stance: "변기는 변기다",
+        likeCount: 1340,
+        replyCount: 23
+      ),
+    ] + (1 ... 4).map { index in
+      ClassReportOpinion(
+        id: "figma-reply-\(index)",
+        kind: .reply,
+        body: sourceBody,
+        authorName: "공은지",
+        parent: parent
+      )
+    }
+    return ClassReport(
+      texts: texts,
+      myOpinions: entries.map(\.body),
+      initialVoteLeading: figma.initialVoteLeading,
+      finalVoteLeading: figma.finalVoteLeading,
+      layout: figma.layout,
+      opinionEntries: entries
+    )
+  }()
 }

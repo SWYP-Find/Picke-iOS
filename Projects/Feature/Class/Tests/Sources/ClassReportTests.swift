@@ -341,16 +341,45 @@ struct ClassReportTests {
     var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(17))
     state.report = MockClassReport.figma
     state.sourceViewState = .ready
-    let opinions = state.myOpinions
+    let opinions = state.report!.resolvedOpinions
     #expect(!opinions.isEmpty)
     state.isGeneratingFeedback = true
-    #expect(state.myOpinions == opinions)
+    #expect(state.report?.resolvedOpinions == opinions)
     state.isGeneratingFeedback = false
     for error in [ClassAIFeedbackError.deviceNotEligible, .modelNotReady, .generationFailed] {
       state.feedbackError = error
-      #expect(state.myOpinions == opinions)
+      #expect(state.report?.resolvedOpinions == opinions)
       #expect(state.myOpinionCount == opinions.count)
     }
+  }
+
+  @Test
+  func 준비된_리포트에서_의견_버튼을_누르면_화면_ID만_전달하고_상태를_유지한다() async {
+    let instanceID = UUID(30)
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: instanceID)
+    state.report = MockClassReport.figma
+    state.sourceViewState = .ready
+    state.selectedTab = .feedback
+    let store = TestStore(initialState: state) { ClassReportFeature() }
+
+    #expect(store.state.myOpinionCount == 3)
+    #expect(store.state.myOpinionsButtonTitle == "내가 남긴 의견 3개 보기")
+    await store.send(.view(.myOpinionsTapped))
+    await store.receive(\.delegate.openMyOpinions, instanceID)
+    #expect(store.state == state)
+  }
+
+  @Test
+  func 리포트가_없거나_로딩_중이면_의견_화면을_열지_않는다() async {
+    var loading = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(31))
+    loading.report = MockClassReport.figma
+    let loadingStore = TestStore(initialState: loading) { ClassReportFeature() }
+    await loadingStore.send(.view(.myOpinionsTapped))
+
+    var absent = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(32))
+    absent.sourceViewState = .ready
+    let absentStore = TestStore(initialState: absent) { ClassReportFeature() }
+    await absentStore.send(.view(.myOpinionsTapped))
   }
 }
 

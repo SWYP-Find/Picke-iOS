@@ -30,7 +30,7 @@ struct PickeClassAuditApp: App {
   var body: some Scene {
     WindowGroup {
       if let scenario = ProcessInfo.processInfo.environment["PICKE_TAB_SCENARIO"],
-         ["members", "report", "keyboard-mount"].contains(scenario)
+         ["members", "report", "opinions-empty", "keyboard-mount"].contains(scenario)
       {
         MainTabAuditView(scenario: scenario)
       } else if let scenario = ProcessInfo.processInfo.environment["PICKE_MEMBER_SCENARIO"],

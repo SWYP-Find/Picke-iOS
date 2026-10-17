@@ -55,7 +55,7 @@ public struct ClassAIFeedbackContext: Equatable, Sendable {
     report: ClassReport,
     isOwner: Bool
   ) throws -> Self {
-    let selected = report.myOpinions + [report[.commentBody], report[.replyBody]]
+    let selected = report.resolvedOpinions.map(\.body) + [report[.commentBody], report[.replyBody]]
     return try Self(
       kind: isOwner ? .ownerPersonal : .studentPersonal,
       room: room,

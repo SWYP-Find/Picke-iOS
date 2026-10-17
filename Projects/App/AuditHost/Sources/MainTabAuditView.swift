@@ -44,7 +44,7 @@ struct MainTabAuditView: View {
     let repository = MockClassRepository(
       rooms: [room],
       availableRooms: [],
-      reports: scenario == "report" ? [room.id: MockClassReport.figma] : nil,
+      reports: scenario == "report" ? [room.id: MockClassReport.figmaMyOpinions] : nil,
       members: [room.id: members]
     )
     var state = MainTabCoordinator.State(
@@ -65,7 +65,7 @@ struct MainTabAuditView: View {
     state.classState.routes.push(.detail(.init(room: room)))
     if scenario == "report" {
       // The participant comment flow replaces its route with a report above detail.
-      let fixture = MockClassReport.figma
+      let fixture = MockClassReport.figmaMyOpinions
       var report = ClassReportFeature.State(room: room)
       report.report = fixture
       report.sourceViewState = .ready
@@ -81,6 +81,8 @@ struct MainTabAuditView: View {
         nextHint: fixture[.nextHint]
       )
       state.classState.routes.push(.report(report))
+    } else if scenario == "opinions-empty" {
+      state.classState.routes.push(.myOpinions(.init()))
     } else {
       state.classState.routes.push(.members(.init(
         room: room,
@@ -156,7 +158,13 @@ private extension MainTabAuditView {
       return value
     }()
     let report: ClassReportFeature.State? = {
-      guard case let .report(value)? = store.classState.routes.last?.screen else { return nil }
+      for route in store.classState.routes.reversed() {
+        if case let .report(value) = route.screen { return value }
+      }
+      return nil
+    }()
+    let opinions: ClassMyOpinionsFeature.State? = {
+      guard case let .myOpinions(value)? = store.classState.routes.last?.screen else { return nil }
       return value
     }()
     let values: [String: Any] = [
@@ -173,7 +181,7 @@ private extension MainTabAuditView {
       "memberCount": members?.members.count ?? -1,
       "memberSearch": members?.searchText ?? "",
       "reportInstanceID": report?.instanceID.uuidString ?? "",
-      "reportShowsMyOpinions": report?.showsMyOpinions ?? false,
+      "opinionCount": opinions?.opinions.count ?? -1,
     ]
     guard let data = try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]),
           let json = String(data: data, encoding: .utf8) else { return "{}" }
@@ -187,6 +195,7 @@ private extension MainTabAuditView {
     case .detail?: return "detail"
     case .members?: return "members"
     case .report?: return "report"
+    case .myOpinions?: return "myOpinions"
     default: return "other"
     }
   }
