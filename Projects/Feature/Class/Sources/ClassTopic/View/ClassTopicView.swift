@@ -68,7 +68,10 @@ private extension ClassTopicView {
   @ViewBuilder
   func formSection() -> some View {
     VStack(alignment: .leading, spacing: 24) {
-      field("찾고 싶은 주제") {
+      field(
+        "찾고 싶은 주제",
+        spacing: 8
+      ) {
         TextField(
           "",
           text: $store.keyword,
@@ -78,11 +81,17 @@ private extension ClassTopicView {
         .pickeTextField()
       }
 
-      field("대상 수준", isRequired: true) {
+      field(
+        "대상 수준",
+        isRequired: true
+      ) {
         levelSegment()
       }
 
-      field("카테고리 (최대 3개)", isRequired: true) {
+      field(
+        "카테고리 (최대 3개)",
+        isRequired: true
+      ) {
         categoryGrid()
       }
     }
@@ -92,9 +101,10 @@ private extension ClassTopicView {
   func field(
     _ label: String,
     isRequired: Bool = false,
+    spacing: CGFloat = 12,
     @ViewBuilder content: () -> some View
   ) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: spacing) {
       HStack(spacing: 2) {
         Text(label)
           .foregroundStyle(.gray800)
@@ -103,7 +113,8 @@ private extension ClassTopicView {
             .foregroundStyle(.primary500)
         }
       }
-      .pretendardFont(.semiBold15)
+      .pretendardFont(.headingSmall)
+      .frame(minHeight: 20, alignment: .leading)
       content()
     }
   }
