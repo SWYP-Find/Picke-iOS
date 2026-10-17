@@ -24,6 +24,7 @@ let project = Project.makeModule(
     .domain(.classroom, .interface),
     .SPM.composableArchitecture,
   ],
+  testDependencies: [.SPM.issueReportingTestSupport],
   sourceFolderExclusions: [".omc", "ClassRecommend/View/.omc"],
   hasTests: true,
   hasInterface: true,

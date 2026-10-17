@@ -31,6 +31,7 @@ let project = Project.makeAppModule(
   settings: .appMainSetting,
   scripts: [.SentryUploadString],
   dependencies: appDependencies,
+  testDependencies: [.SPM.issueReportingTestSupport],
   resources: ["Resources/**"],
   infoPlist: .appInfoPlist,
   entitlements: .file(path: "../../Entitlements/Picke.entitlements"),

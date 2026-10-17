@@ -49,6 +49,7 @@ extension Project {
     settings: ProjectDescription.Settings,
     scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
+    testDependencies: [ProjectDescription.TargetDependency] = [],
     resources: ProjectDescription.ResourceFileElements? = nil,
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
@@ -81,7 +82,7 @@ extension Project {
           bundleId: bundleId,
           destinations: destinations,
           deploymentTarget: deploymentTarget,
-          dependencies: [.target(name: name)]
+          dependencies: [.target(name: name)] + testDependencies
         )
       )
     }

@@ -143,16 +143,48 @@ struct ClassReportTests {
       $0.requestID = requestID
       $0.sourceViewState = .loading
     }
-    await store.send(.inner(.reportResponse(
-      instanceID: UUID(7),
-      requestID: requestID,
-      roomID: room.id,
-      .success(MockClassReport.figma)
-    )))
     await store.receive(\.inner.reportResponse) {
       $0.requestID = nil
       $0.sourceViewState = .failed
     }
+    await store.send(.inner(.reportResponse(
+      instanceID: instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(MockClassReport.figma)
+    )))
+  }
+
+  @Test
+  func 요청이_같아도_다른_화면의_리포트_응답은_무시한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let requestID = UUID(21)
+    var state = ClassReportFeature.State(room: room, instanceID: UUID(22))
+    state.requestID = requestID
+    let store = TestStore(initialState: state) { ClassReportFeature() }
+
+    await store.send(.inner(.reportResponse(
+      instanceID: UUID(23),
+      requestID: requestID,
+      roomID: room.id,
+      .success(MockClassReport.figma)
+    )))
+  }
+
+  @Test
+  func 화면이_같아도_이전_요청의_리포트_응답은_무시한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let instanceID = UUID(24)
+    var state = ClassReportFeature.State(room: room, instanceID: instanceID)
+    state.requestID = UUID(25)
+    let store = TestStore(initialState: state) { ClassReportFeature() }
+
+    await store.send(.inner(.reportResponse(
+      instanceID: instanceID,
+      requestID: UUID(26),
+      roomID: room.id,
+      .success(MockClassReport.figma)
+    )))
   }
 
   @Test
