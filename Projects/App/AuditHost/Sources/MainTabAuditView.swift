@@ -23,7 +23,7 @@ struct MainTabAuditView: View {
 
   init(scenario: String) {
     self.scenario = scenario
-    let source = ClassRoom.mocks[0]
+    let source = scenario == "report" ? ClassRoom.mockClosedSociety : ClassRoom.mocks[0]
     let members = MockClassRepository.figmaOwnerMembers + (11 ... 22).map {
       ClassMember(id: $0, name: "검증 멤버 \($0)")
     }
@@ -44,6 +44,7 @@ struct MainTabAuditView: View {
     let repository = MockClassRepository(
       rooms: [room],
       availableRooms: [],
+      reports: scenario == "report" ? [room.id: MockClassReport.figma] : nil,
       members: [room.id: members]
     )
     var state = MainTabCoordinator.State(
@@ -62,15 +63,32 @@ struct MainTabAuditView: View {
     list.viewState = .loaded
     state.classState.routes.push(.myClasses(list))
     state.classState.routes.push(.detail(.init(room: room)))
-    state.classState.routes.push(.members(.init(
-      room: room,
-      members: members,
-      currentMemberID: 1,
-      instanceID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-      preloadedViewState: .loaded
-    )))
     if scenario == "report" {
-      state.classState.routes.push(.report(.init(room: room)))
+      // The participant comment flow replaces its route with a report above detail.
+      let fixture = MockClassReport.figma
+      var report = ClassReportFeature.State(room: room)
+      report.report = fixture
+      report.sourceViewState = .ready
+      report.feedback = ClassAIPersonalFeedback(
+        summaryTitle: fixture[.aiSummaryTitle],
+        summaryDetail: fixture[.aiSummaryDetail],
+        points: [
+          .init(title: fixture[.feedbackTitle1], detail: fixture[.feedbackDetail1]),
+          .init(title: fixture[.feedbackTitle2], detail: fixture[.feedbackDetail2]),
+          .init(title: fixture[.feedbackTitle3], detail: fixture[.feedbackDetail3]),
+        ],
+        nextQuestion: fixture[.nextQuestion],
+        nextHint: fixture[.nextHint]
+      )
+      state.classState.routes.push(.report(report))
+    } else {
+      state.classState.routes.push(.members(.init(
+        room: room,
+        members: members,
+        currentMemberID: 1,
+        instanceID: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+        preloadedViewState: .loaded
+      )))
     }
     store = withDependencies {
       $0.context = .test
@@ -137,6 +155,10 @@ private extension MainTabAuditView {
       guard case let .members(value)? = store.classState.routes.last?.screen else { return nil }
       return value
     }()
+    let report: ClassReportFeature.State? = {
+      guard case let .report(value)? = store.classState.routes.last?.screen else { return nil }
+      return value
+    }()
     let values: [String: Any] = [
       "scenario": scenario,
       "mounted": scenario != "keyboard-mount" || mounted,
@@ -150,6 +172,8 @@ private extension MainTabAuditView {
       "memberInstanceID": members?.instanceID.uuidString ?? "",
       "memberCount": members?.members.count ?? -1,
       "memberSearch": members?.searchText ?? "",
+      "reportInstanceID": report?.instanceID.uuidString ?? "",
+      "reportShowsMyOpinions": report?.showsMyOpinions ?? false,
     ]
     guard let data = try? JSONSerialization.data(withJSONObject: values, options: [.sortedKeys]),
           let json = String(data: data, encoding: .utf8) else { return "{}" }

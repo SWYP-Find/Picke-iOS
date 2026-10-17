@@ -1180,7 +1180,7 @@ struct ClassCoordinatorTests {
     }
     #expect(preservedDetail == detail)
     #expect(report.room == room)
-    #expect(!store.state.showsTabBar)
+    #expect(store.state.showsTabBar)
 
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
@@ -1347,7 +1347,7 @@ struct ClassCoordinatorTests {
       Issue.record("멤버 리포트로 이동하지 않음")
       return
     }
-    #expect(!store.state.showsTabBar)
+    #expect(store.state.showsTabBar)
 
     await store.send(.router(.routeAction(id: 3, action: .report(.delegate(.dismiss)))))
     await store.receive {

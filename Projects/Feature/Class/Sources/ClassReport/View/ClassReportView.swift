@@ -59,7 +59,6 @@ private extension ClassReportView {
       HStack(spacing: 0) {
         backButton
         Spacer()
-        closeButton
       }
       .padding(.horizontal, 6)
     }
@@ -86,31 +85,6 @@ private extension ClassReportView {
     .stroke(
       .gray900,
       style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
-    )
-    .frame(width: 24, height: 24)
-  }
-
-  var closeButton: some View {
-    Button { send(.backTapped) } label: {
-      closeIcon
-        .frame(width: 44, height: 44)
-        .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel("닫기")
-    .accessibilityIdentifier("xmark")
-  }
-
-  var closeIcon: some View {
-    Path { path in
-      path.move(to: CGPoint(x: 4, y: 4))
-      path.addLine(to: CGPoint(x: 20, y: 20))
-      path.move(to: CGPoint(x: 20, y: 4))
-      path.addLine(to: CGPoint(x: 4, y: 20))
-    }
-    .stroke(
-      .gray900,
-      style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
     )
     .frame(width: 24, height: 24)
   }
@@ -168,9 +142,7 @@ private extension ClassReportView {
   func reportTitle() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
-        Text(store.room.status == .closed ? "마감" : "진행 중")
-          .frame(minHeight: 17)
-          .pickeBadge(.filled, size: .tag)
+        statusBadge()
         Text("#\(store.room.battle.categoryDisplayTitle)")
           .frame(minHeight: 17)
           .pickeBadge(.filled, size: .tag)
@@ -191,6 +163,23 @@ private extension ClassReportView {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  func statusBadge() -> some View {
+    switch store.room.status {
+    case .open:
+      Text("진행 중")
+        .frame(minHeight: 17)
+        .pickeBadge(.filled, size: .tag)
+    case .closed:
+      Text("종료")
+        .pretendardFont(.semiBold12)
+        .foregroundStyle(.gray300)
+        .padding(.horizontal, 4)
+        .frame(height: 20)
+        .roundedBackground(.gray50, radius: 2)
+    }
   }
 
   @ViewBuilder
@@ -509,7 +498,7 @@ private extension ClassReportView {
       .foregroundStyle(.primary500)
       .padding(16)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(.primary50)
+      .background(Color(hex: "FCF5F3"))
 
       VStack(alignment: .leading, spacing: 16) {
         insightPoint(

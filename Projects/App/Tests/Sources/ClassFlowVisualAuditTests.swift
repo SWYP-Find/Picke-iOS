@@ -118,7 +118,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         throw error
       }
       XCTAssertEqual(store.routes.count, 3)
-      XCTAssertFalse(store.showsTabBar)
+      XCTAssertTrue(store.showsTabBar)
       let reportName = isAI ? "comment-to-report-ai" : "comment-to-report-regular"
       let reportImage = try await saveClassAudit(window: window, name: reportName)
       let reportText = try recognizedAuditText(in: reportImage, name: reportName)
