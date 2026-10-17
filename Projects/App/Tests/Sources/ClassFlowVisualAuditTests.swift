@@ -2394,6 +2394,141 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureSeededAIChatReferenceFrames() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the seeded AI chat design fixture")
+    }
+    let directory = try FileManager.default.url(
+      for: .documentDirectory,
+      in: .userDomainMask,
+      appropriateFor: nil,
+      create: true
+    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let conversationID = try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000801"))
+    let messages: [ClassAIChatMessage] = [
+      .init(
+        id: try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000802")),
+        speaker: .opponent,
+        text: "이건 기만입니다. 하늘 아래 모든 사물은 그에 걸맞은 완벽한 목적과 형상, 즉 '이데아'를 가지고 있습니다."
+      ),
+      .init(
+        id: try XCTUnwrap(UUID(uuidString: "00000000-0000-0000-0000-000000000803")),
+        speaker: .user,
+        text: "플라톤 선생님, 당신은 사물에 '영혼'이 미리 정해져 있다고 믿는군요. 하지만 사물은 그저 그곳에 존재할 뿐입니다."
+      ),
+    ]
+    let room = ClassRoom(
+      id: 801,
+      name: "AI 채팅 디자인 검증",
+      joinCode: "PKAI01",
+      battle: ClassBattleSummary(
+        id: -1,
+        title: "슬픔을 드러내지 않은 뫼르소를 비난할 수 있을까?",
+        summary: "",
+        philosopherA: "사르트르",
+        optionATitle: "비난할 수 있다",
+        philosopherB: "플라톤",
+        optionBTitle: "비난할 수 없다",
+        category: .philosophy,
+        level: .high,
+        audioDuration: 0,
+        viewCount: 0
+      ),
+      deadline: Date(timeIntervalSince1970: 1_895_000_000),
+      memberCount: 1,
+      role: .member,
+      status: .open,
+      allowsAnonymousOpinion: false,
+      requiresComment: false
+    )
+
+    for viewport in [CGSize(width: 375, height: 812), CGSize(width: 402, height: 874)] {
+      // Figma-only fixture: a settled round-one user reply is not a reachable
+      // reducer transition. These images prove layout, not runtime AI behavior.
+      var state = ClassAIChatFeature.State(
+        room: room,
+        battleID: -1_000_801,
+        selectedOptionID: 1,
+        conversationID: conversationID
+      )
+      state.hasStarted = true
+      state.messages = messages
+      let starts = LockIsolated(0)
+      let responses = LockIsolated(0)
+      let endedIDs = LockIsolated<[UUID]>([])
+      let store = Store(initialState: state) {
+        ClassAIChatFeature().dependency(
+          \.classAIChatUseCase,
+          MockClassAIChatUseCase(
+            start: { _, _ in starts.withValue { $0 += 1 } },
+            respond: { _, _, _ in
+              responses.withValue { $0 += 1 }
+              return "Unexpected model response during design capture"
+            },
+            end: { id in endedIDs.withValue { $0.append(id) } }
+          )
+        )
+      }
+      var checkedMountedState = false
+      let (image, _) = try await capture(
+        AnyView(ClassAIChatView(store: store)),
+        ready: { store.hasStarted && store.messages == messages && !store.isGenerating },
+        includeScrollBottom: false,
+        viewport: viewport,
+        inspectWindow: { _ in
+          // onDisappear resets identity, so inspect while the view is mounted.
+          XCTAssertEqual(store.conversationID, conversationID)
+          XCTAssertEqual(store.messages, messages)
+          XCTAssertEqual(store.round, 1)
+          XCTAssertTrue(store.hasStarted)
+          XCTAssertEqual(store.opponentName, "플라톤")
+          XCTAssertEqual(store.selectedStanceTitle, "비난할 수 있다")
+          XCTAssertEqual(store.quickReplies, [
+            "저는 비난할 수 있다에 동의해요",
+            "그 입장의 근거는 무엇인가요?",
+            "다른 관점도 생각해 볼게요",
+          ])
+          checkedMountedState = true
+        }
+      )
+      XCTAssertTrue(checkedMountedState)
+      XCTAssertEqual(starts.value, 0)
+      XCTAssertEqual(responses.value, 0)
+      XCTAssertTrue(endedIDs.value.allSatisfy { $0 == conversationID })
+      XCTAssertEqual(image.size, viewport)
+      let name = "ai-chat-figma-only-seeded-\(Int(viewport.width))"
+      let attachment = XCTAttachment(image: image)
+      attachment.name = name
+      attachment.lifetime = .keepAlways
+      add(attachment)
+      try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
+      let text = try recognizedAuditText(in: image, name: name)
+      for fragment in [
+        "사전투표에서", "선택하셨네요", "반대입장의플라톤", "3라운드토론을시작해보세요",
+        "이건기만입니다", "존재할뿐입니다", "저는비난할수있다에동의해요", "내생각을입력해보세요",
+      ] {
+        XCTAssertTrue(text.contains(fragment), "Missing \(fragment) at \(viewport.width): \(text)")
+      }
+      // iPhone 18 Pro / iOS 27.0 audit scene (95B75F64-D81F-47A2-B130-DEF8EF93B032):
+      // this fixture's speaker header occupies y=226...250pt at both sizes.
+      // Recalibrate this ROI when the audit simulator or font metrics change.
+      // Isolate it from the same name in the notice and user message.
+      let speaker = try recognizedAuditText(
+        in: image,
+        name: name + "-opponent-speaker",
+        regionOfInterest: CGRect(
+          x: 58 / viewport.width,
+          y: 1 - 250 / viewport.height,
+          width: 44 / viewport.width,
+          height: 24 / viewport.height
+        )
+      )
+      XCTAssertEqual(speaker, "플라톤", "Opponent speaker missing at \(viewport.width)")
+    }
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")
