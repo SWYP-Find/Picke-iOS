@@ -26,15 +26,7 @@ public struct ClassReportView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: store.room.name) {
-        Button { send(.backTapped) } label: {
-          Image(systemName: "xmark")
-            .font(.system(size: 20, weight: .light))
-            .frame(width: 24, height: 24)
-        }
-        .buttonStyle(.plain)
-      }
-      .foregroundStyle(.gray800)
+      navigationBar()
 
       reportTitle()
         .padding(.vertical, 12)
@@ -54,6 +46,75 @@ public struct ClassReportView: View {
 }
 
 private extension ClassReportView {
+  @ViewBuilder
+  func navigationBar() -> some View {
+    ZStack {
+      Text(store.room.name)
+        .pretendardFont(.headingMedium)
+        .kerning(0)
+        .foregroundStyle(.gray500)
+        .lineLimit(1)
+        .padding(.horizontal, 56)
+
+      HStack(spacing: 0) {
+        backButton
+        Spacer()
+        closeButton
+      }
+      .padding(.horizontal, 6)
+    }
+    .frame(height: 48)
+  }
+
+  var backButton: some View {
+    Button { send(.backTapped) } label: {
+      backIcon
+        .frame(width: 44, height: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("뒤로")
+    .accessibilityIdentifier("chevron.left")
+  }
+
+  var backIcon: some View {
+    Path { path in
+      path.move(to: CGPoint(x: 17, y: 2))
+      path.addLine(to: CGPoint(x: 7, y: 12))
+      path.addLine(to: CGPoint(x: 17, y: 22))
+    }
+    .stroke(
+      .gray900,
+      style: StrokeStyle(lineWidth: 1.5, lineCap: .round)
+    )
+    .frame(width: 24, height: 24)
+  }
+
+  var closeButton: some View {
+    Button { send(.backTapped) } label: {
+      closeIcon
+        .frame(width: 44, height: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("닫기")
+    .accessibilityIdentifier("xmark")
+  }
+
+  var closeIcon: some View {
+    Path { path in
+      path.move(to: CGPoint(x: 4, y: 4))
+      path.addLine(to: CGPoint(x: 20, y: 20))
+      path.move(to: CGPoint(x: 20, y: 4))
+      path.addLine(to: CGPoint(x: 4, y: 20))
+    }
+    .stroke(
+      .gray900,
+      style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)
+    )
+    .frame(width: 24, height: 24)
+  }
+
   @ViewBuilder
   func sourceSkeleton() -> some View {
     ScrollView {
