@@ -57,8 +57,8 @@ public struct ClassCoordinator {
       case let .myClasses(myClasses)?:
         return myClasses.modal == nil && myClasses.customAlert == nil && !myClasses.isLeaving
       case let .members(members)?:
-        return members.room.role == .owner && members.management == nil && members.filter == nil
-          && members.editName == nil && members.customAlert == nil && !members.isSaving
+        return members.filter == nil && members.editName == nil
+          && members.customAlert == nil && !members.isSaving
       case let .ownerDashboard(dashboard)?:
         return dashboard.management == nil
       case .report?, .myOpinions?:
@@ -811,20 +811,6 @@ private extension ClassCoordinator {
          .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case let .routeAction(routeID, action: .members(.delegate(.editClass))):
-      guard routeID == state.routes.count - 1,
-            case let .members(member)? = state.routes.last?.screen,
-            member.room.role == .owner, !member.isSaving
-      else { return .none }
-      return openDeadlineEditor(state: &state, room: member.room)
-
-    case let .routeAction(routeID, action: .members(.delegate(.deleteClass))):
-      guard routeID == state.routes.count - 1,
-            case let .members(member)? = state.routes.last?.screen,
-            member.room.role == .owner, !member.isSaving
-      else { return .none }
-      return returnToClassDetail(state: &state, action: .deleteTapped)
-
     case let .routeAction(routeID, action: .ownerDashboard(.delegate(.editClass))):
       guard routeID == state.routes.count - 1,
             case let .ownerDashboard(dashboard)? = state.routes.last?.screen
@@ -935,8 +921,6 @@ private extension ClassCoordinator {
     switch state.routes.last?.screen {
     case let .ownerDashboard(dashboard):
       room = dashboard.room
-    case let .members(member) where member.room.role == .owner:
-      room = member.room
     default:
       return .none
     }

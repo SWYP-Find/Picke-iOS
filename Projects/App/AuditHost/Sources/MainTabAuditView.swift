@@ -25,7 +25,10 @@ struct MainTabAuditView: View {
     self.scenario = scenario
     let isReport = scenario == "report" || scenario == "owner-report"
     let source = isReport ? ClassRoom.mockClosedSociety : ClassRoom.mocks[0]
-    let members = MockClassRepository.figmaOwnerMembers + (11 ... 22).map {
+    let memberFixture = scenario == "owner-report" || source.role == .owner
+      ? MockClassRepository.figmaOwnerMembers
+      : MockClassRepository.figmaParticipantMembers
+    let members = memberFixture + (11 ... 22).map {
       ClassMember(id: $0, name: "검증 멤버 \($0)")
     }
     let room = ClassRoom(

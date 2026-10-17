@@ -70,7 +70,14 @@ struct MemberAuditView: View {
     let repository = MockClassRepository(
       rooms: rooms,
       availableRooms: [],
-      members: Dictionary(uniqueKeysWithValues: rooms.map { ($0.id, MockClassRepository.figmaOwnerMembers) })
+      members: Dictionary(uniqueKeysWithValues: rooms.map { room in
+        (
+          room.id,
+          room.role == .owner
+            ? MockClassRepository.figmaOwnerMembers
+            : MockClassRepository.figmaParticipantMembers
+        )
+      })
     )
     self.repository = repository
     var list = MyClassFeature.State()

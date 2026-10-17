@@ -16,11 +16,15 @@ import UIKit
 import UserNotifications
 
 extension AppDelegate {
+  static var isRunningHostedUnitTests: Bool {
+    NSClassFromString("XCTestCase") != nil
+  }
+
   /// 기동 초기화 진입점. 순서에 의미가 있다.
   /// 외부 SDK 부팅은 Firebase 를 PickeConfig 가, Sentry·Mixpanel 을 PickeAnalytics 가 맡는다.
   func configure() {
     configureFonts()
-    guard !PickeApp.isRunningHostedUnitTests else { return }
+    guard !Self.isRunningHostedUnitTests else { return }
     FirebaseConfiguration.configure()
     PickeAnalyticsConfiguration.configure()
     configureAdMob()

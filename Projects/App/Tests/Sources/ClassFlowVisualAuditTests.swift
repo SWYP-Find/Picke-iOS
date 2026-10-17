@@ -629,45 +629,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     attachment.name = name
     attachment.lifetime = .keepAlways
     add(attachment)
-    let text = try recognizedAuditText(in: image, name: name)
+    let text = try recognizedAuditText(
+      in: image,
+      name: name,
+      regionOfInterest: CGRect(x: 0, y: 0, width: 1, height: 0.55)
+    )
     for label in ["이름을입력해주세요", "이클래스에서만보이는이름이에요", "수정하기"] {
-      XCTAssertTrue(text.contains(label), "Missing \(label): \(text)")
-    }
-  }
-
-  @MainActor
-  func testCaptureOwnerMemberManagement() async throws {
-    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
-      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture owner member management")
-    }
-    let directory = try FileManager.default.url(
-      for: .documentDirectory,
-      in: .userDomainMask,
-      appropriateFor: nil,
-      create: true
-    ).appendingPathComponent("ClassVisualAudit", isDirectory: true)
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    var state = ClassMemberFeature.State(
-      room: ClassRoom.mocks[0],
-      members: [ClassMember(id: 1, name: "김선생", isOwner: true)],
-      instanceID: UUID(),
-      preloadedViewState: .loaded
-    )
-    state.management = .init(kind: .management)
-    let store = Store(initialState: state) { ClassMemberFeature() }
-    let (image, _) = try await capture(
-      AnyView(ClassMemberView(store: store)),
-      ready: nil,
-      includeScrollBottom: false
-    )
-    let name = "owner-member-management"
-    try XCTUnwrap(image.pngData()).write(to: directory.appendingPathComponent(name + ".png"))
-    let attachment = XCTAttachment(image: image)
-    attachment.name = name
-    attachment.lifetime = .keepAlways
-    add(attachment)
-    let text = try recognizedAuditText(in: image, name: name)
-    for label in ["클래스관리", "클래스정보수정", "참여코드공유", "클래스삭제"] {
       XCTAssertTrue(text.contains(label), "Missing \(label): \(text)")
     }
   }
@@ -3024,6 +2991,34 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   private func makeFrames() async throws -> [Frame] {
     let owner = ClassRoom.mocks[0]
     let member = ClassRoom.mockJoinable
+    let ownerFigmaRoom = ClassRoom(
+      id: owner.id,
+      name: owner.name,
+      joinCode: owner.joinCode,
+      battle: owner.battle,
+      deadline: owner.deadline,
+      memberCount: 22,
+      role: owner.role,
+      status: owner.status,
+      allowsAnonymousOpinion: owner.allowsAnonymousOpinion,
+      requiresComment: owner.requiresComment,
+      ownerParticipates: owner.ownerParticipates,
+      memberCapacity: 30
+    )
+    let memberFigmaRoom = ClassRoom(
+      id: member.id,
+      name: member.name,
+      joinCode: member.joinCode,
+      battle: member.battle,
+      deadline: member.deadline,
+      memberCount: 22,
+      role: member.role,
+      status: member.status,
+      allowsAnonymousOpinion: member.allowsAnonymousOpinion,
+      requiresComment: member.requiresComment,
+      ownerParticipates: member.ownerParticipates,
+      memberCapacity: 30
+    )
     let aiQuestion = ClassAIQuestion.examples[0]
     let filter = ClassTopicFilter(categories: [.philosophy])
     var topic = ClassTopicFeature.State()
@@ -3058,7 +3053,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       rooms: ClassRoom.mocks + [member, .mockClosedSociety],
       availableRooms: []
     )
-    let ownerMembers = try await previewRepository.fetchMembers(roomID: owner.id)
 
     func classTab(_ screen: ClassCoordinator.ClassScreen.State) -> AnyView {
       let repository: MockClassRepository = if case let .myClasses(list) = screen {
@@ -3328,7 +3322,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         "member-list",
         "Figma participant member avatar fixture",
         classTab(.members(.init(
-          room: member,
+          room: memberFigmaRoom,
           members: MockClassRepository.figmaParticipantMembers,
           currentMemberID: 2,
           instanceID: UUID(),
@@ -3394,10 +3388,10 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         24,
         "운영자 멤버 목록",
         "owner-members",
-        "owner room with mock members",
+        "Figma owner member avatar and capacity fixture",
         classTab(.members(.init(
-          room: owner,
-          members: ownerMembers,
+          room: ownerFigmaRoom,
+          members: MockClassRepository.figmaOwnerMembers,
           currentMemberID: 1,
           instanceID: UUID(),
           preloadedViewState: .loaded

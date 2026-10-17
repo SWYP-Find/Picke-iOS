@@ -16,7 +16,7 @@ struct PickeApp: App {
   init() {}
 
   static var isRunningHostedUnitTests: Bool {
-    NSClassFromString("XCTestCase") != nil
+    AppDelegate.isRunningHostedUnitTests
   }
 
   var body: some Scene {

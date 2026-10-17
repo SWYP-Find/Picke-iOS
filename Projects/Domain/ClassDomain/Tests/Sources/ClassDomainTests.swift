@@ -238,6 +238,12 @@ struct ClassDomainTests {
       .lion, .koala, .bear, .penguin, .dog, .sloth, .alpaca, .fox, .hamster, .raccoon,
     ]
     #expect(members.prefix(10).map(\.avatar) == avatars)
+    #expect(MockClassRepository.figmaOwnerMembers.prefix(10).map(\.avatar) == [
+      nil, nil, nil, .penguin, .dog, .sloth, nil, .fox, .hamster, .raccoon,
+    ])
+    #expect(MockClassRepository.figmaParticipantMembers.prefix(10).map(\.avatar) == [
+      .lion, .koala, .bear, .penguin, .dog, .sloth, .alpaca, .fox, .hamster, .raccoon,
+    ])
   }
 
   @Test(arguments: [nil, 30] as [Int?])
@@ -309,6 +315,7 @@ struct ClassDomainTests {
     #expect(updated.memberCapacity == memberCapacity)
     #expect(try await repository.fetchMembers(roomID: 1).count == updated.memberCount)
     #expect(try await repository.fetchMembers(roomID: 1).first?.avatar == .lion)
+    #expect(try await repository.fetchMembers(roomID: 1).first(where: { $0.id == 4 })?.avatar == .penguin)
     #expect(try await repository.fetchMyClasses()[0].memberCount == updated.memberCount)
     #expect(try await repository.fetchMyClasses()[0].memberCapacity == memberCapacity)
 
