@@ -41,6 +41,7 @@ public struct ClassAIChatView: View {
 
 private extension ClassAIChatView {
   static let bottomAnchorID = "conversation-bottom"
+  static let userAvatarSize: CGFloat = 36
 
   // MARK: - Header
 
@@ -181,9 +182,7 @@ private extension ClassAIChatView {
         }
         bubble(text, isUser: false)
       }
-      .frame(maxWidth: 272, alignment: .leading)
-
-      Spacer(minLength: 0)
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
 
@@ -193,8 +192,6 @@ private extension ClassAIChatView {
     beginsTurn: Bool
   ) -> some View {
     HStack(alignment: .top, spacing: 6) {
-      Spacer(minLength: 0)
-
       VStack(alignment: .trailing, spacing: 6) {
         if beginsTurn {
           Text("나")
@@ -203,12 +200,12 @@ private extension ClassAIChatView {
         }
         bubble(text, isUser: true)
       }
-      .frame(maxWidth: 272, alignment: .trailing)
+      .frame(maxWidth: .infinity, alignment: .trailing)
 
       if beginsTurn {
         userAvatar
       } else {
-        Color.clear.frame(width: 40, height: 1)
+        Color.clear.frame(width: Self.userAvatarSize, height: 1)
       }
     }
   }
@@ -235,11 +232,17 @@ private extension ClassAIChatView {
     Text(text)
       .pretendardFont(.regular13)
       .foregroundStyle(.gray400)
+      .lineSpacing(bubbleLinePadding)
+      .padding(.vertical, bubbleLinePadding / 2)
       .fixedSize(horizontal: false, vertical: true)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.horizontal, 8)
-      .padding(.vertical, isUser ? 8 : 6)
+      .padding(.vertical, 6)
       .pickeCard(isUser ? .beige400 : .cardBaseBackgroundDefault)
+  }
+
+  var bubbleLinePadding: CGFloat {
+    max(0, 18 - UIFont.pretendardFontFamily(family: .Regular, size: 13).lineHeight)
   }
 
   @ViewBuilder
@@ -294,7 +297,7 @@ private extension ClassAIChatView {
     PickeAvatarView(
       imageURL: nil,
       fallback: "나",
-      size: 40
+      size: Self.userAvatarSize
     )
   }
 
