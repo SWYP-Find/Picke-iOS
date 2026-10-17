@@ -6,21 +6,21 @@
 //
 
 import AppTrackingTransparency
-import GoogleMobileAds
-import PickeCoreLogger
-import UIKit
-import UserNotifications
-
 import DomainAssembly
+import GoogleMobileAds
 import PickeConfig
+import PickeCoreLogger
 import PickeDesignKit
 import ServiceAssembly
+import UIKit
+import UserNotifications
 
 extension AppDelegate {
   /// 기동 초기화 진입점. 순서에 의미가 있다.
   /// 외부 SDK 부팅은 Firebase 를 PickeConfig 가, Sentry·Mixpanel 을 PickeAnalytics 가 맡는다.
   func configure() {
     configureFonts()
+    guard !PickeApp.isRunningHostedUnitTests else { return }
     FirebaseConfiguration.configure()
     PickeAnalyticsConfiguration.configure()
     configureAdMob()

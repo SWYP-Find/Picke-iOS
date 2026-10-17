@@ -170,7 +170,6 @@ struct MyClassTests {
       $0.isDeleting = true
       $0.fetchGeneration = 1
     }
-    await store.send(.inner(.roomsResponse(0, .success(ClassRoom.mocks))))
     await store.receive(\.inner, .deleted(.success(1))) {
       $0.isDeleting = false
       $0.selectedRoomID = nil
@@ -242,10 +241,10 @@ struct MyClassTests {
       $0.leavingRoomID = room.id
       $0.fetchGeneration = 1
     }
-    await store.send(.view(.leaveConfirmed))
-    await store.send(.view(.roomTapped(ClassRoom.mockClosedSociety.id)))
     await store.receive(\.inner, .left(.success(room.id)))
     await store.receive(\.delegate, .left(room.id))
+    await store.send(.view(.leaveConfirmed))
+    await store.send(.view(.roomTapped(ClassRoom.mockClosedSociety.id)))
     #expect(store.state.rooms.contains(where: { $0.id == room.id }))
     await store.send(.inner(.roomsResponse(0, .success([room]))))
     await store.send(.inner(.leaveCleanupCompleted(room.id))) {
