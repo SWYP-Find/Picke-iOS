@@ -26,20 +26,7 @@ public struct ClassAIVoteView: View {
 
   public var body: some View {
     GeometryReader { geometry in
-      ZStack(alignment: .top) {
-        Color.white.ignoresSafeArea()
-        artwork(
-          width: geometry.size.width,
-          height: geometry.size.height * 0.66 + geometry.safeAreaInsets.top
-        )
-        .offset(y: -geometry.safeAreaInsets.top)
-
-        VStack(spacing: 0) {
-          navigationBar
-          Spacer(minLength: 0)
-          voteContent()
-        }
-      }
+      page(in: geometry)
     }
     .toolbar(.hidden, for: .navigationBar)
     .onAppear {
@@ -54,6 +41,37 @@ public struct ClassAIVoteView: View {
 
 private extension ClassAIVoteView {
   static let optionMinHeight: CGFloat = 57
+
+  @ViewBuilder
+  func page(in geometry: GeometryProxy) -> some View {
+    VStack(spacing: 0) {
+      navigationBar
+      scrollContent(width: geometry.size.width)
+    }
+    .background(alignment: .top) {
+      artwork(
+        width: geometry.size.width,
+        height: geometry.size.width * 512 / 375
+      )
+      .offset(y: -geometry.safeAreaInsets.top)
+    }
+    .background { Color.white.ignoresSafeArea() }
+  }
+
+  @ViewBuilder
+  func scrollContent(width: CGFloat) -> some View {
+    GeometryReader { viewport in
+      ScrollView {
+        VStack(spacing: 0) {
+          Spacer(minLength: 205.914 * width / 375)
+          voteContent(width: width)
+        }
+        .frame(minHeight: viewport.size.height)
+      }
+      .scrollIndicators(.hidden)
+      .scrollBounceBehavior(.basedOnSize)
+    }
+  }
 
   var navigationBar: some View {
     PickeNavigationBar(
@@ -84,46 +102,36 @@ private extension ClassAIVoteView {
     .frame(width: width, height: height)
     .clipped()
     .overlay {
-      LinearGradient(
-        colors: [.black.opacity(0.35), .black.opacity(0.28), .clear],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-    }
-    .overlay {
-      LinearGradient(
-        stops: [
-          .init(color: .clear, location: 0.52),
-          .init(color: .white, location: 1),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
+      Color.black.opacity(0.4)
     }
     .accessibilityHidden(true)
   }
 
   @ViewBuilder
-  func voteContent() -> some View {
+  func voteContent(width: CGFloat) -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("#\(store.room.battle.categoryDisplayTitle)")
-        .pickeBadge(.filled, size: .tag)
+      metadataRow()
         .padding(.bottom, 20)
 
       Text(store.room.battle.title)
-        .pretendardFont(.semiBold24)
+        .pretendardFont(.bold24)
         .foregroundStyle(.gray800)
+        .lineSpacing(titleLinePadding)
+        .padding(.vertical, titleLinePadding / 2)
         .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: 287 * width / 375, alignment: .leading)
         .padding(.bottom, 12)
 
       Text(store.room.battle.summary)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray300)
+        .pretendardFont(.bodyMedium)
+        .foregroundStyle(.gray400)
+        .lineSpacing(summaryLinePadding)
+        .padding(.vertical, summaryLinePadding / 2)
         .fixedSize(horizontal: false, vertical: true)
-        .padding(.bottom, 26)
+        .padding(.bottom, 40)
 
       participationContent()
-        .padding(.bottom, 22)
+        .padding(.bottom, 20)
 
       if store.viewState == .loaded, let errorMessage = store.errorMessage {
         Text(errorMessage)
@@ -142,8 +150,77 @@ private extension ClassAIVoteView {
         .padding(.top, 8)
     }
     .padding(.horizontal, 16)
-    .padding(.bottom, 16)
+    .padding(.bottom, 24)
     .frame(maxWidth: .infinity, alignment: .leading)
+    .background { contentBackground(width: width) }
+  }
+
+  @ViewBuilder
+  func contentBackground(width: CGFloat) -> some View {
+    // Source 13384:59439: content y434, white fade y228.086...440.424.
+    // Anchor the fade to content so longer text and short screens stay legible.
+    GeometryReader { geometry in
+      ZStack(alignment: .top) {
+        Color.white
+          .offset(y: 6.424 * width / 375)
+        LinearGradient(
+          colors: [.white.opacity(0), .white],
+          startPoint: .init(x: 0.5, y: 0),
+          endPoint: .init(x: 188.037 / 375, y: 1)
+        )
+        .frame(height: 212.338 * width / 375)
+        .offset(y: -205.914 * width / 375)
+      }
+      .frame(width: geometry.size.width, height: geometry.size.height)
+    }
+    .accessibilityHidden(true)
+    .allowsHitTesting(false)
+  }
+
+  @ViewBuilder
+  func metadataRow() -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      categoryBadge
+      Spacer(minLength: 0)
+      if let count = store.commentCountTitle {
+        commentCountBadge(count)
+      }
+    }
+    .frame(minHeight: 25, alignment: .top)
+  }
+
+  var categoryBadge: some View {
+    Text(store.categoryTitle)
+      .pretendardFont(.semiBold12)
+      .foregroundStyle(.badgeFilledText)
+      .lineLimit(1)
+      .frame(height: 16)
+      .padding(.horizontal, 4)
+      .padding(.vertical, 2)
+      .background(.badgeFilledBackground, in: RoundedRectangle(cornerRadius: 2))
+  }
+
+  @ViewBuilder
+  func commentCountBadge(_ count: String) -> some View {
+    HStack(spacing: 2) {
+      Image(asset: .commentMessage)
+        .resizable()
+        .frame(width: 16, height: 16)
+      Text(count)
+        .pretendardFont(.regular13)
+        .foregroundStyle(.gray300)
+        .fixedSize()
+        .frame(height: 17)
+    }
+    .padding(.horizontal, 6)
+    .padding(.vertical, 4)
+    .background(.white, in: RoundedRectangle(cornerRadius: 2))
+    .overlay {
+      RoundedRectangle(cornerRadius: 2)
+        .strokeBorder(Color(hex: "DFDFDF"), lineWidth: 1)
+    }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(store.commentAccessibilityLabel)
   }
 
   @ViewBuilder
@@ -251,13 +328,24 @@ private extension ClassAIVoteView {
 
   var deadlineLabel: some View {
     Label(
-      store.room.deadline == .distantFuture
-        ? "마감일 없음"
-        : store.room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지",
+      store.deadlineTitle,
       systemImage: "clock"
     )
     .pretendardFont(.regular13)
     .foregroundStyle(.gray300)
+    .padding(.vertical, deadlineLinePadding / 2)
     .frame(maxWidth: .infinity)
+  }
+
+  var titleLinePadding: CGFloat {
+    max(0, 31.2 - UIFont.pretendardFontFamily(family: .Bold, size: 24).lineHeight)
+  }
+
+  var summaryLinePadding: CGFloat {
+    max(0, 19.6 - UIFont.pretendardFontFamily(family: .Regular, size: 14).lineHeight)
+  }
+
+  var deadlineLinePadding: CGFloat {
+    max(0, 18 - UIFont.pretendardFontFamily(family: .Regular, size: 13).lineHeight)
   }
 }

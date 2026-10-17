@@ -9,6 +9,7 @@ import BattleDomainInterface
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeCoreUtility
 
 @Reducer
 public struct ClassAIVoteFeature {
@@ -49,6 +50,20 @@ public struct ClassAIVoteFeature {
 
     public var canSubmit: Bool {
       viewState == .loaded && selectedOptionID != nil && !isSubmitting
+    }
+
+    public var categoryTitle: String { "#\(room.battle.categoryDisplayTitle)" }
+
+    public var commentCountTitle: String? {
+      guard room.battle.commentCount > 0 else { return nil }
+      return String(room.battle.commentCount)
+    }
+
+    public var commentAccessibilityLabel: String { "댓글 \(room.battle.commentCount)개" }
+
+    public var deadlineTitle: String {
+      guard room.deadline != .distantFuture else { return "마감일 없음" }
+      return room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
     }
   }
 

@@ -2552,9 +2552,12 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       ("long-title", .loaded, 2, true),
       ("loading", .loading, nil, false),
       ("error", .error, nil, false),
+      ("no-comments-no-deadline", .loaded, nil, false),
     ]
-    for viewport in [CGSize(width: 375, height: 812), CGSize(width: 402, height: 874)] {
-      for variant in variants {
+    for viewport in [CGSize(width: 375, height: 812), CGSize(width: 402, height: 874), CGSize(width: 375, height: 500)] {
+      let compact = viewport.height == 500
+      for variant in variants where !compact || variant.name == "long-title" || variant.name == "error" {
+        let withoutMetadata = variant.name == "no-comments-no-deadline"
         let room = ClassRoom(
           id: 801,
           name: "1학년 3반 사회 토론",
@@ -2573,9 +2576,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
             level: .high,
             audioDuration: 0,
             viewCount: 0,
-            commentCount: 23
+            commentCount: withoutMetadata ? 0 : 23
           ),
-          deadline: Date(timeIntervalSince1970: 1_790_154_000),
+          deadline: withoutMetadata ? .distantFuture : Date(timeIntervalSince1970: 1_790_154_000),
           memberCount: 1,
           role: .member,
           status: .open,
@@ -2597,12 +2600,14 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         XCTAssertEqual(store.selectedOptionID, variant.selected)
         XCTAssertEqual(store.canSubmit, variant.phase == .loaded && variant.selected != nil)
         var checkedMountedState = false
-        let (image, _) = try await capture(
+        var safeAreaDescription = ""
+        let (image, bottomImage) = try await capture(
           AnyView(ClassAIVoteView(store: store, onAppear: {})),
           ready: { store.viewState == variant.phase },
-          includeScrollBottom: false,
+          includeScrollBottom: compact,
           viewport: viewport,
-          inspectWindow: { _ in
+          inspectWindow: { window in
+            safeAreaDescription = "Viewport: \(viewport); window safe area: \(window.safeAreaInsets); host safe area: \(String(describing: window.rootViewController?.view.safeAreaInsets))"
             XCTAssertEqual(store.viewState, variant.phase)
             XCTAssertEqual(store.selectedOptionID, variant.selected)
             XCTAssertEqual(store.errorMessage, state.errorMessage)
@@ -2616,12 +2621,32 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         XCTAssertTrue(checkedMountedState)
         XCTAssertEqual(useCase.fetchCalls.value.count, 0)
         XCTAssertEqual(image.size, viewport)
-        let name = "ai-vote-reference-\(variant.name)-\(Int(viewport.width))"
+        let name = "ai-vote-reference-\(variant.name)-\(Int(viewport.width))" + (compact ? "-compact" : "")
+        let insets = XCTAttachment(string: safeAreaDescription)
+        insets.name = name + "-safe-area"
+        insets.lifetime = .keepAlways
+        add(insets)
         let attachment = XCTAttachment(image: image)
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
-        let text = try recognizedAuditText(in: image, name: name)
+        var text = try recognizedAuditText(in: image, name: name)
+        if compact {
+          let bottom = try XCTUnwrap(bottomImage, "Compact vote content must scroll")
+          let attachment = XCTAttachment(image: bottom)
+          attachment.name = name + "-bottom"
+          attachment.lifetime = .keepAlways
+          add(attachment)
+          let bottomText = try recognizedAuditText(in: bottom, name: name + "-bottom")
+          XCTAssertTrue(bottomText.contains("투표하기"), "CTA missing after scroll: \(bottomText)")
+          XCTAssertTrue(bottomText.contains("까지"), "Deadline missing after scroll: \(bottomText)")
+          text += bottomText
+        }
+        if withoutMetadata {
+          XCTAssertNil(store.commentCountTitle)
+          XCTAssertTrue(text.contains("마감일없음"))
+          XCTAssertFalse(text.contains("23"), "Zero-comment badge must be hidden: \(text)")
+        }
         XCTAssertTrue(text.contains("투표하기"), "Missing CTA in \(name): \(text)")
         if variant.phase == .loaded {
           for fragment in [room.battle.optionATitle, room.battle.optionBTitle, "사회적 공감도 중요하다", "연령과 교정 가능성 고려"] {
