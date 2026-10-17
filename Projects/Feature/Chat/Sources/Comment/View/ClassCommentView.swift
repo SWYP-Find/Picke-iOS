@@ -1,26 +1,25 @@
 //
 //  ClassCommentView.swift
-//  Picke
+//  Chat
 //
 //  Created by Picke on 10/11/26.
 //
 
 import CommentDomainInterface
 import ComposableArchitecture
-import FeatureAssembly
 import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: CommentFeature.self)
-struct ClassCommentView: View {
-  @Bindable var store: StoreOf<CommentFeature>
+public struct ClassCommentView: View {
+  @Bindable public var store: StoreOf<CommentFeature>
   private let onOpenReport: (Int) -> Void
   @FocusState private var isCommentFocused: Bool
   @State private var hasAnimatedVoteProgress = false
 
-  init(
+  public init(
     store: StoreOf<CommentFeature>,
     onOpenReport: @escaping (Int) -> Void
   ) {
@@ -28,7 +27,7 @@ struct ClassCommentView: View {
     self.onOpenReport = onOpenReport
   }
 
-  var body: some View {
+  public var body: some View {
     VStack(spacing: 0) {
       headerSection()
       commentScroll()

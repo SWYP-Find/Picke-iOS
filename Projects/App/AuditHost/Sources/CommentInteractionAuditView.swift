@@ -116,6 +116,7 @@ private extension CommentInteractionAuditContentView {
   var diagnostics: some View {
     Text("Comment UI audit")
       .pretendardFont(family: .Regular, size: 10)
+      .foregroundStyle(.clear)
       .accessibilityIdentifier("audit-comment-state")
       .accessibilityValue(diagnosticValue)
       .allowsHitTesting(false)
