@@ -45,6 +45,11 @@ private extension CommentInteractionTests {
     let emptyComposer = try composer(in: app, placeholder: placeholder, empty: true)
     let emptySend = try sendButton(in: app, scenario: scenario, composer: emptyComposer)
     XCTAssertFalse(emptySend.isEnabled, "Empty send must be disabled")
+    if scenario == "global" {
+      capture(in: app, name: "global-root-before-focus")
+      try checkGlobalNavigation(in: app)
+      try checkEmptyNotice(in: app, composer: emptyComposer, name: "global-root-before-focus")
+    }
 
     emptyComposer.tap()
     try await waitForKeyboard(in: app, visible: true, name: scenario + "-root-keyboard")
@@ -63,6 +68,9 @@ private extension CommentInteractionTests {
       name: scenario + "-root-keyboard"
     )
     capture(in: app, name: scenario + "-root-keyboard")
+    if scenario == "global" {
+      try checkEmptyNotice(in: app, composer: filledComposer, name: "global-root-keyboard")
+    }
     filledSend.tap()
 
     try await wait(in: app, for: "posted full perspective") {
@@ -252,6 +260,49 @@ private extension CommentInteractionTests {
     return matches[0]
   }
 
+  func checkGlobalNavigation(in app: XCUIApplication) throws {
+    let back = try uniqueHittableBack(in: app)
+    let row = back.frame.minY ... back.frame.maxY
+    let buttons = app.buttons.allElementsBoundByIndex.filter {
+      $0.isHittable && row.contains($0.frame.midY)
+    }
+    attachText(
+      buttons.map { "label=\($0.label); identifier=\($0.identifier); frame=\($0.frame)" }.joined(separator: "\n"),
+      name: "global-navigation-buttons"
+    )
+    XCTAssertEqual(buttons.count, 1, "Figma 8661:8290 has only the back button in the navigation row")
+    XCTAssertFalse(buttons.contains { $0.frame.midX > app.frame.midX }, "Navigation must have no trailing action")
+    XCTAssertFalse(app.buttons["chevron.right"].exists, "The extra forward chevron must be absent")
+  }
+
+  func checkEmptyNotice(
+    in app: XCUIApplication,
+    composer: XCUIElement,
+    name: String
+  ) throws {
+    let notices = app.staticTexts.matching(NSPredicate(format: "label == %@", "아직 작성된 관점이 없습니다"))
+      .allElementsBoundByIndex
+    let scrolls = app.scrollViews.containing(NSPredicate(format: "label == %@", "아직 작성된 관점이 없습니다"))
+      .allElementsBoundByIndex
+    attachText(
+      "noticeFrames=\(notices.map(\.frame)); viewportFrames=\(scrolls.map(\.frame)); composer=\(composer.frame)",
+      name: name + "-empty-notice-geometry"
+    )
+    guard notices.count == 1, scrolls.count == 1 else {
+      capture(in: app, name: name + "-empty-notice-ambiguous")
+      throw AuditError.ambiguousEmptyNotice
+    }
+    let notice = notices[0].frame
+    let viewport = scrolls[0].frame
+    XCTAssertGreaterThan(notice.width, 0)
+    XCTAssertGreaterThan(notice.height, 0)
+    XCTAssertGreaterThan(viewport.width, 0)
+    XCTAssertGreaterThan(viewport.height, 0)
+    XCTAssertGreaterThanOrEqual(notice.minY, viewport.minY - 0.5, "Empty notice must stay below the viewport top")
+    XCTAssertLessThanOrEqual(notice.maxY, viewport.maxY + 0.5, "Empty notice must stay above the viewport bottom")
+    XCTAssertLessThanOrEqual(notice.maxY, composer.frame.minY, "Empty notice must stay above the composer")
+  }
+
   func checkAboveKeyboard(
     composer: XCUIElement,
     send: XCUIElement,
@@ -404,6 +455,7 @@ private extension CommentInteractionTests {
     case ambiguousSend
     case ambiguousComment
     case ambiguousBack
+    case ambiguousEmptyNotice
     case keyboardMismatch
     case geometryMismatch
     case missingState

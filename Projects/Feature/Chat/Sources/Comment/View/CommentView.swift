@@ -53,7 +53,7 @@ private extension CommentView {
   func headerSection() -> some View {
     // Figma 8661-8291: 네비바·투표요약·필터탭은 고정, 아래 List 영역만 스크롤한다.
     VStack(spacing: 4) {
-      navigationBar()
+      navigationBar
       summarySection()
       filterTabs()
     }
@@ -127,19 +127,11 @@ private extension CommentView {
 // MARK: - Navigation
 
 private extension CommentView {
-  @ViewBuilder
-  func navigationBar() -> some View {
+  var navigationBar: some View {
     PickeNavigationBar(
       onBack: { send(.backButtonTapped) },
       centerTitle: store.title
-    ) {
-      Button { send(.forwardTapped) } label: {
-        Image(systemName: "chevron.right")
-          .font(.system(size: 18, weight: .semibold))
-          .frame(width: 24, height: 24)
-      }
-      .buttonStyle(.plain)
-    }
+    )
     .foregroundStyle(.cardBaseTextTitle)
   }
 }
@@ -335,7 +327,7 @@ private extension CommentView {
   @ViewBuilder
   func emptyState() -> some View {
     PickeEmptyStateView(message: "아직 작성된 관점이 없습니다")
-      .padding(.vertical, 60)
+      .padding(.vertical, isCommentFocused ? 16 : 60)
   }
 
   @ViewBuilder
