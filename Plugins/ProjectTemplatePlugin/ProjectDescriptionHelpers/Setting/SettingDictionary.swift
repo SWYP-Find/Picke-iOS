@@ -2,7 +2,7 @@
 //  SettingDictionary.swift
 //  ProjectTemplatePlugin
 //
-//  Created by 서원지 on 6/12/24.
+//  Created by Picke on 6/12/24.
 //
 
 import Foundation

@@ -1,8 +1,8 @@
 //
 //  NewBattle.swift
-//  Entity
+//  HomeDomainInterface
 //
-//  Created by Wonji Suh  on 5/15/26.
+//  Created by Picke on 5/15/26.
 //
 
 import Foundation

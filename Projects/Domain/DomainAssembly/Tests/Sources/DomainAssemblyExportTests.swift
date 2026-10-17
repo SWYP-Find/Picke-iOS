@@ -2,6 +2,8 @@
 //  DomainAssemblyExportTests.swift
 //  DomainAssemblyTests
 //
+//  Created by Picke on 10/11/26.
+//
 
 import Testing
 
@@ -18,6 +20,7 @@ struct DomainAssemblyExportTests {
       (any AttendanceInterface).self,
       (any AuthUseCaseInterface).self,
       (any BattleInterface).self,
+      (any ClassInterface).self,
       (any CommentInterface).self,
       (any HomeInterface).self,
       (any NotificationInterface).self,
@@ -26,6 +29,6 @@ struct DomainAssemblyExportTests {
       (any SearchInterface).self,
     ]
 
-    #expect(interfaces.count == 10)
+    #expect(interfaces.count == 11)
   }
 }

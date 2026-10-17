@@ -1,3 +1,10 @@
+//
+//  Project.swift
+//  FeatureAssembly
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 import DependencyPackagePlugin
@@ -19,6 +26,7 @@ let project = Project.makeModule(
     .feature(.hifi, .implementation),
     .feature(.battle, .implementation),
     .feature(.profile, .implementation),
+    .feature(.classroom, .implementation),
     .feature(.notification, .implementation),
     .feature(.ad, .implementation),
     .feature(.featureSharedUI, .implementation),

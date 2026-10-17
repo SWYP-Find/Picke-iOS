@@ -2,7 +2,7 @@
 //  FeatureAssemblyExported.swift
 //  FeatureAssembly
 //
-//  Created by Wonji Suh  on 9/5/25.
+//  Created by Picke on 9/5/25.
 //
 
 // MARK: - 여기에 한번에 호출 할꺼 추가
@@ -12,6 +12,7 @@
 @_exported import Auth
 @_exported import Battle
 @_exported import Chat
+@_exported import Class
 @_exported import Hifi
 @_exported import Home
 @_exported import Notification

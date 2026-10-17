@@ -1,7 +1,8 @@
 //
 //  TargetDependency+Modules.swift
-//  Plugins
+//  DependencyPlugin
 //
+//  Created by Picke on 10/11/26.
 //  레이어 의존성 DSL. 카탈로그가 경로를 들고 있어 여기서는 타깃만 가리킨다.
 //  모듈이 Interface 타깃(`Project.makeModule(hasInterface: true)`)을 가지면
 //  `.domain(.auth, .interface)` 처럼 어느 타깃에 의존할지 명시할 수 있다.

@@ -2,8 +2,8 @@
 //  NetworkClientDependency.swift
 //  PickeNetworkInterface
 //
+//  Created by Picke on 10/11/26.
 //  네트워크 클라이언트의 DependencyKey.
-//
 //  실제 인증 클라이언트는 ServiceAssembly 가 `DependencyValues` 에 등록한다.
 //  Interface 모듈에는 계약과 테스트 기본값만 둔다.
 //

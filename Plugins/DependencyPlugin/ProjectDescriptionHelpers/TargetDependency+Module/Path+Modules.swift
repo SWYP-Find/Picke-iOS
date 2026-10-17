@@ -1,7 +1,8 @@
 //
 //  Path+Modules.swift
-//  Plugins
+//  DependencyPlugin
 //
+//  Created by Picke on 10/11/26.
 //  레이어 루트 경로. 카탈로그가 rawValue 만 넘겨 재사용한다.
 //
 

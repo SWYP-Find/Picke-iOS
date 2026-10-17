@@ -1,8 +1,8 @@
 //
 //  AuthTests.swift
-//  Feature.AuthTests
+//  AuthTests
 //
-//  Created by Roy on 2026-05-09.
+//  Created by Picke on 2026-05-09.
 //
 
 import Testing

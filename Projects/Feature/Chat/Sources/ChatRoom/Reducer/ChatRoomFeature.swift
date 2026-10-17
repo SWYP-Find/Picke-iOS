@@ -1,22 +1,21 @@
 //
 //  ChatRoomFeature.swift
-//  Home
+//  Chat
 //
-//  Created by Wonji Suh on 5/19/26.
+//  Created by Picke on 5/19/26.
 //
 
-import Foundation
-import PickeCoreLogger
-
+import AudioPlayerServiceInterface
 import BattleDomainInterface
 import ChatInterface
 import ComposableArchitecture
+import Foundation
 import HomeDomainInterface
+import PickeAnalyticsInterface
+import PickeCoreLogger
+import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
-import PickeCoreUtility
-import PickeAnalyticsInterface
-import AudioPlayerServiceInterface
 
 @Reducer
 public struct ChatRoomFeature {
@@ -24,9 +23,11 @@ public struct ChatRoomFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public let instanceID = UUID()
     public var bundle: ChatRoomBundle = .mock
     public var scenario: BattleScenario?
     public var isPlaying: Bool = false
+    public var playbackRate: Float = 1
     public var currentTime: TimeInterval = 0
     public var playerDuration: TimeInterval = 0
     public var battleId: Int = 0
@@ -60,72 +61,41 @@ public struct ChatRoomFeature {
     /// 흘리므로, 목표 시간 근처에 도달하기 전까지 옵저버 tick 을 무시해 오디오-텍스트 불일치를 막는다.
     public var pendingSeekTime: TimeInterval?
 
+    public static let supportedPlaybackRates: [Float] = [1, 1.25, 1.5, 2]
+
+    public var playbackRateTitle: String {
+      switch playbackRate {
+      case 1: return "1.0"
+      case 1.25: return "1.25"
+      case 1.5: return "1.5"
+      case 2: return "2.0"
+      default: return "1.0"
+      }
+    }
+
     public var totalDuration: TimeInterval {
-      if playerDuration > 0 { return playerDuration }
+      if playerDuration > 0 {
+        return playerDuration
+      }
       guard let scenario else { return bundle.totalDuration }
       let nodesTotal = scenario.nodes.reduce(0) { $0 + $1.audioDuration }
       return nodesTotal > 0 ? TimeInterval(nodesTotal) : bundle.totalDuration
     }
 
-    public var battleTitle: String { scenario?.title ?? bundle.battleTitle }
+    public var battleTitle: String {
+      scenario?.title ?? bundle.battleTitle
+    }
 
     public var messages: [ChatMessage] {
       // scenario 가 nil(미로드/로드 실패)이면 목업을 노출하지 않는다.
       // 과거엔 bundle.messages(목업 전체)를 반환해 "재생 안 됨 + 전체 내용 노출" 버그가 있었다.
       guard let scenario else { return [] }
-      let nodes = visibleNodes(in: scenario)
-      let currentMs = Int(currentTime * 1000)
-      return nodes.flatMap { node -> [ChatMessage] in
-        let scripts = node.scripts
-        // 대사별 startTimeMs 가 구분되면 그 값을, 모두 같거나(0) 평평하면 노드 오디오 구간에 균등 분배.
-        let distinctStarts = Set(scripts.map(\.startTimeMs)).count
-        let nodeStartMs = scripts.map(\.startTimeMs).min() ?? 0
-        let nodeDurationMs = node.audioDuration * 1000
-        let count = scripts.count
-
-        func revealStart(_ index: Int) -> Int {
-          if distinctStarts > 1 { return scripts[index].startTimeMs }
-          if count > 1 { return nodeStartMs + nodeDurationMs * index / count }
-          return nodeStartMs
-        }
-
-        return scripts.enumerated().flatMap { index, script -> [ChatMessage] in
-          let scriptStart = revealStart(index)
-          guard currentMs >= scriptStart else { return [] }
-          let scriptEnd = index + 1 < count ? revealStart(index + 1) : nodeStartMs + nodeDurationMs
-          let windowMs = max(1, scriptEnd - scriptStart)
-          let messageSpeaker = speaker(for: script, in: scenario)
-
-          // 나레이션/클로징(center)·발언자(좌/우) 모두 문장마다 개별 말풍선.
-          // 문장 시작 시점은 글자수 비례로 분배(긴 문장=더 긴 시간) → 싱크.
-          let sentences = script.text.splitIntoSentences()
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-          guard sentences.count > 1 else {
-            return [ChatMessage(
-              messageId: UUID.deterministic(script.scriptId, 0),
-              speaker: messageSpeaker,
-              text: script.text,
-              startTimeMs: scriptStart
-            )]
-          }
-          let totalChars = max(1, sentences.reduce(0) { $0 + $1.count })
-          var charsBefore = 0
-          var result: [ChatMessage] = []
-          for (sentenceIndex, sentence) in sentences.enumerated() {
-            let sentenceStart = scriptStart + windowMs * charsBefore / totalChars
-            charsBefore += sentence.count
-            guard currentMs >= sentenceStart else { break }
-            result.append(ChatMessage(
-              messageId: UUID.deterministic(script.scriptId, sentenceIndex),
-              speaker: messageSpeaker,
-              text: sentence,
-              startTimeMs: sentenceStart
-            ))
-          }
-          return result
-        }
-      }
+      return ChatRoomTimelineUseCase().messages(
+        scenario: scenario,
+        visibleNodeIds: visibleNodeIds,
+        currentNodeId: currentNodeId,
+        currentTime: currentTime
+      )
     }
 
     /// 현재 재생 중(가장 최근 노출된) 메시지 id. 문장 단위 노출이라 마지막 노출 버블이 활성.
@@ -135,11 +105,15 @@ public struct ChatRoomFeature {
 
     public var audioUrl: String? {
       guard let scenario else { return nil }
-      if let url = scenario.audios[scenario.recommendedPathKey.rawValue] { return url }
+      if let url = scenario.audios[scenario.recommendedPathKey.rawValue] {
+        return url
+      }
       return scenario.audios.values.first
     }
 
-    public var canScrub: Bool { hasFinishedListening }
+    public var canScrub: Bool {
+      hasFinishedListening
+    }
 
     public var currentNode: ScenarioNode? {
       guard let scenario else { return nil }
@@ -166,7 +140,9 @@ public struct ChatRoomFeature {
       return Int(nodeStartTime(for: confirmedSelection.selectedNodeId) * 1000)
     }
 
-    public var isConfirmEnabled: Bool { selectedOptionLabel != nil }
+    public var isConfirmEnabled: Bool {
+      selectedOptionLabel != nil
+    }
 
     public init(battleId: Int = 0) {
       self.battleId = battleId
@@ -211,6 +187,7 @@ public struct ChatRoomFeature {
     case refreshTapped
     case retryTapped
     case togglePlayTapped
+    case playbackRateSelected(Float)
     case seekBackwardTapped
     case seekForwardTapped
     case replayTapped
@@ -238,9 +215,10 @@ public struct ChatRoomFeature {
     case customAlert(PresentationAction<CustomAlertAction>)
   }
 
-  nonisolated enum CancelID: Hashable {
+  public nonisolated enum CancelID: Hashable, Sendable {
     case fetchScenario
-    case audioObserver
+    case audioObserver(UUID)
+    case sharedAudioObserver
     case audioErrorDismiss
   }
 
@@ -272,67 +250,6 @@ public struct ChatRoomFeature {
   }
 }
 
-private extension ChatRoomFeature.State {
-  func visibleNodes(in scenario: BattleScenario) -> [ScenarioNode] {
-    let ids = visibleNodeIds.isEmpty ? [currentNodeId ?? scenario.startNodeId] : visibleNodeIds
-    return ids.compactMap { id in
-      scenario.nodes.first { $0.nodeId == id }
-    }
-  }
-
-  func speaker(
-    for script: ScenarioScript,
-    in scenario: BattleScenario
-  ) -> ChatSpeaker {
-    switch script.speakerType {
-    case .a:
-      return speaker(
-        label: "A",
-        side: .left,
-        fallbackName: script.speakerName,
-        in: scenario
-      )
-    case .b:
-      return speaker(
-        label: "B",
-        side: .right,
-        fallbackName: script.speakerName,
-        in: scenario
-      )
-    case .narrator:
-      return ChatSpeaker(name: script.speakerName, side: .center)
-    case .philosopher, .unknown:
-      if let philosopher = scenario.philosophers.first(where: { $0.name == script.speakerName }) {
-        let side: ChatSpeakerSide = philosopher.label == "B" ? .right : .left
-        return ChatSpeaker(
-          label: philosopher.label,
-          name: philosopher.name,
-          imageURL: philosopher.imageUrl,
-          side: side
-        )
-      }
-      return ChatSpeaker(name: script.speakerName, side: .center)
-    }
-  }
-
-  func speaker(
-    label: String,
-    side: ChatSpeakerSide,
-    fallbackName: String,
-    in scenario: BattleScenario
-  ) -> ChatSpeaker {
-    guard let philosopher = scenario.philosophers.first(where: { $0.label == label }) else {
-      return ChatSpeaker(label: label, name: fallbackName, side: side)
-    }
-    return ChatSpeaker(
-      label: philosopher.label,
-      name: philosopher.name,
-      imageURL: philosopher.imageUrl,
-      side: side
-    )
-  }
-}
-
 extension ChatRoomFeature {
   private func handleViewAction(
     state: inout State,
@@ -350,15 +267,18 @@ extension ChatRoomFeature {
     case .onDisappear:
       state.isPlaying = false
       return .merge(
-        .cancel(id: CancelID.audioObserver),
+        .cancel(id: CancelID.audioObserver(state.instanceID)),
         .run { [player = audioPlayer] _ in await player.pause() }
       )
 
     case .backButtonTapped:
-      return .run { [player = audioPlayer] send in
-        await player.pause()
-        await send(.delegate(.dismiss))
-      }
+      return .concatenate(
+        .cancel(id: CancelID.audioObserver(state.instanceID)),
+        .run { [player = audioPlayer] send in
+          await player.pause()
+          await send(.delegate(.dismiss))
+        }
+      )
 
     case .refreshTapped:
       state.currentTime = 0
@@ -383,7 +303,18 @@ extension ChatRoomFeature {
       state.isPlaying.toggle()
       let playing = state.isPlaying
       return .run { [player = audioPlayer] _ in
-        if playing { await player.play() } else { await player.pause() }
+        if playing {
+          await player.play()
+        } else {
+          await player.pause()
+        }
+      }
+
+    case let .playbackRateSelected(rate):
+      guard rate.isFinite, State.supportedPlaybackRates.contains(rate) else { return .none }
+      state.playbackRate = rate
+      return .run { [player = audioPlayer] _ in
+        await player.setPlaybackRate(rate)
       }
 
     case .seekBackwardTapped:
@@ -484,7 +415,8 @@ extension ChatRoomFeature {
       state.playerDuration = 0
       state.isPlaying = true
       state.hasAudioError = false
-      return .run { [player = audioPlayer] send in
+      return .run { [player = audioPlayer, rate = state.playbackRate] send in
+        await player.setPlaybackRate(rate)
         let isPlayable = await player.load(url: url)
         guard isPlayable else {
           await send(.inner(.audioLoadFailed))
@@ -498,12 +430,15 @@ extension ChatRoomFeature {
       }
 
     case .subscribePlayer:
-      return .run { [player = audioPlayer] send in
+      return .run { [player = audioPlayer, rate = state.playbackRate] send in
+        await player.setPlaybackRate(rate)
         for await time in player.currentTimes() {
+          guard !Task.isCancelled else { return }
           await send(.inner(.playerTimeUpdated(time)))
         }
       }
-      .cancellable(id: CancelID.audioObserver, cancelInFlight: true)
+      .cancellable(id: CancelID.audioObserver(state.instanceID), cancelInFlight: true)
+      .cancellable(id: CancelID.sharedAudioObserver, cancelInFlight: true)
     }
   }
 
@@ -535,7 +470,10 @@ extension ChatRoomFeature {
         return .none
       case let .failure(error):
         state.scenarioLoadFailed = true
-        PickeLogger.error("[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)", category: .ui)
+        PickeLogger.error(
+          "[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)",
+          category: .ui
+        )
         return .none
       }
 
@@ -543,7 +481,7 @@ extension ChatRoomFeature {
       // 수동 seek(분기 선택·구간 이동) 직후, iOS 는 seek 반영 전 stale tick 을 흘린다.
       // 목표 시간 근처에 도달하기 전까지 tick 을 무시해 노드가 어긋나지 않게 한다(오디오-텍스트 동기).
       if let pending = state.pendingSeekTime {
-        guard abs(time - pending) < 0.5 else { return .none }
+        guard abs(time - pending) < 0.5 * max(1, Double(state.playbackRate)) else { return .none }
         state.pendingSeekTime = nil
       }
       state.currentTime = time

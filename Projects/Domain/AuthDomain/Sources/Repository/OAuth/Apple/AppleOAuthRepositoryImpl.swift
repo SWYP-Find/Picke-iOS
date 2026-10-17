@@ -1,8 +1,8 @@
 //
 //  AppleOAuthRepositoryImpl.swift
-//  Repository
+//  AuthDomain
 //
-//  Created by Wonji Suh  on 12/29/25.
+//  Created by Picke on 12/29/25.
 //
 
 import Foundation

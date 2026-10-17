@@ -2,6 +2,8 @@
 //  AppStartPopupAd.swift
 //  Ad
 //
+//  Created by Picke on 10/11/26.
+//
 
 import PickeCoreLogger
 import UIKit

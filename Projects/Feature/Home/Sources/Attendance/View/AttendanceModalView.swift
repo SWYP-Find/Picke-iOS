@@ -2,10 +2,11 @@
 //  AttendanceModalView.swift
 //  Home
 //
-
-import SwiftUI
+//  Created by Picke on 10/11/26.
+//
 
 import ComposableArchitecture
+import SwiftUI
 
 @ViewAction(for: AttendanceModalFeature.self)
 public struct AttendanceModalView: View {
@@ -27,7 +28,7 @@ public struct AttendanceModalView: View {
 extension AttendanceModalView {
   @ViewBuilder
   private func dimmedBackground() -> some View {
-    Color.black.opacity(0.4)
+    Color.clear
       .ignoresSafeArea()
       .contentShape(Rectangle())
       .onTapGesture { send(.dismissTapped) }

@@ -2,20 +2,22 @@
 //  TermsAgreementView.swift
 //  Auth
 //
-
-import SwiftUI
+//  Created by Picke on 10/11/26.
+//
 
 import AuthDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
+import SwiftUI
 
 struct TermsAgreementView: View {
   @Bindable var store: StoreOf<TermsAgreementFeature>
 
   var body: some View {
     ZStack(alignment: .bottom) {
-      Color.black.opacity(0.4)
+      Color.clear
         .ignoresSafeArea()
+        .contentShape(Rectangle())
         .onTapGesture { store.send(.view(.dismissTapped)) }
 
       sheet()

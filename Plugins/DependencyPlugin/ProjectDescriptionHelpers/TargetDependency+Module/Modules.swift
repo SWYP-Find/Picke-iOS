@@ -1,7 +1,8 @@
 //
 //  Modules.swift
-//  Plugins
+//  DependencyPlugin
 //
+//  Created by Picke on 10/11/26.
 //  레이어별 모듈 카탈로그(단일 출처).
 //  모듈 추가 = case 한 줄. rawValue 가 실제 타깃명이자 디렉토리명이라 오타로 깨지지 않는다.
 //
@@ -16,6 +17,7 @@ public enum FeatureModule: String, CaseIterable {
   case hifi = "Hifi"
   case web = "Web"
   case battle = "Battle"
+  case classroom = "Class"
   case profile = "Profile"
   case notification = "Notification"
   case ad = "Ad"
@@ -64,6 +66,7 @@ public enum DomainModule: String, CaseIterable {
   case attendance = "AttendanceDomain"
   case auth = "AuthDomain"
   case battle = "BattleDomain"
+  case classroom = "ClassDomain"
   case comment = "CommentDomain"
   case ad = "AdDomain"
   case home = "HomeDomain"

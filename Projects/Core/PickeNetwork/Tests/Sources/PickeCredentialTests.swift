@@ -2,6 +2,7 @@
 //  PickeCredentialTests.swift
 //  PickeNetworkTests
 //
+//  Created by Picke on 10/11/26.
 //  토큰 사전 갱신 판정을 검증한다. 401 을 받기 전에 미리 갱신하는 근거가 되는 값이다.
 //
 

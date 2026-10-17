@@ -662,7 +662,7 @@ SVG 생성에는 Graphviz의 `dot`이 필요합니다. 앱 빌드나 Tuist 캐�
 | 저장소 | PickeStorage, Keychain, SQLiteData |
 | 이미지 | SDWebImageSwiftUI, Kingfisher |
 | 모니터링 | Firebase Crashlytics, Sentry |
-| 분석·광고 | Mixpanel, Google Mobile Ads, Kakao AdFit |
+| 분석·광고 | Mixpanel, Sentry, Google Mobile Ads, Kakao AdFit |
 | 테스트 | Swift Testing, XCTest, Tuist |
 
 패키지 선언과 실제 해석된 버전은 [Tuist/Package.swift](Tuist/Package.swift)와 [Tuist/Package.resolved](Tuist/Package.resolved)를 기준으로 합니다.

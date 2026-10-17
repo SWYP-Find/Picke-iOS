@@ -2,6 +2,7 @@
 //  PickeLogLevel.swift
 //  PickeCoreLogger
 //
+//  Created by Picke on 10/11/26.
 //  Copyright © 2026 Picke. All rights reserved.
 //
 

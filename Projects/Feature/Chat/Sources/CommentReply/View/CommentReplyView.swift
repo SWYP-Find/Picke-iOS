@@ -2,6 +2,8 @@
 //  CommentReplyView.swift
 //  Chat
 //
+//  Created by Picke on 10/11/26.
+//
 
 import SwiftUI
 
@@ -37,25 +39,8 @@ public struct CommentReplyView: View {
   public var body: some View {
     VStack(spacing: 0) {
       navigationBar()
-      ScrollViewReader { proxy in
-        ScrollView {
-          if store.isLoadingReplies, store.replies.isEmpty {
-            CommentReplySkeletonView()
-          } else {
-            VStack(spacing: 0) {
-              parentCommentSection()
-              replyCountHeader()
-              replySection()
-            }
-          }
-        }
-        .scrollIndicators(.hidden)
-        .scrollDismissesKeyboard(.interactively)
-        .onChange(of: store.replies.count) { _, _ in
-          scrollToTargetReply(using: proxy)
-        }
-      }
-      inputBar()
+      replyScroll
+      inputBar
     }
     .screenBackground()
     .contentShape(Rectangle())
@@ -68,10 +53,33 @@ public struct CommentReplyView: View {
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
     .animation(.easeInOut(duration: 0.18), value: store.menuTargetReplyId)
   }
+}
+
+private extension CommentReplyView {
+  var replyScroll: some View {
+    ScrollViewReader { proxy in
+      ScrollView {
+        if store.isLoadingReplies, store.replies.isEmpty {
+          CommentReplySkeletonView()
+        } else {
+          VStack(spacing: 0) {
+            parentCommentSection()
+            replyCountHeader()
+            replySection()
+          }
+        }
+      }
+      .scrollIndicators(.hidden)
+      .scrollDismissesKeyboard(.interactively)
+      .onChange(of: store.replies.count) { _, _ in
+        scrollToTargetReply(using: proxy)
+      }
+    }
+  }
 
   /// 답글 "…" 메뉴 (내 글: 수정/삭제, 남 글: 신고) — pill 형태.
   @ViewBuilder
-  private func replyMenu(for reply: CommentReplyItem) -> some View {
+  func replyMenu(for reply: CommentReplyItem) -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       if reply.isMine {
         PickeActionPill(title: "수정", systemImage: "pencil") { send(.replyMenu(id: reply.id, action: .edit)) }
@@ -87,7 +95,7 @@ public struct CommentReplyView: View {
 
   /// 부모(관점) "…" 메뉴 (내 글: 수정/삭제, 남 글: 신고).
   @ViewBuilder
-  private func parentMenuView() -> some View {
+  func parentMenuView() -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       if store.parentComment.isMine {
         PickeActionPill(title: "수정", systemImage: "pencil") { send(.parentMenu(.edit)) }
@@ -130,17 +138,16 @@ private extension CommentReplyView {
       replyCount: store.parentComment.replyCount,
       likeCount: store.parentComment.likeCount,
       isLiked: store.parentComment.isLiked,
-      isMine: store.parentComment.isMine,
       showsReplyCount: true,
       moreAction: { send(.parentMenu(.more)) },
       likeAction: { send(.parentLikeTapped) }
     )
     .topDivider(.beige600)
-    .overlay(alignment: .topTrailing) {
+    .overlay(alignment: .bottomTrailing) {
       if store.parentMenuOpen {
         parentMenuView()
-          .padding(.trailing, 12)
-          .offset(y: 46)
+          .padding(.trailing, 16)
+          .padding(.bottom, 28)
           .zIndex(1)
       }
     }
@@ -154,7 +161,8 @@ private extension CommentReplyView {
       .pretendardFont(.semiBold13)
       .foregroundStyle(.gray800)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(12)
+      .padding(.horizontal, 18)
+      .frame(height: 42)
       .background(.beige200)
       .bottomDivider(.beige600)
   }
@@ -173,16 +181,15 @@ private extension CommentReplyView {
           replyCount: nil,
           likeCount: reply.likeCount,
           isLiked: reply.isLiked,
-          isMine: reply.isMine,
           showsReplyCount: false,
           moreAction: { send(.replyMenu(id: reply.id, action: .more)) },
           likeAction: { send(.replyLikeTapped(reply.id)) }
         )
-        .overlay(alignment: .topTrailing) {
+        .overlay(alignment: .bottomTrailing) {
           if store.menuTargetReplyId == reply.id {
             replyMenu(for: reply)
-              .padding(.trailing, 24)
-              .offset(y: 46)
+              .padding(.trailing, 16)
+              .padding(.bottom, 28)
               .zIndex(1)
           }
         }
@@ -191,6 +198,7 @@ private extension CommentReplyView {
     }
   }
 
+  @ViewBuilder
   func commentCard(
     author: String,
     imageURL: String?,
@@ -201,7 +209,6 @@ private extension CommentReplyView {
     replyCount: Int?,
     likeCount: Int,
     isLiked: Bool,
-    isMine: Bool,
     showsReplyCount: Bool,
     moreAction: (() -> Void)? = nil,
     likeAction: @escaping () -> Void
@@ -212,12 +219,9 @@ private extension CommentReplyView {
         author: author,
         imageURL: imageURL,
         timeAgo: timeAgo,
-        isMine: isMine,
-        moreAction: moreAction
+        option: option,
+        optionLabel: optionLabel
       )
-
-      // Figma: 옵션 칩은 헤더 아래 독립 라인에 배치
-      optionBadge(label: optionLabel, option: option)
 
       Text(content)
         .pretendardFont(.regular13)
@@ -226,13 +230,7 @@ private extension CommentReplyView {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
 
-      HStack(spacing: 4) {
-        Spacer()
-
-        if showsReplyCount, let replyCount {
-          actionLabel(systemName: "message", text: "\(replyCount)")
-        }
-
+      HStack(spacing: 11) {
         Button(action: likeAction) {
           HStack(spacing: 2) {
             Image(asset: .heartPlus)
@@ -245,24 +243,43 @@ private extension CommentReplyView {
           .foregroundStyle(isLiked ? .primary500 : .gray300)
         }
         .buttonStyle(.plain)
+
+        if showsReplyCount, let replyCount {
+          actionLabel(systemName: "message", text: "\(replyCount)")
+        }
+
+        Spacer()
+
+        if let moreAction {
+          Button(action: moreAction) {
+            Image(systemName: "ellipsis")
+              .pretendardFont(family: .Regular, size: 18)
+              .foregroundStyle(.gray300)
+              .frame(width: 24, height: 24)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel("더보기")
+        }
       }
       .foregroundStyle(.gray300)
     }
-    .padding(12)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(.beige50)
     .bottomDivider(.beige600)
   }
 
+  @ViewBuilder
   func commentHeader(
     author: String,
     imageURL: String?,
     timeAgo: String,
-    isMine _: Bool,
-    moreAction: (() -> Void)?
+    option: CommentOption,
+    optionLabel: String
   ) -> some View {
-    // Figma top 행: 아바타(36) + 이름/시간 스택 + 세로 더보기, 요소 간 gap 6
-    HStack(spacing: 6) {
+    HStack(spacing: 8) {
       PickeAvatarView(
         imageURL: imageURL,
         fallback: author,
@@ -271,7 +288,7 @@ private extension CommentReplyView {
 
       VStack(alignment: .leading, spacing: 0) {
         Text(author)
-          .pretendardFont(.labelMedium)
+          .pretendardFont(.semiBold12)
           .foregroundStyle(.gray500)
           .lineLimit(1)
 
@@ -283,20 +300,14 @@ private extension CommentReplyView {
 
       Spacer()
 
-      Button { moreAction?() } label: {
-        // Figma: 세로 점 3개(더보기) 24pt
-        Image(systemName: "ellipsis")
-          .rotationEffect(.degrees(90))
-          .font(.system(size: 18, weight: .regular))
-          .foregroundStyle(.gray300)
-          .frame(width: 24, height: 24)
-          .contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
+      optionBadge(label: optionLabel, option: option)
     }
   }
 
-  func optionBadge(label: String, option: CommentOption) -> some View {
+  func optionBadge(
+    label: String,
+    option: CommentOption
+  ) -> some View {
     Text(label)
       .pretendardFont(.labelSmall)
       .foregroundStyle(option == .a ? .primary500 : .beige50)
@@ -318,47 +329,23 @@ private extension CommentReplyView {
       Text(text)
         .pretendardFont(.labelSmall)
     }
-    .padding(.horizontal, 6)
-    .padding(.vertical, 4)
   }
 }
 
 // MARK: - Input
 
 private extension CommentReplyView {
-  @ViewBuilder
-  func inputBar() -> some View {
-    // 댓글 화면 입력칸과 동일한 구성 (placeholder/색/레이아웃 통일).
-    HStack(spacing: 8) {
-      VStack(alignment: .leading, spacing: 6) {
-        TextField("댓글을 입력해주세요", text: $store.replyText, axis: .vertical)
-          .pretendardFont(.regular13)
-          .foregroundStyle(.neutral400)
-          .focused($isReplyFocused)
-          .frame(maxWidth: .infinity, alignment: .topLeading)
-
-        Spacer(minLength: 0)
+  private var inputBar: some View {
+    PickeCommentInputBar(
+      text: $store.replyText,
+      focus: $isReplyFocused,
+      placeholder: "내용을 입력하세요",
+      isSendEnabled: store.isSendEnabled,
+      isCompact: true,
+      onSend: {
+        isReplyFocused = false
+        send(.sendTapped)
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-      .background(.beige50)
-
-      Button { send(.sendTapped) } label: {
-        Image(systemName: "paperplane.fill")
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(.beige50)
-          .frame(width: 36, height: 36)
-          .background(store.isSendEnabled ? .primary500 : .primary200, in: Circle())
-      }
-      .buttonStyle(.plain)
-      .disabled(!store.isSendEnabled)
-    }
-    .padding(.top, 12)
-    .padding(.horizontal, 16)
-    .padding(.bottom, 24)
-    .frame(height: 128)
-    .background(.beige400)
-    .topDivider(.beige800)
+    )
   }
 }

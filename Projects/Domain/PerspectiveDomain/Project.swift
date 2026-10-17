@@ -1,3 +1,10 @@
+//
+//  Project.swift
+//  PerspectiveDomain
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 import DependencyPackagePlugin

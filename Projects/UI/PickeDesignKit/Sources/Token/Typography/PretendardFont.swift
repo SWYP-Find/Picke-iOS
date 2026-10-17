@@ -1,8 +1,8 @@
 //
 //  PretendardFont.swift
-//  DDDAttendance
+//  PickeDesignKit
 //
-//  Created by 서원지 on 6/9/24.
+//  Created by Picke on 6/9/24.
 //
 
 import SwiftUI

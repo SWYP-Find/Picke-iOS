@@ -1,8 +1,8 @@
 //
 //  DemoModule.swift
-//  Templates
+//  ProjectDescription
 //
-//  Created by 서원지 on 1/14/24.
+//  Created by Picke on 1/14/24.
 //
 
 import Foundation
