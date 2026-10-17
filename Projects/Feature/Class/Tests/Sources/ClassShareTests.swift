@@ -1,3 +1,10 @@
+//
+//  ClassShareTests.swift
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
+//
+
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
@@ -27,10 +34,11 @@ struct ClassShareTests {
       role: room.role,
       status: room.status,
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
-      requiresComment: room.requiresComment
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
     )
     #expect(ClassShareFeature.State(room: noDeadline).deadlineText == nil)
-    #expect(ClassShareFeature.State(room: room).deadlineText != nil)
+    #expect(ClassShareFeature.State(room: room).deadlineText?.hasPrefix("참여 마감 · ") == true)
   }
 
   @Test
@@ -41,5 +49,32 @@ struct ClassShareTests {
 
     await store.send(.view(.enterClassTapped))
     await store.receive(\.delegate.enterClass)
+  }
+
+  @Test
+  func 목_클래스에서는_운영자_이름_경로를_요청한다() async {
+    let repository = MockClassRepository(rooms: [room])
+    let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
+      ClassShareFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+    }
+
+    await store.send(.view(.enterClassTapped))
+    await store.receive(\.delegate, .nameOwner(room))
+  }
+
+  @Test
+  func 이름_경로_요청은_공유_화면을_유지한다() async {
+    let repository = MockClassRepository(rooms: [room])
+    let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
+      ClassShareFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+    }
+
+    await store.send(.view(.enterClassTapped))
+    await store.receive(\.delegate, .nameOwner(room))
+    #expect(store.state.room == room)
   }
 }

@@ -1,6 +1,8 @@
 //
 //  ClassTests.swift
-//  Feature.ClassTests
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
 //
 
 @testable import Class
@@ -11,55 +13,33 @@ import Testing
 @MainActor
 struct ClassTests {
   @Test
-  func 참여하기_탭하면_코드_입력_모달을_띄운다() async {
+  func 참여하기_탭하면_참가_경로_델리게이트를_보낸다() async {
     let store = TestStore(initialState: ClassIntroFeature.State()) {
       ClassIntroFeature()
     }
 
-    await store.send(.view(.joinTapped)) {
-      $0.join = ClassJoinFeature.State()
-    }
+    await store.send(.view(.joinTapped))
+    await store.receive(\.delegate.join)
   }
 
   @Test
-  func 코드_확인에_성공하면_코드_모달을_닫고_이름_입력_모달을_띄운다() async {
-    let clock = TestClock()
-    let room = ClassRoom.mockJoinable
-    var state = ClassIntroFeature.State()
-    state.join = ClassJoinFeature.State()
-    let store = TestStore(initialState: state) {
+  func 뒤로가면_홈_이동_델리게이트를_보낸다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
       ClassIntroFeature()
-    } withDependencies: {
-      $0.continuousClock = clock
     }
 
-    await store.send(.join(.presented(.delegate(.found(room))))) {
-      $0.join = nil
-    }
-    await clock.advance(by: .seconds(0.3))
-    await store.receive(\.inner.nicknameModalPresented, room) {
-      $0.join = ClassJoinFeature.State(mode: .nickname, preview: room)
-    }
-  }
-
-  @Test
-  func 이름_입력_모달_대기_중_뒤로가면_예약된_모달을_취소한다() async {
-    let clock = TestClock()
-    let room = ClassRoom.mockJoinable
-    var state = ClassIntroFeature.State()
-    state.join = ClassJoinFeature.State()
-    let store = TestStore(initialState: state) {
-      ClassIntroFeature()
-    } withDependencies: {
-      $0.continuousClock = clock
-    }
-
-    await store.send(.join(.presented(.delegate(.found(room))))) {
-      $0.join = nil
-    }
     await store.send(.view(.backTapped))
     await store.receive(\.delegate.backToHome)
-    await clock.advance(by: .seconds(0.3))
+  }
+
+  @Test
+  func 내_클래스_탭하면_내_클래스_델리게이트를_보낸다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    }
+
+    await store.send(.view(.myClassesTapped))
+    await store.receive(\.delegate.myClasses)
   }
 
   @Test
@@ -79,10 +59,14 @@ struct ClassTests {
     }
 
     await store.send(.view(.ticketTapped)) {
-      $0.showTicketNotice = true
+      $0.customAlert = .alert(
+        title: "이용권 등록 준비 중",
+        message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
+        cancelTitle: ""
+      )
     }
-    await store.send(.view(.ticketNoticeDismissed)) {
-      $0.showTicketNotice = false
+    await store.send(.customAlert(.presented(.confirmTapped))) {
+      $0.customAlert = nil
     }
   }
 
@@ -93,10 +77,34 @@ struct ClassTests {
     }
 
     await store.send(.view(.categoryTapped(.philosophy))) {
-      $0.category = .philosophy
+      $0.categories = [.philosophy]
     }
     await store.send(.view(.categoryTapped(.philosophy))) {
-      $0.category = nil
+      $0.categories = []
+    }
+  }
+
+  @Test
+  func 카테고리는_최대_세_개까지_선택하고_해제하면_다시_추가할_수_있다() async {
+    let store = TestStore(initialState: ClassTopicFeature.State()) {
+      ClassTopicFeature()
+    }
+
+    await store.send(.view(.categoryTapped(.philosophy))) {
+      $0.categories = [.philosophy]
+    }
+    await store.send(.view(.categoryTapped(.society))) {
+      $0.categories = [.philosophy, .society]
+    }
+    await store.send(.view(.categoryTapped(.literature))) {
+      $0.categories = [.philosophy, .society, .literature]
+    }
+    await store.send(.view(.categoryTapped(.science)))
+    await store.send(.view(.categoryTapped(.society))) {
+      $0.categories = [.philosophy, .literature]
+    }
+    await store.send(.view(.categoryTapped(.science))) {
+      $0.categories = [.philosophy, .literature, .science]
     }
   }
 
@@ -105,7 +113,7 @@ struct ClassTests {
     var state = ClassTopicFeature.State()
     state.keyword = "  촉법소년 "
     state.level = .high
-    state.category = .society
+    state.categories = [.society, .philosophy]
     let store = TestStore(initialState: state) {
       ClassTopicFeature()
     }
@@ -114,7 +122,7 @@ struct ClassTests {
     await store.receive(\.delegate.search, ClassTopicFilter(
       keyword: "촉법소년",
       level: .high,
-      category: .society
+      categories: [.society, .philosophy]
     ))
   }
 }

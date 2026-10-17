@@ -1,8 +1,8 @@
 //
 //  GoogleLoginManager.swift
-//  Repository
+//  AuthDomain
 //
-//  Created by Wonji Suh  on 7/23/25.
+//  Created by Picke on 7/23/25.
 //
 
 import CryptoKit

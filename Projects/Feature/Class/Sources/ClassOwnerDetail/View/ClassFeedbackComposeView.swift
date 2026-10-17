@@ -1,3 +1,10 @@
+//
+//  ClassFeedbackComposeView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ComposableArchitecture
 import PickeDesignKit
 import PickeSharedUI
@@ -50,12 +57,7 @@ public struct ClassFeedbackComposeView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
-    .alert("전송 준비 중", isPresented: $store.showUnavailableAlert) {
-      Button("확인", role: .cancel) {}
-    } message: {
-      Text("서버 연동 전이라 피드백을 전송할 수 없습니다.")
-    }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 

@@ -1,3 +1,10 @@
+//
+//  ClassModalFeature.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ComposableArchitecture
 
 @Reducer
@@ -7,7 +14,6 @@ public struct ClassModalFeature {
   @ObservableState
   public struct State: Equatable {
     public enum Kind: Equatable {
-      case nickname
       case management
       case deadline
       case code

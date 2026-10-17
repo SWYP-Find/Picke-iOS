@@ -1,4 +1,11 @@
 // swift-tools-version: 6.2
+//
+//  Package.swift
+//  ProjectDescription
+//
+//  Created by Picke on 10/11/26.
+//
+
 @preconcurrency import PackageDescription
 
 #if TUIST

@@ -1,3 +1,10 @@
+//
+//  ClassMemberSort.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 public enum ClassMemberSort: String, CaseIterable, Equatable, Sendable {
   case name = "이름순"
   case comments = "댓글 많은순"

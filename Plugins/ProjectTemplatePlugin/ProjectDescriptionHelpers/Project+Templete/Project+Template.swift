@@ -2,6 +2,7 @@
 //  Project+Template.swift
 //  ProjectTemplatePlugin
 //
+//  Created by Picke on 10/11/26.
 //  모듈 하나를 구성하는 단일 진입점.
 //  Interface·Testing·Demo·Tests 는 플래그로 켠다 — buildableFolders 는 폴더가 없으면
 //  generate 가 깨지므로, 해당 폴더를 실제로 둔 모듈만 켠다.
@@ -23,6 +24,7 @@ public extension Project {
     dependencies: [ProjectDescription.TargetDependency] = [],
     testDependencies: [ProjectDescription.TargetDependency] = [],
     resources: ProjectDescription.ResourceFileElements? = nil,
+    sourceFolderExclusions: [String] = [],
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
@@ -38,6 +40,9 @@ public extension Project {
     let interfaceTargetName = "\(name)Interface"
     let testingTargetName = "\(name)Testing"
     let demoTargetName = "\(name)Demo"
+    let sourceFolder: BuildableFolder = sourceFolderExclusions.isEmpty
+      ? "Sources"
+      : .folder("Sources", exceptions: .exceptions([.exception(excluded: sourceFolderExclusions)]))
 
     var targets: [Target] = []
 
@@ -62,7 +67,7 @@ public extension Project {
       bundleId: bundleId,
       deploymentTargets: deploymentTarget,
       infoPlist: infoPlist,
-      buildableFolders: resources != nil ? ["Sources", "Resources"] : ["Sources"],
+      buildableFolders: resources != nil ? [sourceFolder, "Resources"] : [sourceFolder],
       entitlements: entitlements,
       scripts: scripts,
       dependencies: (hasInterface ? [.target(name: interfaceTargetName)] : []) + dependencies,
@@ -152,11 +157,13 @@ public extension Project {
     settings: ProjectDescription.Settings,
     scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
+    testDependencies: [ProjectDescription.TargetDependency] = [],
     resources: ProjectDescription.ResourceFileElements? = nil,
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
-    hasTests: Bool = false
+    hasTests: Bool = false,
+    additionalTargets: [Target] = []
   ) -> Project {
     return configureApp(
       name: name,
@@ -169,11 +176,13 @@ public extension Project {
       settings: settings,
       scripts: scripts,
       dependencies: dependencies,
+      testDependencies: testDependencies,
       resources: resources,
       infoPlist: infoPlist,
       entitlements: entitlements,
       schemes: schemes,
-      hasTests: hasTests
+      hasTests: hasTests,
+      additionalTargets: additionalTargets
     )
   }
 }

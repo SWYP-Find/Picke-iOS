@@ -2,7 +2,7 @@
 //  AppView.swift
 //  Picke
 //
-//  Created by Wonji Suh  on 5/6/26.
+//  Created by Picke on 5/6/26.
 //
 
 import SwiftUI

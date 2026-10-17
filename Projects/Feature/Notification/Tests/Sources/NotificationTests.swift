@@ -1,8 +1,8 @@
 //
 //  NotificationTests.swift
-//  Feature.NotificationTests
+//  NotificationTests
 //
-//  Created by Roy on 2026-06-10.
+//  Created by Picke on 2026-06-10.
 //
 
 @testable import Notification

@@ -1,3 +1,10 @@
+//
+//  FeedAdInterface.swift
+//  AdDomainInterface
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ComposableArchitecture
 
 public protocol FeedAdInterface: Sendable {

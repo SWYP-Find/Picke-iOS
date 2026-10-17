@@ -1,3 +1,10 @@
+//
+//  ClassUseCaseImpl.swift
+//  ClassDomain
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -33,5 +40,17 @@ public struct ClassUseCaseImpl: ClassInterface {
 
   public func deleteClass(id: Int) async throws {
     try await repository.deleteClass(id: id)
+  }
+
+  public func leaveClass(id: Int) async throws {
+    try await repository.leaveClass(id: id)
+  }
+
+  public func fetchReport(roomID: Int) async throws -> ClassReport? {
+    try await repository.fetchReport(roomID: roomID)
+  }
+
+  public func fetchOwnerDashboard(roomID: Int) async throws -> ClassOwnerDashboardData? {
+    try await repository.fetchOwnerDashboard(roomID: roomID)
   }
 }

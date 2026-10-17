@@ -1,3 +1,10 @@
+//
+//  FeedAdRepositoryImpl.swift
+//  AdDomain
+//
+//  Created by Picke on 10/11/26.
+//
+
 import APIEndpoint
 import AdDomainInterface
 import ComposableArchitecture

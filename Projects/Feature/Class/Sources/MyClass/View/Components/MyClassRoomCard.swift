@@ -2,28 +2,48 @@
 //  MyClassRoomCard.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
+import PickeCoreUtility
 import PickeDesignKit
 import SwiftUI
 
 /// 내 클래스 목록 카드 (Figma 12178:8263 `Card/BattleListCard`).
 struct MyClassRoomCard: View {
   let room: ClassRoom
+  let onOpen: () -> Void
+  let onManage: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    Button(action: onOpen) {
       VStack(alignment: .leading, spacing: 12) {
-        badgeRow()
-        titleSection()
-      }
+        VStack(alignment: .leading, spacing: 12) {
+          badgeRow()
+          titleSection()
+        }
 
-      footer()
+        footer()
+      }
+      .padding(12)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .pickeCard(.beige50, border: .beige600)
+      .contentShape(Rectangle())
     }
-    .padding(12)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .pickeCard(.beige50, border: .beige600)
-    .contentShape(Rectangle())
+    .buttonStyle(.plain)
+    .overlay(alignment: .topTrailing) {
+      Button(action: onManage) {
+        Image(systemName: "ellipsis")
+          .font(.pretendardFontFamily(family: .Bold, size: 14))
+          .foregroundStyle(.gray900)
+          .frame(width: 24, height: 24)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("클래스 관리")
+      .padding(12)
+    }
   }
 }
 
@@ -34,11 +54,6 @@ private extension MyClassRoomCard {
       statusBadge
 
       Spacer(minLength: 0)
-
-      Image(systemName: "ellipsis")
-        .font(.pretendardFontFamily(family: .Bold, size: 14))
-        .foregroundStyle(.gray900)
-        .frame(width: 24, height: 24)
     }
   }
 
@@ -65,11 +80,13 @@ private extension MyClassRoomCard {
         .pretendardFont(.headingMedium)
         .foregroundStyle(.gray500)
         .lineLimit(1)
+        .frame(minHeight: 24, alignment: .leading)
 
       Text(room.battle.title)
         .pretendardFont(.regular13)
         .foregroundStyle(.gray300)
         .lineLimit(1)
+        .frame(minHeight: 18, alignment: .leading)
     }
   }
 
@@ -93,9 +110,8 @@ private extension MyClassRoomCard {
       }
 
       Spacer(minLength: 0)
-
-      viewLabel
     }
+    .frame(minHeight: 18)
     .padding(.top, 12)
     .overlay(alignment: .top) {
       Rectangle()
@@ -120,27 +136,9 @@ private extension MyClassRoomCard {
     .foregroundStyle(.gray300)
   }
 
-  var viewLabel: some View {
-    HStack(spacing: 4) {
-      Text("보기")
-        .pretendardFont(family: .Bold, size: 12)
-      Image(systemName: "chevron.right")
-        .font(.pretendardFontFamily(family: .Bold, size: 9))
-        .frame(width: 12, height: 12)
-    }
-    .foregroundStyle(.primary500)
-  }
-
   /// 마감일을 끈 클래스(`.distantFuture`)는 표시하지 않는다.
   var deadlineText: String? {
     guard room.deadline != .distantFuture else { return nil }
-    return "\(Self.deadlineFormatter.string(from: room.deadline))까지"
+    return "\(room.deadline.formatted(.dottedDateTimeWithWeekday))까지"
   }
-
-  static let deadlineFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.locale = Locale(identifier: "ko_KR")
-    formatter.dateFormat = "yyyy. MM. dd. EEEE HH:mm"
-    return formatter
-  }()
 }

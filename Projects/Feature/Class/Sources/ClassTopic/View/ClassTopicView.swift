@@ -2,6 +2,8 @@
 //  ClassTopicView.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -26,7 +28,7 @@ public struct ClassTopicView: View {
       .foregroundStyle(.gray500)
 
       ScrollView {
-        VStack(alignment: .leading, spacing: 32) {
+        VStack(alignment: .leading, spacing: 40) {
           titleSection()
           formSection()
         }
@@ -40,7 +42,7 @@ public struct ClassTopicView: View {
         .padding(.bottom, 16)
     }
     .screenBackground()
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
   }
 }
 
@@ -52,31 +54,44 @@ private extension ClassTopicView {
         .pretendardFont(.semiBold24)
         .lineSpacing(2.4)
         .foregroundStyle(.gray800)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 62, alignment: .topLeading)
 
-      Text("관심 있는 주제나 수업 조건을 선택해 주세요.")
+      Text("관심 있는 주제나 배틀 조건을 선택해 주세요.")
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minHeight: 23, alignment: .leading)
     }
   }
 
   @ViewBuilder
   func formSection() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      field("찾고 싶은 주제") {
+    VStack(alignment: .leading, spacing: 24) {
+      field(
+        "찾고 싶은 주제",
+        spacing: 8
+      ) {
         TextField(
           "",
           text: $store.keyword,
-          prompt: Text("예) 촉법소년 · AI가 인간의 일을 대신해도 될까?")
+          prompt: Text("예) AI, 범죄, 촉법")
             .foregroundStyle(.gray300)
         )
         .pickeTextField()
       }
 
-      field("대상 수준") {
+      field(
+        "대상 수준",
+        isRequired: true
+      ) {
         levelSegment()
       }
 
-      field("카테고리") {
+      field(
+        "카테고리 (최대 3개)",
+        isRequired: true
+      ) {
         categoryGrid()
       }
     }
@@ -85,12 +100,21 @@ private extension ClassTopicView {
   @ViewBuilder
   func field(
     _ label: String,
+    isRequired: Bool = false,
+    spacing: CGFloat = 12,
     @ViewBuilder content: () -> some View
   ) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text(label)
-        .pretendardFont(.semiBold15)
-        .foregroundStyle(.gray800)
+    VStack(alignment: .leading, spacing: spacing) {
+      HStack(spacing: 2) {
+        Text(label)
+          .foregroundStyle(.gray800)
+        if isRequired {
+          Text("*")
+            .foregroundStyle(.primary500)
+        }
+      }
+      .pretendardFont(.headingSmall)
+      .frame(minHeight: 20, alignment: .leading)
       content()
     }
   }
@@ -101,10 +125,10 @@ private extension ClassTopicView {
       ForEach(ClassAudienceLevel.allCases, id: \.self) { level in
         Button {
           withAnimation(.snappy(duration: 0.25)) {
-            store.level = level
+            send(.levelTapped(level))
           }
         } label: {
-          Text(level.title)
+          Text(level.topicTitle)
             .pickeBoxSegment(
               isSelected: store.level == level,
               namespace: levelNamespace
@@ -127,7 +151,7 @@ private extension ClassTopicView {
           send(.categoryTapped(category))
         } label: {
           Text(category.title)
-            .pickeChoiceChip(isSelected: store.category == category)
+            .pickeChoiceChip(isSelected: store.categories.contains(category))
         }
         .buttonStyle(.plain)
       }

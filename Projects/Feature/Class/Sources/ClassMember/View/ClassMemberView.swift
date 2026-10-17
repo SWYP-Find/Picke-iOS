@@ -1,3 +1,10 @@
+//
+//  ClassMemberView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
@@ -14,62 +21,32 @@ public struct ClassMemberView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 멤버")
-        .foregroundStyle(.gray500)
+      navigationBar()
 
-      searchField
+      searchField()
         .padding(.horizontal, 16)
-        .padding(.top, 12)
+        .padding(.top, 16)
 
-      if store.room.role == .owner {
-        Text("멤버 내보내기는 서버 연동 후 제공됩니다.")
-          .pretendardFont(family: .Medium, size: 12)
-          .foregroundStyle(.gray300)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .padding(.horizontal, 16)
-          .padding(.top, 8)
-      }
-
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 0) {
-          Text(store.members.isEmpty ? "클래스 멤버 \(store.room.memberCount)" : "멤버 \(store.members.count)")
-            .pretendardFont(family: .Medium, size: 14)
-            .foregroundStyle(.gray300)
-            .padding(.bottom, 4)
-
-          switch store.viewState {
-          case .unavailable:
-            Text("멤버 목록을 불러올 수 없어요.")
-              .pretendardFont(family: .Medium, size: 14)
-              .foregroundStyle(.gray300)
-              .frame(maxWidth: .infinity)
-              .padding(.top, 72)
-          case .noSearchResults:
-            Text("검색 결과가 없어요.")
-              .pretendardFont(family: .Medium, size: 14)
-              .foregroundStyle(.gray300)
-              .frame(maxWidth: .infinity)
-              .padding(.top, 72)
-          case let .members(members):
-            ForEach(members) { member in
-              memberRow(member)
-            }
-          }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 20)
-      }
-      .scrollIndicators(.hidden)
+      memberList()
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.hidden, for: .tabBar)
     .pickeModal(
       $store.scope(state: \.filter, action: \.filter),
       dimOpacity: 0.28
     ) { filterStore in
       filterSheet(store: filterStore)
     }
+    .pickeModal(
+      $store.scope(state: \.editName, action: \.editName),
+      dimOpacity: 0.28
+    ) { editNameStore in
+      nameSheet(store: editNameStore)
+    }
+    .pickeModal($store.scope(state: \.management, action: \.management), dimOpacity: 0.28) { _ in
+      managementSheet()
+    }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
@@ -82,22 +59,169 @@ public struct ClassMemberView: View {
 #endif
 
 private extension ClassMemberView {
-  var searchField: some View {
+  @ViewBuilder
+  func memberList() -> some View {
+    ScrollView {
+      LazyVStack(alignment: .leading, spacing: 0) {
+        Text(store.memberCountTitle)
+          .pretendardFont(family: .Medium, size: 14)
+          .foregroundStyle(.gray300)
+          .frame(height: 20)
+          .padding(.bottom, 4)
+
+        memberContent()
+      }
+      .padding(.horizontal, 16)
+      .padding(.top, 20)
+    }
+    .scrollIndicators(.hidden)
+  }
+
+  @ViewBuilder
+  func memberContent() -> some View {
+    switch store.viewState {
+    case .loading:
+      memberSkeleton()
+    case .error:
+      loadError()
+    case .empty:
+      emptyMessage("아직 참여한 멤버가 없어요.")
+    case .noSearchResults:
+      emptyMessage("검색 결과가 없어요.")
+    case .loaded:
+      ForEach(store.visibleMembers) { member in
+        memberRow(member)
+      }
+    }
+  }
+
+  @ViewBuilder
+  func navigationBar() -> some View {
+    PickeNavigationBar(centerTitle: "클래스 멤버") {
+      if store.room.role == .owner {
+        managementButton
+      }
+    }
+    .foregroundStyle(.gray500)
+    .overlay(alignment: .leading) {
+      backButton
+        .padding(.leading, 6)
+    }
+  }
+
+  var backButton: some View {
+    Button { send(.backTapped) } label: {
+      Path { path in
+        path.move(to: CGPoint(x: 16.5, y: 2.5))
+        path.addLine(to: CGPoint(x: 6.5, y: 12))
+        path.addLine(to: CGPoint(x: 16.5, y: 21.5))
+      }
+      .stroke(.gray500, style: StrokeStyle(lineWidth: 1.2, lineCap: .round, lineJoin: .round))
+      .frame(width: 24, height: 24)
+      .frame(width: 44, height: 44)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("뒤로")
+    .accessibilityIdentifier("chevron.left")
+    .accessibilitySortPriority(1)
+  }
+
+  var managementButton: some View {
+    Button { send(.managementTapped) } label: {
+      managementIcon()
+        .frame(width: 24, height: 24)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(store.isSaving)
+    .accessibilityLabel("클래스 관리")
+  }
+
+  @ViewBuilder
+  func managementIcon() -> some View {
+    HStack(spacing: 3.5) {
+      ForEach(0 ..< 3, id: \.self) { _ in
+        Circle()
+          .fill(.gray800)
+          .frame(width: 2.5, height: 2.5)
+      }
+    }
+  }
+
+  @ViewBuilder
+  func managementSheet() -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { send(.managementDismissed) }
+      ClassManagementSheet(
+        room: store.room,
+        onEdit: { send(.managementEditTapped) },
+        onDelete: { send(.managementDeleteTapped) }
+      )
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
+  }
+
+  @ViewBuilder
+  func memberSkeleton() -> some View {
+    VStack(spacing: 0) {
+      ForEach(0 ..< 5, id: \.self) { _ in
+        HStack(spacing: 12) {
+          SkeletonView(.circle)
+            .frame(width: 36, height: 36)
+          SkeletonView(.round(cornerRadius: 2))
+            .frame(width: 112, height: 18)
+          Spacer(minLength: 0)
+        }
+        .frame(height: 68)
+        .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
+        .accessibilityHidden(true)
+      }
+    }
+  }
+
+  @ViewBuilder
+  func loadError() -> some View {
+    VStack(spacing: 12) {
+      emptyMessage("멤버 목록을 불러올 수 없어요.")
+      Button("다시 시도하기") { send(.retryTapped) }
+        .pretendardFont(family: .SemiBold, size: 14)
+        .foregroundStyle(.primary500)
+    }
+  }
+
+  func emptyMessage(_ message: String) -> some View {
+    Text(message)
+      .pretendardFont(family: .Medium, size: 14)
+      .foregroundStyle(.gray300)
+      .frame(maxWidth: .infinity)
+      .padding(.top, 72)
+  }
+
+  @ViewBuilder
+  func searchField() -> some View {
     HStack(spacing: 8) {
       Image(systemName: "magnifyingglass")
-        .font(.system(size: 18))
-        .foregroundStyle(.gray300)
-      TextField("이름을 입력해주세요.", text: $store.searchText)
-        .pretendardFont(family: .Medium, size: 13)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 18, height: 18)
         .foregroundStyle(.gray800)
-
-      Button { send(.filterTapped) } label: {
-        Image(systemName: "slider.horizontal.3")
-          .font(.system(size: 16, weight: .semibold))
-          .foregroundStyle(.gray500)
-          .frame(width: 32, height: 32)
-      }
-      .accessibilityLabel("멤버 필터")
+      TextField(
+        "검색어를 입력해주세요.",
+        text: $store.searchText,
+        prompt: Text("검색어를 입력해주세요.").foregroundStyle(.gray300)
+      )
+      .pretendardFont(family: .Medium, size: 13)
+      .foregroundStyle(.gray800)
+      .accessibilityIdentifier("class-member-search")
     }
     .padding(.horizontal, 12)
     .frame(height: 44)
@@ -107,26 +231,64 @@ private extension ClassMemberView {
 
   @ViewBuilder
   func memberRow(_ member: ClassMember) -> some View {
-    HStack(spacing: 12) {
-      PickeAvatarView(imageURL: nil, fallback: member.name, size: 36)
+    HStack(spacing: 8) {
+      if let avatar = member.avatar {
+        memberAvatar(avatar)
+      }
 
       Text(member.name)
         .pretendardFont(family: .Medium, size: 16)
         .foregroundStyle(.gray800)
+        .lineLimit(1)
+
+      if member.id == store.currentMemberID {
+        Button { send(.editNameTapped(member.id)) } label: {
+          ClassMemberEditIcon()
+            .stroke(.gray800, style: StrokeStyle(lineWidth: 1.25, lineCap: .round, lineJoin: .round))
+            .frame(width: 20, height: 20)
+        }
+        .accessibilityLabel("내 이름 수정")
+      }
 
       Spacer(minLength: 0)
 
       if member.isOwner {
-        Text("운영자")
-          .pretendardFont(family: .SemiBold, size: 12)
-          .foregroundStyle(.primary500)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
-          .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+        memberTag("운영자")
+      } else if member.id == store.currentMemberID {
+        memberTag("나")
+      } else if store.room.role == .owner, member.id != store.currentMemberID {
+        Button { send(.removeTapped(member.id)) } label: {
+          Image(systemName: "minus.circle.fill")
+            .resizable()
+            .scaledToFit()
+            .symbolRenderingMode(.palette)
+            .foregroundStyle(.gray300, .gray100)
+            .frame(width: 20, height: 20)
+        }
+        .accessibilityLabel("\(member.name) 내보내기")
       }
     }
-    .frame(height: 68)
+    .frame(minHeight: 36)
+    .padding(.vertical, 16)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
+  }
+
+  func memberAvatar(_ avatar: ClassMemberAvatar) -> some View {
+    Image(asset: avatar.imageAsset)
+      .resizable()
+      .scaledToFit()
+      .frame(width: 36, height: 36)
+      .clipShape(Circle())
+      .accessibilityHidden(true)
+  }
+
+  func memberTag(_ title: String) -> some View {
+    Text(title)
+      .pretendardFont(family: .SemiBold, size: 12)
+      .foregroundStyle(.primary500)
+      .padding(.horizontal, 4)
+      .padding(.vertical, 3)
+      .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
   }
 
   @ViewBuilder
@@ -236,5 +398,48 @@ private extension ClassMemberView {
       .frame(width: 40, height: 4)
       .frame(maxWidth: .infinity)
       .padding(.bottom, 10)
+  }
+
+  @ViewBuilder
+  func nameSheet(store editNameStore: StoreOf<ClassMemberEditNameFeature>) -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { editNameStore.send(.dismissTapped) }
+
+      VStack(alignment: .leading, spacing: 20) {
+        sheetHandle
+        VStack(alignment: .leading, spacing: 6) {
+          Text("이름을 입력해주세요")
+            .pretendardFont(.semiBold24)
+            .frame(minHeight: 31, alignment: .leading)
+            .foregroundStyle(.gray800)
+          Text("이 클래스에서만 보이는 이름이에요.")
+            .pretendardFont(.bodyMedium)
+            .frame(minHeight: 20, alignment: .leading)
+            .foregroundStyle(.gray300)
+        }
+
+        TextField("이름을 입력해주세요", text: $store.draftName)
+          .textInputAutocapitalization(.never)
+          .pickeTextField(height: 44)
+          .accessibilityIdentifier("class-member-name")
+
+        Button("수정하기") { send(.nameSaved) }
+          .disabled(store.isSaving)
+          .ctaButtonStyle(.primary, size: .large, height: 52)
+          .disabled(store.draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      }
+      .padding(.top, 12)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 16)
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
   }
 }

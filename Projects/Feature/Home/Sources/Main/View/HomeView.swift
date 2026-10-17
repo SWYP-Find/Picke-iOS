@@ -2,7 +2,7 @@
 //  HomeView.swift
 //  Home
 //
-//  Created by Wonji Suh on 5/15/26.
+//  Created by Picke on 5/15/26.
 //
 
 import SwiftUI
@@ -74,7 +74,6 @@ public struct HomeView: View {
     }
     .onAppear { send(.onAppear) }
     .navigationBarHidden(true)
-    .toolbar(store.attendanceModal == nil ? .automatic : .hidden, for: .tabBar)
     .scrollIndicators(.hidden)
     .scrollBounceBehavior(.basedOnSize)
   }

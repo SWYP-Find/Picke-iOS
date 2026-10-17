@@ -1,8 +1,8 @@
 //
 //  ImageAsset.swift
-//  DesignSystem
+//  PickeDesignKit
 //
-//  Created by 서원지 on 7/13/24.
+//  Created by Picke on 7/13/24.
 //
 
 import Foundation
@@ -61,10 +61,26 @@ public enum ImageAsset: String {
   // MARK: - 댓글(관점)
 
   case heartPlus
+  case commentMessage
 
   // MARK: - 클래스
 
+  case classAIVoteArtwork
+  case classConditionReset
   case classIntroBackground
+  case classClosedBattle
   case classJoin
   case classMine
+  case classMemberLion
+  case classMemberKoala
+  case classMemberBear
+  case classMemberPenguin
+  case classMemberDog
+  case classMemberAlpaca
+  case classMemberSloth
+  case classMemberFox
+  case classMemberHamster
+  case classMemberRaccoon
+  case classPickeBattleGuide
+  case classCustomBattleGuide
 }

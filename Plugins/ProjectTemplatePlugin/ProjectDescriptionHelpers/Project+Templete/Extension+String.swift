@@ -1,8 +1,8 @@
 //
 //  Extension+String.swift
-//  MyPlugin
+//  ProjectTemplatePlugin
 //
-//  Created by 서원지 on 1/6/24.
+//  Created by Picke on 1/6/24.
 //
 
 import Foundation
@@ -17,7 +17,7 @@ public extension String {
     return Project.Environment.bundlePrefix
   }
 
-  static func appBuildVersion(buildVersion: String = "2610012046") -> String {
+  static func appBuildVersion(buildVersion: String = "2610022246") -> String {
     return buildVersion
   }
 

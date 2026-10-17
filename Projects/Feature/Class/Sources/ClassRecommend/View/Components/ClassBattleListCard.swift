@@ -2,6 +2,8 @@
 //  ClassBattleListCard.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import PickeDesignKit
@@ -33,7 +35,7 @@ private extension ClassBattleListCard {
   @ViewBuilder
   func metaRow() -> some View {
     HStack(spacing: 10) {
-      Text("#\(battle.category.title)")
+      Text("#\(battle.categoryDisplayTitle)")
         .pickeBadge(.filled, size: .tag)
 
       Spacer(minLength: 0)
@@ -61,7 +63,7 @@ private extension ClassBattleListCard {
         Text("미리듣기")
           .pretendardFont(.semiBold12)
       }
-      .foregroundStyle(.gray300)
+      .foregroundStyle(.primary500)
     }
     .buttonStyle(.plain)
     .disabled(true)
@@ -109,11 +111,18 @@ private extension ClassBattleListCard {
     imageURL: URL?
   ) -> some View {
     HStack(spacing: 4) {
-      PickeAvatarView(
-        imageURL: imageURL?.absoluteString,
-        fallback: philosopher,
-        size: 40
-      )
+      if imageURL == nil, philosopher == "순자" {
+        Image(asset: .avatarSunja)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 40, height: 40)
+      } else {
+        PickeAvatarView(
+          imageURL: imageURL?.absoluteString,
+          fallback: philosopher,
+          size: 40
+        )
+      }
 
       VStack(alignment: .leading, spacing: 2) {
         Text(title)

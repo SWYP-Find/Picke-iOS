@@ -2,7 +2,7 @@
 //  AppReducer.swift
 //  Picke
 //
-//  Created by Wonji Suh  on 5/6/26.
+//  Created by Picke on 5/6/26.
 //
 
 import Foundation
@@ -11,6 +11,7 @@ import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
 import PickeAnalyticsInterface
+import PickeAuthInterface
 import PickeCoreLogger
 import PickeCoreUtility
 
@@ -329,7 +330,7 @@ public struct AppReducer: Sendable {
   private func setupRefreshTokenExpiredListener() -> Effect<Action> {
     return .publisher {
       NotificationCenter.default
-        .publisher(for: NSNotification.Name("RefreshTokenExpired"))
+        .publisher(for: .pickeAuthSessionDidExpire)
         .map { _ in Action.async(.refreshTokenExpired) }
     }
     .cancellable(id: CancelID.refreshTokenListener, cancelInFlight: true)

@@ -1,8 +1,8 @@
 //
 //  WebReducer.swift
-//  Profile
+//  Web
 //
-//  Created by Wonji Suh  on 1/4/26.
+//  Created by Picke on 1/4/26.
 //
 
 import Foundation

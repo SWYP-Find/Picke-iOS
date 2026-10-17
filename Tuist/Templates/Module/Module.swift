@@ -1,8 +1,8 @@
 //
 //  Module.swift
-//  Manifests
+//  ProjectDescription
 //
-//  Created by 서원지 on 10/31/23.
+//  Created by Picke on 10/31/23.
 //
 
 import ProjectDescription

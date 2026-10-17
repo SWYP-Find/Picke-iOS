@@ -2,6 +2,7 @@
 //  Scheme+Module.swift
 //  ProjectTemplatePlugin
 //
+//  Created by Picke on 10/11/26.
 //  Demo 가 있는 모듈의 구현/테스트 스킴과 Demo 실행 스킴을 분리한다.
 //
 

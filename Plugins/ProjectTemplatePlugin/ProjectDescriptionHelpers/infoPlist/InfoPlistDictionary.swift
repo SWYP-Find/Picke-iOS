@@ -1,8 +1,8 @@
 //
 //  InfoPlistDictionary.swift
-//  Plugins
+//  ProjectTemplatePlugin
 //
-//  Created by Wonji Suh  on 3/22/25.
+//  Created by Picke on 3/22/25.
 //
 
 import Foundation

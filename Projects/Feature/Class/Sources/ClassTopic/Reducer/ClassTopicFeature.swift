@@ -2,11 +2,12 @@
 //  ClassTopicFeature.swift
 //  Class
 //
-
-import Foundation
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 
 @Reducer
 public struct ClassTopicFeature {
@@ -16,7 +17,7 @@ public struct ClassTopicFeature {
   public struct State: Equatable {
     public var keyword: String = ""
     public var level: ClassAudienceLevel = .middle
-    public var category: ClassCategory?
+    public var categories: [ClassCategory] = []
 
     public init() {}
 
@@ -24,7 +25,7 @@ public struct ClassTopicFeature {
       ClassTopicFilter(
         keyword: keyword.trimmingCharacters(in: .whitespacesAndNewlines),
         level: level,
-        category: category
+        categories: categories
       )
     }
   }
@@ -38,6 +39,7 @@ public struct ClassTopicFeature {
   @CasePathable
   public enum View {
     case backTapped
+    case levelTapped(ClassAudienceLevel)
     case categoryTapped(ClassCategory)
     case searchTapped
   }
@@ -65,6 +67,8 @@ public struct ClassTopicFeature {
   }
 }
 
+// MARK: - Action Handlers
+
 extension ClassTopicFeature {
   private func handleViewAction(
     state: inout State,
@@ -74,8 +78,16 @@ extension ClassTopicFeature {
     case .backTapped:
       return .send(.delegate(.dismiss))
 
+    case let .levelTapped(level):
+      state.level = level
+      return .none
+
     case let .categoryTapped(category):
-      state.category = state.category == category ? nil : category
+      if let index = state.categories.firstIndex(of: category) {
+        state.categories.remove(at: index)
+      } else if state.categories.count < 3 {
+        state.categories.append(category)
+      }
       return .none
 
     case .searchTapped:

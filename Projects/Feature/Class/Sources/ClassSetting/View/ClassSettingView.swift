@@ -2,6 +2,8 @@
 //  ClassSettingView.swift
 //  Class
 //
+//  Created by Picke on 10/11/26.
+//
 
 import ClassDomainInterface
 import ComposableArchitecture
@@ -13,6 +15,7 @@ import SwiftUI
 @ViewAction(for: ClassSettingFeature.self)
 public struct ClassSettingView: View {
   @Bindable public var store: StoreOf<ClassSettingFeature>
+  @FocusState private var isNameFocused: Bool
 
   public init(store: StoreOf<ClassSettingFeature>) {
     self.store = store
@@ -20,43 +23,64 @@ public struct ClassSettingView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(
-        onBack: { send(.backTapped) },
-        centerTitle: "클래스 설정"
-      )
-      .foregroundStyle(.gray500)
-
-      ScrollView {
-        VStack(alignment: .leading, spacing: 32) {
-          Text("수업 정보에 맞게\n클래스를 설정해 주세요")
-            .pretendardFont(.semiBold24)
-            .lineSpacing(2.4)
-            .foregroundStyle(.gray500)
-
-          nameSection()
-          deadlineSection()
-          battleSection()
-          commentToggle
-        }
-        .padding(16)
-      }
-      .scrollIndicators(.hidden)
-      .scrollBounceBehavior(.basedOnSize)
+      navigationBar
+      settingsScroll
 
       createButton
         .padding(.horizontal, 16)
         .padding(.bottom, 16)
     }
     .screenBackground()
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
+    .pickeModal(
+      $store.scope(state: \.unavailableNotice, action: \.unavailableNotice),
+      dimOpacity: 0.28
+    ) { noticeStore in
+      unavailableNotice(store: noticeStore)
+    }
   }
 }
 
 private extension ClassSettingView {
+  var navigationBar: some View {
+    PickeNavigationBar(
+      onBack: { send(.backTapped) },
+      centerTitle: "클래스 설정"
+    )
+    .foregroundStyle(.gray500)
+  }
+
+  var settingsScroll: some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 32) {
+        Text(store.heading)
+          .pretendardFont(.semiBold24)
+          .lineSpacing(2.4)
+          .foregroundStyle(.gray800)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 62, alignment: .leading)
+
+        nameSection()
+        deadlineSection()
+        contentSection()
+        participationSection()
+      }
+      .padding(16)
+    }
+    .scrollIndicators(.hidden)
+    .scrollBounceBehavior(.basedOnSize)
+  }
+
   @ViewBuilder
   func nameSection() -> some View {
     VStack(alignment: .leading, spacing: 8) {
-      sectionLabel("클래스 명")
+      HStack(spacing: 4) {
+        sectionLabel("클래스 명")
+        Text("*")
+          .pretendardFont(.semiBold15)
+          .foregroundStyle(.primary500)
+      }
 
       TextField(
         "",
@@ -71,6 +95,7 @@ private extension ClassSettingView {
           .foregroundStyle(.gray300)
       )
       .pickeTextField()
+      .focused($isNameFocused)
     }
   }
 
@@ -80,9 +105,11 @@ private extension ClassSettingView {
       Toggle(isOn: $store.isDeadlineEnabled) {
         VStack(alignment: .leading, spacing: 2) {
           sectionLabel("참여 마감일")
-          Text("마감 전까지 학생이 클래스에 참여할 수 있어요.")
+          Text(store.deadlineDescription)
             .pretendardFont(.bodySmall)
             .foregroundStyle(.gray300)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(minHeight: 18, alignment: .leading)
         }
       }
       .toggleStyle(.picke)
@@ -91,22 +118,17 @@ private extension ClassSettingView {
         deadlineField
       }
 
-      if store.isDeadlineEnabled, store.isDatePickerPresented {
-        DatePicker(
-          "",
-          selection: $store.deadline,
-          in: Date()...,
-          displayedComponents: [.date, .hourAndMinute]
-        )
-        .datePickerStyle(.graphical)
-        .tint(.primary500)
-        .pickeCard(.beige50, border: .beige600)
+      if let message = store.deadlineValidationMessage {
+        Text(message)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.red)
       }
     }
   }
 
   var deadlineField: some View {
     Button {
+      isNameFocused = false
       send(.deadlineFieldTapped)
     } label: {
       Text(store.deadlineText)
@@ -120,10 +142,23 @@ private extension ClassSettingView {
   }
 
   @ViewBuilder
-  func battleSection() -> some View {
+  func contentSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       sectionLabel("선택한 배틀")
-      ClassSelectedBattleCard(battle: store.battle)
+      if let question = store.aiQuestion {
+        ClassAIQuestionCard(question: question, isSelected: false)
+          .selectionIndicatorHidden()
+      } else if let battle = store.battle {
+        ClassSelectedBattleCard(battle: battle)
+      }
+    }
+  }
+
+  @ViewBuilder
+  func participationSection() -> some View {
+    VStack(alignment: .leading, spacing: 20) {
+      commentToggle
+      ownerParticipationToggle
     }
   }
 
@@ -131,9 +166,25 @@ private extension ClassSettingView {
     Toggle(isOn: $store.requiresComment) {
       VStack(alignment: .leading, spacing: 2) {
         sectionLabel("댓글 달기 필수")
-        Text("학생들의 생각을 댓글로 확인해요.")
+        Text(store.commentDescription)
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray300)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 18, alignment: .leading)
+      }
+    }
+    .toggleStyle(.picke)
+  }
+
+  var ownerParticipationToggle: some View {
+    Toggle(isOn: $store.ownerParticipates) {
+      VStack(alignment: .leading, spacing: 2) {
+        sectionLabel(store.ownerParticipationTitle)
+        Text(store.ownerParticipationDescription)
+          .pretendardFont(.bodySmall)
+          .foregroundStyle(.gray300)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(minHeight: 18, alignment: .leading)
       }
     }
     .toggleStyle(.picke)
@@ -143,6 +194,7 @@ private extension ClassSettingView {
     Text(title)
       .pretendardFont(.semiBold15)
       .foregroundStyle(.gray800)
+      .frame(minHeight: 23, alignment: .leading)
   }
 
   var createButton: some View {
@@ -153,5 +205,44 @@ private extension ClassSettingView {
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(!store.canCreate)
+  }
+
+  func unavailableNotice(store: StoreOf<ClassAIUnavailableNoticeFeature>) -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onTapGesture { store.send(.dismissTapped) }
+
+      VStack(alignment: .leading, spacing: 20) {
+        Capsule()
+          .fill(Color.beige700)
+          .frame(width: 36, height: 4)
+          .frame(maxWidth: .infinity)
+
+        VStack(alignment: .leading, spacing: 8) {
+          Text("AI 질문 클래스 준비 중")
+            .pretendardFont(.semiBold24)
+            .foregroundStyle(.gray800)
+          Text("지금은 예시 질문을 살펴볼 수 있어요. AI 질문으로 클래스 만들기는 아직 사용할 수 없습니다.")
+            .pretendardFont(.medium15)
+            .foregroundStyle(.gray300)
+        }
+
+        Button { store.send(.dismissTapped) } label: {
+          Text("확인")
+        }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+      }
+      .padding(.top, 12)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 32)
+      .frame(maxWidth: .infinity)
+      .background(
+        UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+          .fill(.beige50)
+          .ignoresSafeArea(edges: .bottom)
+      )
+    }
   }
 }

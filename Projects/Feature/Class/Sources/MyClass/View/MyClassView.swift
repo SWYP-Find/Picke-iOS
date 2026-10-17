@@ -1,3 +1,10 @@
+//
+//  MyClassView.swift
+//  Class
+//
+//  Created by Picke on 10/11/26.
+//
+
 import ClassDomainInterface
 import ComposableArchitecture
 import PickeDesignKit
@@ -29,8 +36,35 @@ public struct MyClassView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
-    .toolbar(.visible, for: .tabBar)
     .onAppear { send(.onAppear) }
+    .pickeModal(
+      $store.scope(state: \.modal, action: \.modal),
+      dimOpacity: 0.28
+    ) { _ in
+      if let roomID = store.selectedRoomID,
+         let room = store.rooms.first(where: { $0.id == roomID })
+      {
+        ZStack(alignment: .bottom) {
+          Color.clear
+            .ignoresSafeArea()
+            .contentShape(Rectangle())
+            .onTapGesture { send(.managementDismissed) }
+          ClassManagementSheet(
+            room: room,
+            onEdit: { send(.editClassTapped) },
+            onDelete: { send(.deleteTapped) },
+            onLeave: { send(.leaveTapped) }
+          )
+          .frame(maxWidth: .infinity)
+          .background(
+            UnevenRoundedRectangle(topLeadingRadius: 26, topTrailingRadius: 26)
+              .fill(.beige50)
+              .ignoresSafeArea(edges: .bottom)
+          )
+        }
+      }
+    }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
   }
 }
 
@@ -61,13 +95,14 @@ private extension MyClassView {
         .pretendardFont(.medium15)
         .foregroundStyle(.gray300)
         .frame(maxWidth: .infinity, minHeight: 160)
-    case let .loaded(rooms):
+    case .loaded:
       LazyVStack(spacing: 12) {
-        ForEach(rooms) { room in
-          Button { send(.roomTapped(room.id)) } label: {
-            MyClassRoomCard(room: room)
-          }
-          .buttonStyle(.plain)
+        ForEach(store.visibleRooms) { room in
+          MyClassRoomCard(
+            room: room,
+            onOpen: { send(.roomTapped(room.id)) },
+            onManage: { send(.managementTapped(room.id)) }
+          )
         }
       }
     }
