@@ -238,7 +238,10 @@ private extension ClassAIChatView {
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
-      .pickeCard(isUser ? .beige400 : .cardBaseBackgroundDefault)
+      .pickeCard(
+        isUser ? .beige400 : .cardBaseBackgroundDefault,
+        insideBorder: isUser
+      )
   }
 
   var bubbleLinePadding: CGFloat {

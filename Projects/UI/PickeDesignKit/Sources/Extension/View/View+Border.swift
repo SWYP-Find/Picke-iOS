@@ -8,13 +8,22 @@
 import SwiftUI
 
 public extension View {
-  /// `.overlay(RoundedRectangle(cornerRadius:).stroke(color, lineWidth:))` 축약.
+  /// 라운드 테두리. `insideBorder`는 외곽선을 도형 내부에 그린다.
   func roundedBorder(
     _ color: Color,
     lineWidth: CGFloat = 1,
-    radius: CGFloat = .radiusDefault
+    radius: CGFloat = .radiusDefault,
+    insideBorder: Bool = false
   ) -> some View {
-    overlay(RoundedRectangle(cornerRadius: radius).stroke(color, lineWidth: lineWidth))
+    overlay {
+      if insideBorder {
+        RoundedRectangle(cornerRadius: radius)
+          .strokeBorder(color, lineWidth: lineWidth)
+      } else {
+        RoundedRectangle(cornerRadius: radius)
+          .stroke(color, lineWidth: lineWidth)
+      }
+    }
   }
 
   /// 카드 외형 — 라운드 배경 + 테두리.
@@ -22,13 +31,15 @@ public extension View {
     _ background: Color = .cardBaseBackgroundDefault,
     border: Color = .borderBeigeDefault,
     lineWidth: CGFloat = 1,
-    radius: CGFloat = .radiusDefault
+    radius: CGFloat = .radiusDefault,
+    insideBorder: Bool = false
   ) -> some View {
     roundedBackground(background, radius: radius)
       .roundedBorder(
         border,
         lineWidth: lineWidth,
-        radius: radius
+        radius: radius,
+        insideBorder: insideBorder
       )
   }
 
