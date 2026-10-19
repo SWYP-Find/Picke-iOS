@@ -20,43 +20,8 @@ public struct ClassStartMethodView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      PickeNavigationBar(
-        onBack: { send(.backTapped) },
-        centerTitle: "새 클래스 만들기"
-      )
-      .foregroundStyle(.gray500)
-
-      VStack(alignment: .leading, spacing: 0) {
-        titleSection()
-          .padding(.bottom, 32)
-
-        VStack(spacing: 16) {
-          methodCard(
-            .existingContent,
-            guide: .pickeBattle,
-            badge: "TTS 포함",
-            title: "Pické 배틀로 클래스 만들기",
-            description: "기존 배틀 콘텐츠를 골라 클래스를 만들어요"
-          )
-          methodCard(
-            .ownTopic,
-            guide: .customBattle,
-            badge: "AI 채팅",
-            title: "커스텀 배틀로 클래스 만들기",
-            description: "원하는 주제로 직접 배틀을 만들어보세요"
-          )
-        }
-
-        Spacer(minLength: 16)
-
-        Button { send(.continueTapped) } label: {
-          Text("주제 정하기")
-        }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
-      }
-      .padding(.horizontal, 16)
-      .padding(.top, 16)
-      .padding(.bottom, 16)
+      navigationBar
+      contentSection()
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
@@ -72,6 +37,58 @@ public struct ClassStartMethodView: View {
 }
 
 private extension ClassStartMethodView {
+  var navigationBar: some View {
+    PickeNavigationBar(
+      onBack: { send(.backTapped) },
+      centerTitle: "새 클래스 만들기"
+    )
+    .foregroundStyle(.gray500)
+  }
+
+  @ViewBuilder
+  func contentSection() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      titleSection()
+        .padding(.bottom, 32)
+
+      methodCards()
+
+      Spacer(minLength: 16)
+
+      continueButton
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 16)
+    .padding(.bottom, 16)
+  }
+
+  @ViewBuilder
+  func methodCards() -> some View {
+    VStack(spacing: 16) {
+      methodCard(
+        .existingContent,
+        guide: .pickeBattle,
+        badge: "TTS 포함",
+        title: "Pické 배틀로 클래스 만들기",
+        description: "기존 배틀 콘텐츠를 골라 클래스를 만들어요"
+      )
+      methodCard(
+        .ownTopic,
+        guide: .customBattle,
+        badge: "AI 채팅",
+        title: "커스텀 배틀로 클래스 만들기",
+        description: "원하는 주제로 직접 배틀을 만들어보세요"
+      )
+    }
+  }
+
+  var continueButton: some View {
+    Button { send(.continueTapped) } label: {
+      Text("주제 정하기")
+    }
+    .ctaButtonStyle(.primary, size: .large, height: 52)
+  }
+
   @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 6) {

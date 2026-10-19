@@ -14,6 +14,8 @@ import PickeSharedUI
 public struct ClassIntroFeature {
   public init() {}
 
+  @Dependency(\.classTicketMockEnabled) private var classTicketMockEnabled
+
   @ObservableState
   public struct State: Equatable {
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
@@ -98,12 +100,15 @@ extension ClassIntroFeature {
       return .send(.delegate(.create))
 
     case .ticketTapped:
-      state.customAlert = .alert(
-        title: "이용권 등록 준비 중",
-        message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
-        cancelTitle: ""
-      )
-      return .none
+      guard classTicketMockEnabled else {
+        state.customAlert = .alert(
+          title: "이용권 등록 준비 중",
+          message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
+          cancelTitle: ""
+        )
+        return .none
+      }
+      return .send(.delegate(.ticket))
     }
   }
 }

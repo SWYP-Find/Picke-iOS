@@ -1898,6 +1898,55 @@ struct ClassNavigationLoadingTests {
 @MainActor
 struct ClassParticipantPushTests {
   @Test
+  func 인트로_이용권은_한번만_push하고_닫으면_돌아간다() async {
+    let ticketID = UUID(301)
+    let store = TestStore(initialState: ClassCoordinator.State()) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(ticketID)
+    }
+
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.ticket))))) {
+      $0.routes.push(.ticket(.init(instanceID: ticketID)))
+      $0.ticketInstanceIDs = [ticketID]
+    }
+    #expect(store.state.showsTabBar)
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.ticket)))))
+    #expect(store.state.routes.count == 2)
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.delegate(.dismiss)))))
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+      $0.ticketInstanceIDs = []
+    }
+  }
+
+  @Test
+  func 이용권_확인_중_스와이프로_경로가_제거되면_응답도_취소된다() async {
+    let clock = TestClock()
+    let ticketID = UUID(302)
+    var ticket = ClassTicketFeature.State(instanceID: ticketID)
+    ticket.code = "PICKE30"
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(ticket))
+    state.ticketInstanceIDs = [ticketID]
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.continuousClock = clock
+      $0.date = .constant(Date(timeIntervalSince1970: 0))
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.view(.checkTapped))))) {
+      guard case var .ticket(current) = $0.routes[1].screen else { return }
+      current.isChecking = true
+      $0.routes[screenAt: 1] = .ticket(current)
+    }
+    await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.ticketInstanceIDs = []
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
   func 인트로_참여는_코드_화면을_한번만_push한다() async {
     let codeID = UUID(201)
     let store = TestStore(initialState: ClassCoordinator.State()) { ClassCoordinator() } withDependencies: {

@@ -25,6 +25,9 @@ public struct ClassCoordinatorView: View {
       case let .intro(introStore):
         ClassIntroView(store: introStore)
 
+      case let .ticket(ticketStore):
+        ClassTicketView(store: ticketStore)
+
       case let .join(joinStore):
         ClassJoinView(store: joinStore)
 
