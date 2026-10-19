@@ -43,6 +43,7 @@ public struct ClassCoordinator {
     var participantJoinInstanceIDs: Set<UUID> = []
     var memberInstanceIDs: Set<UUID> = []
     var aiVoteInstanceIDs: Set<UUID> = []
+    var ticketInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
@@ -61,7 +62,7 @@ public struct ClassCoordinator {
           && members.customAlert == nil && !members.isSaving
       case let .ownerDashboard(dashboard)?:
         return dashboard.management == nil
-      case .report?, .myOpinions?:
+      case .report?, .myOpinions?, .ticket?:
         return true
       default:
         return false
@@ -378,14 +379,20 @@ private extension ClassCoordinator {
       guard case let .aiVote(vote) = route.screen else { return nil }
       return vote.instanceID
     })
+    let ticketIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ticket(ticket) = route.screen else { return nil }
+      return ticket.instanceID
+    })
     let removedOwners = state.ownerNameInstanceIDs.subtracting(ownerIDs)
     let removedJoins = state.participantJoinInstanceIDs.subtracting(joinIDs)
     let removedMembers = state.memberInstanceIDs.subtracting(memberIDs)
     let removedVotes = state.aiVoteInstanceIDs.subtracting(voteIDs)
+    let removedTickets = state.ticketInstanceIDs.subtracting(ticketIDs)
     state.ownerNameInstanceIDs = ownerIDs
     state.participantJoinInstanceIDs = joinIDs
     state.memberInstanceIDs = memberIDs
     state.aiVoteInstanceIDs = voteIDs
+    state.ticketInstanceIDs = ticketIDs
     return .merge(
       removedOwners.map { .cancel(id: ClassJoinFeature.CancelID.nameOwner($0)) }
         + removedJoins.flatMap { id in
@@ -401,6 +408,7 @@ private extension ClassCoordinator {
             .cancel(id: ClassAIVoteFeature.CancelID.submit(id)),
           ]
         }
+        + removedTickets.map { .cancel(id: ClassTicketFeature.CancelID.check($0)) }
     )
   }
 
@@ -462,6 +470,20 @@ private extension ClassCoordinator {
       invalidateCompletingJoin(state: &state)
       state.routes.push(.join(.init(mode: .code, instanceID: uuid())))
       return .none
+
+    case let .routeAction(routeID, action: .intro(.delegate(.ticket))):
+      guard routeID == 0, state.routes.count == 1,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.ticket(.init(instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .ticket = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
 
     case let .routeAction(routeID, action: .join(.delegate(.found(room, instanceID: instanceID)))):
       guard routeID == state.routes.count - 1,
@@ -1120,6 +1142,7 @@ extension ClassCoordinator {
   @Reducer
   public enum ClassScreen {
     case intro(ClassIntroFeature)
+    case ticket(ClassTicketFeature)
     case join(ClassJoinFeature)
     case startMethod(ClassStartMethodFeature)
     case topic(ClassTopicFeature)
