@@ -160,7 +160,7 @@ struct ClassTicketTests {
     let store = TestStore(initialState: state) { ClassTicketFeature() }
 
     await store.send(.view(.confirmTapped))
-    await store.receive(\.delegate, .showOverview(start, end))
+    await store.receive(\.delegate, .registrationConfirmed(startDate: start, endDate: end))
     #expect(store.state.navigationTitle == "이용권 등록하기")
   }
 
@@ -191,7 +191,7 @@ struct ClassTicketTests {
     #expect(store.state.navigationTitle == "클래스 이용권")
     #expect(store.state.periodText == "2026.10.09 – 2027.04.08")
     await store.send(.view(.addRegistrationTapped))
-    await store.receive(\.delegate, .addRegistration)
+    await store.receive(\.delegate, .addRegistrationRequested)
     await store.send(.view(.backTapped))
     await store.receive(\.delegate, .dismiss)
   }

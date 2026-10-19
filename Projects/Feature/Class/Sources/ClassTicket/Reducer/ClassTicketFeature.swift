@@ -59,8 +59,8 @@ public struct ClassTicketFeature {
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
-    case showOverview(Date, Date)
-    case addRegistration
+    case registrationConfirmed(startDate: Date, endDate: Date)
+    case addRegistrationRequested
     case registered(Date, Date)
   }
 
@@ -93,11 +93,14 @@ public struct ClassTicketFeature {
           let registrationStartDate = state.registrationStartDate,
           let expirationDate = state.expirationDate
         else { return .none }
-        return .send(.delegate(.showOverview(registrationStartDate, expirationDate)))
+        return .send(.delegate(.registrationConfirmed(
+          startDate: registrationStartDate,
+          endDate: expirationDate
+        )))
 
       case .view(.addRegistrationTapped):
         guard state.phase == .overview else { return .none }
-        return .send(.delegate(.addRegistration))
+        return .send(.delegate(.addRegistrationRequested))
 
       case let .view(.faqTapped(index)):
         state.expandedFAQ = state.expandedFAQ == index ? nil : index
