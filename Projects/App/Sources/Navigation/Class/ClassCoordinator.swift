@@ -90,6 +90,7 @@ public struct ClassCoordinator {
 
   public enum AsyncAction: Equatable {}
   public enum InnerAction: Equatable {
+    case ticketRegistrationCompleted(routeID: Int, instanceID: UUID, startDate: Date, endDate: Date)
     case membersLoaded(
       routeID: Int,
       roomID: Int,
@@ -476,6 +477,51 @@ private extension ClassCoordinator {
             case .intro = state.routes[0].screen
       else { return .none }
       invalidateCompletingJoin(state: &state)
+      state.routes.push(.ticket(.init(instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.showOverview(startDate, endDate)))):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(completed)? = state.routes.last?.screen,
+            completed.phase == .registered,
+            completed.registrationStartDate == startDate,
+            completed.expirationDate == endDate
+      else { return .none }
+      return .send(.inner(.ticketRegistrationCompleted(
+        routeID: routeID,
+        instanceID: completed.instanceID,
+        startDate: startDate,
+        endDate: endDate
+      )))
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.registered(startDate, endDate)))):
+      guard routeID == state.routes.count - 1,
+            routeID >= 2,
+            case let .ticket(registered)? = state.routes.last?.screen,
+            registered.phase == .registered,
+            registered.registrationStartDate == startDate,
+            registered.expirationDate == endDate,
+            case var .ticket(overview) = state.routes[routeID - 1].screen,
+            overview.phase == .overview
+      else { return .none }
+      overview.registrationStartDate = startDate
+      overview.expirationDate = endDate
+      state.routes[screenAt: routeID - 1] = .ticket(overview)
+      if routeID >= 3,
+         case var .ticket(original) = state.routes[routeID - 2].screen,
+         original.phase == .registered
+      {
+        original.registrationStartDate = startDate
+        original.expirationDate = endDate
+        state.routes[screenAt: routeID - 2] = .ticket(original)
+      }
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.addRegistration))):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(overview)? = state.routes.last?.screen,
+            overview.phase == .overview
+      else { return .none }
       state.routes.push(.ticket(.init(instanceID: uuid())))
       return .none
 
@@ -1028,6 +1074,42 @@ private extension ClassCoordinator {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .ticketRegistrationCompleted(routeID, instanceID, startDate, endDate):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(completed)? = state.routes.last?.screen,
+            completed.instanceID == instanceID,
+            completed.phase == .registered,
+            completed.registrationStartDate == startDate,
+            completed.expirationDate == endDate
+      else { return .none }
+
+      if routeID >= 2,
+         case let .ticket(previous) = state.routes[routeID - 1].screen,
+         previous.phase == .overview
+      {
+        state.routes.goBack()
+        var overview = previous
+        overview.registrationStartDate = startDate
+        overview.expirationDate = endDate
+        state.routes[screenAt: routeID - 1] = .ticket(overview)
+        if routeID >= 3,
+           case var .ticket(original) = state.routes[routeID - 2].screen,
+           original.phase == .registered
+        {
+          original.registrationStartDate = startDate
+          original.expirationDate = endDate
+          state.routes[screenAt: routeID - 2] = .ticket(original)
+        }
+        return .none
+      }
+
+      var overview = ClassTicketFeature.State(instanceID: uuid())
+      overview.phase = .overview
+      overview.registrationStartDate = startDate
+      overview.expirationDate = endDate
+      state.routes.push(.ticket(overview))
+      return .none
+
     case let .joinedSessionCleared(requestID, room):
       guard state.pendingJoinID == requestID,
             isCompletingJoinPrefix(state)

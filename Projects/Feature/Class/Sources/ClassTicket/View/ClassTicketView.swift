@@ -19,16 +19,19 @@ public struct ClassTicketView: View {
     VStack(spacing: 0) {
       PickeNavigationBar(
         onBack: { send(.backTapped) },
-        centerTitle: "이용권 등록하기"
+        centerTitle: store.navigationTitle
       )
       .foregroundStyle(.gray800)
 
       ScrollView {
         VStack(alignment: .leading, spacing: 0) {
-          if store.phase == .entry {
+          switch store.phase {
+          case .entry:
             entryContent()
-          } else {
+          case .registered:
             registeredContent()
+          case .overview:
+            overviewContent()
           }
         }
         .frame(maxWidth: .infinity)
@@ -178,6 +181,39 @@ private extension ClassTicketView {
         .foregroundStyle(.gray300)
     }
     .frame(maxWidth: .infinity)
+  }
+
+  @ViewBuilder
+  func overviewContent() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text("사용 중인 이용권")
+        .pretendardFont(family: .SemiBold, size: 16)
+        .foregroundStyle(.gray800)
+        .padding(.bottom, 16)
+
+      ticketCard()
+
+      overviewBottomSection()
+        .padding(.top, 40)
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 20)
+  }
+
+  @ViewBuilder
+  func overviewBottomSection() -> some View {
+    VStack(spacing: 10) {
+      Text("체험용 이용권이며 마이페이지에 저장되지 않아요")
+        .pretendardFont(.bodySmall)
+        .foregroundStyle(.gray300)
+        .frame(maxWidth: .infinity)
+
+      Button("이용권 추가등록하기") {
+        send(.addRegistrationTapped)
+      }
+      .ctaButtonStyle(.primary, size: .large, height: 52)
+      .accessibilityIdentifier("class-ticket-add-registration")
+    }
   }
 
   @ViewBuilder

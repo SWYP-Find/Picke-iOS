@@ -21,10 +21,13 @@ final class ClassTicketVisualAuditTests: XCTestCase {
     registered.phase = .registered
     registered.registrationStartDate = try XCTUnwrap("2026.10.09".date(as: .yearMonthDayDotted))
     registered.expirationDate = try XCTUnwrap("2027.04.08".date(as: .yearMonthDayDotted))
+    var overview = registered
+    overview.phase = .overview
     for (width, height) in [(402, 874), (375, 812)] {
       let size = CGSize(width: width, height: height)
       try await capture(entry, name: "ticket-entry-\(width)", size: size)
       try await capture(registered, name: "ticket-registered-\(width)", size: size)
+      try await capture(overview, name: "ticket-overview-\(width)", size: size)
     }
   }
 

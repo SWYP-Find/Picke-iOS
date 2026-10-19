@@ -30,6 +30,10 @@ public struct ClassTicketFeature {
       !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isChecking
     }
 
+    public var navigationTitle: String {
+      phase == .overview ? "클래스 이용권" : "이용권 등록하기"
+    }
+
     public var periodText: String {
       guard let registrationStartDate, let expirationDate else { return "" }
       return "\(registrationStartDate.formatted(.yearMonthDayDotted)) – \(expirationDate.formatted(.yearMonthDayDotted))"
@@ -48,12 +52,16 @@ public struct ClassTicketFeature {
     case backTapped
     case checkTapped
     case confirmTapped
+    case addRegistrationTapped
     case faqTapped(Int)
   }
 
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
+    case showOverview(Date, Date)
+    case addRegistration
+    case registered(Date, Date)
   }
 
   public enum CancelID: Hashable, Sendable {
@@ -76,8 +84,20 @@ public struct ClassTicketFeature {
       case .binding:
         return .none
 
-      case .view(.backTapped), .view(.confirmTapped):
+      case .view(.backTapped):
         return .send(.delegate(.dismiss))
+
+      case .view(.confirmTapped):
+        guard
+          state.phase == .registered,
+          let registrationStartDate = state.registrationStartDate,
+          let expirationDate = state.expirationDate
+        else { return .none }
+        return .send(.delegate(.showOverview(registrationStartDate, expirationDate)))
+
+      case .view(.addRegistrationTapped):
+        guard state.phase == .overview else { return .none }
+        return .send(.delegate(.addRegistration))
 
       case let .view(.faqTapped(index)):
         state.expandedFAQ = state.expandedFAQ == index ? nil : index
@@ -111,6 +131,7 @@ public struct ClassTicketFeature {
           state.registrationStartDate = start
           state.expirationDate = lastDay
           state.phase = .registered
+          return .send(.delegate(.registered(start, lastDay)))
 
         case .failure:
           state.errorMessage = "유효하지 않은 이용권 코드예요. 다시 확인해 주세요."

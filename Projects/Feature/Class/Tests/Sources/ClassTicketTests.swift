@@ -32,6 +32,10 @@ struct ClassTicketTests {
       $0.registrationStartDate = registeredAt
       $0.expirationDate = "2027.04.08".date(as: .yearMonthDayDotted)
     }
+    await store.receive(\.delegate, .registered(
+      registeredAt,
+      try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    ))
     #expect(store.state.periodText == "2026.10.09 – 2027.04.08")
   }
 
@@ -103,6 +107,10 @@ struct ClassTicketTests {
         $0.registrationStartDate = registeredAt
         $0.expirationDate = end.date(as: .yearMonthDayDotted)
       }
+      await store.receive(\.delegate, .registered(
+        registeredAt,
+        try #require(end.date(as: .yearMonthDayDotted))
+      ))
       #expect(store.state.periodText == "\(start) – \(end)")
     }
   }
@@ -134,6 +142,57 @@ struct ClassTicketTests {
       $0.registrationStartDate = "2026.10.18".date(as: .yearMonthDayDotted)
       $0.expirationDate = "2027.04.17".date(as: .yearMonthDayDotted)
     }
+    await store.receive(\.delegate, .registered(
+      try #require("2026.10.18".date(as: .yearMonthDayDotted)),
+      try #require("2027.04.17".date(as: .yearMonthDayDotted))
+    ))
     #expect(store.state.periodText == "2026.10.18 – 2027.04.17")
+  }
+
+  @Test
+  func 등록_완료_확인은_이용_기간을_개요_경로로_전달한다() async throws {
+    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let end = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    var state = ClassTicketFeature.State()
+    state.phase = .registered
+    state.registrationStartDate = start
+    state.expirationDate = end
+    let store = TestStore(initialState: state) { ClassTicketFeature() }
+
+    await store.send(.view(.confirmTapped))
+    await store.receive(\.delegate, .showOverview(start, end))
+    #expect(store.state.navigationTitle == "이용권 등록하기")
+  }
+
+  @Test
+  func 미등록_또는_기간이_없는_상태에서는_개요로_이동하지_않는다() async throws {
+    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    for phase in [ClassTicketPhase.entry, .registered, .overview] {
+      var state = ClassTicketFeature.State()
+      state.phase = phase
+      state.registrationStartDate = start
+      let store = TestStore(initialState: state) { ClassTicketFeature() }
+
+      await store.send(.view(.confirmTapped))
+      await store.finish()
+    }
+  }
+
+  @Test
+  func 개요에서만_추가등록을_요청하고_뒤로가기는_별도_종료를_요청한다() async throws {
+    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let end = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    var state = ClassTicketFeature.State()
+    state.phase = .overview
+    state.registrationStartDate = start
+    state.expirationDate = end
+    let store = TestStore(initialState: state) { ClassTicketFeature() }
+
+    #expect(store.state.navigationTitle == "클래스 이용권")
+    #expect(store.state.periodText == "2026.10.09 – 2027.04.08")
+    await store.send(.view(.addRegistrationTapped))
+    await store.receive(\.delegate, .addRegistration)
+    await store.send(.view(.backTapped))
+    await store.receive(\.delegate, .dismiss)
   }
 }
