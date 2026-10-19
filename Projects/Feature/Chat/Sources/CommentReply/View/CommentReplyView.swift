@@ -15,10 +15,21 @@ import PickeCoreUtility
 
 @ViewAction(for: CommentReplyFeature.self)
 public struct CommentReplyView: View {
+  private enum EditingTarget: Equatable {
+    case parent
+    case reply(Int)
+  }
+
   @Bindable public var store: StoreOf<CommentReplyFeature>
   @FocusState private var isReplyFocused: Bool
   /// 딥링크 타깃 답글로 1회만 스크롤.
   @State private var didScrollToTarget = false
+
+  private var editingTarget: EditingTarget? {
+    if store.editingParent { return .parent }
+    if let id = store.editingCommentId { return .reply(id) }
+    return nil
+  }
 
   public init(store: StoreOf<CommentReplyFeature>) {
     self.store = store
@@ -50,6 +61,9 @@ public struct CommentReplyView: View {
     .navigationBarHidden(true)
     .hidesSystemBars()
     .onAppear { send(.onAppear) }
+    .onChange(of: editingTarget) { _, target in
+      isReplyFocused = target != nil
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
     .animation(.easeInOut(duration: 0.18), value: store.menuTargetReplyId)
   }
@@ -82,7 +96,12 @@ private extension CommentReplyView {
   func replyMenu(for reply: CommentReplyItem) -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       if reply.isMine {
-        PickeActionPill(title: "수정", systemImage: "pencil") { send(.replyMenu(id: reply.id, action: .edit)) }
+        PickeActionPill(title: "수정", systemImage: "pencil") {
+          guard reply.commentId != nil else { return }
+          store.editingParent = false
+          send(.replyMenu(id: reply.id, action: .edit))
+          isReplyFocused = true
+        }
         PickeActionPill(title: "삭제", systemImage: "trash") { send(.replyMenu(id: reply.id, action: .delete)) }
       } else {
         PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.replyMenu(
@@ -98,7 +117,10 @@ private extension CommentReplyView {
   func parentMenuView() -> some View {
     VStack(alignment: .trailing, spacing: 8) {
       if store.parentComment.isMine {
-        PickeActionPill(title: "수정", systemImage: "pencil") { send(.parentMenu(.edit)) }
+        PickeActionPill(title: "수정", systemImage: "pencil") {
+          send(.parentMenu(.edit))
+          isReplyFocused = true
+        }
         PickeActionPill(title: "삭제", systemImage: "trash") { send(.parentMenu(.delete)) }
       } else {
         PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.parentMenu(.report)) }

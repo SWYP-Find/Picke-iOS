@@ -6,6 +6,7 @@
 //
 
 import BattleDomainInterface
+import CommentDomainInterface
 import ComposableArchitecture
 import FeatureAssembly
 @testable import Picke
@@ -17,6 +18,62 @@ import XCTest
 
 /// Opt-in captures of the mounted global comment and reply screens for design review.
 final class CommentFinalDesignTests: XCTestCase {
+  @MainActor
+  func testReplyEditTakesInputFocus() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify reply input focus")
+    }
+
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: .mockJoinable)
+    let battleAPI: any BattleInterface = session
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    let createdPerspective = try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "부모 의견입니다.",
+      optionId: 1
+    )
+    let perspective = try XCTUnwrap(createdPerspective)
+    let perspectiveAPI: any PerspectiveInterface = session
+    _ = try await perspectiveAPI.createComment(
+      perspectiveId: perspective.perspectiveId,
+      content: "수정할 답글입니다."
+    )
+
+    let store = Store(initialState: CommentReplyFeature.State(
+      perspectiveId: perspective.perspectiveId,
+      parentComment: CommentItem(item: perspective, order: 0)
+    )) {
+      CommentReplyFeature()
+        .dependency(\.perspectiveUseCase, session)
+        .dependency(\.commentUseCase, session)
+        .dependency(\.analyticsUseCase, .testValue)
+    }
+    let window = try makeWindow(rootView: CommentReplyView(store: store))
+    defer { window.isHidden = true }
+    try await waitFor("reply loaded for focus") {
+      !store.isLoadingDetail && !store.isLoadingReplies && !store.replies.isEmpty
+    }
+
+    let reply = try XCTUnwrap(store.replies.first)
+    store.send(.view(.replyMenu(id: reply.id, action: .edit)))
+    try await waitFor("reply edit first responder") { hasFocusedInput(in: window) }
+
+    window.endEditing(true)
+    try await waitFor("reply focus released") { !hasFocusedInput(in: window) }
+    store.send(.view(.parentMenu(.edit)))
+    try await waitFor("parent edit first responder") { hasFocusedInput(in: window) }
+    XCTAssertTrue(store.editingParent)
+
+    window.endEditing(true)
+    try await waitFor("parent focus released") { !hasFocusedInput(in: window) }
+    store.send(.binding(.set(\CommentReplyFeature.State.editingParent, false)))
+    store.send(.view(.replyMenu(id: reply.id, action: .edit)))
+    try await waitFor("reply focus after parent edit") { hasFocusedInput(in: window) }
+    XCTAssertFalse(store.editingParent)
+  }
+
   @MainActor
   func testGlobalCommentAndReplyCapture() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
@@ -121,6 +178,7 @@ final class CommentFinalDesignTests: XCTestCase {
     replyStore.send(.view(.replyMenu(id: lastReply.id, action: .edit)))
     XCTAssertEqual(replyStore.editingCommentId, lastReply.commentId)
     XCTAssertEqual(replyStore.replyText, lastReply.content)
+    try await waitFor("reply edit focus") { hasFocusedInput(in: replyWindow) }
     try await capture(replyWindow, name: "reply-edit")
 
     replyStore.send(.view(.parentMenu(.more)))
@@ -128,6 +186,18 @@ final class CommentFinalDesignTests: XCTestCase {
     scrollToTop(replyScroll)
     let parentMenuImage = try await capture(replyWindow, name: "reply-parent-menu")
     try assertMenuLabels(["수정", "삭제"], visibleIn: replyScroll, window: replyWindow, image: parentMenuImage)
+    replyWindow.endEditing(true)
+    try await waitFor("reply focus released before parent edit") { !hasFocusedInput(in: replyWindow) }
+    replyStore.send(.view(.parentMenu(.edit)))
+    try await waitFor("parent edit focus") { hasFocusedInput(in: replyWindow) }
+    XCTAssertTrue(replyStore.editingParent)
+
+    replyWindow.endEditing(true)
+    try await waitFor("parent focus released before reply edit") { !hasFocusedInput(in: replyWindow) }
+    replyStore.send(.binding(.set(\CommentReplyFeature.State.editingParent, false)))
+    replyStore.send(.view(.replyMenu(id: lastReply.id, action: .edit)))
+    try await waitFor("reply focus after parent edit") { hasFocusedInput(in: replyWindow) }
+    XCTAssertFalse(replyStore.editingParent)
   }
 
   @MainActor
@@ -183,6 +253,18 @@ final class CommentFinalDesignTests: XCTestCase {
     }
     window.layoutIfNeeded()
     return window.rootViewController.map { containsInput($0.view) } ?? false
+  }
+
+  @MainActor
+  private func hasFocusedInput(in window: UIWindow) -> Bool {
+    func containsFocusedInput(_ view: UIView) -> Bool {
+      if (view is UITextField || view is UITextView), view.window === window, view.isFirstResponder {
+        return true
+      }
+      return view.subviews.contains(where: containsFocusedInput)
+    }
+    window.layoutIfNeeded()
+    return window.rootViewController.map { containsFocusedInput($0.view) } ?? false
   }
 
   @MainActor
