@@ -1920,6 +1920,114 @@ struct ClassParticipantPushTests {
   }
 
   @Test
+  func 이용권_확인은_push하고_재등록은_기존_확인_경로를_갱신한다() async throws {
+    let firstStart = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let firstEnd = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    let secondStart = try #require("2026.11.01".date(as: .yearMonthDayDotted))
+    let secondEnd = try #require("2027.04.30".date(as: .yearMonthDayDotted))
+    let clock = TestClock()
+    let originalID = UUID(400)
+    var registration = ClassTicketFeature.State(instanceID: originalID)
+    registration.phase = .registered
+    registration.registrationStartDate = firstStart
+    registration.expirationDate = firstEnd
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [originalID]
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.continuousClock = clock
+      $0.date = .constant(secondStart)
+    }
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .ticket(.delegate(.showOverview(firstStart, firstEnd)))
+    )))
+    await store.receive(\.inner) {
+      var overview = ClassTicketFeature.State(instanceID: UUID(0))
+      overview.phase = .overview
+      overview.registrationStartDate = firstStart
+      overview.expirationDate = firstEnd
+      $0.routes.push(.ticket(overview))
+      $0.ticketInstanceIDs = [originalID, UUID(0)]
+    }
+    #expect(store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ticket(.delegate(.addRegistration))
+    ))) {
+      $0.routes.push(.ticket(.init(instanceID: UUID(1))))
+      $0.ticketInstanceIDs = [originalID, UUID(0), UUID(1)]
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.binding(.set(\.code, "PICKE30")))
+    ))) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.code = "PICKE30"
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.view(.checkTapped))
+    ))) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = true
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.receive(\.router.routeAction) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = false
+      ticket.phase = .registered
+      ticket.registrationStartDate = secondStart
+      ticket.expirationDate = secondEnd
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await store.receive(\.router.routeAction) {
+      guard case var .ticket(overview) = $0.routes[2].screen,
+            case var .ticket(original) = $0.routes[1].screen
+      else { return }
+      overview.registrationStartDate = secondStart
+      overview.expirationDate = secondEnd
+      original.registrationStartDate = secondStart
+      original.expirationDate = secondEnd
+      $0.routes[screenAt: 2] = .ticket(overview)
+      $0.routes[screenAt: 1] = .ticket(original)
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.delegate(.showOverview(secondStart, secondEnd)))
+    )))
+    #expect(store.state.routes.count == 4)
+    await store.receive(\.inner) {
+      $0.routes.goBack()
+      guard case var .ticket(overview) = $0.routes[2].screen,
+            case var .ticket(original) = $0.routes[1].screen
+      else { return }
+      overview.registrationStartDate = secondStart
+      overview.expirationDate = secondEnd
+      original.registrationStartDate = secondStart
+      original.expirationDate = secondEnd
+      $0.routes[screenAt: 2] = .ticket(overview)
+      $0.routes[screenAt: 1] = .ticket(original)
+      $0.ticketInstanceIDs = [originalID, UUID(0)]
+    }
+    #expect(store.state.routes.count == 3)
+    await store.send(.view(.backAction)) {
+      $0.routes.goBack()
+      $0.ticketInstanceIDs = [originalID]
+    }
+    guard case let .ticket(original) = store.state.routes.last?.screen else {
+      Issue.record("뒤로 이동 후 등록 화면이 사라졌습니다")
+      return
+    }
+    #expect(original.periodText == "2026.11.01 – 2027.04.30")
+  }
+
+  @Test
   func 이용권_확인_중_스와이프로_경로가_제거되면_응답도_취소된다() async {
     let clock = TestClock()
     let ticketID = UUID(302)
@@ -1941,6 +2049,94 @@ struct ClassParticipantPushTests {
     await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
       $0.routes = Array($0.routes.dropLast())
       $0.ticketInstanceIDs = []
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 추가등록_성공_후_뒤로가도_확인_화면에_새_기간이_남는다() async throws {
+    let oldStart = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let oldEnd = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    let newStart = try #require("2026.11.01".date(as: .yearMonthDayDotted))
+    let newEnd = try #require("2027.04.30".date(as: .yearMonthDayDotted))
+    var original = ClassTicketFeature.State(instanceID: UUID(400))
+    original.phase = .registered
+    original.registrationStartDate = oldStart
+    original.expirationDate = oldEnd
+    var overview = ClassTicketFeature.State(instanceID: UUID(401))
+    overview.phase = .overview
+    overview.registrationStartDate = oldStart
+    overview.expirationDate = oldEnd
+    var registration = ClassTicketFeature.State(instanceID: UUID(402))
+    registration.phase = .registered
+    registration.registrationStartDate = newStart
+    registration.expirationDate = newEnd
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(original))
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [original.instanceID, overview.instanceID, registration.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.delegate(.registered(newStart, newEnd)))
+    ))) {
+      guard case var .ticket(currentOverview) = $0.routes[2].screen,
+            case var .ticket(currentOriginal) = $0.routes[1].screen
+      else { return }
+      currentOverview.registrationStartDate = newStart
+      currentOverview.expirationDate = newEnd
+      currentOriginal.registrationStartDate = newStart
+      currentOriginal.expirationDate = newEnd
+      $0.routes[screenAt: 2] = .ticket(currentOverview)
+      $0.routes[screenAt: 1] = .ticket(currentOriginal)
+    }
+    await store.send(.view(.backAction)) {
+      $0.routes.goBack()
+      $0.ticketInstanceIDs = [original.instanceID, overview.instanceID]
+    }
+    guard case let .ticket(currentOverview) = store.state.routes.last?.screen else {
+      Issue.record("추가등록 뒤 확인 화면이 사라졌습니다")
+      return
+    }
+    #expect(currentOverview.periodText == "2026.11.01 – 2027.04.30")
+  }
+
+  @Test
+  func 추가등록_조회_중_경로가_제거되면_응답을_취소한다() async throws {
+    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let end = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    let clock = TestClock()
+    var original = ClassTicketFeature.State(instanceID: UUID(400))
+    original.phase = .registered
+    original.registrationStartDate = start
+    original.expirationDate = end
+    var overview = ClassTicketFeature.State(instanceID: UUID(401))
+    overview.phase = .overview
+    overview.registrationStartDate = start
+    overview.expirationDate = end
+    var registration = ClassTicketFeature.State(instanceID: UUID(402))
+    registration.code = "PICKE30"
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(original))
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [original.instanceID, overview.instanceID, registration.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.continuousClock = clock
+      $0.date = .constant(start)
+    }
+
+    await store.send(.router(.routeAction(id: 3, action: .ticket(.view(.checkTapped))))) {
+      guard case var .ticket(current) = $0.routes[3].screen else { return }
+      current.isChecking = true
+      $0.routes[screenAt: 3] = .ticket(current)
+    }
+    await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.ticketInstanceIDs = [original.instanceID, overview.instanceID]
     }
     await clock.advance(by: .milliseconds(350))
     await store.finish(timeout: .seconds(1))
