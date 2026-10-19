@@ -1942,7 +1942,7 @@ struct ClassParticipantPushTests {
 
     await store.send(.router(.routeAction(
       id: 1,
-      action: .ticket(.delegate(.showOverview(firstStart, firstEnd)))
+      action: .ticket(.delegate(.registrationConfirmed(startDate: firstStart, endDate: firstEnd)))
     )))
     await store.receive(\.inner) {
       var overview = ClassTicketFeature.State(instanceID: UUID(0))
@@ -1956,7 +1956,7 @@ struct ClassParticipantPushTests {
 
     await store.send(.router(.routeAction(
       id: 2,
-      action: .ticket(.delegate(.addRegistration))
+      action: .ticket(.delegate(.addRegistrationRequested))
     ))) {
       $0.routes.push(.ticket(.init(instanceID: UUID(1))))
       $0.ticketInstanceIDs = [originalID, UUID(0), UUID(1)]
@@ -1999,7 +1999,7 @@ struct ClassParticipantPushTests {
     }
     await store.send(.router(.routeAction(
       id: 3,
-      action: .ticket(.delegate(.showOverview(secondStart, secondEnd)))
+      action: .ticket(.delegate(.registrationConfirmed(startDate: secondStart, endDate: secondEnd)))
     )))
     #expect(store.state.routes.count == 4)
     await store.receive(\.inner) {

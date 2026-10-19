@@ -480,7 +480,7 @@ private extension ClassCoordinator {
       state.routes.push(.ticket(.init(instanceID: uuid())))
       return .none
 
-    case let .routeAction(routeID, action: .ticket(.delegate(.showOverview(startDate, endDate)))):
+    case let .routeAction(routeID, action: .ticket(.delegate(.registrationConfirmed(startDate: startDate, endDate: endDate)))):
       guard routeID == state.routes.count - 1,
             case let .ticket(completed)? = state.routes.last?.screen,
             completed.phase == .registered,
@@ -517,7 +517,7 @@ private extension ClassCoordinator {
       }
       return .none
 
-    case let .routeAction(routeID, action: .ticket(.delegate(.addRegistration))):
+    case let .routeAction(routeID, action: .ticket(.delegate(.addRegistrationRequested))):
       guard routeID == state.routes.count - 1,
             case let .ticket(overview)? = state.routes.last?.screen,
             overview.phase == .overview
