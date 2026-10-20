@@ -55,4 +55,6 @@ Figma 파일 `6Z49tKXvCCQDd7tyGtvtiI`의 최신 수정 시각은 2026-10-17 08:4
 
 댓글·답글 화면은 `Picke-TicketAudit`의 `CommentFinalDesignTests/testGlobalCommentAndReplyCapture`로 2026-10-21 iPhone 18 Pro iOS 27.0에서 다시 캡처했다. 결과 번들 `/private/tmp/picke-comment-reply-20261021-scroll-assertions-second.xcresult`에는 테스트 1개 통과·실패 0개·건너뜀 0개와 `reply-parent-top`, `reply-middle-row-menu`, `reply-last-row-menu`, `reply-parent-menu` PNG가 있다. 테스트는 중간·마지막 답글과 부모 댓글 메뉴를 각각 연 뒤 수동 스크롤 없이 수정·삭제가 화면에 보이는지 확인한다. 이미 보이는 중간 메뉴는 스크롤 위치가 그대로이고, 마지막 답글 메뉴는 목록 상단에서 열어 스크롤 위치가 내려가는 것도 단언한다. 부모 메뉴는 목록 아래쪽에서도 이미 보일 수 있어 불필요한 이동을 요구하지 않는다. 세 메뉴를 카드 아래 독립 영역에 두어 본문·좋아요·더보기와 겹치지 않는 것을 캡처로 확인했다. Figma `4351:5256`과 비교하면 답글 제목·A/B 배지·더보기·반응 수의 배치 방향은 맞지만, 콘텐츠와 프로필 이미지가 달라 카드 높이와 줄바꿈의 1:1 일치는 확인하지 못했다. Figma에는 열린 메뉴 상태도 없다. 시각 판정은 `.omx/state/comment-reply-20261019/ralph-progress.json`에 86점, `revise`로 기록했다.
 
+별도 `testParentMenuScrollsIntoViewFromBelowReplies`는 답글 12개로 부모 댓글을 화면 밖에 둔 뒤 메뉴를 열어 스크롤 위치가 위로 이동하고 `수정`·`삭제`가 보이는지 검증했다. `/private/tmp/picke-parent-menu-offscreen-20261021-escalated.xcresult`에서 테스트 1개가 통과했고 `reply-parent-menu-from-bottom` 캡처를 확인했다. 이 캡처는 긴 목록의 열린 메뉴 동작을 증명하며, 닫힌 상태의 Figma 시안과 동일 콘텐츠 비교를 대신하지 않는다.
+
 다음 수정 우선순위는 실제 앱 진입 화면의 상단 안전 영역과 동일 콘텐츠를 사용한 댓글·답글 캡처 확인이다. 완료 판정은 각각의 캡처와 Figma 확정 시안을 같은 크기로 대조한 뒤 내린다.

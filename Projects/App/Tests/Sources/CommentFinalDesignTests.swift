@@ -222,6 +222,59 @@ final class CommentFinalDesignTests: XCTestCase {
   }
 
   @MainActor
+  func testParentMenuScrollsIntoViewFromBelowReplies() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify the off-screen parent menu")
+    }
+
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: .mockJoinable)
+    let battleAPI: any BattleInterface = session
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    let createdPerspective = try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "화면 위쪽에 놓일 부모 의견입니다.",
+      optionId: 1
+    )
+    let perspective = try XCTUnwrap(createdPerspective)
+    let perspectiveAPI: any PerspectiveInterface = session
+    for index in 1 ... 12 {
+      _ = try await perspectiveAPI.createComment(
+        perspectiveId: perspective.perspectiveId,
+        content: "\(index)번째 답글입니다. 부모 의견 아래로 목록을 충분히 길게 만듭니다."
+      )
+    }
+
+    let store = Store(initialState: CommentReplyFeature.State(
+      perspectiveId: perspective.perspectiveId,
+      parentComment: CommentItem(item: perspective, order: 0)
+    )) {
+      CommentReplyFeature()
+        .dependency(\.perspectiveUseCase, session)
+        .dependency(\.commentUseCase, session)
+        .dependency(\.analyticsUseCase, .testValue)
+    }
+    let window = try makeWindow(rootView: CommentReplyView(store: store))
+    defer { window.isHidden = true }
+    try await waitFor("long reply list loaded") {
+      !store.isLoadingDetail && !store.isLoadingReplies && store.replies.count == 12
+    }
+
+    let scroll = try XCTUnwrap(verticalScrollView(in: window))
+    scrollToBottom(scroll)
+    let bottomOffset = scroll.contentOffset.y
+    XCTAssertGreaterThan(bottomOffset, 500, "The parent menu must begin outside the viewport")
+
+    store.send(.view(.parentMenu(.more)))
+    XCTAssertTrue(store.parentMenuOpen)
+    try await Task.sleep(for: .milliseconds(350))
+    XCTAssertLessThan(scroll.contentOffset.y, bottomOffset - 1)
+    let image = try await capture(window, name: "reply-parent-menu-from-bottom")
+    try assertMenuLabels(["수정", "삭제"], visibleIn: scroll, window: window, image: image)
+  }
+
+  @MainActor
   private func makeCommentStore(
     battleID: Int,
     session: ClassMockChatSession
