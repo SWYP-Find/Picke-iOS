@@ -17,6 +17,37 @@ import Testing
 @MainActor
 struct ClassCoordinatorTests {
   @Test
+  func 추천_배틀_미리듣기는_push로_열고_뒤로가면_추천_목록으로_돌아온다() async {
+    let battle = ClassBattleSummary.mocks[0]
+    var state = ClassCoordinator.State()
+    state.routes.push(.recommend(.init(filter: .init())))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .recommend(.delegate(.previewRequested(battle)))
+    )))
+    #expect(store.state.routes.count == 3)
+    guard case let .battlePreview(preview)? = store.state.routes.last?.screen else {
+      Issue.record("미리듣기 화면이 push되지 않았습니다.")
+      return
+    }
+    #expect(preview.battle.id == battle.id)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .battlePreview(.delegate(.dismiss))
+    )))
+    await store.receive(\.view.backAction)
+    #expect(store.state.routes.count == 2)
+    guard case .recommend? = store.state.routes.last?.screen else {
+      Issue.record("뒤로 가기 후 추천 목록이 복원되지 않았습니다.")
+      return
+    }
+  }
+
+  @Test
   func AI_투표_등장_이벤트는_현재_화면_인스턴스에만_전달한다() {
     let room = ClassRoom.mockClosedSociety
     let instanceID = UUID()

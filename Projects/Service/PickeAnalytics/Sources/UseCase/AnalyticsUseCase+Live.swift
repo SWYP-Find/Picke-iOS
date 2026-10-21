@@ -94,7 +94,11 @@ extension AnalyticsUseCase: DependencyKey {
 
     captureEventInSentry(
       name: name,
-      properties: properties
+      properties: properties,
+      isError: {
+        if case .classPreviewFailed = event { return true }
+        return false
+      }()
     )
 
     // 광고 클릭은 매출과 직결돼 별도 카운터 + 로그로 남긴다(로그는 검색/필터 대상).
@@ -112,10 +116,11 @@ extension AnalyticsUseCase: DependencyKey {
 
   private static func captureEventInSentry(
     name: String,
-    properties: Properties
+    properties: Properties,
+    isError: Bool
   ) {
     SentrySDK.capture(message: name) { scope in
-      scope.setLevel(.info)
+      scope.setLevel(isError ? .error : .info)
       scope.setTag(value: name, key: "analytics_event")
       scope.setContext(value: properties.mapValues { $0 as Any }, key: "analytics")
     }
@@ -157,6 +162,7 @@ extension AnalyticsUseCase: DependencyKey {
     case .uiAction: "ui_action"
     case .playbackAction: "playback_action"
     case .engagementAction: "engagement_action"
+    case .classPreviewFailed: "class_preview_failed"
     }
   }
 
@@ -260,6 +266,9 @@ extension AnalyticsUseCase: DependencyKey {
 
     case let .engagementAction(action, targetID):
       return ["action": action.rawValue, "target_id": targetID]
+
+    case let .classPreviewFailed(battleID, reason):
+      return ["content_id": String(battleID), "reason": reason]
     }
   }
 }

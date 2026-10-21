@@ -116,6 +116,8 @@ public struct MainTabCoordinator {
   }
 
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
+  @Dependency(\.battleUseCase) private var previewBattleUseCase
+  @Dependency(\.audioPlayer) private var previewAudioPlayer
   @Dependency(\.classMockChatSession) private var classMockChatSession
   @Dependency(\.classMockAudioPlayer) private var classMockAudioPlayer
 
@@ -131,6 +133,11 @@ public struct MainTabCoordinator {
     }
     Scope(state: \.classState, action: \.classroom) {
       ClassCoordinator()
+        .dependency(\.classBattlePreviewDependencies, .init(
+          battleUseCase: previewBattleUseCase,
+          audioPlayer: previewAudioPlayer,
+          analyticsUseCase: analyticsUseCase
+        ))
         .dependency(\.battleUseCase, classMockChatSession)
         .dependency(\.perspectiveUseCase, classMockChatSession)
         .dependency(\.commentUseCase, classMockChatSession)

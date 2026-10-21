@@ -15,14 +15,19 @@ struct ClassBattleListCard: View {
   let battle: ClassBattleSummary
   let isSelected: Bool
   let onPreview: () -> Void
+  let onSelect: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 18) {
+      VStack(alignment: .leading, spacing: 16) {
         metaRow()
         titleSection()
+          .contentShape(Rectangle())
+          .onTapGesture(perform: onSelect)
       }
       versusRow()
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onSelect)
     }
     .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -35,23 +40,28 @@ private extension ClassBattleListCard {
   @ViewBuilder
   func metaRow() -> some View {
     HStack(spacing: 10) {
-      Text("#\(battle.categoryDisplayTitle)")
-        .pickeBadge(.filled, size: .tag)
-
-      Spacer(minLength: 0)
-
       HStack(spacing: 2) {
+        Text("#\(battle.categoryDisplayTitle)")
+          .pickeBadge(.filled, size: .tag)
+
+        Spacer(minLength: 0)
+
         Image(systemName: "clock")
           .pretendardFont(.labelXSmall)
         Text("\(battle.durationMinutes)분")
           .pretendardFont(.labelSmall)
       }
-      .foregroundStyle(.gray300)
+      .contentShape(Rectangle())
+      .onTapGesture(perform: onSelect)
 
       previewButton
 
-      Image(systemName: "checkmark")
-        .pickeCheckbox(isChecked: isSelected)
+      Button(action: onSelect) {
+        Image(systemName: "checkmark")
+          .pickeCheckbox(isChecked: isSelected)
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(isSelected ? "배틀 선택 해제" : "배틀 선택")
     }
   }
 
@@ -66,8 +76,7 @@ private extension ClassBattleListCard {
       .foregroundStyle(.primary500)
     }
     .buttonStyle(.plain)
-    .disabled(true)
-    .accessibilityHint("미리듣기는 준비 중입니다")
+    .accessibilityLabel("\(battle.title) 미리듣기")
   }
 
   @ViewBuilder

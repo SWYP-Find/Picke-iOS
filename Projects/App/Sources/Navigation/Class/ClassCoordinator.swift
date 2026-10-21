@@ -634,6 +634,16 @@ private extension ClassCoordinator {
       state.routes.push(.setting(.init(battle: battle, instanceID: uuid())))
       return .none
 
+    case let .routeAction(routeID, action: .recommend(.delegate(.previewRequested(battle)))):
+      guard routeID == state.routes.count - 1,
+            case .recommend? = state.routes.last?.screen
+      else { return .none }
+      state.routes.push(.battlePreview(.init(battle: battle)))
+      return .none
+
+    case .routeAction(_, action: .battlePreview(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
     case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question, filter)))):
       state.routes.push(.setting(.init(aiQuestion: question, filter: filter, instanceID: uuid())))
       return .none
@@ -1229,6 +1239,7 @@ extension ClassCoordinator {
     case startMethod(ClassStartMethodFeature)
     case topic(ClassTopicFeature)
     case recommend(ClassRecommendFeature)
+    case battlePreview(ClassBattlePreviewFeature)
     case setting(ClassSettingFeature)
     case share(ClassShareFeature)
     case ownerName(ClassJoinFeature)

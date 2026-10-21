@@ -2136,7 +2136,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       XCTAssertTrue(initialText.contains("선택한조건"))
       XCTAssertEqual(store.conditionTitles.count, keyword.isEmpty ? 3 : 4)
       if !keyword.isEmpty {
-        XCTAssertTrue(initialText.contains("AI와인간사이의윤리와사상에대해서"))
+        XCTAssertEqual(store.conditionTitles.first, topic)
       }
 
       if mode == .aiQuestions {
@@ -2198,6 +2198,96 @@ final class ClassFlowVisualAuditTests: XCTestCase {
                     "Last card should be readable above CTA: \(bottomText)")
       try assertRecommendCTA(in: bottomImage, name: name + "-last-card")
     }
+  }
+
+  @MainActor
+  func testClassBattlePreviewReferenceCapture() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify preview layout")
+    }
+    let battle = ClassBattleSummary(
+      id: 901,
+      title: "인간은 본래 선한가, 악한가?",
+      summary: "",
+      philosopherA: "플라톤",
+      optionATitle: "선하다",
+      philosopherB: "사르트르",
+      optionBTitle: "악하다",
+      category: .philosophy,
+      level: .high,
+      audioDuration: 60,
+      viewCount: 0
+    )
+    var state = ClassBattlePreviewFeature.State(battle: battle)
+    state.isActive = true
+    state.isAudioReady = true
+    state.isPlaying = true
+    state.viewState = .loaded
+    state.currentTime = 13
+    state.scenario = BattleScenario(
+      battleId: battle.id,
+      title: battle.title,
+      philosophers: [
+        .init(label: "A", name: "플라톤", stance: "", imageUrl: ""),
+        .init(label: "B", name: "사르트르", stance: "", imageUrl: ""),
+      ],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [ScenarioNode(
+        nodeId: 1,
+        nodeName: "START",
+        audioDuration: 60,
+        autoNextNodeId: nil,
+        scripts: [
+          ScenarioScript(
+            scriptId: 1,
+            startTimeMs: 0,
+            speakerType: .a,
+            speakerName: "플라톤",
+            text: "이건 기만입니다. 하늘 아래 모든 사물은 그에 걸맞은 완벽한 목적과 형상, 즉 '이데아'를 가지고 있습니다."
+          ),
+          ScenarioScript(
+            scriptId: 2,
+            startTimeMs: 5000,
+            speakerType: .b,
+            speakerName: "사르트르",
+            text: "플라톤 선생님, 당신은 사물에 '영혼'이 미리 정해져 있다고 믿는군요. 하지만 사물은 그저 그곳에 존재할 뿐입니다."
+          ),
+          ScenarioScript(
+            scriptId: 3,
+            startTimeMs: 10000,
+            speakerType: .a,
+            speakerName: "플라톤",
+            text: "이건 기만입니다. 하늘 아래 모든 사물은 그에 걸맞은 완벽한 목적과 형상, 즉 '이데아'를 가지고 있습니다."
+          ),
+          ScenarioScript(
+            scriptId: 4,
+            startTimeMs: 12000,
+            speakerType: .b,
+            speakerName: "사르트르",
+            text: "플라톤 선생님, 당신은 사물에 '영혼'이 미리 정해져 있다고 믿는군요. 하지만 사물은 그저 그곳에 존재할 뿐입니다."
+          ),
+        ],
+        interactiveOptions: []
+      )]
+    )
+    let store = Store(initialState: state) {
+      ClassBattlePreviewFeature()
+        .dependency(\.classBattlePreviewDependencies.audioPlayer, DefaultAudioPlayerImpl())
+        .dependency(\.classBattlePreviewDependencies.analyticsUseCase, .testValue)
+    }
+    let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+    let window = UIWindow(windowScene: scene)
+    window.rootViewController = UIHostingController(rootView: ClassBattlePreviewView(store: store))
+    window.frame = CGRect(x: 0, y: 0, width: 375, height: 812)
+    window.makeKeyAndVisible()
+    defer { window.isHidden = true }
+    let image = try await saveClassAudit(window: window, name: "class-battle-preview-375")
+    XCTAssertEqual(image.size, CGSize(width: 375, height: 812))
+    let text = try recognizedAuditText(in: image, name: "class-battle-preview-375")
+    XCTAssertTrue(text.contains("1분미리듣기중"), "Preview badge missing from rendered capture: \(text)")
   }
 
   @MainActor

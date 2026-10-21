@@ -39,6 +39,8 @@ public enum AnalyticsEvent: Sendable {
   case uiAction(action: AnalyticsButton, screen: AnalyticsScreen)
   /// (Tier3, 선택) 재생 조작.
   case playbackAction(action: PlaybackAction, contentID: String)
+  /// 클래스 배틀 미리듣기의 시나리오/음원 준비 실패.
+  case classPreviewFailed(battleID: Int, reason: String)
   /// (Tier3, 선택) 미세 상호작용.
   case engagementAction(action: EngagementAction, targetID: String)
 }
