@@ -170,9 +170,9 @@ private extension ClassRecommendView {
           ClassBattleListCard(
             battle: battle,
             isSelected: store.selectedBattleId == battle.id,
-            onPreview: { send(.previewTapped(battle.id)) }
+            onPreview: { send(.previewTapped(battle.id)) },
+            onSelect: { send(.battleTapped(battle.id)) }
           )
-          .onTapGesture { send(.battleTapped(battle.id)) }
         }
       }
     }

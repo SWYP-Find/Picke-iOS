@@ -106,10 +106,13 @@ final class CommentFinalDesignTests: XCTestCase {
       optionId: 1
     )
     let perspective = try XCTUnwrap(createdPerspective)
+    let longReply = (1 ... 8).map {
+      "\($0)번째 근거를 비교하며 충분한 설명인지 다시 살펴봅니다."
+    }.joined(separator: "\n")
     let replyTexts = [
       "첫 번째 답글입니다. 부모 글에서 나온 주장에 동의합니다.",
-      "두 번째 답글은 다른 근거를 덧붙입니다. 충분한 설명이 있는지 살펴봐야 합니다.",
-      "세 번째 답글입니다. 의견을 비교한 뒤 다시 판단해 보고 싶어요.",
+      longReply,
+      "세 번째 답글입니다.",
     ]
     let perspectiveAPI: any PerspectiveInterface = session
     for text in replyTexts {
@@ -169,10 +172,25 @@ final class CommentFinalDesignTests: XCTestCase {
     replyStore.send(.binding(.set(\.replyText, "답글을 작성하고 있어요.")))
     XCTAssertTrue(replyStore.isSendEnabled)
     try await capture(replyWindow, name: "reply-draft")
+    let middleReply = replyStore.replies[1]
+    scrollToBottom(replyScroll)
+    let middleOffset = replyScroll.contentOffset.y
+    replyStore.send(.view(.replyMenu(id: middleReply.id, action: .more)))
+    XCTAssertEqual(replyStore.menuTargetReplyId, middleReply.id)
+    try await Task.sleep(for: .milliseconds(350))
+    XCTAssertEqual(replyScroll.contentOffset.y, middleOffset, accuracy: 1)
+    let middleMenuImage = try await capture(replyWindow, name: "reply-middle-row-menu")
+    try assertMenuLabels(["수정", "삭제"], visibleIn: replyScroll, window: replyWindow, image: middleMenuImage)
+    replyStore.send(.view(.replyMenu(id: middleReply.id, action: .more)))
     let lastReply = try XCTUnwrap(replyStore.replies.last)
+    scrollToTop(replyScroll)
+    XCTAssertGreaterThan(replyScroll.contentSize.height, replyScroll.bounds.height)
+    let topOffset = -replyScroll.adjustedContentInset.top
+    XCTAssertEqual(replyScroll.contentOffset.y, topOffset, accuracy: 1)
     replyStore.send(.view(.replyMenu(id: lastReply.id, action: .more)))
     XCTAssertEqual(replyStore.menuTargetReplyId, lastReply.id)
-    scrollToBottom(replyScroll)
+    try await Task.sleep(for: .milliseconds(350))
+    XCTAssertGreaterThan(replyScroll.contentOffset.y, topOffset + 1)
     let replyMenuImage = try await capture(replyWindow, name: "reply-last-row-menu")
     try assertMenuLabels(["수정", "삭제"], visibleIn: replyScroll, window: replyWindow, image: replyMenuImage)
     replyStore.send(.view(.replyMenu(id: lastReply.id, action: .edit)))
@@ -181,13 +199,16 @@ final class CommentFinalDesignTests: XCTestCase {
     try await waitFor("reply edit focus") { hasFocusedInput(in: replyWindow) }
     try await capture(replyWindow, name: "reply-edit")
 
+    replyWindow.endEditing(true)
+    try await waitFor("reply focus released before parent menu") { !hasFocusedInput(in: replyWindow) }
+    scrollToBottom(replyScroll)
+    let parentBottomOffset = replyScroll.contentOffset.y
+    XCTAssertGreaterThan(parentBottomOffset, topOffset + 1)
     replyStore.send(.view(.parentMenu(.more)))
     XCTAssertTrue(replyStore.parentMenuOpen)
-    scrollToTop(replyScroll)
+    try await Task.sleep(for: .milliseconds(350))
     let parentMenuImage = try await capture(replyWindow, name: "reply-parent-menu")
     try assertMenuLabels(["수정", "삭제"], visibleIn: replyScroll, window: replyWindow, image: parentMenuImage)
-    replyWindow.endEditing(true)
-    try await waitFor("reply focus released before parent edit") { !hasFocusedInput(in: replyWindow) }
     replyStore.send(.view(.parentMenu(.edit)))
     try await waitFor("parent edit focus") { hasFocusedInput(in: replyWindow) }
     XCTAssertTrue(replyStore.editingParent)
@@ -198,6 +219,59 @@ final class CommentFinalDesignTests: XCTestCase {
     replyStore.send(.view(.replyMenu(id: lastReply.id, action: .edit)))
     try await waitFor("reply focus after parent edit") { hasFocusedInput(in: replyWindow) }
     XCTAssertFalse(replyStore.editingParent)
+  }
+
+  @MainActor
+  func testParentMenuScrollsIntoViewFromBelowReplies() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify the off-screen parent menu")
+    }
+
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: .mockJoinable)
+    let battleAPI: any BattleInterface = session
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    let createdPerspective = try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "화면 위쪽에 놓일 부모 의견입니다.",
+      optionId: 1
+    )
+    let perspective = try XCTUnwrap(createdPerspective)
+    let perspectiveAPI: any PerspectiveInterface = session
+    for index in 1 ... 12 {
+      _ = try await perspectiveAPI.createComment(
+        perspectiveId: perspective.perspectiveId,
+        content: "\(index)번째 답글입니다. 부모 의견 아래로 목록을 충분히 길게 만듭니다."
+      )
+    }
+
+    let store = Store(initialState: CommentReplyFeature.State(
+      perspectiveId: perspective.perspectiveId,
+      parentComment: CommentItem(item: perspective, order: 0)
+    )) {
+      CommentReplyFeature()
+        .dependency(\.perspectiveUseCase, session)
+        .dependency(\.commentUseCase, session)
+        .dependency(\.analyticsUseCase, .testValue)
+    }
+    let window = try makeWindow(rootView: CommentReplyView(store: store))
+    defer { window.isHidden = true }
+    try await waitFor("long reply list loaded") {
+      !store.isLoadingDetail && !store.isLoadingReplies && store.replies.count == 12
+    }
+
+    let scroll = try XCTUnwrap(verticalScrollView(in: window))
+    scrollToBottom(scroll)
+    let bottomOffset = scroll.contentOffset.y
+    XCTAssertGreaterThan(bottomOffset, 500, "The parent menu must begin outside the viewport")
+
+    store.send(.view(.parentMenu(.more)))
+    XCTAssertTrue(store.parentMenuOpen)
+    try await Task.sleep(for: .milliseconds(350))
+    XCTAssertLessThan(scroll.contentOffset.y, bottomOffset - 1)
+    let image = try await capture(window, name: "reply-parent-menu-from-bottom")
+    try assertMenuLabels(["수정", "삭제"], visibleIn: scroll, window: window, image: image)
   }
 
   @MainActor
@@ -334,22 +408,38 @@ final class CommentFinalDesignTests: XCTestCase {
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = .accurate
     request.recognitionLanguages = ["ko-KR", "en-US"]
+    request.usesLanguageCorrection = false
     // Read the trailing menu separately so text behind the overlay cannot merge
     // with its short labels during line recognition.
     let menuRegion = CGRect(x: 0.76, y: 0, width: 0.24, height: 1)
     request.regionOfInterest = menuRegion
     try VNImageRequestHandler(cgImage: XCTUnwrap(image.cgImage)).perform([request])
     let viewport = scroll.convert(scroll.bounds, to: window).intersection(window.bounds)
+    var observedBounds: [CGRect] = []
     for label in labels {
-      let observation = try XCTUnwrap((request.results ?? []).first {
-        $0.topCandidates(1).first?.string.contains(label) == true
-      }, "Last-row menu label \(label) must appear in rendered pixels")
+      let observation = (request.results ?? []).first(where: {
+        $0.topCandidates(5).contains {
+          $0.string.replacingOccurrences(of: " ", with: "").contains(label)
+        }
+      })
+      XCTAssertNotNil(observation, "Menu label \(label) must be readable in the capture")
+      guard let observation else { continue }
       let bounds = observation.boundingBox
-      let center = CGPoint(
-        x: (menuRegion.minX + bounds.midX * menuRegion.width) * window.bounds.width,
-        y: (1 - (menuRegion.minY + bounds.midY * menuRegion.height)) * window.bounds.height
+      let labelFrame = CGRect(
+        x: (menuRegion.minX + bounds.minX * menuRegion.width) * window.bounds.width,
+        y: (1 - (menuRegion.minY + bounds.maxY * menuRegion.height)) * window.bounds.height,
+        width: bounds.width * menuRegion.width * window.bounds.width,
+        height: bounds.height * menuRegion.height * window.bounds.height
       )
-      XCTAssertTrue(viewport.contains(center), "Menu label \(label) is outside the visible comment list")
+      XCTAssertTrue(viewport.contains(labelFrame), "Menu label \(label) is outside the visible comment list")
+      observedBounds.append(labelFrame)
+    }
+    if observedBounds.count == labels.count {
+      XCTAssertEqual(
+        Set(observedBounds.map { $0.midY.rounded() }).count,
+        labels.count,
+        "Menu labels must occupy separate visible buttons"
+      )
     }
   }
 

@@ -98,6 +98,19 @@ struct ClassRecommendTests {
   }
 
   @Test
+  func 미리듣기는_배틀_선택을_바꾸지_않고_선택한_배틀을_전달한다() async {
+    let battle = ClassBattleSummary.mocks[0]
+    var state = ClassRecommendFeature.State(filter: .init())
+    state.battles = [battle]
+    state.viewState = .loaded
+    let store = TestStore(initialState: state) { ClassRecommendFeature() }
+
+    await store.send(.view(.previewTapped(battle.id)))
+    await store.receive(\.delegate.previewRequested, battle)
+    #expect(store.state.selectedBattleId == nil)
+  }
+
+  @Test
   func 선택한_배틀을_다시_누르면_선택이_해제된다() async {
     var state = ClassRecommendFeature.State(filter: .init())
     state.battles = ClassBattleSummary.mocks

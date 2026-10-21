@@ -16,7 +16,9 @@ let project = Project.makeModule(
   bundleId: .appBundleID(name: ".ClassDomain"),
   product: .framework,
   settings: .settings(),
-  dependencies: [],
+  dependencies: [
+    .serviceAssembly,
+  ],
   hasTests: true,
   hasInterface: true,
   interfaceDependencies: [

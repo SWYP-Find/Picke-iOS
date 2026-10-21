@@ -16,6 +16,43 @@ import Testing
 @MainActor
 struct MainTabCoordinatorTests {
   @Test
+  func 클래스_미리듣기는_상위_분석_의존성을_사용한다() async {
+    let tracked = LockIsolated(false)
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    var preview = ClassBattlePreviewFeature.State(battle: .mocks[0])
+    preview.scenario = BattleScenario(
+      battleId: preview.battle.id,
+      title: "미리 듣기",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: []
+    )
+    state.classState.routes.push(.battlePreview(preview))
+    var activePreview = preview
+    activePreview.isActive = true
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { event in
+        guard case .screenView(screen: .classBattlePreview, referrer: .classRecommend) = event else { return }
+        tracked.setValue(true)
+      }
+    }
+
+    await store.send(.classroom(.router(.routeAction(
+      id: 1,
+      action: .battlePreview(.view(.onAppear))
+    )))) {
+      $0.classState.routes[1].screen = .battlePreview(activePreview)
+    }
+    #expect(tracked.value)
+    await store.finish()
+  }
+
+  @Test
   func 탭_변경은_한번만_기록하고_재선택과_잘못된_탭은_기록하지_않는다() async {
     let events = LockIsolated<[AnalyticsButton]>([])
     let store = TestStore(initialState: MainTabCoordinator.State()) {

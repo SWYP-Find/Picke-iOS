@@ -28,4 +28,6 @@ public enum AnalyticsScreen: String, Sendable {
   case withdraw
   case recap
   case mainTab = "main_tab"
+  case classRecommend = "class_recommend"
+  case classBattlePreview = "class_battle_preview"
 }

@@ -28,7 +28,10 @@ extension ClassAIFeedbackUseCaseDependency: DependencyKey {
 
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
-    ClassMockRepositoryStorage.shared
+    ClassLiveRepository(
+      mock: ClassMockRepositoryStorage.shared,
+      recommendations: ClassRepositoryImpl()
+    )
   }
 }
 

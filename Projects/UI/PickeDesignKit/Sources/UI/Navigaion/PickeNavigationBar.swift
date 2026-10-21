@@ -8,23 +8,27 @@
 import SwiftUI
 
 /// 화면 상단에 공통으로 올라가는 네비게이션 바.
-/// 타이틀은 좌우 콘텐츠 폭과 무관하게 바 전체 기준 절대 중앙에 놓인다(안드로이드 `CustomTopAppBar` 동일).
+/// 기본 타이틀은 바 전체 기준 중앙에 놓이고, `leadingTitle`은 뒤로가기 버튼 옆에 놓인다.
+/// 두 타이틀을 함께 전달하면 `leadingTitle`이 우선한다.
 /// 색상은 호출처에서 `.foregroundStyle(.beige50)` 같은 modifier 로 위임.
 public struct PickeNavigationBar<Trailing: View>: View {
   private let onBack: (() -> Void)?
   private let centerIcon: Image?
   private let centerTitle: String?
+  private let leadingTitle: String?
   private let trailing: () -> Trailing
 
   public init(
     onBack: (() -> Void)? = nil,
     centerIcon: Image? = nil,
     centerTitle: String? = nil,
+    leadingTitle: String? = nil,
     @ViewBuilder trailing: @escaping () -> Trailing
   ) {
     self.onBack = onBack
     self.centerIcon = centerIcon
     self.centerTitle = centerTitle
+    self.leadingTitle = leadingTitle
     self.trailing = trailing
   }
 
@@ -34,6 +38,12 @@ public struct PickeNavigationBar<Trailing: View>: View {
 
       HStack(spacing: 4) {
         leadingArea
+        if let leadingTitle {
+          Text(leadingTitle)
+            .pretendardFont(.headingMedium)
+            .kerning(-0.4)
+            .lineLimit(1)
+        }
         Spacer()
         trailing()
       }
@@ -66,7 +76,7 @@ public struct PickeNavigationBar<Trailing: View>: View {
 
   @ViewBuilder
   private var centerArea: some View {
-    if let centerTitle {
+    if leadingTitle == nil, let centerTitle {
       Text(centerTitle)
         .pretendardFont(.headingMedium)
         .kerning(-0.4)
@@ -84,8 +94,14 @@ public extension PickeNavigationBar where Trailing == EmptyView {
   init(
     onBack: (() -> Void)? = nil,
     centerIcon: Image? = nil,
-    centerTitle: String? = nil
+    centerTitle: String? = nil,
+    leadingTitle: String? = nil
   ) {
-    self.init(onBack: onBack, centerIcon: centerIcon, centerTitle: centerTitle) { EmptyView() }
+    self.init(
+      onBack: onBack,
+      centerIcon: centerIcon,
+      centerTitle: centerTitle,
+      leadingTitle: leadingTitle
+    ) { EmptyView() }
   }
 }

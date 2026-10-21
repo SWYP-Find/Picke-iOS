@@ -88,6 +88,18 @@ private extension CommentReplyView {
       .onChange(of: store.replies.count) { _, _ in
         scrollToTargetReply(using: proxy)
       }
+      .onChange(of: store.menuTargetReplyId) { _, id in
+        guard let id else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+          proxy.scrollTo("reply-menu-\(id)", anchor: nil)
+        }
+      }
+      .onChange(of: store.parentMenuOpen) { _, isOpen in
+        guard isOpen else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+          proxy.scrollTo("parent-menu", anchor: nil)
+        }
+      }
     }
   }
 
@@ -136,7 +148,7 @@ private extension CommentReplyView {
   func navigationBar() -> some View {
     PickeNavigationBar(
       onBack: { send(.backButtonTapped) },
-      centerTitle: "댓글"
+      leadingTitle: "댓글"
     )
     .foregroundStyle(.gray500)
     // Figma: 앱바는 beige200 위에 투명 배치, 하단 구분선 없음
@@ -150,30 +162,32 @@ private extension CommentReplyView {
   @ViewBuilder
   func parentCommentSection() -> some View {
     // Figma: 원본 댓글은 beige50 풀폭 행, 상·하단 구분선(beige600)
-    commentCard(
-      author: store.parentComment.isMine ? "나" : store.parentComment.author,
-      imageURL: store.parentComment.authorImageURL,
-      timeAgo: store.parentComment.timeAgo,
-      option: store.parentComment.option,
-      optionLabel: store.parentComment.optionLabel ?? "",
-      content: store.parentComment.content,
-      replyCount: store.parentComment.replyCount,
-      likeCount: store.parentComment.likeCount,
-      isLiked: store.parentComment.isLiked,
-      showsReplyCount: true,
-      moreAction: { send(.parentMenu(.more)) },
-      likeAction: { send(.parentLikeTapped) }
-    )
-    .topDivider(.beige600)
-    .overlay(alignment: .bottomTrailing) {
+    VStack(spacing: 0) {
+      commentCard(
+        author: store.parentComment.isMine ? "나" : store.parentComment.author,
+        imageURL: store.parentComment.authorImageURL,
+        timeAgo: store.parentComment.timeAgo,
+        option: store.parentComment.option,
+        content: store.parentComment.content,
+        replyCount: store.parentComment.replyCount,
+        likeCount: store.parentComment.likeCount,
+        isLiked: store.parentComment.isLiked,
+        showsReplyCount: true,
+        moreAction: { send(.parentMenu(.more)) },
+        likeAction: { send(.parentLikeTapped) }
+      )
+      .topDivider(.beige600)
+
       if store.parentMenuOpen {
         parentMenuView()
           .padding(.trailing, 16)
-          .padding(.bottom, 28)
-          .zIndex(1)
+          .padding(.vertical, 12)
+          .frame(maxWidth: .infinity, alignment: .trailing)
+          .background(.beige50)
+          .bottomDivider(.beige600)
+          .id("parent-menu")
       }
     }
-    .zIndex(store.parentMenuOpen ? 1 : 0)
   }
 
   @ViewBuilder
@@ -193,29 +207,32 @@ private extension CommentReplyView {
   func replySection() -> some View {
     VStack(alignment: .leading, spacing: 0) {
       ForEach(store.replies) { reply in
-        commentCard(
-          author: reply.isMine ? "나" : reply.author,
-          imageURL: reply.authorImageURL,
-          timeAgo: reply.timeAgo,
-          option: reply.option,
-          optionLabel: store.parentComment.optionLabel ?? "",
-          content: reply.content,
-          replyCount: nil,
-          likeCount: reply.likeCount,
-          isLiked: reply.isLiked,
-          showsReplyCount: false,
-          moreAction: { send(.replyMenu(id: reply.id, action: .more)) },
-          likeAction: { send(.replyLikeTapped(reply.id)) }
-        )
-        .overlay(alignment: .bottomTrailing) {
+        VStack(spacing: 0) {
+          commentCard(
+            author: reply.isMine ? "나" : reply.author,
+            imageURL: reply.authorImageURL,
+            timeAgo: reply.timeAgo,
+            option: reply.option,
+            content: reply.content,
+            replyCount: nil,
+            likeCount: reply.likeCount,
+            isLiked: reply.isLiked,
+            showsReplyCount: false,
+            moreAction: { send(.replyMenu(id: reply.id, action: .more)) },
+            likeAction: { send(.replyLikeTapped(reply.id)) }
+          )
+
           if store.menuTargetReplyId == reply.id {
             replyMenu(for: reply)
               .padding(.trailing, 16)
-              .padding(.bottom, 28)
-              .zIndex(1)
+              .padding(.vertical, 12)
+              .frame(maxWidth: .infinity, alignment: .trailing)
+              .background(.beige50)
+              .bottomDivider(.beige600)
+              .id("reply-menu-\(reply.id)")
           }
         }
-        .zIndex(store.menuTargetReplyId == reply.id ? 1 : 0)
+        .id(reply.id)
       }
     }
   }
@@ -226,7 +243,6 @@ private extension CommentReplyView {
     imageURL: String?,
     timeAgo: String,
     option: CommentOption,
-    optionLabel: String,
     content: String,
     replyCount: Int?,
     likeCount: Int,
@@ -242,7 +258,7 @@ private extension CommentReplyView {
         imageURL: imageURL,
         timeAgo: timeAgo,
         option: option,
-        optionLabel: optionLabel
+        moreAction: moreAction
       )
 
       Text(content)
@@ -253,6 +269,12 @@ private extension CommentReplyView {
         .padding(.horizontal, 2)
 
       HStack(spacing: 11) {
+        Spacer()
+
+        if showsReplyCount, let replyCount {
+          actionLabel(systemName: "message", text: "\(replyCount)")
+        }
+
         Button(action: likeAction) {
           HStack(spacing: 2) {
             Image(asset: .heartPlus)
@@ -265,24 +287,6 @@ private extension CommentReplyView {
           .foregroundStyle(isLiked ? .primary500 : .gray300)
         }
         .buttonStyle(.plain)
-
-        if showsReplyCount, let replyCount {
-          actionLabel(systemName: "message", text: "\(replyCount)")
-        }
-
-        Spacer()
-
-        if let moreAction {
-          Button(action: moreAction) {
-            Image(systemName: "ellipsis")
-              .pretendardFont(family: .Regular, size: 18)
-              .foregroundStyle(.gray300)
-              .frame(width: 24, height: 24)
-              .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-          .accessibilityLabel("더보기")
-        }
       }
       .foregroundStyle(.gray300)
     }
@@ -299,7 +303,7 @@ private extension CommentReplyView {
     imageURL: String?,
     timeAgo: String,
     option: CommentOption,
-    optionLabel: String
+    moreAction: (() -> Void)?
   ) -> some View {
     HStack(spacing: 8) {
       PickeAvatarView(
@@ -308,11 +312,15 @@ private extension CommentReplyView {
         size: 36
       )
 
-      VStack(alignment: .leading, spacing: 0) {
-        Text(author)
-          .pretendardFont(.semiBold12)
-          .foregroundStyle(.gray500)
-          .lineLimit(1)
+      VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
+          Text(author)
+            .pretendardFont(.semiBold12)
+            .foregroundStyle(.gray500)
+            .lineLimit(1)
+
+          optionBadge(label: option.label, option: option)
+        }
 
         // 시간 — caption/sm/semibold Pretendard SemiBold 10, gray300
         Text(timeAgo)
@@ -322,7 +330,17 @@ private extension CommentReplyView {
 
       Spacer()
 
-      optionBadge(label: optionLabel, option: option)
+      if let moreAction {
+        Button(action: moreAction) {
+          Image(systemName: "ellipsis")
+            .pretendardFont(family: .Regular, size: 18)
+            .foregroundStyle(.gray300)
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("더보기")
+      }
     }
   }
 

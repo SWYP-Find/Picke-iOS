@@ -117,6 +117,7 @@ public struct ClassRecommendFeature {
     case dismiss
     case select(ClassBattleSummary)
     case selectAIQuestion(ClassAIQuestion, ClassTopicFilter)
+    case previewRequested(ClassBattleSummary)
   }
 
   nonisolated enum CancelID: Hashable {
@@ -186,8 +187,11 @@ extension ClassRecommendFeature {
       state.viewState = state.questions.isEmpty ? .empty : .loaded
       return .none
 
-    case .previewTapped:
-      return .none
+    case let .previewTapped(id):
+      guard state.mode == .existingContent,
+            let battle = state.battles.first(where: { $0.id == id })
+      else { return .none }
+      return .send(.delegate(.previewRequested(battle)))
 
     case .selectTapped:
       if state.mode == .aiQuestions {
