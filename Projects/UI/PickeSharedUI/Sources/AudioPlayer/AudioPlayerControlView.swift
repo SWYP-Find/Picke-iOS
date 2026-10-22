@@ -20,6 +20,7 @@ public struct AudioPlayerControlView: View {
   /// 화면에서 사용하는 오디오 컨트롤 색상.
   private let tint: Color
   private let playbackRateTitle: String
+  private let captionVerticalOffset: CGFloat
   private let onPlaybackRateSelected: (Float) -> Void
 
   public init(
@@ -31,6 +32,7 @@ public struct AudioPlayerControlView: View {
     isReplayEnabled: Bool,
     tint: Color,
     playbackRateTitle: String,
+    captionVerticalOffset: CGFloat = 0,
     onPlaybackRateSelected: @escaping (Float) -> Void
   ) {
     _isPlaying = isPlaying
@@ -41,6 +43,7 @@ public struct AudioPlayerControlView: View {
     self.isReplayEnabled = isReplayEnabled
     self.tint = tint
     self.playbackRateTitle = playbackRateTitle
+    self.captionVerticalOffset = captionVerticalOffset
     self.onPlaybackRateSelected = onPlaybackRateSelected
   }
 
@@ -77,6 +80,7 @@ extension AudioPlayerControlView {
         Text("배속")
           .pretendardFont(.medium11)
           .foregroundStyle(.neutral300)
+          .offset(y: captionVerticalOffset)
       }
       .contentShape(Rectangle())
     }
@@ -164,6 +168,7 @@ extension AudioPlayerControlView {
         .pretendardFont(.medium11)
         .foregroundStyle(.neutral300)
         .opacity(caption == nil ? 0 : 1)
+        .offset(y: captionVerticalOffset)
     }
   }
 }

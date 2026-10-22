@@ -26,6 +26,9 @@ public struct ClassBattlePreviewView: View {
       conversation()
       playerBar()
     }
+    .padding(.top, 8)
+    .padding(.bottom, 9)
+    .ignoresSafeArea(.container, edges: .bottom)
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
@@ -51,7 +54,7 @@ private extension ClassBattlePreviewView {
       .background(.beige500, in: Capsule())
       .frame(maxWidth: .infinity)
       .padding(.top, 4)
-      .padding(.bottom, 20)
+      .padding(.bottom, 22)
   }
 
   @ViewBuilder
@@ -71,7 +74,7 @@ private extension ClassBattlePreviewView {
     case .loaded:
       ScrollViewReader { proxy in
         ScrollView {
-          LazyVStack(spacing: 22) {
+          LazyVStack(spacing: 20) {
             ForEach(store.previewScripts) { script in
               scriptRow(script)
                 .id(script.id)
@@ -109,14 +112,12 @@ private extension ClassBattlePreviewView {
     let speaker = store.withState { $0.speaker(for: script) }
     switch speaker.side {
     case .left:
-      HStack(alignment: .top, spacing: 8) {
+      HStack(alignment: .top, spacing: 10) {
         avatar(speaker)
         scriptContent(script, speaker: speaker)
-        Spacer(minLength: 0)
       }
     case .right:
-      HStack(alignment: .top, spacing: 8) {
-        Spacer(minLength: 0)
+      HStack(alignment: .top, spacing: 10) {
         scriptContent(script, speaker: speaker)
         avatar(speaker)
       }
@@ -130,7 +131,7 @@ private extension ClassBattlePreviewView {
     _ script: ScenarioScript,
     speaker: ChatSpeaker
   ) -> some View {
-    VStack(alignment: speaker.side == .right ? .trailing : .leading, spacing: 6) {
+    VStack(alignment: speaker.side == .right ? .trailing : .leading, spacing: 9) {
       Text(speaker.name)
         .pretendardFont(.headingSmall)
         .foregroundStyle(.neutral900)
@@ -176,7 +177,7 @@ private extension ClassBattlePreviewView {
 
   @ViewBuilder
   func playerBar() -> some View {
-    VStack(spacing: 12) {
+    VStack(spacing: 2) {
       progressBar()
       AudioPlayerControlView(
         isPlaying: .constant(store.isPlaying),
@@ -187,12 +188,13 @@ private extension ClassBattlePreviewView {
         isReplayEnabled: store.isAudioReady,
         tint: .neutral900,
         playbackRateTitle: store.playbackRateTitle,
+        captionVerticalOffset: -8,
         onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
       )
       .disabled(!store.isAudioReady)
     }
     .padding(.horizontal, 24)
-    .padding(.top, 14)
+    .padding(.top, 24)
     .padding(.bottom, 8)
     .background(.white)
   }
