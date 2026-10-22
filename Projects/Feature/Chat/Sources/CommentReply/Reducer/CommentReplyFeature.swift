@@ -56,7 +56,12 @@ public struct CommentReplyFeature {
     }
 
     public var isSendEnabled: Bool {
-      !replyText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      let text = replyText.trimmingCharacters(in: .whitespacesAndNewlines)
+      return !text.isEmpty && (replyCharacterLimit.map { replyText.count <= $0 } ?? true)
+    }
+
+    public var replyCharacterLimit: Int? {
+      editingParent ? nil : 200
     }
 
     public init(
@@ -275,7 +280,7 @@ extension CommentReplyFeature {
 
     case .sendTapped:
       let text = state.replyText.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !text.isEmpty else { return .none }
+      guard state.isSendEnabled else { return .none }
       state.replyText = ""
       if state.editingParent {
         state.editingParent = false
@@ -288,11 +293,13 @@ extension CommentReplyFeature {
       return .send(.async(.createReply(content: text)))
 
     case let .beginEditing(commentId, content):
+      state.editingParent = false
       state.editingCommentId = commentId
       state.replyText = content
       return .none
 
     case .cancelEditing:
+      state.editingParent = false
       state.editingCommentId = nil
       state.replyText = ""
       return .none
@@ -314,6 +321,7 @@ extension CommentReplyFeature {
         guard let reply = state.replies.first(where: { $0.id == id }),
               let commentId = reply.commentId
         else { return .none }
+        state.editingParent = false
         state.editingCommentId = commentId
         state.replyText = reply.content
         return .none

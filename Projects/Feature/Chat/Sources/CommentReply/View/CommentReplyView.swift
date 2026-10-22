@@ -110,7 +110,6 @@ private extension CommentReplyView {
       if reply.isMine {
         PickeActionPill(title: "수정", systemImage: "pencil") {
           guard reply.commentId != nil else { return }
-          store.editingParent = false
           send(.replyMenu(id: reply.id, action: .edit))
           isReplyFocused = true
         }
@@ -379,9 +378,9 @@ private extension CommentReplyView {
     PickeCommentInputBar(
       text: $store.replyText,
       focus: $isReplyFocused,
-      placeholder: "내용을 입력하세요",
+      placeholder: "자유롭게 의견을 써주세요.",
       isSendEnabled: store.isSendEnabled,
-      isCompact: true,
+      characterLimit: store.replyCharacterLimit,
       onSend: {
         isReplyFocused = false
         send(.sendTapped)

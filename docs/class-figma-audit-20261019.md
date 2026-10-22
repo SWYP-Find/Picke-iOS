@@ -8,7 +8,7 @@ Figma 파일 `6Z49tKXvCCQDd7tyGtvtiI`의 최신 수정 시각은 2026-10-17 08:4
 | `13244:49148` | 이용권 등록완료 | `ClassTicketView`의 등록 상태. 402pt 캡처에서 카드와 버튼 위치가 대체로 맞는다. 안내 문구는 Mock 제한을 표시하므로 시안과 다르다. |
 | `13244:49243` | 이용권 확인하기 | `ClassTicketView`의 확인 상태를 코디네이터 push로 연결했다. 402pt 캡처의 카드·행·버튼은 시안과 가깝고 제목을 16pt로 조정했다. Mock 안내 문구와 클래스 탭 선택은 실제 진입 계약상 다르다. |
 | `8661:8290` | 댓글창 확정본 | 2026-10-21 Chat 댓글 캡처를 다시 대조했다. 주요 구성은 유사하지만 테스트 콘텐츠·프로필 이미지와 상태 표시줄이 달라 완전 일치는 미확인이다. 댓글·답글 API는 변경하지 않았다. |
-| `4351:5256` | 대댓글 상세 확정본 | 2026-10-21 캡처의 카드 구조·메뉴 가시성을 확인했다. 동일 콘텐츠 대조가 불가능해 시각 판정은 86점, `revise`다. |
+| `4351:5256` | 대댓글 상세 확정본 | 2026-10-21 재캡처에서 카드 구조·메뉴 가시성과 128pt 입력창·안내 문구·글자 수 표시를 확인했다. 동일 콘텐츠 대조가 불가능해 시각 판정은 88점, `revise`다. |
 | `3928:5099` | 대댓글(이전 링크) | 최신 Figma 파일에서 노드가 조회되지 않는다. 현재 이름이 같은 프레임은 `4351:5256`이며, 클래스 흐름에는 `12799:48394` 대댓글 상세 프레임이 있다. |
 | `12772:36346` | 마감일 수정 바텀시트 | 2026-10-19 iPhone 18 Pro 시뮬레이터 캡처에서 시트 높이 334pt, 핸들·휠 선택행·활성 버튼의 위치를 402pt Figma 시안과 대조했다. 배치가 거의 일치한다. |
 
@@ -56,5 +56,11 @@ Figma 파일 `6Z49tKXvCCQDd7tyGtvtiI`의 최신 수정 시각은 2026-10-17 08:4
 댓글·답글 화면은 `Picke-TicketAudit`의 `CommentFinalDesignTests/testGlobalCommentAndReplyCapture`로 2026-10-21 iPhone 18 Pro iOS 27.0에서 다시 캡처했다. 결과 번들 `/private/tmp/picke-comment-reply-20261021-scroll-assertions-second.xcresult`에는 테스트 1개 통과·실패 0개·건너뜀 0개와 `reply-parent-top`, `reply-middle-row-menu`, `reply-last-row-menu`, `reply-parent-menu` PNG가 있다. 테스트는 중간·마지막 답글과 부모 댓글 메뉴를 각각 연 뒤 수동 스크롤 없이 수정·삭제가 화면에 보이는지 확인한다. 이미 보이는 중간 메뉴는 스크롤 위치가 그대로이고, 마지막 답글 메뉴는 목록 상단에서 열어 스크롤 위치가 내려가는 것도 단언한다. 부모 메뉴는 목록 아래쪽에서도 이미 보일 수 있어 불필요한 이동을 요구하지 않는다. 세 메뉴를 카드 아래 독립 영역에 두어 본문·좋아요·더보기와 겹치지 않는 것을 캡처로 확인했다. Figma `4351:5256`과 비교하면 답글 제목·A/B 배지·더보기·반응 수의 배치 방향은 맞지만, 콘텐츠와 프로필 이미지가 달라 카드 높이와 줄바꿈의 1:1 일치는 확인하지 못했다. Figma에는 열린 메뉴 상태도 없다. 시각 판정은 `.omx/state/comment-reply-20261019/ralph-progress.json`에 86점, `revise`로 기록했다.
 
 별도 `testParentMenuScrollsIntoViewFromBelowReplies`는 답글 12개로 부모 댓글을 화면 밖에 둔 뒤 메뉴를 열어 스크롤 위치가 위로 이동하고 `수정`·`삭제`가 보이는지 검증했다. `/private/tmp/picke-parent-menu-offscreen-20261021-escalated.xcresult`에서 테스트 1개가 통과했고 `reply-parent-menu-from-bottom` 캡처를 확인했다. 이 캡처는 긴 목록의 열린 메뉴 동작을 증명하며, 닫힌 상태의 Figma 시안과 동일 콘텐츠 비교를 대신하지 않는다.
+
+대댓글 입력창은 Figma `4351:5256`의 확장형 높이·안내 문구·`200/200` 글자 수 표시를 반영했다. `/private/tmp/picke-comment-reply-expanded-20261021.xcresult`의 `testGlobalCommentAndReplyCapture` 1개가 통과했고 `reply-parent-top`을 확인했다. 현재 캡처는 테스트 데이터가 Figma와 달라 전체 화면의 1:1 일치는 입증하지 못한다. 동일 문구 캡처 실험은 모델 전체 바인딩의 `Sendable` 컴파일 오류, 이후 비동기 로드가 테스트 데이터를 덮어쓴 문제로 두 번 실패해 실험 코드를 제거했다. 시각 판정은 `.omx/state/comment-reply-20261019/ralph-progress.json`에 88점, `revise`로 기록했다.
+
+교차 검토에서 지적된 200자 초과 전송과 긴 글의 입력창 넘침을 보완했다. `CommentReplyFeature.State.isSendEnabled`와 전송 액션은 원문 기준 200자를 넘는 답글을 차단하며, 부모 댓글 수정에서 답글 수정으로 전환할 때 편집 대상을 reducer에서 정리한다. 확장형 입력창은 최대 3줄로 제한하고 글자 수 초과분을 음수로 표시한다. 기존 200자 초과 답글을 수정할 때 원문은 자동으로 잘리지 않으며, 제한 이내로 직접 수정하기 전에는 전송할 수 없다. `/private/tmp/picke-comment-reply-limit-escalated-20261021.xcresult`는 변경 전 200/201자 경계 테스트와 전체 댓글·답글 캡처 테스트 2개가 통과한 기록이며, 이번 수정본의 테스트 결과는 별도 확인이 필요하다. 긴 글을 입력 중인 화면의 커서·카운터 가시성은 아직 캡처하지 못했다.
+
+UI 회귀 테스트용 `Picke-ClassUIAudit` 워크스페이스는 Tuist 바이너리 캐시에 남아 있던 `InternalCollectionsUtilities.xcframework`가 현재 Xcode SDK와 맞지 않아 기본 생성 상태에서 빌드되지 않았다. `TUIST_CLASS_UI_AUDIT=1 tuist generate --no-binary-cache --no-open`으로 의존성을 소스 프로젝트로 다시 생성하면 해당 캐시 충돌을 피할 수 있다. 이 경로의 UI 테스트 결과는 별도로 확인해야 한다.
 
 다음 수정 우선순위는 실제 앱 진입 화면의 상단 안전 영역과 동일 콘텐츠를 사용한 댓글·답글 캡처 확인이다. 완료 판정은 각각의 캡처와 Figma 확정 시안을 같은 크기로 대조한 뒤 내린다.
