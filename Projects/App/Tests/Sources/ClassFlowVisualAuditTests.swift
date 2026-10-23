@@ -2097,9 +2097,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
   @MainActor
   func testClassRecommendLayout() async throws {
-    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
-      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify recommendation layout")
-    }
     // Local fixture: the shared Class/AI-setting filter below stays unchanged.
     let topic = "AI와 인간 사이의 윤리와 사상에 대해서"
     let scenarios: [(String, ClassRecommendFeature.Mode, CGSize, String)] = [
@@ -2202,9 +2199,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
   @MainActor
   func testClassBattlePreviewReferenceCapture() async throws {
-    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
-      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify preview layout")
-    }
     let state = ClassBattlePreviewReferenceFixture.makeState()
     let store = Store(initialState: state) {
       ClassBattlePreviewFeature()
