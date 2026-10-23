@@ -2648,6 +2648,26 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testClassTopicReferenceCapture() async throws {
+    var state = ClassTopicFeature.State()
+    state.categories = [.philosophy]
+    let store = Store(initialState: state) { ClassTopicFeature() }
+    let (image, _) = try await capture(
+      AnyView(ClassTopicView(store: store)),
+      ready: nil,
+      includeScrollBottom: false,
+      viewport: CGSize(width: 402, height: 874)
+    )
+    let text = try recognizedAuditText(in: image, name: "class-topic-402")
+    XCTAssertTrue(text.contains("어떤주제로"))
+    XCTAssertTrue(text.contains("조건에맞는콘텐츠보기"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = "class-topic-402.png"
+    attachment.lifetime = .keepAlways
+    add(attachment)
+  }
+
+  @MainActor
   func testCaptureClassFlowFrames() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the Class user flow")
