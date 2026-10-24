@@ -14,6 +14,18 @@ extension ClassUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassTicketUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassTicketInterface {
+    ClassTicketUseCaseImpl()
+  }
+}
+
+extension ClassTicketRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassTicketInterface {
+    ClassTicketRepositoryImpl()
+  }
+}
+
 extension ClassBattleUseCaseDependency: DependencyKey {
   public static var liveValue: any ClassBattleInterface {
     ClassBattleUseCaseImpl()
@@ -44,10 +56,30 @@ extension ClassAIChatUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassDebateUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassDebateInterface {
+    ClassDebateUseCaseImpl()
+  }
+}
+
+extension ClassAIRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassAIRepositoryInterface {
+    ClassAIRepositoryImpl()
+  }
+}
+
 extension ClassAIFeedbackUseCaseDependency: DependencyKey {
   public static var liveValue: any ClassAIFeedbackInterface {
     ClassAIFeedbackUseCaseImpl()
   }
+}
+
+extension ClassTopicDraftUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassTopicDraftInterface { ClassTopicDraftUseCaseImpl() }
+}
+
+extension ClassTopicDraftRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassTopicDraftInterface { ClassTopicDraftRepositoryImpl() }
 }
 
 extension ClassRepositoryDependency: DependencyKey {

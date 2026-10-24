@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import AuthDomainInterface
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -29,12 +30,15 @@ public struct ClassAIChatFeature {
     public var isTerminal = false
     public var isModelAvailable = true
     public var canRetrySession = false
+    public var transportRetryAvailable = false
     public var errorMessage: String?
     public var hasStarted = false
     public var sessionRequestID: UUID?
     public var responseRequestID: UUID?
     public var pendingText: String?
     public var blockedInput: String?
+    public var debate: ClassDebate?
+    public var replyRequestKey: UUID?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     public init(
@@ -51,11 +55,11 @@ public struct ClassAIChatFeature {
     }
 
     public var selectedStanceTitle: String {
-      selectedOptionID == 1 ? room.battle.optionATitle : room.battle.optionBTitle
+      debate?.participantOptionTitle ?? (selectedOptionID == 1 ? room.battle.optionATitle : room.battle.optionBTitle)
     }
 
     public var opponentName: String {
-      return selectedOptionID == 1 ? room.battle.philosopherB : room.battle.philosopherA
+      debate?.philosopherName ?? (selectedOptionID == 1 ? room.battle.philosopherB : room.battle.philosopherA)
     }
 
     public var opponentAvatarURL: URL? {
@@ -91,8 +95,36 @@ public struct ClassAIChatFeature {
 
     public var canSend: Bool {
       let trimmedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-      return hasStarted && !isGenerating && !isCompleted && isModelAvailable
-        && !trimmedDraft.isEmpty && trimmedDraft != blockedInput
+      let minimum = debate?.replyMinLength ?? 50
+      let maximum = debate?.replyMaxLength ?? 1000
+      return debate?.canReply == true && !isGenerating && !isCompleted
+        && (minimum ... maximum).contains(trimmedDraft.count)
+        && trimmedDraft != blockedInput
+    }
+
+    mutating func apply(_ debate: ClassDebate) {
+      self.debate = debate
+      if replyRequestKey != nil,
+         debate.messages.last(where: { $0.speaker == .user })?.content == draft
+      {
+        draft = ""
+        replyRequestKey = nil
+      }
+      round = debate.round
+      messages = debate.messages.map { message in
+        let id = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012llx", message.id)) ?? UUID()
+        return ClassAIChatMessage(
+          id: id,
+          speaker: message.speaker == .ai ? .opponent : .user,
+          text: message.content
+        )
+      }
+      hasStarted = true
+      isCompleted = debate.status == .completed
+      isModelAvailable = true
+      canRetrySession = debate.canRetry
+      transportRetryAvailable = false
+      errorMessage = debate.status == .failed ? ClassAIChatError.temporarilyUnavailable.localizedDescription : nil
     }
   }
 
@@ -121,6 +153,8 @@ public struct ClassAIChatFeature {
     case sessionFailed(UUID, ClassAIChatError)
     case responseReceived(UUID, [String])
     case responseFailed(UUID, ClassAIChatError)
+    case debateLoaded(UUID, Result<ClassDebate, AuthError>)
+    case replyLoaded(UUID, Result<ClassDebate, AuthError>)
   }
 
   @CasePathable
@@ -134,7 +168,7 @@ public struct ClassAIChatFeature {
     case response
   }
 
-  @Dependency(\.classAIChatUseCase) private var chatUseCase
+  @Dependency(\.classDebateUseCase) private var debateUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -164,70 +198,47 @@ extension ClassAIChatFeature {
   ) -> Effect<Action> {
     switch action {
     case .onAppear, .retryTapped:
-      guard !state.hasStarted, !state.isCompleted, !state.isTerminal else { return .none }
-      if action == .onAppear, state.messages.isEmpty, state.errorMessage != nil {
+      guard state.sessionRequestID == nil, state.responseRequestID == nil else { return .none }
+      let isRetry = action == .retryTapped
+      if isRetry, !state.canRetrySession {
         return .none
       }
-      if action == .retryTapped, !state.canRetrySession {
-        return .none
-      }
-      let isRetry = state.canRetrySession
-      let needsOpening = state.messages.isEmpty
-      state.hasStarted = true
-      state.isGenerating = true
-      if state.blockedInput == nil {
-        state.errorMessage = nil
-      }
-      state.isModelAvailable = true
-      state.canRetrySession = false
       let requestID = UUID()
       state.sessionRequestID = requestID
-      let id = state.conversationID
-      let opponent = state.opponentName
-      let priorMessages = state.pendingText != nil && state.messages.last?.speaker == .user
-        ? Array(state.messages.dropLast()) : state.messages
-      let context = ClassAIChatContext(
-        question: state.room.battle.title,
-        selectedStance: state.selectedStanceTitle,
-        opponentStance: state.selectedOptionID == 1
-          ? state.room.battle.optionBTitle : state.room.battle.optionATitle,
-        opponentPhilosopherName: opponent == "A 입장" || opponent == "B 입장" ? nil : opponent,
-        priorMessages: priorMessages
-      )
+      state.isGenerating = true
+      state.errorMessage = nil
+      let roomID = state.room.id
+      let retryServerGeneration = isRetry && !state.transportRetryAvailable
+        && state.debate?.canRetry == true
       return .run { send in
         do {
-          if isRetry {
-            await chatUseCase.end(id)
-          }
-          try await chatUseCase.start(id, context)
-          if !needsOpening {
-            guard !Task.isCancelled else { return }
-            await send(.inner(.sessionReady(requestID, [])))
-            return
-          }
-          let opening = try await chatUseCase.respond(
-            id,
-            "토론을 시작합니다. 상대의 입장에서 제가 선택한 입장에 반박하는 짧은 첫 질문을 한국어로 해 주세요.",
-            isFinalRound: false
-          )
-          guard !Task.isCancelled else { return }
-          let bubbles = ClassAIChatMessageUseCase.bubbles(from: opening)
-          if bubbles.isEmpty {
-            await send(.inner(.sessionFailed(requestID, .emptyResponse)))
+          let initial: ClassDebate
+          if retryServerGeneration {
+            initial = try await debateUseCase.retry(classID: roomID)
           } else {
-            await send(.inner(.sessionReady(requestID, bubbles)))
+            do {
+              initial = try await debateUseCase.fetch(classID: roomID)
+            } catch ClassAIChatError.noSession {
+              initial = try await debateUseCase.start(classID: roomID)
+            }
           }
+          var debate = initial
+          while debate.status == .generating, !debate.canRetry, !Task.isCancelled {
+            try await Task.sleep(for: .seconds(2))
+            debate = try await debateUseCase.fetch(classID: roomID)
+          }
+          guard !Task.isCancelled else { return }
+          await send(.inner(.debateLoaded(requestID, .success(debate))))
         } catch is CancellationError {
           return
         } catch {
           guard !Task.isCancelled else { return }
-          await send(.inner(.sessionFailed(requestID, error as? ClassAIChatError ?? .unexpectedFailure)))
+          await send(.inner(.debateLoaded(requestID, .failure(AuthError.from(error)))))
         }
       }
       .cancellable(id: CancelID.session, cancelInFlight: true)
 
     case .onDisappear:
-      let id = state.conversationID
       state.conversationID = UUID()
       state.hasStarted = false
       state.sessionRequestID = nil
@@ -240,11 +251,7 @@ extension ClassAIChatFeature {
         state.draft = pendingText
         state.pendingText = nil
       }
-      return .merge(
-        .cancel(id: CancelID.session),
-        .cancel(id: CancelID.response),
-        .run { _ in await chatUseCase.end(id) }
-      )
+      return .merge(.cancel(id: CancelID.session), .cancel(id: CancelID.response))
 
     case .backTapped:
       return .send(.delegate(.dismiss))
@@ -252,6 +259,7 @@ extension ClassAIChatFeature {
     case let .draftChanged(text):
       guard text != state.draft else { return .none }
       state.draft = text
+      state.replyRequestKey = nil
       if text.trimmingCharacters(in: .whitespacesAndNewlines) != state.blockedInput {
         state.blockedInput = nil
         state.errorMessage = nil
@@ -261,6 +269,7 @@ extension ClassAIChatFeature {
     case let .quickReplyTapped(text):
       guard !state.isGenerating, !state.isCompleted, state.isModelAvailable else { return .none }
       state.draft = text
+      state.replyRequestKey = nil
       if text.trimmingCharacters(in: .whitespacesAndNewlines) != state.blockedInput {
         state.blockedInput = nil
         state.errorMessage = nil
@@ -270,11 +279,12 @@ extension ClassAIChatFeature {
     case .sendTapped:
       guard state.canSend else { return .none }
       let text = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard text.count <= 240 else {
-        state.errorMessage = "240자 이내로 줄여 주세요."
+      guard let debate = state.debate,
+            (debate.replyMinLength ... debate.replyMaxLength).contains(text.count)
+      else {
+        state.errorMessage = "50~1,000자로 입력해 주세요."
         return .none
       }
-      let isFinalRound = state.round == state.totalRounds
       state.isGenerating = true
       state.errorMessage = nil
       state.pendingText = text
@@ -282,32 +292,35 @@ extension ClassAIChatFeature {
       state.messages.append(.init(speaker: .user, text: text))
       let requestID = UUID()
       state.responseRequestID = requestID
-      let id = state.conversationID
+      let requestKey = state.replyRequestKey ?? UUID()
+      state.replyRequestKey = requestKey
+      let roomID = state.room.id
+      let round = debate.round
       return .run { send in
         do {
-          let reply = try await chatUseCase.respond(
-            id,
-            text,
-            isFinalRound: isFinalRound
+          var result = try await debateUseCase.submitReply(
+            classID: roomID,
+            round: round,
+            content: text,
+            requestKey: requestKey
           )
-          guard !Task.isCancelled else { return }
-          let bubbles = ClassAIChatMessageUseCase.bubbles(from: reply)
-          if bubbles.isEmpty {
-            await send(.inner(.responseFailed(requestID, .emptyResponse)))
-          } else {
-            await send(.inner(.responseReceived(requestID, bubbles)))
+          while result.status == .generating, !result.canRetry, !Task.isCancelled {
+            try await Task.sleep(for: .seconds(2))
+            result = try await debateUseCase.fetch(classID: roomID)
           }
+          guard !Task.isCancelled else { return }
+          await send(.inner(.replyLoaded(requestID, .success(result))))
         } catch is CancellationError {
           return
         } catch {
           guard !Task.isCancelled else { return }
-          await send(.inner(.responseFailed(requestID, error as? ClassAIChatError ?? .unexpectedFailure)))
+          await send(.inner(.replyLoaded(requestID, .failure(AuthError.from(error)))))
         }
       }
       .cancellable(id: CancelID.response, cancelInFlight: true)
 
     case .finalVoteTapped:
-      guard state.isCompleted || !state.isModelAvailable || state.errorMessage != nil else { return .none }
+      guard state.isCompleted else { return .none }
       state.customAlert = .finalVote()
       return .none
     }
@@ -322,6 +335,42 @@ extension ClassAIChatFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .debateLoaded(requestID, result):
+      guard state.sessionRequestID == requestID else { return .none }
+      state.sessionRequestID = nil
+      state.isGenerating = false
+      switch result {
+      case let .success(debate):
+        state.apply(debate)
+      case let .failure(error):
+        state.errorMessage = error.localizedDescription
+        state.canRetrySession = true
+        state.transportRetryAvailable = true
+      }
+      return .none
+
+    case let .replyLoaded(requestID, result):
+      guard state.responseRequestID == requestID else { return .none }
+      state.responseRequestID = nil
+      state.isGenerating = false
+      switch result {
+      case let .success(debate):
+        state.pendingText = nil
+        state.replyRequestKey = nil
+        state.apply(debate)
+        if debate.status == .completed {
+          state.customAlert = .finalVote()
+        }
+      case let .failure(error):
+        if state.messages.last?.speaker == .user {
+          state.messages.removeLast()
+        }
+        state.draft = state.pendingText ?? state.draft
+        state.pendingText = nil
+        state.errorMessage = error.localizedDescription
+      }
+      return .none
+
     case let .sessionReady(requestID, bubbles):
       guard state.sessionRequestID == requestID else { return .none }
       state.sessionRequestID = nil

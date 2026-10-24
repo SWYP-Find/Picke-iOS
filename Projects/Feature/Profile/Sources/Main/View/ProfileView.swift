@@ -27,6 +27,10 @@ public struct ProfileView: View {
 
         if store.viewState == .loading {
           ProfileSkeletonView()
+        } else if store.viewState == .error {
+          PickeRetryErrorView(message: "마이페이지를 불러오지 못했어요") {
+            send(.retryTapped)
+          }
         } else {
           // xr63n: 카드 그룹 ↔ 메뉴 그룹 gap 20
           VStack(spacing: 20) {

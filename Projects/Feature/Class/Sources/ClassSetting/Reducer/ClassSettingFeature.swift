@@ -19,6 +19,7 @@ public struct ClassSettingFeature {
   public struct State: Equatable {
     public var battle: ClassBattleSummary?
     public var aiQuestion: ClassAIQuestion?
+    public var topicVersionID: Int?
     public var filter: ClassTopicFilter?
     public var name = ""
     public var deadline: Date
@@ -56,6 +57,19 @@ public struct ClassSettingFeature {
       self.instanceID = instanceID
     }
 
+    public init(
+      topicVersion: ClassTopicVersion,
+      filter: ClassTopicFilter,
+      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60),
+      instanceID: UUID = UUID()
+    ) {
+      self.aiQuestion = ClassAIQuestion(version: topicVersion)
+      self.topicVersionID = topicVersion.id
+      self.filter = filter
+      self.deadline = deadline
+      self.instanceID = instanceID
+    }
+
     public var deadlineText: String {
       deadline.formatted(.fullKoreanDateTime)
     }
@@ -85,11 +99,21 @@ public struct ClassSettingFeature {
     }
 
     public var creation: ClassCreation? {
-      guard let battle else { return nil }
+      if let battle {
+        return ClassCreation(
+          name: trimmedName,
+          deadline: isDeadlineEnabled ? deadline : .distantFuture,
+          battleId: battle.id,
+          allowsAnonymousOpinion: false,
+          requiresComment: requiresComment,
+          ownerParticipates: ownerParticipates
+        )
+      }
+      guard let topicVersionID, aiQuestion != nil else { return nil }
       return ClassCreation(
         name: trimmedName,
         deadline: isDeadlineEnabled ? deadline : .distantFuture,
-        battleId: battle.id,
+        topicVersionId: topicVersionID,
         allowsAnonymousOpinion: false,
         requiresComment: requiresComment,
         ownerParticipates: ownerParticipates
@@ -114,6 +138,18 @@ public struct ClassSettingFeature {
         level: filter.level,
         audioDuration: 0,
         viewCount: 0
+      )
+    }
+
+    public var aiCreation: ClassCreation? {
+      guard let topicVersionID else { return nil }
+      return ClassCreation(
+        name: trimmedName,
+        deadline: isDeadlineEnabled ? deadline : .distantFuture,
+        topicVersionId: topicVersionID,
+        allowsAnonymousOpinion: false,
+        requiresComment: requiresComment,
+        ownerParticipates: ownerParticipates
       )
     }
 
@@ -249,7 +285,7 @@ extension ClassSettingFeature {
         state.deadlineValidationMessage = "현재 이후 시간을 선택해 주세요."
         return .none
       }
-      if state.aiQuestion != nil {
+      if state.aiQuestion != nil, state.topicVersionID == nil {
         state.unavailableNotice = .init()
         return .none
       }

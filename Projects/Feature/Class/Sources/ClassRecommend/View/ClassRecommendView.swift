@@ -42,6 +42,7 @@ public struct ClassRecommendView: View {
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
+    .onDisappear { send(.onDisappear) }
   }
 }
 
@@ -88,7 +89,7 @@ private extension ClassRecommendView {
               .frame(minHeight: 17)
               .padding(.horizontal, 4)
               .frame(height: 20)
-              .roundedBackground(.primary50)
+              .background(.primary50, in: Capsule())
           }
         }
         .padding(.trailing, 60)
