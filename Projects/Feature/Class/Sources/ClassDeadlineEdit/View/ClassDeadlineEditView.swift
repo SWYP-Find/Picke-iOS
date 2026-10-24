@@ -36,7 +36,7 @@ private extension ClassDeadlineEditView {
       if store.isDeadlineEnabled {
         deadlinePicker
       } else {
-        enableDeadlineButton
+        noDeadlineMessage
           .frame(height: 174)
       }
     }
@@ -51,12 +51,10 @@ private extension ClassDeadlineEditView {
     .disabled(store.isSaving)
   }
 
-  var enableDeadlineButton: some View {
-    Button("마감일 설정하기") { send(.deadlineEnabledChanged(true)) }
+  var noDeadlineMessage: some View {
+    Text("마감일이 없는 클래스는 마감일을 연장할 수 없어요.")
       .pretendardFont(.semiBold15)
-      .foregroundStyle(.primary500)
-      .frame(minHeight: 44)
-      .disabled(store.isSaving)
+      .foregroundStyle(.neutral500)
   }
 
   var saveButton: some View {

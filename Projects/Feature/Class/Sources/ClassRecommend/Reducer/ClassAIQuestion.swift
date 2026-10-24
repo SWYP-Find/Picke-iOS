@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import ClassDomainInterface
 import Foundation
 
 public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
@@ -43,10 +44,44 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
     self.philosopherBName = philosopherBName
   }
 
+  public init?(candidate: ClassTopicCandidate) {
+    guard candidate.options.count == 2 else { return nil }
+    self.init(
+      id: candidate.id,
+      category: candidate.category,
+      title: candidate.question,
+      summary: candidate.description,
+      optionATitle: candidate.options[0].label,
+      optionADescription: candidate.options[0].rationale,
+      philosopherAName: candidate.options[0].philosopher,
+      optionBTitle: candidate.options[1].label,
+      optionBDescription: candidate.options[1].rationale,
+      philosopherBName: candidate.options[1].philosopher
+    )
+  }
+
+  public init?(version: ClassTopicVersion) {
+    guard let first = version.options.first(where: { $0.position == "A" }),
+          let second = version.options.first(where: { $0.position == "B" })
+    else { return nil }
+    self.init(
+      id: version.id,
+      category: version.category,
+      title: version.question,
+      summary: version.description,
+      optionATitle: first.label,
+      optionADescription: first.rationale,
+      philosopherAName: first.philosopherName,
+      optionBTitle: second.label,
+      optionBDescription: second.rationale,
+      philosopherBName: second.philosopherName
+    )
+  }
+
   public static let examples: [Self] = [
     .init(
       id: 1,
-      category: "도덕",
+      category: "사회",
       title: "슬픔을 드러내지 않은 뫼르소를 비난할 수 있을까?",
       summary: "감정을 표현하지 않는 태도를 도덕적으로 판단할 수 있는지 이야기해요.",
       optionATitle: "비난할 수 있다",
@@ -58,7 +93,7 @@ public struct ClassAIQuestion: Equatable, Identifiable, Sendable {
     ),
     .init(
       id: 2,
-      category: "범죄",
+      category: "사회",
       title: "재판에서 삶의 태도까지 판단 근거가 되어도 될까?",
       summary: "뫼르소의 범죄와 무관한 태도가 재판에 영향을 주는 것이 정당할까요?",
       optionATitle: "고려해도 된다",

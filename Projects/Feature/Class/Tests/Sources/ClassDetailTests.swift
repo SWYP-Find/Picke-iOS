@@ -31,13 +31,10 @@ struct ClassDetailTests {
     ))
   }
   @Test
-  func 목_저장소가_있으면_배틀에_입장한다() async {
+  func 열린_클래스는_목_저장소_설정_없이_배틀에_입장한다() async {
     let room = ClassRoom.mocks[0]
-    let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
       ClassDetailFeature()
-    } withDependencies: {
-      $0.classMockRepository = repository
     }
 
     await store.send(.view(.battleTapped))
@@ -104,21 +101,14 @@ struct ClassDetailTests {
   }
 
   @Test
-  func 목_배틀을_누르면_준비_안내를_표시한다() async {
+  func 열린_클래스_배틀은_준비_안내_없이_코디네이터로_이동한다() async {
     for room in ClassRoom.mocks where room.status == .open {
       let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
         ClassDetailFeature()
       }
 
-      await store.send(.view(.battleTapped)) {
-        $0.customAlert = .alert(
-          title: "배틀을 준비하고 있어요",
-          message: "이 클래스의 배틀은 아직 참여할 수 없어요."
-        )
-      }
-      await store.send(.customAlert(.presented(.confirmTapped))) {
-        $0.customAlert = nil
-      }
+      await store.send(.view(.battleTapped))
+      await store.receive(\.delegate, .openBattle(room))
     }
   }
 

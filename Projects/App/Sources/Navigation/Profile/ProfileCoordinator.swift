@@ -18,10 +18,12 @@ public struct ProfileCoordinator {
   public init() {}
 
   @Dependency(\.audioPlayer) private var audioPlayer
+  @Dependency(\.uuid) private var uuid
 
   @ObservableState
   public struct State: Equatable {
     public var routes: [Route<ProfileScreen.State>]
+    var ticketInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.profile(.init()), embedInNavigationView: true)]
@@ -53,7 +55,7 @@ public struct ProfileCoordinator {
     state: inout State,
     action: Action
   ) -> Effect<Action> {
-    switch action {
+    let effect: Effect<Action> = switch action {
     case let .router(routeAction):
       routerAction(state: &state, action: routeAction)
     case let .view(viewAction):
@@ -61,10 +63,21 @@ public struct ProfileCoordinator {
     case .async, .inner, .navigation:
       .none
     }
+    return .merge(effect, cancelRemovedTicketChecks(state: &state))
   }
 }
 
 private extension ProfileCoordinator {
+  func cancelRemovedTicketChecks(state: inout State) -> Effect<Action> {
+    let currentIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ticket(ticket) = route.screen else { return nil }
+      return ticket.instanceID
+    })
+    let removedIDs = state.ticketInstanceIDs.subtracting(currentIDs)
+    state.ticketInstanceIDs = currentIDs
+    return .merge(removedIDs.map { .cancel(id: ClassTicketFeature.CancelID.check($0)) })
+  }
+
   func routerAction(
     state: inout State,
     action: IndexedRouterActionOf<ProfileScreen>
@@ -133,16 +146,80 @@ private extension ProfileCoordinator {
     case .routeAction(_, action: .web(.delegate(.backToRoot))):
       return .send(.view(.backAction))
 
-    case let .routeAction(_, action: .profile(.delegate(.menuSelected(item)))):
+    case let .routeAction(routeID, action: .profile(.delegate(.menuSelected(item)))):
+      guard routeID == 0, state.routes.count == 1,
+            case .profile = state.routes[0].screen
+      else { return .none }
       switch item {
       case .battleHistory:
         state.routes.push(.battleRecord(.init()))
       case .contentActivity:
         state.routes.push(.contentActivity(.init()))
+      case .ticketRegistration:
+        state.routes.push(.ticket(.init(instanceID: uuid())))
       case .noticeEvent:
         state.routes.push(.notice(.init()))
       }
       return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.addRegistrationRequested))):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(overview)? = state.routes.last?.screen,
+            overview.phase == .overview
+      else { return .none }
+      var registration = ClassTicketFeature.State(instanceID: uuid())
+      registration.shouldCheckExistingTicket = false
+      state.routes.push(.ticket(registration))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.registered(startDate, endDate)))):
+      guard routeID == state.routes.count - 1,
+            routeID >= 2,
+            case let .ticket(registered)? = state.routes.last?.screen,
+            registered.phase == .registered,
+            registered.registrationStartDate == startDate,
+            registered.expirationDate == endDate,
+            case var .ticket(overview) = state.routes[routeID - 1].screen,
+            overview.phase == .overview
+      else { return .none }
+      overview.registrationStartDate = startDate
+      overview.expirationDate = endDate
+      overview.ticket = registered.ticket
+      state.routes[screenAt: routeID - 1] = .ticket(overview)
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.registrationConfirmed(startDate: startDate, endDate: endDate)))):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(completed)? = state.routes.last?.screen,
+            completed.phase == .registered,
+            completed.registrationStartDate == startDate,
+            completed.expirationDate == endDate
+      else { return .none }
+      if routeID >= 2,
+         case let .ticket(previous) = state.routes[routeID - 1].screen,
+         previous.phase == .overview
+      {
+        state.routes.goBack()
+        var overview = previous
+        overview.registrationStartDate = startDate
+        overview.expirationDate = endDate
+        overview.ticket = completed.ticket
+        state.routes[screenAt: routeID - 1] = .ticket(overview)
+        return .none
+      }
+      var overview = ClassTicketFeature.State(instanceID: uuid())
+      overview.phase = .overview
+      overview.ticket = completed.ticket
+      overview.registrationStartDate = startDate
+      overview.expirationDate = endDate
+      state.routes.push(.ticket(overview))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .ticket = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
 
     case .routeAction(_, action: .battleRecord(.delegate(.dismiss))):
       return .send(.view(.backAction))
@@ -213,6 +290,7 @@ extension ProfileCoordinator {
   @Reducer
   public enum ProfileScreen {
     case profile(ProfileFeature)
+    case ticket(ClassTicketFeature)
     case pointHistory(PointHistoryFeature)
     case settings(SettingsFeature)
     case battleRecord(BattleRecordFeature)

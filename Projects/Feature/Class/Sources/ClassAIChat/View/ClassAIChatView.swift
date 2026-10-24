@@ -106,6 +106,14 @@ private extension ClassAIChatView {
           stanceNotice
             .padding(.bottom, 14)
 
+          if let aiNotice = store.debate?.aiNotice, !aiNotice.isEmpty {
+            Text(aiNotice)
+              .pretendardFont(.regular13)
+              .foregroundStyle(.gray500)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(.bottom, 8)
+          }
+
           ForEach(Array(store.messages.enumerated()), id: \.element.id) { index, message in
             let beginsTurn = index == 0 || store.messages[index - 1].speaker != message.speaker
             messageRow(message, beginsTurn: beginsTurn)
@@ -309,14 +317,10 @@ private extension ClassAIChatView {
   @ViewBuilder
   func composer() -> some View {
     VStack(spacing: 12) {
-      if store.isCompleted || !store.isModelAvailable {
+      if store.isCompleted || store.canRetrySession {
         sessionEndActions()
       } else {
         inputRow()
-
-        if store.errorMessage != nil {
-          finalVoteLink
-        }
       }
     }
     .padding(.top, 16)
@@ -333,9 +337,11 @@ private extension ClassAIChatView {
         .ctaButtonStyle(.primary, size: .large, height: 52)
         .padding(.horizontal, 16)
     }
-    Button("최종투표하기") { send(.finalVoteTapped) }
-      .ctaButtonStyle(.primary, size: .large, height: 52)
-      .padding(.horizontal, 16)
+    if store.isCompleted {
+      Button("최종투표하기") { send(.finalVoteTapped) }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+        .padding(.horizontal, 16)
+    }
   }
 
   @ViewBuilder
@@ -386,13 +392,6 @@ private extension ClassAIChatView {
     .buttonStyle(ClassAIChatSendButtonStyle())
     .disabled(!store.canSend)
     .accessibilityLabel("메시지 보내기")
-  }
-
-  var finalVoteLink: some View {
-    Button("최종투표로 이동하기") { send(.finalVoteTapped) }
-      .pretendardFont(.regular13)
-      .foregroundStyle(.gray500)
-      .padding(.vertical, 6)
   }
 
   // MARK: - Helpers

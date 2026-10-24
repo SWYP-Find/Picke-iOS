@@ -5,19 +5,15 @@
 //  Created by Picke on 10/11/26.
 //
 
-import AudioPlayerServiceInterface
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
 import Foundation
-import PickeAnalyticsInterface
 import PickeCoreUtility
 import TCAFlow
 
 @FlowCoordinator(screen: "ClassScreen", navigation: true)
 public struct ClassCoordinator {
-  @Dependency(\.classMockRepository) private var classMockRepository
-  @Dependency(\.classMockChatSession) private var classMockChatSession
   @Dependency(\.classMemberUseCase) private var classMemberUseCase
   @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
@@ -115,10 +111,8 @@ public struct ClassCoordinator {
     )
     case memberMutationCompleted(ClassRoom, [ClassMember])
     case memberMutationFailed(Int, String)
-    case mockBattleRegistered(roomID: Int, battleID: Int)
-    case completedAIVoteResolved(battleID: Int, isMindChanged: Bool)
-    case membershipSessionCleared(routeID: Int, roomID: Int)
-    case joinedSessionCleared(UUID, ClassRoom)
+    case membershipLeaveReady(routeID: Int, roomID: Int)
+    case joinedNavigationReady(UUID, ClassRoom)
   }
 
   public enum NavigationAction: Equatable {}
@@ -547,6 +541,7 @@ private extension ClassCoordinator {
       else { return .none }
       overview.registrationStartDate = startDate
       overview.expirationDate = endDate
+      overview.ticket = registered.ticket
       state.routes[screenAt: routeID - 1] = .ticket(overview)
       if routeID >= 3,
          case var .ticket(original) = state.routes[routeID - 2].screen,
@@ -554,6 +549,7 @@ private extension ClassCoordinator {
       {
         original.registrationStartDate = startDate
         original.expirationDate = endDate
+        original.ticket = registered.ticket
         state.routes[screenAt: routeID - 2] = .ticket(original)
       }
       return .none
@@ -563,7 +559,9 @@ private extension ClassCoordinator {
             case let .ticket(overview)? = state.routes.last?.screen,
             overview.phase == .overview
       else { return .none }
-      state.routes.push(.ticket(.init(instanceID: uuid())))
+      var registration = ClassTicketFeature.State(instanceID: uuid())
+      registration.shouldCheckExistingTicket = false
+      state.routes.push(.ticket(registration))
       return .none
 
     case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):
@@ -623,10 +621,7 @@ private extension ClassCoordinator {
       state.completingJoinNicknameInstanceID = instanceID
       state.completedAIBattles[-1_000_000 - room.id] = nil
       state.chatRoomsByBattleID[-1_000_000 - room.id] = nil
-      return .run { [classMockChatSession] send in
-        await classMockChatSession.clear(roomID: room.id)
-        await send(.inner(.joinedSessionCleared(requestID, room)))
-      }
+      return .send(.inner(.joinedNavigationReady(requestID, room)))
 
     case let .routeAction(routeID, action: .join(.async(.find(_)))):
       if routeID == state.routes.count - 1,
@@ -696,8 +691,8 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .battlePreview(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question, filter)))):
-      state.routes.push(.setting(.init(aiQuestion: question, filter: filter, instanceID: uuid())))
+    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(version, filter)))):
+      state.routes.push(.setting(.init(topicVersion: version, filter: filter, instanceID: uuid())))
       return .none
 
     case let .routeAction(routeID, action: .setting(.delegate(.editDeadline(instanceID)))):
@@ -784,10 +779,7 @@ private extension ClassCoordinator {
     case let .routeAction(routeID, action: .myClasses(.delegate(.left(roomID)))):
       state.completedAIBattles[-1_000_000 - roomID] = nil
       state.chatRoomsByBattleID[-1_000_000 - roomID] = nil
-      return .run { [classMockChatSession] send in
-        await classMockChatSession.clear(roomID: roomID)
-        await send(.inner(.membershipSessionCleared(routeID: routeID, roomID: roomID)))
-      }
+      return .send(.inner(.membershipLeaveReady(routeID: routeID, roomID: roomID)))
 
     case let .routeAction(routeID, action: .myClasses(.delegate(.openInformation(room)))):
       guard routeID == state.routes.count - 1,
@@ -873,11 +865,16 @@ private extension ClassCoordinator {
       }
 
     case let .routeAction(_, action: .detail(.delegate(.openBattle(room)))):
-      guard classMockRepository != nil else { return .none }
-      return .run { [classMockChatSession] send in
-        let battleID = await classMockChatSession.register(room: room)
-        await send(.inner(.mockBattleRegistered(roomID: room.id, battleID: battleID)))
+      if room.battleType == .custom {
+        state.routes.push(.aiVote(.init(
+          room: room,
+          battleID: room.battle.id,
+          isLiveClassBattle: true
+        )))
+      } else {
+        state.routes.push(.battleFlow(.init(room: room)))
       }
+      return .none
 
     case let .routeAction(_, action: .detail(.delegate(.openClosedBattle(room)))):
       state.routes.push(.closedBattle(.init(room: room)))
@@ -1002,6 +999,24 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .aiVote(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .battleFlow? = state.routes.last?.screen else { return .none }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.completed(classID: classID)))):
+      guard routeID == state.routes.count - 1,
+            case let .battleFlow(flow)? = state.routes.last?.screen,
+            flow.room.id == classID else { return .none }
+      guard let detailIndex = state.routes.lastIndex(where: {
+        guard case let .detail(detail) = $0.screen else { return false }
+        return detail.room.id == classID
+      }) else { return .none }
+      for _ in (detailIndex + 1) ..< state.routes.count {
+        state.routes.goBack()
+      }
+      return .none
+
     case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(
       battleID: battleID,
       selectedOptionID: selectedOptionID,
@@ -1009,13 +1024,18 @@ private extension ClassCoordinator {
     )))):
       guard case let .aiVote(vote)? = state.routes.last?.screen else { return .none }
       if hasCompletedPostVote {
-        return .run { [classMockChatSession] send in
-          let isMindChanged = await classMockChatSession.hasChangedMind(battleID: battleID)
-          await send(.inner(.completedAIVoteResolved(
-            battleID: battleID,
-            isMindChanged: isMindChanged
-          )))
+        if vote.room.requiresComment {
+          state.routes.push(.battleFlow(.init(room: vote.room)))
+          return .none
         }
+        guard let detailIndex = state.routes.lastIndex(where: {
+          guard case let .detail(detail) = $0.screen else { return false }
+          return detail.room.id == vote.room.id
+        }) else { return .none }
+        for _ in (detailIndex + 1) ..< state.routes.count {
+          state.routes.goBack()
+        }
+        return .none
       }
       state.routes.push(.aiChat(.init(
         room: vote.room,
@@ -1028,14 +1048,13 @@ private extension ClassCoordinator {
       return .send(.view(.backAction))
 
     case let .routeAction(_, action: .aiChat(.delegate(.finalVote(battleID: battleID)))):
-      guard case .aiChat? = state.routes.last?.screen else { return .none }
-      if let isMindChanged = state.completedAIBattles[battleID] {
-        var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
-        chat.routes[screenAt: 0] = .comment(.init(battleId: battleID, isMindChanged: isMindChanged))
-        state.routes.push(.chat(chat))
-      } else {
-        state.routes.push(.chat(.init(route: .finalVote(battleId: battleID))))
-      }
+      guard case let .aiChat(aiChat)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.aiVote(.init(
+        room: aiChat.room,
+        battleID: battleID,
+        isLiveClassBattle: true,
+        isPostVote: true
+      )))
       return .none
 
     case .routeAction(_, action: .detail(.delegate(.deleted))):
@@ -1202,6 +1221,7 @@ private extension ClassCoordinator {
         var overview = previous
         overview.registrationStartDate = startDate
         overview.expirationDate = endDate
+        overview.ticket = completed.ticket
         state.routes[screenAt: routeID - 1] = .ticket(overview)
         if routeID >= 3,
            case var .ticket(original) = state.routes[routeID - 2].screen,
@@ -1209,6 +1229,7 @@ private extension ClassCoordinator {
         {
           original.registrationStartDate = startDate
           original.expirationDate = endDate
+          original.ticket = completed.ticket
           state.routes[screenAt: routeID - 2] = .ticket(original)
         }
         return .none
@@ -1216,12 +1237,13 @@ private extension ClassCoordinator {
 
       var overview = ClassTicketFeature.State(instanceID: uuid())
       overview.phase = .overview
+      overview.ticket = completed.ticket
       overview.registrationStartDate = startDate
       overview.expirationDate = endDate
       state.routes.push(.ticket(overview))
       return .none
 
-    case let .joinedSessionCleared(requestID, room):
+    case let .joinedNavigationReady(requestID, room):
       guard state.pendingJoinID == requestID,
             isCompletingJoinPrefix(state)
       else { return .none }
@@ -1230,7 +1252,7 @@ private extension ClassCoordinator {
       state.routes.push(.detail(.init(room: room)))
       return .none
 
-    case let .membershipSessionCleared(routeID, roomID):
+    case let .membershipLeaveReady(routeID, roomID):
       guard state.routes.indices.contains(routeID),
             case let .myClasses(list) = state.routes[routeID].screen,
             list.isLeaving, list.leavingRoomID == roomID
@@ -1239,33 +1261,6 @@ private extension ClassCoordinator {
         id: routeID,
         action: .myClasses(.inner(.leaveCleanupCompleted(roomID)))
       )))
-
-    case let .completedAIVoteResolved(battleID, isMindChanged):
-      guard case let .aiVote(vote)? = state.routes.last?.screen,
-            vote.battleID == battleID
-      else { return .none }
-      state.completedAIBattles[battleID] = isMindChanged
-      var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
-      chat.routes[screenAt: 0] = .comment(.init(battleId: battleID, isMindChanged: isMindChanged))
-      state.routes.push(.chat(chat))
-      return .none
-
-    case let .mockBattleRegistered(roomID, battleID):
-      guard case let .detail(detail)? = state.routes.last?.screen,
-            detail.room.id == roomID
-      else { return .none }
-      state.chatRoomsByBattleID[battleID] = detail.room
-      // Keep this detail beneath both direct and AI chat routes so report can return here.
-      if detail.room.battle.id < 0 {
-        state.routes.push(.aiVote(.init(room: detail.room, battleID: battleID)))
-      } else {
-        var chat = ChatCoordinator.State(route: .preVote(battleId: battleID))
-        var preVote = PreVoteFeature.State(battleId: battleID)
-        preVote.showsResultsForExistingParticipation = true
-        chat.routes[screenAt: 0] = .preVote(preVote)
-        state.routes.push(.chat(chat))
-      }
-      return .none
 
     case let .membersLoaded(routeID, roomID, instanceID, requestID, _, members, currentMemberID):
       guard state.routes.indices.contains(routeID),
@@ -1356,6 +1351,7 @@ extension ClassCoordinator {
     case ownerFeedback(ClassFeedbackComposeFeature)
     case aiVote(ClassAIVoteFeature)
     case aiChat(ClassAIChatFeature)
+    case battleFlow(ClassBattleFlowFeature)
     case chat(ChatCoordinator)
   }
 }

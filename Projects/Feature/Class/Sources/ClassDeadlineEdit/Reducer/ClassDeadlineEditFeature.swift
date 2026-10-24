@@ -41,11 +41,17 @@ public struct ClassDeadlineEditFeature {
     }
 
     public var minimumSelectableDate: Date {
-      room.deadline == .distantFuture ? referenceNow : min(room.deadline, referenceNow)
+      max(room.deadline, referenceNow)
     }
 
     public var validationMessage: String? {
-      isDeadlineEnabled && draftDeadline < referenceNow ? "현재 이후 시간을 선택해 주세요." : nil
+      guard isDeadlineEnabled else { return nil }
+      if draftDeadline <= room.deadline { return "마감일은 기존 마감일보다 뒤로 연장만 할 수 있습니다." }
+      if draftDeadline < referenceNow { return "현재 이후 시간을 선택해 주세요." }
+      if let ticketExpiresAt = room.ticketExpiresAt, draftDeadline > ticketExpiresAt {
+        return "마감일은 이용권 종료일 이전이어야 합니다."
+      }
+      return nil
     }
 
     public var selectedDeadlineText: String {
@@ -53,10 +59,8 @@ public struct ClassDeadlineEditFeature {
     }
 
     public var canSave: Bool {
-      guard room.role == .owner, isDeadlineEnabled, !isSaving, validationMessage == nil else {
-        return false
-      }
-      return room.deadline == .distantFuture || draftDeadline > room.deadline
+      room.role == .owner && room.deadline != .distantFuture && !isSaving
+        && isDeadlineEnabled && validationMessage == nil && draftDeadline != room.deadline
     }
   }
 
@@ -119,17 +123,9 @@ public struct ClassDeadlineEditFeature {
           .send(.delegate(.dismiss))
         )
       case let .view(.deadlineEnabledChanged(enabled)):
-        guard !state.isSaving else { return .none }
-        guard enabled || state.room.deadline == .distantFuture else { return .none }
+        guard !state.isSaving, enabled, state.room.deadline != .distantFuture else { return .none }
         state.isDeadlineEnabled = enabled
         state.errorMessage = nil
-        if enabled, state.room.deadline == .distantFuture {
-          state.draftDeadline = AppDateFormat.calendar.date(
-            byAdding: .day,
-            value: 7,
-            to: state.referenceNow
-          ) ?? state.referenceNow.addingTimeInterval(604_800)
-        }
         return .none
       case .view(.saveTapped):
         guard state.canSave else { return .none }

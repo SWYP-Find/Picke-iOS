@@ -108,31 +108,6 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 클래스_표시정보는_배틀별로_보관하고_이전_화면의_등록응답은_무시한다() async {
-    let first = ClassRoom.mocks[0]
-    let second = ClassRoom.mockJoinable
-    let firstBattleID = -1_000_000 - first.id
-    let secondBattleID = -1_000_000 - second.id
-    var state = ClassCoordinator.State()
-    state.chatRoomsByBattleID[firstBattleID] = first
-    state.routes.push(.detail(.init(room: second)))
-    let store = TestStore(initialState: state) { ClassCoordinator() }
-    store.exhaustivity = .off
-
-    await store.send(.inner(.mockBattleRegistered(roomID: first.id, battleID: firstBattleID)))
-    #expect(store.state.routes.count == 2)
-    #expect(store.state.chatRoomsByBattleID == [firstBattleID: first])
-
-    await store.send(.inner(.mockBattleRegistered(roomID: second.id, battleID: secondBattleID)))
-    #expect(store.state.chatRoomsByBattleID[firstBattleID] == first)
-    #expect(store.state.chatRoomsByBattleID[secondBattleID] == second)
-
-    await store.send(.view(.backToRootAction))
-    #expect(store.state.chatRoomsByBattleID.isEmpty)
-    #expect(store.state.routes.count == 1)
-  }
-
-  @Test
   func 스와이프로_루트에_돌아오면_클래스_표시정보도_초기화한다() async {
     let room = ClassRoom.mockJoinable
     var state = ClassCoordinator.State()
@@ -143,129 +118,6 @@ struct ClassCoordinatorTests {
 
     await store.send(.router(.updateRoutes([state.routes[0]])))
     #expect(store.state.chatRoomsByBattleID.isEmpty)
-  }
-
-  @Test
-  func 목록을_닫아_탈퇴_정리를_놓쳐도_재참여_전에는_개인_배틀을_초기화한다() async throws {
-    let room = ClassRoom.mockJoinable
-    let session = ClassMockChatSession()
-    let battleID = await session.register(room: room)
-    let battleAPI: any BattleInterface = session
-    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
-    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 2)
-    _ = try await battleAPI.createPerspective(battleId: battleID, content: "이전 참여 의견", optionId: 2)
-    var state = ClassCoordinator.State()
-    state.completedAIBattles[battleID] = true
-    let codeID = UUID()
-    let nicknameID = UUID()
-    state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
-    state.routes.push(.join(.init(mode: .nickname, instanceID: nicknameID)))
-    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
-      $0.classMockChatSession = session
-      $0.uuid = .incrementing
-    }
-    store.exhaustivity = .off
-
-    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.joined(
-      room,
-      nickname: "새 이름",
-      instanceID: nicknameID
-    ))))))
-    let requestID = try #require(store.state.pendingJoinID)
-    await store.receive(\.inner, .joinedSessionCleared(requestID, room))
-    await store.finish()
-    #expect(store.state.completedAIBattles[battleID] == nil)
-    guard case let .detail(detail)? = store.state.routes.last?.screen else {
-      Issue.record("새 참여 기록이 정리된 뒤 클래스 상세로 진입해야 합니다.")
-      return
-    }
-    #expect(detail.room == room)
-    _ = await session.register(room: room)
-    #expect(await session.hasChangedMind(battleID: battleID) == false)
-    #expect(try await battleAPI.fetchMyPerspective(battleId: battleID) == nil)
-  }
-
-  @Test
-  func 클래스에서_나가면_개인_배틀_기록을_지운_뒤_목록을_갱신한다() async throws {
-    let room = ClassRoom.mockJoinable
-    let session = ClassMockChatSession()
-    let battleID = await session.register(room: room)
-    let battleAPI: any BattleInterface = session
-    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
-    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 2)
-    #expect(await session.hasChangedMind(battleID: battleID))
-    let listeningKey = "picke.chatRoom.hasFinishedListening.\(battleID)"
-    UserDefaults.standard.set(true, forKey: listeningKey)
-    defer { UserDefaults.standard.removeObject(forKey: listeningKey) }
-
-    var list = MyClassFeature.State()
-    list.rooms = [room]
-    list.viewState = .loaded
-    list.selectedRoomID = room.id
-    list.isLeaving = true
-    list.leavingRoomID = room.id
-    var state = ClassCoordinator.State()
-    state.routes.push(.myClasses(list))
-    state.completedAIBattles[battleID] = true
-    let store = TestStore(initialState: state) {
-      ClassCoordinator()
-    } withDependencies: {
-      $0.classMockChatSession = session
-    }
-    store.exhaustivity = .off
-
-    await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.left(room.id))))))
-    await store.receive(\.inner, .membershipSessionCleared(routeID: 1, roomID: room.id))
-    await store.receive {
-      guard case let .router(.routeAction(id, action: .myClasses(.inner(.leaveCleanupCompleted(roomID))))) = $0
-      else { return false }
-      return id == 1 && roomID == room.id
-    }
-    await store.finish()
-
-    #expect(await session.hasChangedMind(battleID: battleID) == false)
-    #expect(UserDefaults.standard.object(forKey: listeningKey) == nil)
-    #expect(store.state.completedAIBattles[battleID] == nil)
-    guard case let .myClasses(updated)? = store.state.routes.last?.screen else {
-      Issue.record("클래스 나가기 후 목록 경로가 유지되어야 합니다.")
-      return
-    }
-    #expect(updated.rooms.isEmpty)
-    #expect(updated.isLeaving == false)
-    _ = await session.register(room: room)
-    #expect(await session.hasChangedMind(battleID: battleID) == false)
-  }
-
-  @Test
-  func 클래스_배틀은_기존_채팅_경로로_진입한다() async {
-    let room = ClassRoom.mocks[0]
-    let repository = MockClassRepository(rooms: [room], availableRooms: [])
-    let session = ClassMockChatSession()
-    var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
-    let store = TestStore(initialState: state) {
-      ClassCoordinator()
-    } withDependencies: {
-      $0.classMockRepository = repository
-      $0.classMockChatSession = session
-    }
-    store.exhaustivity = .off
-
-    await store.send(.router(.routeAction(
-      id: 1,
-      action: .detail(.delegate(.openBattle(room)))
-    )))
-    let battleID = -1_000_000 - room.id
-    await store.receive(\.inner, .mockBattleRegistered(roomID: room.id, battleID: battleID))
-
-    guard case let .chat(chat)? = store.state.routes.last?.screen,
-          case let .preVote(vote)? = chat.routes.last?.screen
-    else {
-      Issue.record("클래스 목 배틀이 기존 채팅 경로로 열리지 않음")
-      return
-    }
-    #expect(vote.battleId == battleID)
-    #expect(vote.showsResultsForExistingParticipation)
   }
 
   @Test
@@ -488,258 +340,6 @@ struct ClassCoordinatorTests {
       return
     }
     #expect(detail.room.id == room.id)
-  }
-
-  @Test
-  func AI_질문_클래스는_목_단일_투표_화면으로_진입한다() async throws {
-    let original = ClassRoom.mocks[0]
-    let setting = ClassSettingFeature.State(
-      aiQuestion: ClassAIQuestion.examples[0],
-      filter: .init(),
-      deadline: original.deadline
-    )
-    let battle = try #require(setting.aiBattle)
-    let room = ClassRoom(
-      id: original.id,
-      name: original.name,
-      joinCode: original.joinCode,
-      battle: battle,
-      deadline: original.deadline,
-      memberCount: original.memberCount,
-      role: original.role,
-      status: original.status,
-      allowsAnonymousOpinion: original.allowsAnonymousOpinion,
-      requiresComment: original.requiresComment,
-      memberCapacity: original.memberCapacity
-    )
-    let repository = MockClassRepository(rooms: [room], availableRooms: [])
-    let session = ClassMockChatSession()
-    let battleAPI: any BattleInterface = session
-    var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
-    let store = TestStore(initialState: state) {
-      ClassCoordinator()
-    } withDependencies: {
-      $0.classMockRepository = repository
-      $0.classMockChatSession = session
-      $0.uuid = .incrementing
-    }
-    store.exhaustivity = .off
-
-    await store.send(.router(.routeAction(
-      id: 1,
-      action: .detail(.delegate(.openBattle(room)))
-    )))
-    let battleID = -1_000_000 - room.id
-    await store.receive(\.inner, .mockBattleRegistered(roomID: room.id, battleID: battleID))
-
-    guard case let .aiVote(vote)? = store.state.routes.last?.screen else {
-      Issue.record("AI 질문 클래스가 단일 투표 화면으로 열리지 않음")
-      return
-    }
-    #expect(vote.battleID == battleID)
-    #expect(vote.room == room)
-
-    await store.send(.router(.routeAction(
-      id: 2,
-      action: .aiVote(.view(.optionTapped(1)))
-    )))
-    await store.send(.router(.routeAction(
-      id: 2,
-      action: .aiVote(.delegate(.voteSubmitted(
-        battleID: battleID,
-        selectedOptionID: 1,
-        hasCompletedPostVote: false
-      )))
-    )))
-    guard case let .aiChat(aiChat)? = store.state.routes.last?.screen else {
-      Issue.record("AI 질문 사전 투표 후 AI 채팅 화면으로 이어지지 않음")
-      return
-    }
-    #expect(aiChat.battleID == battleID)
-    #expect(aiChat.room == room)
-    #expect(aiChat.selectedOptionID == 1)
-
-    let routeCount = store.state.routes.count
-    await store.send(.router(.routeAction(
-      id: 2,
-      action: .aiVote(.delegate(.voteSubmitted(
-        battleID: battleID,
-        selectedOptionID: 1,
-        hasCompletedPostVote: false
-      )))
-    )))
-    #expect(store.state.routes.count == routeCount)
-
-    await store.send(.router(.routeAction(
-      id: 3,
-      action: .aiChat(.delegate(.finalVote(battleID: battleID)))
-    )))
-    guard case let .chat(finalVoteChat)? = store.state.routes.last?.screen,
-          case let .preVote(finalVote)? = finalVoteChat.routes.last?.screen
-    else {
-      Issue.record("AI 채팅 완료 후 기존 최종투표 화면으로 이어지지 않음")
-      return
-    }
-    #expect(finalVote.battleId == battleID)
-    #expect(finalVote.voteMode == .post)
-
-    let previousStats = try await battleAPI.fetchVoteStats(battleId: battleID)
-    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
-    let votedStats = try await battleAPI.fetchVoteStats(battleId: battleID)
-    #expect(votedStats.totalCount == previousStats.totalCount + 1)
-    #expect(votedStats.options[0].voteCount == previousStats.options[0].voteCount + 1)
-
-    let opinion = try await battleAPI.createPerspective(
-      battleId: battleID,
-      content: "다른 탭에서 쓴 의견",
-      optionId: 2
-    )
-    let battleAfterOpinion = try await battleAPI.fetchBattle(battleId: battleID)
-    let statsAfterOpinion = try await battleAPI.fetchVoteStats(battleId: battleID)
-    #expect(opinion?.option.optionId == 1)
-    #expect(battleAfterOpinion.userVoteStatus == .pro)
-    #expect(statsAfterOpinion.options[0].voteCount == votedStats.options[0].voteCount)
-    #expect(statsAfterOpinion.options[1].voteCount == votedStats.options[1].voteCount)
-  }
-
-  @Test
-  func 사후_투표를_마친_AI_질문_클래스는_댓글로_재진입한다() async throws {
-    let original = ClassRoom.mocks[0]
-    let setting = ClassSettingFeature.State(
-      aiQuestion: ClassAIQuestion.examples[0],
-      filter: .init(),
-      deadline: original.deadline
-    )
-    let battle = try #require(setting.aiBattle)
-    let room = ClassRoom(
-      id: original.id,
-      name: original.name,
-      joinCode: original.joinCode,
-      battle: battle,
-      deadline: original.deadline,
-      memberCount: original.memberCount,
-      role: original.role,
-      status: original.status,
-      allowsAnonymousOpinion: original.allowsAnonymousOpinion,
-      requiresComment: original.requiresComment,
-      memberCapacity: original.memberCapacity
-    )
-    let session = ClassMockChatSession()
-    let battleAPI: any BattleInterface = session
-    let battleID = await session.register(room: room)
-    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
-    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 2)
-    var vote = ClassAIVoteFeature.State(room: room, battleID: battleID, instanceID: UUID())
-    vote.selectedOptionID = 2
-    vote.hasSubmitted = true
-    vote.hasCompletedPostVote = true
-    var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
-    state.routes.push(.aiVote(vote))
-    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
-      $0.classMockChatSession = session
-    }
-    store.exhaustivity = .off
-
-    await store.send(.router(.routeAction(
-      id: 2,
-      action: .aiVote(.delegate(.voteSubmitted(
-        battleID: battleID,
-        selectedOptionID: 2,
-        hasCompletedPostVote: true
-      )))
-    )))
-    await store.receive(\.inner, .completedAIVoteResolved(battleID: battleID, isMindChanged: true))
-    guard case let .chat(chat)? = store.state.routes.last?.screen,
-          case let .comment(comment)? = chat.routes.last?.screen
-    else {
-      Issue.record("완료된 AI 질문 배틀이 댓글 화면으로 열리지 않음")
-      return
-    }
-    #expect(comment.battleId == battleID)
-    #expect(comment.isMindChanged)
-  }
-
-  @Test
-  func AI_채팅의_사후_투표_댓글에서_뒤로_가면_채팅으로_돌아오고_재투표하지_않는다() async {
-    let room = ClassRoom.mocks[0]
-    let battleID = -1_000_000 - room.id
-    var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
-    state.routes.push(.aiChat(.init(room: room, battleID: battleID, selectedOptionID: 1)))
-    state.routes.push(.chat(.init(route: .finalVote(battleId: battleID))))
-    let store = TestStore(initialState: state) { ClassCoordinator() }
-    store.exhaustivity = .off
-
-    await store.send(.router(.routeAction(
-      id: 3,
-      action: .chat(.router(.routeAction(
-        id: 0,
-        action: .preVote(.delegate(.voteSubmitted(
-          battleId: battleID,
-          voteMode: .post,
-          result: .init(voteId: 1, status: .created),
-          isMindChanged: true
-        )))
-      )))
-    )))
-    #expect(store.state.completedAIBattles[battleID] == true)
-
-    await store.send(.router(.routeAction(
-      id: 3,
-      action: .chat(.router(.routeAction(id: 1, action: .comment(.delegate(.dismiss)))))
-    )))
-    guard case .aiChat? = store.state.routes.last?.screen else {
-      Issue.record("댓글 뒤로 가기가 AI 채팅으로 돌아오지 않음")
-      return
-    }
-
-    await store.send(.router(.routeAction(
-      id: 2,
-      action: .aiChat(.delegate(.finalVote(battleID: battleID)))
-    )))
-    guard case let .chat(reopenedChat)? = store.state.routes.last?.screen,
-          case let .comment(comment)? = reopenedChat.routes.last?.screen
-    else {
-      Issue.record("완료된 사후 투표를 다시 열어 댓글로 이동하지 않음")
-      return
-    }
-    #expect(comment.battleId == battleID)
-    #expect(comment.isMindChanged)
-  }
-
-  @Test
-  func 클래스_채팅은_클래스_목_DI에서_배틀을_읽는다() async {
-    let room = ClassRoom.mocks[0]
-    let session = ClassMockChatSession()
-    let battleID = await session.register(room: room)
-    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
-    state.classState.routes.push(.chat(.init(route: .preVote(battleId: battleID))))
-    let store = TestStore(initialState: state) {
-      MainTabCoordinator()
-    } withDependencies: {
-      $0.classMockChatSession = session
-      $0.battleUseCase = MockBattleRepository()
-    }
-    store.exhaustivity = .off
-
-    await store.send(.classroom(.router(.routeAction(
-      id: 1,
-      action: .chat(.router(.routeAction(id: 0, action: .preVote(.async(.fetchBattleDetail)))))
-    ))))
-    await store.finish()
-    await store.skipReceivedActions()
-
-    guard case let .chat(chat)? = store.state.classState.routes.last?.screen,
-          case let .preVote(vote)? = chat.routes.last?.screen,
-          let detail = vote.battleDetail
-    else {
-      Issue.record("클래스 목 배틀 상세를 불러오지 못함")
-      return
-    }
-    #expect(detail.battleInfo.battleId == battleID)
-    #expect(detail.battleInfo.title == room.battle.title)
   }
 
   @Test
@@ -2303,7 +1903,7 @@ struct ClassParticipantPushTests {
       $0.participantJoinInstanceIDs = [codeID]
     }
     #expect(store.state.routes.count == 2)
-    await store.send(.inner(.joinedSessionCleared(requestID, room))) {
+    await store.send(.inner(.joinedNavigationReady(requestID, room))) {
       $0.pendingJoinID = nil
       $0.completingJoinCodeInstanceID = nil
       $0.completingJoinNicknameInstanceID = nil
@@ -2343,7 +1943,7 @@ struct ClassParticipantPushTests {
     }
     #expect(currentCode.activeFindRequestID == nil)
 
-    await store.send(.inner(.joinedSessionCleared(requestID, room))) {
+    await store.send(.inner(.joinedNavigationReady(requestID, room))) {
       $0.pendingJoinID = nil
       $0.completingJoinCodeInstanceID = nil
       $0.completingJoinNicknameInstanceID = nil
@@ -2375,7 +1975,7 @@ struct ClassParticipantPushTests {
       $0.routes.goBackToRoot()
       $0.participantJoinInstanceIDs = []
     }
-    await store.send(.inner(.joinedSessionCleared(requestID, room)))
+    await store.send(.inner(.joinedNavigationReady(requestID, room)))
     #expect(store.state.routes.count == 1)
   }
 }

@@ -53,35 +53,13 @@ struct ClassTests {
   }
 
   @Test
-  func Mock_이용권을_활성화하면_등록_화면으로_이동한다() async {
+  func 이용권_탭하면_등록_화면으로_이동한다() async {
     let store = TestStore(initialState: ClassIntroFeature.State()) {
       ClassIntroFeature()
-    } withDependencies: {
-      $0.classTicketMockEnabled = true
     }
 
     await store.send(.view(.ticketTapped))
     await store.receive(\.delegate.ticket)
-  }
-
-  @Test
-  func Mock_이용권이_꺼져_있으면_기존_안내를_보여준다() async {
-    let store = TestStore(initialState: ClassIntroFeature.State()) {
-      ClassIntroFeature()
-    } withDependencies: {
-      $0.classTicketMockEnabled = false
-    }
-
-    await store.send(.view(.ticketTapped)) {
-      $0.customAlert = .alert(
-        title: "이용권 등록 준비 중",
-        message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
-        cancelTitle: ""
-      )
-    }
-    await store.send(.customAlert(.presented(.confirmTapped))) {
-      $0.customAlert = nil
-    }
   }
 
   @Test
