@@ -1,3 +1,4 @@
+import BattleDomainInterface
 import ClassDomainInterface
 import ComposableArchitecture
 import DomainAssembly
@@ -8,6 +9,36 @@ import Testing
 
 @MainActor
 struct ClassBattleFlowCoordinatorTests {
+  @Test
+  func 클래스_탭은_주입된_배틀_의존성을_Mock_세션으로_덮어쓰지_않는다() async {
+    let room = ClassRoom.mocks[0]
+    let session = ClassMockChatSession()
+    let battleID = await session.register(room: room)
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    state.classState.routes.push(.chat(.init(route: .preVote(battleId: battleID))))
+    let store = TestStore(initialState: state) { MainTabCoordinator() } withDependencies: {
+      $0.classMockChatSession = session
+      $0.battleUseCase = MockBattleRepository()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.classroom(.router(.routeAction(
+      id: 1,
+      action: .chat(.router(.routeAction(id: 0, action: .preVote(.async(.fetchBattleDetail)))))
+    ))))
+    await store.finish()
+    await store.skipReceivedActions()
+
+    guard case let .chat(chat)? = store.state.classState.routes.last?.screen,
+          case let .preVote(vote)? = chat.routes.last?.screen,
+          let detail = vote.battleDetail
+    else {
+      Issue.record("주입된 배틀 의존성의 응답을 받지 못했습니다")
+      return
+    }
+    #expect(detail.battleInfo.battleId == 0)
+  }
+
   @Test
   func TTS_클래스는_Mock_주입과_무관하게_배틀_Flow로_진입하고_상세로_돌아온다() async {
     let room = ClassRoom.mocks[0]
