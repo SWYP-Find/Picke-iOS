@@ -1,6 +1,7 @@
 @testable import ClassDomain
 import ClassDomainInterface
 import Foundation
+import PickeNetwork
 import Testing
 
 struct ClassResultAPIContractTests {
@@ -11,6 +12,13 @@ struct ClassResultAPIContractTests {
     #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_409_RESULT_EXPIRED") == .resultExpired)
     #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_403_OWNER") == .accessDenied)
     #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_409_REPORT_RETRY") == .generationFailed)
+  }
+
+  @Test
+  func 감싼_네트워크_디코딩_오류는_재시도_대상에서_제외한다() {
+    let error = ClassResultRepositoryImpl.feedbackError(PickeNetworkError.decoding(.dataMissing))
+    #expect(error == .invalidResponse)
+    #expect(!error.isRetryable)
   }
 
   @Test

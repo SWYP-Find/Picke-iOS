@@ -11,8 +11,8 @@ struct ClassResultDTO: Decodable, Sendable {
       let postVoteCount: Int
       let postVoteRatio: Double
 
-      func toDomain() -> ClassResult.Option {
-        ClassResult.Option(
+      func toDomain() -> ClassResultOption {
+        ClassResultOption(
           id: optionId,
           title: title,
           preVoteCount: preVoteCount,
@@ -30,8 +30,8 @@ struct ClassResultDTO: Decodable, Sendable {
     let postVoteCount: Int
     let options: [Option]
 
-    func toDomain() -> ClassResult.Stats {
-      ClassResult.Stats(
+    func toDomain() -> ClassResultStats {
+      ClassResultStats(
         activeMemberCount: activeMemberCount,
         completedCount: completedCount,
         participationRate: participationRate,
