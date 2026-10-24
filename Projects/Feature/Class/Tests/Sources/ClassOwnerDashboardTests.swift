@@ -13,6 +13,44 @@ import Testing
 
 @MainActor
 struct ClassOwnerDashboardTests {
+  @Test
+  func 서버_결과는_멤버별_활동을_추정하지_않고_집계만_보존한다() async {
+    let room = ClassRoom.mocks[0]
+    let requestID = UUID()
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.requestID = requestID
+    let result = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 12,
+        completedCount: 10,
+        participationRate: 83.3,
+        commentWriterCount: 9,
+        commentRate: 75,
+        postVoteCount: 11,
+        options: []
+      ),
+      myReportState: nil,
+      insightState: nil
+    )
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() }
+
+    await store.send(.inner(.resultResponse(
+      instanceID: state.instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(result)
+    ))) {
+      $0.requestID = nil
+      $0.classResult = result
+      $0.sourceViewState = .ready
+    }
+    #expect(store.state.members.isEmpty)
+    #expect(store.state.metrics == nil)
+  }
+
   private func fixtureState() -> ClassOwnerDashboardFeature.State {
     var state = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
     state.members = MockClassOwnerDashboard.figma.members
@@ -216,344 +254,89 @@ struct ClassOwnerDashboardTests {
     #expect(participated == voteCount)
   }
 
-  @Test
-  func 주입된_대시보드_데이터를_로드하고_다시_나타나도_재요청하지_않는다() async {
-    let room = ClassRoom.mocks[0]
-    let dashboard = ClassOwnerDashboardData(
-      members: [ClassOwnerMember(id: 87, name: "맞춤 멤버", participationCount: 2)],
-      opinions: [ClassOwnerOpinion(id: 91, author: "맞춤 작성자", text: "맞춤 의견", replyCount: 0)],
-      report: MockClassReport.figma,
-      metrics: ClassParticipationMetrics(commentAuthorCount: 1, optionAVoteCount: 1, optionBVoteCount: 0)
+  private struct ResultStub: ClassResultInterface {
+    let result: Result<ClassResult, ClassError>
+
+    func fetch(roomID _: Int) async throws -> ClassResult {
+      try result.get()
+    }
+
+    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
+
+    func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
+
+    func retryInsight(roomID _: Int) async throws {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
+  }
+
+  private func serverResult(_ room: ClassRoom) -> ClassResult {
+    ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 12,
+        completedCount: 10,
+        participationRate: 83.3,
+        commentWriterCount: 9,
+        commentRate: 75,
+        postVoteCount: 11,
+        options: []
+      ),
+      myReportState: nil,
+      insightState: nil
     )
+  }
+
+  @Test
+  func 운영자_화면은_서버_결과만_불러오고_멤버별_활동을_생성하지_않는다() async {
+    let room = ClassRoom.mocks[0]
+    let result = serverResult(room)
     let requestID = UUID()
-    let instanceID = UUID()
-    let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: instanceID)) {
+    let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())) {
       ClassOwnerDashboardFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
-      $0.classUseCase = MockClassRepository(rooms: [room], dashboards: [room.id: dashboard])
+      $0.classResultUseCase = ResultStub(result: .success(result))
     }
     store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
-    await store.receive(\.async.fetchDashboard) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.dashboardResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .ready
-      $0.dashboard = dashboard
-      $0.members = dashboard.members
-      $0.opinions = dashboard.opinions
-      $0.report = dashboard.report
-      $0.metrics = dashboard.metrics
-    }
-    await store.send(.view(.onAppear))
-    #expect(store.state.visibleMembers.map(\.name) == ["맞춤 멤버"])
-    #expect(store.state.visibleOpinions.map(\.text) == ["맞춤 의견"])
-  }
+    await store.receive(\.async.fetchDashboard)
+    await store.receive(\.inner.resultResponse)
 
-  @Test
-  func 데이터가_없으면_성공한_빈_상태로_남는다() async {
-    let room = ClassRoom.mocks[0]
-    let requestID = UUID()
-    let instanceID = UUID()
-    let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: instanceID)) {
-      ClassOwnerDashboardFeature()
-    } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classUseCase = MockClassRepository(rooms: [room], dashboards: [:])
-    }
-
-    await store.send(.view(.onAppear))
-    await store.receive(\.async.fetchDashboard) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.dashboardResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .ready
-    }
+    #expect(store.state.classResult == result)
     #expect(store.state.sourceViewState == .ready)
     #expect(store.state.members.isEmpty)
-    #expect(store.state.report == nil)
+    #expect(store.state.opinions.isEmpty)
     #expect(store.state.metrics == nil)
+    await store.send(.view(.onAppear))
   }
 
   @Test
-  func 오래된_응답과_뒤로가기_후_응답은_무시한다() async {
+  func 서버_결과_실패는_재시도할_수_있는_상태가_된다() async {
     let room = ClassRoom.mocks[0]
-    let instanceID = UUID()
-    let requestID = UUID()
-    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: instanceID)
-    state.requestID = requestID
-    let store = TestStore(initialState: state) {
-      ClassOwnerDashboardFeature()
-    }
-    let staleResponse = ClassOwnerDashboardFeature.Action.inner(.dashboardResponse(
-      instanceID: instanceID,
-      requestID: UUID(),
-      roomID: room.id,
-      .success(MockClassOwnerDashboard.figma)
-    ))
-    await store.send(staleResponse)
-    await store.send(.view(.backTapped)) {
-      $0.requestID = nil
-    }
-    await store.receive(\.delegate, .dismiss)
-    await store.send(.inner(.dashboardResponse(
-      instanceID: instanceID,
-      requestID: requestID,
-      roomID: room.id,
-      .success(MockClassOwnerDashboard.figma)
-    )))
-    #expect(store.state.sourceViewState == .loading)
-    #expect(store.state.members.isEmpty)
-  }
-
-  @Test
-  func 실패는_오류로_표시하고_재시도는_새_요청을_시작한다() async {
-    let room = ClassRoom.mocks[0]
-    let instanceID = UUID()
-    let requestID = UUID()
-    let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: instanceID)) {
+    let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())) {
       ClassOwnerDashboardFeature()
     } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classUseCase = MockClassRepository(rooms: [], dashboards: [:])
-    }
-
-    await store.send(.view(.onAppear))
-    await store.receive(\.async.fetchDashboard) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.dashboardResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .failed
-    }
-    await store.send(.view(.onAppear))
-    #expect(store.state.sourceViewState == .failed)
-    await store.send(.view(.retryTapped))
-    await store.receive(\.async.fetchDashboard) {
-      $0.requestID = requestID
-      $0.sourceViewState = .loading
-    }
-    await store.receive(\.inner.dashboardResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .failed
-    }
-  }
-
-  @Test
-  func 마감일을_변경한_방도_기존_대시보드를_로드한다() async throws {
-    let repository = MockClassRepository()
-    let original = ClassRoom.mocks[0]
-    let deadline = original.deadline.addingTimeInterval(86400)
-    let updated = try await repository.updateDeadline(id: original.id, deadline: deadline)
-    #expect(updated.deadline == deadline)
-    let instanceID = UUID()
-    let requestID = UUID()
-    let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: updated, instanceID: instanceID)) {
-      ClassOwnerDashboardFeature()
-    } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classUseCase = repository
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .failure(.network("연결 실패")))
     }
     store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
-    await store.receive(\.async.fetchDashboard) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.dashboardResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .ready
-      $0.dashboard = MockClassOwnerDashboard.figma
-      $0.members = MockClassOwnerDashboard.figma.members
-      $0.opinions = MockClassOwnerDashboard.figma.opinions
-      $0.report = MockClassOwnerDashboard.figma.report
-      $0.metrics = MockClassOwnerDashboard.figma.metrics
-    }
-    #expect(store.state.room.deadline == deadline)
-  }
-
-  @Test
-  func 학급_인사이트_실패와_개인_피드백_성공은_독립적이다() async {
-    let room = ClassRoom.mocks[0]
-    let dashboard = MockClassOwnerDashboard.figma
-    let requestID = UUID()
-    let feedback = ClassAIPersonalFeedback(
-      summaryTitle: "생성된 제목",
-      summaryDetail: "생성된 개인 분석",
-      points: [
-        .init(title: "첫째", detail: "설명1"),
-        .init(title: "둘째", detail: "설명2"),
-        .init(title: "셋째", detail: "설명3"),
-      ],
-      nextQuestion: "다음 질문?",
-      nextHint: "다음 힌트"
-    )
-    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
-    state.dashboard = dashboard
-    state.report = dashboard.report
-    state.members = dashboard.members
-    state.opinions = dashboard.opinions
-    state.metrics = dashboard.metrics
-    state.sourceViewState = .ready
-    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { context in
-        switch context.kind {
-        case .classInsight: throw ClassAIFeedbackError.modelNotReady
-        case .ownerPersonal: return .personal(feedback)
-        case .studentPersonal: throw ClassAIFeedbackError.generationFailed
-        }
-      }
-    }
-
-    await store.send(.async(.generateInsight)) {
-      $0.insightContext = try! .classInsight(room: room, dashboard: dashboard)
-      $0.insightRequestID = requestID
-      $0.isGeneratingInsight = true
-    }
-    await store.receive(\.inner.insightResponse) {
-      $0.insightRequestID = nil
-      $0.isGeneratingInsight = false
-      $0.insightError = .modelNotReady
-    }
-    await store.send(.view(.insightRetryTapped))
-    await store.receive(\.async.generateInsight) {
-      $0.insightRequestID = requestID
-      $0.isGeneratingInsight = true
-      $0.insightError = nil
-    }
-    await store.receive(\.inner.insightResponse) {
-      $0.insightRequestID = nil
-      $0.isGeneratingInsight = false
-      $0.insightError = .modelNotReady
-    }
-    await store.send(.async(.generatePersonal)) {
-      $0.feedbackContext = try! .personal(room: room, report: dashboard.report!, isOwner: true)
-      $0.feedbackRequestID = requestID
-      $0.isGeneratingFeedback = true
-    }
-    await store.receive(\.inner.feedbackResponse) {
-      $0.feedbackRequestID = nil
-      $0.isGeneratingFeedback = false
-      $0.generatedFeedback = feedback
-    }
-    #expect(store.state.insightViewState == .retryableFailure)
-    #expect(store.state.feedbackViewState == .ready(feedback))
-    #expect(store.state.metrics == dashboard.metrics)
-    #expect(store.state.opinions == dashboard.opinions)
-    #expect(store.state.generatedInsight == nil)
-  }
-
-  @Test
-  func 주입된_학급_인사이트만_AI_영역에_나타난다() async {
-    let room = ClassRoom.mocks[0]
-    let dashboard = MockClassOwnerDashboard.figma
-    let requestID = UUID()
-    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
-    state.dashboard = dashboard
-    state.sourceViewState = .ready
-    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { context in
-        #expect(context.kind == .classInsight)
-        #expect(context.roomID == room.id)
-        return .classInsight("생성된 학급 인사이트")
-      }
-    }
-    await store.send(.async(.generateInsight)) {
-      $0.insightContext = try! .classInsight(room: room, dashboard: dashboard)
-      $0.insightRequestID = requestID
-      $0.isGeneratingInsight = true
-    }
-    await store.receive(\.inner.insightResponse) {
-      $0.insightRequestID = nil
-      $0.isGeneratingInsight = false
-      $0.generatedInsight = "생성된 학급 인사이트"
-    }
-    #expect(store.state.insightViewState == .ready("생성된 학급 인사이트"))
-    #expect(store.state.generatedInsight != dashboard.insight)
-  }
-
-  @Test
-  func AI_상태와_무관하게_운영자의_서버_의견_목록을_보존한다() {
-    var state = ClassOwnerDashboardFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())
-    state.report = MockClassOwnerDashboard.figma.report
-    state.sourceViewState = .ready
-    let opinions = state.myOpinions
-    #expect(!opinions.isEmpty)
-    state.isGeneratingFeedback = true
-    #expect(state.myOpinions == opinions)
-    state.isGeneratingFeedback = false
-    for error in [ClassAIFeedbackError.deviceNotEligible, .modelNotReady, .generationFailed] {
-      state.feedbackError = error
-      #expect(state.myOpinions == opinions)
-      #expect(state.myOpinionCount == opinions.count)
-    }
-  }
-
-  @Test
-  func 구조화된_의견이_legacy_목록보다_우선하며_중복과_순서를_보존한다() {
-    var state = fixtureState()
-    let entries = [
-      ClassReportOpinion(id: "same", kind: .comment, body: "같은 글"),
-      ClassReportOpinion(id: "same", kind: .reply, body: "같은 글"),
-      ClassReportOpinion(id: "last", kind: .reply, body: "마지막 글"),
-    ]
-    state.report = ClassReport(
-      texts: [:],
-      myOpinions: ["legacy"],
-      initialVoteLeading: 0,
-      finalVoteLeading: 0,
-      layout: .summary,
-      opinionEntries: entries
-    )
-
-    #expect(state.myOpinions == entries)
-    #expect(state.myOpinionCount == 3)
-    #expect(state.myOpinionsTitle == "내가 남긴 의견 3개 보기")
-
-    state.report = ClassReport(
-      texts: [:],
-      myOpinions: ["legacy"],
-      initialVoteLeading: 0,
-      finalVoteLeading: 0,
-      layout: .summary,
-      opinionEntries: []
-    )
-    #expect(state.myOpinions.isEmpty)
-    #expect(state.myOpinionCount == 0)
-    #expect(state.myOpinionsTitle == "내가 남긴 의견 0개 보기")
-  }
-
-  @Test
-  func 준비된_운영자_리포트에서만_내_의견_이동을_요청한다() async {
-    var state = fixtureState()
-    state.selectedTab = .report
-    let instanceID = state.instanceID
-    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() }
-
-    await store.send(.view(.myOpinionsTapped))
-    await store.receive(\.delegate, .openMyOpinions(instanceID))
-    #expect(store.state == state)
-
-    let invalidStates: [(inout ClassOwnerDashboardFeature.State) -> Void] = [
-      { (state: inout ClassOwnerDashboardFeature.State) in state.selectedTab = .home },
-      { (state: inout ClassOwnerDashboardFeature.State) in state.sourceViewState = .loading },
-      { (state: inout ClassOwnerDashboardFeature.State) in state.sourceViewState = .failed },
-      { (state: inout ClassOwnerDashboardFeature.State) in state.report = nil },
-      { (state: inout ClassOwnerDashboardFeature.State) in state.management = .init(kind: .management) },
-    ]
-    for invalid in invalidStates {
-      var invalidState = state
-      invalid(&invalidState)
-      let invalidStore = TestStore(initialState: invalidState) { ClassOwnerDashboardFeature() }
-      await invalidStore.send(.view(.myOpinionsTapped))
-      await invalidStore.finish()
-    }
+    await store.receive(\.async.fetchDashboard)
+    await store.receive(\.inner.resultResponse)
+    #expect(store.state.sourceViewState == .failed)
+    await store.send(.view(.retryTapped))
+    await store.receive(\.async.fetchDashboard)
+    await store.receive(\.inner.resultResponse)
+    #expect(store.state.sourceViewState == .failed)
   }
 
   @Test

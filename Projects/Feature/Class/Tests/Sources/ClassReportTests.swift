@@ -2,8 +2,6 @@
 //  ClassReportTests.swift
 //  ClassTests
 //
-//  Created by Picke on 10/11/26.
-//
 
 @testable import Class
 import ClassDomainInterface
@@ -13,378 +11,140 @@ import Testing
 
 @MainActor
 struct ClassReportTests {
-  @Test
-  func 결과_탭을_선택하면_해당_내용으로_바뀐다() async {
-    let store = TestStore(initialState: ClassReportFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())) {
-      ClassReportFeature()
+  private struct ResultStub: ClassResultInterface {
+    let result: Result<ClassResult, ClassError>
+    let feedback: ClassAIPersonalFeedback?
+
+    init(
+      result: Result<ClassResult, ClassError>,
+      feedback: ClassAIPersonalFeedback? = nil
+    ) {
+      self.result = result
+      self.feedback = feedback
     }
 
-    await store.send(.view(.tabSelected(.classResult))) {
-      $0.selectedTab = .classResult
+    func fetch(roomID _: Int) async throws -> ClassResult {
+      try result.get()
     }
-    await store.send(.view(.tabSelected(.classResult)))
-    await store.send(.view(.tabSelected(.feedback))) {
-      $0.selectedTab = .feedback
+
+    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+      guard let feedback else { throw ClassAIFeedbackError.temporarilyUnavailable }
+      return feedback
+    }
+
+    func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
+
+    func retryInsight(roomID _: Int) async throws {
+      throw ClassAIFeedbackError.temporarilyUnavailable
     }
   }
 
-  @Test
-  func 결과_뒤로가기는_코디네이터에_닫기를_알린다() async {
-    let store = TestStore(initialState: ClassReportFeature.State(room: ClassRoom.mocks[0], instanceID: UUID())) {
-      ClassReportFeature()
-    }
-
-    await store.send(.view(.backTapped))
-    await store.receive(\.delegate.dismiss)
-  }
-
-  @Test
-  func 주입된_리포트를_불러오고_중복_요청하지_않는다() async {
-    let room = ClassRoom.mockClosedSociety
-    let report = MockClassReport.figma
-    let instanceID = UUID(1)
-    let requestID = UUID(2)
-    let repository = MockClassRepository(
-      rooms: [room],
-      availableRooms: [],
-      reports: [room.id: report]
+  private func result(
+    room: ClassRoom,
+    reportState: String?
+  ) -> ClassResult {
+    ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 12,
+        completedCount: 10,
+        participationRate: 83.3,
+        commentWriterCount: 9,
+        commentRate: 75,
+        postVoteCount: 11,
+        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: 54.5)]
+      ),
+      myReportState: reportState,
+      insightState: nil
     )
-    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: instanceID)) {
-      ClassReportFeature()
-    } withDependencies: {
-      $0.classUseCase = repository
-      $0.uuid = .constant(requestID)
-    }
-
-    await store.send(.view(.onAppear))
-    await store.receive(\.async.fetch) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.reportResponse) {
-      $0.requestID = nil
-      $0.report = report
-      $0.sourceViewState = .ready
-    }
-    await store.receive(\.async.generateFeedback) {
-      $0.feedbackContext = try! .personal(room: room, report: report, isOwner: false)
-      $0.feedbackRequestID = requestID
-      $0.isGeneratingFeedback = true
-    }
-    await store.receive(\.inner.feedbackResponse) {
-      $0.feedbackRequestID = nil
-      $0.isGeneratingFeedback = false
-      $0.feedbackError = .modelNotReady
-    }
-    await store.send(.view(.onAppear))
-    #expect(store.state.showsSummaryLayout)
   }
 
   @Test
-  func 로딩_중_다시_나타나도_요청하지_않는다() async {
-    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(8))
-    state.requestID = UUID(18)
-    let store = TestStore(initialState: state) { ClassReportFeature() }
+  func 뒤로가기와_닫기는_리포트를_닫는다() async {
+    let state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    let backStore = TestStore(initialState: state) { ClassReportFeature() }
+    await backStore.send(.view(.backTapped))
+    await backStore.receive(\.delegate.dismiss)
 
-    await store.send(.view(.onAppear))
+    let closeStore = TestStore(initialState: state) { ClassReportFeature() }
+    await closeStore.send(.view(.closeTapped))
+    await closeStore.receive(\.delegate.dismiss)
   }
 
   @Test
-  func 없는_리포트는_네_탭을_유지하는_사용불가_상태다() async {
+  func 서버_결과가_있어도_개인_리포트_권한이_없으면_생성하지_않는다() async {
     let room = ClassRoom.mockClosedSociety
-    let requestID = UUID(3)
-    let repository = MockClassRepository(rooms: [room], availableRooms: [], reports: [:])
-    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID(4))) {
+    let response = result(room: room, reportState: nil)
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
       ClassReportFeature()
     } withDependencies: {
-      $0.classUseCase = repository
-      $0.uuid = .constant(requestID)
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .success(response))
     }
+    store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
-    await store.receive(\.async.fetch) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.reportResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .ready
-    }
+    await store.receive(\.async.fetch)
+    await store.receive(\.inner.resultResponse)
+
+    #expect(store.state.classResult == response)
+    #expect(store.state.sourceViewState == .ready)
+    #expect(store.state.feedback == nil)
     #expect(store.state.report == nil)
-    #expect(!store.state.showsSummaryLayout)
-    await store.send(.view(.tabSelected(.feedback))) {
-      $0.selectedTab = .feedback
-    }
   }
 
   @Test
-  func 실패_후_재시도하고_늦은_응답은_무시한다() async {
+  func 참여자의_개인_리포트는_서버_응답으로_표시한다() async {
     let room = ClassRoom.mockClosedSociety
-    let instanceID = UUID(5)
-    let requestID = UUID(6)
-    let repository = MockClassRepository(rooms: [], availableRooms: [])
-    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: instanceID)) {
+    let response = result(room: room, reportState: "SUCCEEDED")
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: "서버 제목",
+      summaryDetail: "서버 분석",
+      points: [.init(title: "강점", detail: "근거")],
+      nextQuestion: "다음 질문?",
+      nextHint: ""
+    )
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
       ClassReportFeature()
     } withDependencies: {
-      $0.classUseCase = repository
-      $0.uuid = .constant(requestID)
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(
+        result: .success(response),
+        feedback: feedback
+      )
     }
+    store.exhaustivity = .off
 
     await store.send(.view(.onAppear))
-    await store.receive(\.async.fetch) {
-      $0.requestID = requestID
-    }
-    await store.receive(\.inner.reportResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .failed
-    }
-    await store.send(.view(.onAppear))
-    #expect(store.state.sourceViewState == .failed)
-    await store.send(.view(.retryTapped))
-    await store.receive(\.async.fetch) {
-      $0.requestID = requestID
-      $0.sourceViewState = .loading
-    }
-    await store.receive(\.inner.reportResponse) {
-      $0.requestID = nil
-      $0.sourceViewState = .failed
-    }
-    await store.send(.inner(.reportResponse(
-      instanceID: instanceID,
-      requestID: requestID,
-      roomID: room.id,
-      .success(MockClassReport.figma)
-    )))
-  }
+    await store.receive(\.async.fetch)
+    await store.receive(\.inner.resultResponse)
+    await store.receive(\.async.generateFeedback)
+    await store.receive(\.inner.feedbackResponse)
 
-  @Test
-  func 요청이_같아도_다른_화면의_리포트_응답은_무시한다() async {
-    let room = ClassRoom.mockClosedSociety
-    let requestID = UUID(21)
-    var state = ClassReportFeature.State(room: room, instanceID: UUID(22))
-    state.requestID = requestID
-    let store = TestStore(initialState: state) { ClassReportFeature() }
-
-    await store.send(.inner(.reportResponse(
-      instanceID: UUID(23),
-      requestID: requestID,
-      roomID: room.id,
-      .success(MockClassReport.figma)
-    )))
-  }
-
-  @Test
-  func 화면이_같아도_이전_요청의_리포트_응답은_무시한다() async {
-    let room = ClassRoom.mockClosedSociety
-    let instanceID = UUID(24)
-    var state = ClassReportFeature.State(room: room, instanceID: instanceID)
-    state.requestID = UUID(25)
-    let store = TestStore(initialState: state) { ClassReportFeature() }
-
-    await store.send(.inner(.reportResponse(
-      instanceID: instanceID,
-      requestID: UUID(26),
-      roomID: room.id,
-      .success(MockClassReport.figma)
-    )))
-  }
-
-  @Test
-  func 뒤로가기_후_지연된_응답은_상태를_바꾸지_않는다() async {
-    let room = ClassRoom.mockClosedSociety
-    let instanceID = UUID(9)
-    let requestID = UUID(10)
-    var state = ClassReportFeature.State(room: room, instanceID: instanceID)
-    state.requestID = requestID
-    let store = TestStore(initialState: state) { ClassReportFeature() }
-
-    await store.send(.view(.backTapped)) {
-      $0.requestID = nil
-    }
-    await store.receive(\.delegate.dismiss)
-    await store.send(.inner(.reportResponse(
-      instanceID: instanceID,
-      requestID: requestID,
-      roomID: room.id,
-      .success(MockClassReport.figma)
-    )))
-  }
-
-  @Test
-  func 생성된_피드백만_표시하고_리포트_원본은_보존한다() async {
-    let room = ClassRoom.mockClosedSociety
-    let report = MockClassReport.figma
-    let feedback = ClassAIPersonalFeedback(
-      summaryTitle: "생성된 제목",
-      summaryDetail: "생성된 분석",
-      points: [
-        .init(title: "첫 관점", detail: "첫 설명"),
-        .init(title: "둘째 관점", detail: "둘째 설명"),
-        .init(title: "셋째 관점", detail: "셋째 설명"),
-      ],
-      nextQuestion: "생성된 질문?",
-      nextHint: "생성된 힌트"
-    )
-    let requestID = UUID(11)
-    var state = ClassReportFeature.State(room: room, instanceID: UUID(12))
-    state.report = report
-    state.sourceViewState = .ready
-    let store = TestStore(initialState: state) { ClassReportFeature() } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { context in
-        #expect(context.kind == .studentPersonal)
-        #expect(context.roomID == room.id)
-        return .personal(feedback)
-      }
-    }
-
-    await store.send(.async(.generateFeedback)) {
-      $0.feedbackContext = try! .personal(room: room, report: report, isOwner: false)
-      $0.feedbackRequestID = requestID
-      $0.isGeneratingFeedback = true
-    }
-    await store.receive(\.inner.feedbackResponse) {
-      $0.feedbackRequestID = nil
-      $0.isGeneratingFeedback = false
-      $0.feedback = feedback
-    }
+    #expect(store.state.classResult == response)
+    #expect(store.state.feedback == feedback)
     #expect(store.state.feedbackViewState == .ready(feedback))
-    #expect(store.state.report == report)
   }
 
   @Test
-  func 일시적_실패는_보존된_리포트로_재시도하고_뒤로가기는_응답을_차단한다() async {
-    let room = ClassRoom.mockClosedSociety
-    let report = MockClassReport.figma
-    let requestID = UUID(13)
-    let instanceID = UUID(14)
-    var state = ClassReportFeature.State(room: room, instanceID: instanceID)
-    state.report = report
-    state.sourceViewState = .ready
-    let store = TestStore(initialState: state) { ClassReportFeature() } withDependencies: {
-      $0.uuid = .constant(requestID)
-      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { _ in
-        throw ClassAIFeedbackError.modelNotReady
-      }
+  func 결과_조회_오류는_실패_상태로_남는다() async {
+    let store = TestStore(initialState: ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .failure(.network("연결 실패")))
     }
+    store.exhaustivity = .off
 
-    await store.send(.async(.generateFeedback)) {
-      $0.feedbackContext = try! .personal(room: room, report: report, isOwner: false)
-      $0.feedbackRequestID = requestID
-      $0.isGeneratingFeedback = true
-    }
-    await store.receive(\.inner.feedbackResponse) {
-      $0.feedbackRequestID = nil
-      $0.isGeneratingFeedback = false
-      $0.feedbackError = .modelNotReady
-    }
-    #expect(store.state.feedbackViewState == .retryableFailure)
-    await store.send(.view(.feedbackRetryTapped))
-    await store.receive(\.async.generateFeedback) {
-      $0.feedbackRequestID = requestID
-      $0.isGeneratingFeedback = true
-      $0.feedbackError = nil
-    }
-    await store.receive(\.inner.feedbackResponse) {
-      $0.feedbackRequestID = nil
-      $0.isGeneratingFeedback = false
-      $0.feedbackError = .modelNotReady
-    }
-    await store.send(.view(.backTapped))
-    await store.receive(\.delegate.dismiss)
-    await store.send(.inner(.feedbackResponse(
-      instanceID: instanceID,
-      requestID: requestID,
-      roomID: room.id,
-      .failure(.modelNotReady),
-      wasUnknown: false
-    )))
-    #expect(store.state.report == report)
-  }
+    await store.send(.view(.onAppear))
+    await store.receive(\.async.fetch)
+    await store.receive(\.inner.resultResponse)
 
-  @Test
-  func 작성한_근거가_없으면_모델을_호출하지_않는다() async {
-    let room = ClassRoom.mockClosedSociety
-    let report = ClassReport(
-      texts: [.aiSummaryDetail: "기존 고정 AI 문구"],
-      myOpinions: [],
-      initialVoteLeading: 0.5,
-      finalVoteLeading: 0.5,
-      layout: .summary
-    )
-    var state = ClassReportFeature.State(room: room, instanceID: UUID(15))
-    state.report = report
-    state.sourceViewState = .ready
-    let store = TestStore(initialState: state) { ClassReportFeature() } withDependencies: {
-      $0.classAIFeedbackUseCase = MockClassAIFeedbackUseCase { _ in
-        Issue.record("근거가 없는 리포트에서 모델을 호출하면 안 됩니다")
-        throw ClassAIFeedbackError.generationFailed
-      }
-    }
-
-    await store.send(.async(.generateFeedback)) {
-      $0.feedbackError = .insufficientInput
-    }
-    #expect(store.state.feedbackViewState == .unavailable)
-    #expect(store.state.report == report)
-  }
-
-  @Test
-  func 지원하지_않는_언어와_문맥_초과는_서로_다른_상태다() {
-    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(16))
-    state.feedbackError = .unsupportedLanguage
-    #expect(state.feedbackViewState == .unavailable)
-    state.feedbackError = .contextTooLong
-    #expect(state.feedbackViewState == .failure)
-  }
-
-  @Test
-  func AI_상태와_무관하게_서버_의견_목록을_보존한다() {
-    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(17))
-    state.report = MockClassReport.figma
-    state.sourceViewState = .ready
-    let opinions = state.report!.resolvedOpinions
-    #expect(!opinions.isEmpty)
-    state.isGeneratingFeedback = true
-    #expect(state.report?.resolvedOpinions == opinions)
-    state.isGeneratingFeedback = false
-    for error in [ClassAIFeedbackError.deviceNotEligible, .modelNotReady, .generationFailed] {
-      state.feedbackError = error
-      #expect(state.report?.resolvedOpinions == opinions)
-      #expect(state.myOpinionCount == opinions.count)
-    }
-  }
-
-  @Test
-  func 준비된_리포트에서_의견_버튼을_누르면_화면_ID만_전달하고_상태를_유지한다() async {
-    let instanceID = UUID(30)
-    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: instanceID)
-    state.report = MockClassReport.figma
-    state.sourceViewState = .ready
-    state.selectedTab = .feedback
-    let store = TestStore(initialState: state) { ClassReportFeature() }
-
-    #expect(store.state.myOpinionCount == 3)
-    #expect(store.state.myOpinionsButtonTitle == "내가 남긴 의견 3개 보기")
-    await store.send(.view(.myOpinionsTapped))
-    await store.receive(\.delegate.openMyOpinions, instanceID)
-    #expect(store.state == state)
-  }
-
-  @Test
-  func 리포트가_없거나_로딩_중이면_의견_화면을_열지_않는다() async {
-    var loading = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(31))
-    loading.report = MockClassReport.figma
-    let loadingStore = TestStore(initialState: loading) { ClassReportFeature() }
-    await loadingStore.send(.view(.myOpinionsTapped))
-
-    var absent = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID(32))
-    absent.sourceViewState = .ready
-    let absentStore = TestStore(initialState: absent) { ClassReportFeature() }
-    await absentStore.send(.view(.myOpinionsTapped))
-  }
-}
-
-private extension UUID {
-  init(_ value: UInt8) {
-    self.init(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, value))
+    #expect(store.state.sourceViewState == .failed)
+    #expect(store.state.classResult == nil)
   }
 }

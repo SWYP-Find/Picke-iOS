@@ -49,9 +49,11 @@ public struct ClassOwnerDashboardFeature {
     public var members: [ClassOwnerMember] = []
     public var opinions: [ClassOwnerOpinion] = []
     public var dashboard: ClassOwnerDashboardData?
+    public var classResult: ClassResult?
     public var insightContext: ClassAIFeedbackContext?
     public var feedbackContext: ClassAIFeedbackContext?
     public var generatedInsight: String?
+    public var serverInsight: ClassAIInsight?
     public var generatedFeedback: ClassAIPersonalFeedback?
     public var insightError: ClassAIFeedbackError?
     public var feedbackError: ClassAIFeedbackError?
@@ -88,6 +90,9 @@ public struct ClassOwnerDashboardFeature {
       if isGeneratingInsight {
         return .loading
       }
+      if insightError == .modelNotReady {
+        return .pending
+      }
       if let insightError, insightError.isRetryable {
         return .retryableFailure
       }
@@ -103,6 +108,9 @@ public struct ClassOwnerDashboardFeature {
       }
       if isGeneratingFeedback {
         return .loading
+      }
+      if feedbackError == .modelNotReady {
+        return .pending
       }
       if let feedbackError, feedbackError.isRetryable {
         return .retryableFailure
@@ -264,6 +272,7 @@ public struct ClassOwnerDashboardFeature {
   @CasePathable
   public enum InnerAction: Equatable {
     case dashboardResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassOwnerDashboardData?, ClassError>)
+    case resultResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassResult, ClassError>)
     case insightResponse(
       instanceID: UUID,
       requestID: UUID,
@@ -296,8 +305,7 @@ public struct ClassOwnerDashboardFeature {
     case openFeedback(ClassOwnerMember)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classAIFeedbackUseCase) private var classAIFeedbackUseCase
+  @Dependency(\.classResultUseCase) private var classResultUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -334,13 +342,11 @@ extension ClassOwnerDashboardFeature {
       return .send(.async(.fetchDashboard))
     case .insightRetryTapped:
       guard state.insightError?.isRetryable == true,
-            !state.isGeneratingInsight,
-            state.insightContext != nil else { return .none }
+            !state.isGeneratingInsight else { return .none }
       return .send(.async(.generateInsight))
     case .feedbackRetryTapped:
       guard state.feedbackError?.isRetryable == true,
-            !state.isGeneratingFeedback,
-            state.feedbackContext != nil else { return .none }
+            !state.isGeneratingFeedback else { return .none }
       return .send(.async(.generatePersonal))
     case .backTapped:
       state.requestID = nil
@@ -403,9 +409,11 @@ extension ClassOwnerDashboardFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetchDashboard:
+      state.classResult = nil
       state.insightRequestID = nil
       state.feedbackRequestID = nil
       state.generatedInsight = nil
+      state.serverInsight = nil
       state.generatedFeedback = nil
       state.insightContext = nil
       state.feedbackContext = nil
@@ -418,12 +426,16 @@ extension ClassOwnerDashboardFeature {
       let requestID = uuid()
       state.requestID = requestID
       state.sourceViewState = .loading
-      let fetch = Effect<Action>.run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      let fetch = Effect<Action>.run { [
+        classResultUseCase,
+        instanceID = state.instanceID,
+        roomID = state.room.id
+      ] send in
         let result = await Result {
-          try await classUseCase.fetchOwnerDashboard(roomID: roomID)
+          try await classResultUseCase.fetch(roomID: roomID)
         }
         .mapError(ClassError.from)
-        await send(.inner(.dashboardResponse(
+        await send(.inner(.resultResponse(
           instanceID: instanceID,
           requestID: requestID,
           roomID: roomID,
@@ -437,28 +449,19 @@ extension ClassOwnerDashboardFeature {
         fetch
       )
     case .generateInsight:
-      let context: ClassAIFeedbackContext
-      if let retained = state.insightContext {
-        context = retained
-      } else {
-        guard let dashboard = state.dashboard else { return .none }
-        do {
-          context = try .classInsight(room: state.room, dashboard: dashboard)
-          state.insightContext = context
-        } catch {
-          state.insightError = .insufficientInput
-          return .none
-        }
-      }
+      let retryServerGeneration = state.insightError == .serverRetryAvailable
       let requestID = uuid()
       state.insightRequestID = requestID
       state.insightError = nil
       state.isGeneratingInsight = true
-      return .run { [classAIFeedbackUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      return .run { [classResultUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
         var wasUnknown = false
         var wasCancelled = false
         let result = await Result {
-          try await classAIFeedbackUseCase.generate(context: context)
+          if retryServerGeneration {
+            try await classResultUseCase.retryInsight(roomID: roomID)
+          }
+          return try await ClassAIFeedbackResult.serverInsight(classResultUseCase.fetchInsight(roomID: roomID))
         }
         .mapError { error in
           wasCancelled = error is CancellationError
@@ -476,28 +479,15 @@ extension ClassOwnerDashboardFeature {
       }
       .cancellable(id: CancelID.generate(state.instanceID), cancelInFlight: true)
     case .generatePersonal:
-      let context: ClassAIFeedbackContext
-      if let retained = state.feedbackContext {
-        context = retained
-      } else {
-        guard let report = state.dashboard?.report else { return .none }
-        do {
-          context = try .personal(room: state.room, report: report, isOwner: true)
-          state.feedbackContext = context
-        } catch {
-          state.feedbackError = .insufficientInput
-          return .none
-        }
-      }
       let requestID = uuid()
       state.feedbackRequestID = requestID
       state.feedbackError = nil
       state.isGeneratingFeedback = true
-      return .run { [classAIFeedbackUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      return .run { [classResultUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
         var wasUnknown = false
         var wasCancelled = false
         let result = await Result {
-          try await classAIFeedbackUseCase.generate(context: context)
+          try await ClassAIFeedbackResult.personal(classResultUseCase.fetchPersonal(roomID: roomID))
         }
         .mapError { error in
           wasCancelled = error is CancellationError
@@ -522,6 +512,23 @@ extension ClassOwnerDashboardFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .resultResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.requestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.requestID = nil
+      switch result {
+      case let .success(classResult):
+        state.classResult = classResult
+        state.sourceViewState = .ready
+        if classResult.insightState != nil {
+          return .send(.async(.generateInsight))
+        }
+      case .failure:
+        state.classResult = nil
+        state.sourceViewState = .failed
+      }
+      return .none
     case let .dashboardResponse(instanceID, requestID, roomID, result):
       guard state.instanceID == instanceID,
             state.requestID == requestID,
@@ -554,11 +561,17 @@ extension ClassOwnerDashboardFeature {
       state.isGeneratingInsight = false
       switch result {
       case let .success(result):
-        guard case let .classInsight(insight) = result else {
+        switch result {
+        case let .serverInsight(insight):
+          state.generatedInsight = insight.text
+          state.serverInsight = insight
+        case let .classInsight(insight):
+          state.generatedInsight = insight
+          state.serverInsight = nil
+        case .personal:
           state.insightError = .generationFailed
           return .none
         }
-        state.generatedInsight = insight
         state.insightError = nil
       case let .failure(error):
         if wasUnknown {
@@ -577,7 +590,7 @@ extension ClassOwnerDashboardFeature {
       state.isGeneratingFeedback = false
       switch result {
       case let .success(result):
-        guard case let .personal(feedback) = result, feedback.points.count == 3 else {
+        guard case let .personal(feedback) = result else {
           state.feedbackError = .generationFailed
           return .none
         }

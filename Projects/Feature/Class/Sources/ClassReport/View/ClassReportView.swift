@@ -35,6 +35,8 @@ public struct ClassReportView: View {
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if store.sourceViewState == .loading {
         sourceSkeleton()
+      } else if let classResult = store.classResult {
+        serverResultPages(classResult)
       } else {
         reportPages()
       }
@@ -47,7 +49,11 @@ public struct ClassReportView: View {
 
 private extension ClassReportView {
   var navigationBar: some View {
-    ClassReportNavigationBar(title: store.room.name) { send(.backTapped) }
+    ClassReportNavigationBar(
+      title: store.room.name,
+      onBack: { send(.backTapped) },
+      onClose: { send(.closeTapped) }
+    )
   }
 
   @ViewBuilder
@@ -65,6 +71,79 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
+  func serverResultPages(_ result: ClassResult) -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 12) {
+          sectionHeading("클래스 참여 결과")
+          reportCard {
+            HStack(spacing: 0) {
+              activityCount("\(result.stats.activeMemberCount)", label: "참여 멤버")
+              Rectangle().fill(.beige600).frame(width: 1, height: 38)
+              activityCount("\(result.stats.completedCount)", label: "완료")
+              Rectangle().fill(.beige600).frame(width: 1, height: 38)
+              activityCount("\(result.stats.postVoteCount)", label: "사후투표")
+            }
+            Text(
+              "참여율 \(result.stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
+                + "의견 작성률 \(result.stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
+            )
+            .pretendardFont(.regular13)
+            .foregroundStyle(.gray700)
+          }
+        }
+
+        VStack(alignment: .leading, spacing: 12) {
+          sectionHeading("투표 결과")
+          reportCard {
+            ForEach(result.stats.options) { option in
+              HStack {
+                Text(option.title)
+                  .pretendardFont(.semiBold13)
+                  .foregroundStyle(.gray800)
+                Spacer()
+                Text("사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)")
+                  .pretendardFont(.regular13)
+                  .foregroundStyle(.gray700)
+              }
+            }
+          }
+        }
+
+        VStack(alignment: .leading, spacing: 12) {
+          sectionHeading("AI 피드백")
+          reportCard {
+            if case let .ready(feedback) = store.feedbackViewState {
+              Text(feedback.summaryTitle)
+                .pretendardFont(.semiBold15)
+                .foregroundStyle(.gray800)
+              Text(feedback.summaryDetail)
+                .pretendardFont(.regular13)
+                .foregroundStyle(.gray700)
+              ForEach(feedback.points.indices, id: \.self) { index in
+                feedbackPoint(feedback.points[index].title, detail: feedback.points[index].detail)
+              }
+              if !feedback.nextQuestion.isEmpty {
+                feedbackPoint("다음 생각", detail: feedback.nextQuestion)
+              }
+              feedbackEvidence(feedback)
+            } else if result.myReportState == "BEFORE_CLOSE" {
+              unavailableReport(
+                title: "마감 후 AI 피드백을 볼 수 있어요",
+                message: "\(result.closeAt.formatted(.dottedDateTimeWithWeekday)) 이후 제공돼요."
+              )
+            } else {
+              feedbackStatus()
+            }
+          }
+        }
+      }
+      .padding(16)
+    }
+    .scrollIndicators(.hidden)
+  }
+
+  @ViewBuilder
   func feedbackStatus() -> some View {
     switch store.feedbackViewState {
     case .loading:
@@ -73,13 +152,15 @@ private extension ClassReportView {
         SkeletonView(.round(cornerRadius: 2)).frame(height: 14)
         SkeletonView(.round(cornerRadius: 2)).frame(width: 220, height: 14)
       }
-      .accessibilityLabel("AI 피드백을 생성하는 중")
+      .accessibilityLabel("AI 피드백을 불러오는 중")
     case .retryableFailure:
-      PickeRetryErrorView(message: "AI 피드백을 생성하지 못했어요") { send(.feedbackRetryTapped) }
+      PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
+    case .pending:
+      unavailableReport(title: "생각을 정리하고 있어요", message: "잠시 뒤 다시 확인해 주세요.")
     case .failure:
-      unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "이 리포트의 피드백을 생성하지 못했습니다.")
+      unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "서버에서 피드백을 준비하지 못했어요.")
     case .unavailable:
-      unavailableReport(title: "AI 피드백을 사용할 수 없어요", message: "작성한 의견과 기기 설정을 확인해 주세요.")
+      unavailableReport(title: "AI 피드백을 사용할 수 없어요", message: "참여 결과를 확인해 주세요.")
     case .ready:
       EmptyView()
     }
@@ -399,9 +480,7 @@ private extension ClassReportView {
         ForEach(feedback.points.indices, id: \.self) { index in
           feedbackPoint(feedback.points[index].title, detail: feedback.points[index].detail)
         }
-        Text("분석에 사용한 내 대댓글 보기")
-          .pretendardFont(.semiBold13)
-          .foregroundStyle(.primary500)
+        feedbackEvidence(feedback)
       } else {
         feedbackStatus()
       }
@@ -464,26 +543,33 @@ private extension ClassReportView {
       .background(Color(hex: "FCF5F3"))
 
       VStack(alignment: .leading, spacing: 16) {
-        insightPoint(
-          "이번에 잘한 점",
-          detail: feedback.points[0].detail
-        )
-        Rectangle().fill(.beige700).frame(height: 1)
-        insightPoint(
-          "한 가지 더 살펴볼 점",
-          detail: feedback.points[1].detail
-        )
-        Rectangle().fill(.beige700).frame(height: 1)
-        insightPoint(
-          "다음 생각 한 걸음",
-          detail: feedback.points[2].detail
-        )
+        ForEach(feedback.points.indices, id: \.self) { index in
+          insightPoint(feedback.points[index].title, detail: feedback.points[index].detail)
+          if index < feedback.points.count - 1 {
+            Rectangle().fill(.beige700).frame(height: 1)
+          }
+        }
+        feedbackEvidence(feedback)
         if store.report != nil {
           Rectangle().fill(.beige700).frame(height: 1)
           myOpinionsSection
         }
       }
       .padding(16)
+    }
+  }
+
+  @ViewBuilder
+  func feedbackEvidence(_ feedback: ClassAIPersonalFeedback) -> some View {
+    if let coverage = feedback.coverageDescription {
+      Text(coverage)
+        .pretendardFont(.regular13)
+        .foregroundStyle(.gray700)
+    }
+    ForEach(feedback.evidence.indices, id: \.self) { index in
+      Text(feedback.evidence[index].quote ?? feedback.evidence[index].content)
+        .pretendardFont(.regular13)
+        .foregroundStyle(.gray700)
     }
   }
 
