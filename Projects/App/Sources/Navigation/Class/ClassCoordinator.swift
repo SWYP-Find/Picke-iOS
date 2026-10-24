@@ -18,6 +18,8 @@ import TCAFlow
 public struct ClassCoordinator {
   @Dependency(\.classMockRepository) private var classMockRepository
   @Dependency(\.classMockChatSession) private var classMockChatSession
+  @Dependency(\.classMemberUseCase) private var classMemberUseCase
+  @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
   @Dependency(\.date) private var date
 
@@ -42,6 +44,7 @@ public struct ClassCoordinator {
     var ownerNameInstanceIDs: Set<UUID> = []
     var participantJoinInstanceIDs: Set<UUID> = []
     var memberInstanceIDs: Set<UUID> = []
+    var detailInstanceIDs: Set<UUID> = []
     var aiVoteInstanceIDs: Set<UUID> = []
     var ticketInstanceIDs: Set<UUID> = []
 
@@ -90,6 +93,8 @@ public struct ClassCoordinator {
 
   public enum AsyncAction: Equatable {}
   public enum InnerAction: Equatable {
+    case detailLoaded(routeID: Int, roomID: Int, instanceID: UUID, requestID: UUID, room: ClassRoom)
+    case detailFailed(routeID: Int, roomID: Int, instanceID: UUID, requestID: UUID, message: String)
     case ticketRegistrationCompleted(routeID: Int, instanceID: UUID, startDate: Date, endDate: Date)
     case membersLoaded(
       routeID: Int,
@@ -196,6 +201,44 @@ public struct ClassCoordinator {
 }
 
 private extension ClassCoordinator {
+  enum DetailLoadCancelID: Hashable {
+    case load(UUID)
+  }
+
+  func fetchDetail(state: inout State, routeID: Int) -> Effect<Action> {
+    guard state.routes.indices.contains(routeID),
+          case var .detail(detail) = state.routes[routeID].screen
+    else { return .none }
+    let requestID = uuid()
+    let roomID = detail.room.id
+    let instanceID = detail.instanceID
+    detail.viewState = .loading
+    detail.loadErrorMessage = nil
+    detail.activeLoadRequestID = requestID
+    state.routes[screenAt: routeID] = .detail(detail)
+    return .run { [classUseCase] send in
+      do {
+        let room = try await classUseCase.fetchClass(id: roomID)
+        await send(.inner(.detailLoaded(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          room: room
+        )))
+      } catch {
+        await send(.inner(.detailFailed(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          message: error.localizedDescription
+        )))
+      }
+    }
+    .cancellable(id: DetailLoadCancelID.load(instanceID), cancelInFlight: true)
+  }
+
   func handleDeadlineSelectionAction(
     state: inout State,
     action: PresentationAction<ClassDeadlineSelectionFeature.Action>
@@ -327,27 +370,17 @@ private extension ClassCoordinator {
       id: routeID,
       action: .members(.loadingStarted(requestID))
     )))
-    guard let classMockRepository else {
-      return .concatenate(started, .send(.inner(.membersFailed(
-        routeID: routeID,
-        roomID: roomID,
-        instanceID: instanceID,
-        requestID: requestID,
-        message: "멤버 정보를 불러올 수 없어요."
-      ))))
-    }
-    let fetch: Effect<Action> = .run { send in
+    let fetch: Effect<Action> = .run { [classMemberUseCase] send in
       do {
-        let members = try await classMockRepository.fetchMembers(roomID: roomID)
-        let currentMemberID = try await classMockRepository.currentMemberID(roomID: roomID)
+        let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
         await send(.inner(.membersLoaded(
           routeID: routeID,
           roomID: roomID,
           instanceID: instanceID,
           requestID: requestID,
           room: room,
-          members: members,
-          currentMemberID: currentMemberID
+          members: memberList.members,
+          currentMemberID: memberList.currentMemberID
         )))
       } catch {
         await send(.inner(.membersFailed(
@@ -376,6 +409,10 @@ private extension ClassCoordinator {
       guard case let .members(member) = route.screen else { return nil }
       return member.instanceID
     })
+    let detailIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .detail(detail) = route.screen else { return nil }
+      return detail.instanceID
+    })
     let voteIDs = Set(state.routes.compactMap { route -> UUID? in
       guard case let .aiVote(vote) = route.screen else { return nil }
       return vote.instanceID
@@ -387,11 +424,13 @@ private extension ClassCoordinator {
     let removedOwners = state.ownerNameInstanceIDs.subtracting(ownerIDs)
     let removedJoins = state.participantJoinInstanceIDs.subtracting(joinIDs)
     let removedMembers = state.memberInstanceIDs.subtracting(memberIDs)
+    let removedDetails = state.detailInstanceIDs.subtracting(detailIDs)
     let removedVotes = state.aiVoteInstanceIDs.subtracting(voteIDs)
     let removedTickets = state.ticketInstanceIDs.subtracting(ticketIDs)
     state.ownerNameInstanceIDs = ownerIDs
     state.participantJoinInstanceIDs = joinIDs
     state.memberInstanceIDs = memberIDs
+    state.detailInstanceIDs = detailIDs
     state.aiVoteInstanceIDs = voteIDs
     state.ticketInstanceIDs = ticketIDs
     return .merge(
@@ -403,6 +442,7 @@ private extension ClassCoordinator {
           ]
         }
         + removedMembers.map { .cancel(id: ClassMemberFeature.CancelID.load($0)) }
+        + removedDetails.map { .cancel(id: DetailLoadCancelID.load($0)) }
         + removedVotes.flatMap { id in
           [
             .cancel(id: ClassAIVoteFeature.CancelID.load(id)),
@@ -728,7 +768,17 @@ private extension ClassCoordinator {
 
     case let .routeAction(_, action: .myClasses(.delegate(.openRoom(room)))):
       state.routes.push(.detail(.init(room: room)))
-      return .none
+      let detailRouteID = state.routes.count - 1
+      return fetchDetail(state: &state, routeID: detailRouteID)
+
+    case let .routeAction(routeID, action: .detail(.delegate(.retryRequested(roomID, instanceID)))):
+      guard routeID == state.routes.count - 1,
+            case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == roomID,
+            detail.instanceID == instanceID,
+            detail.viewState == .error
+      else { return .none }
+      return fetchDetail(state: &state, routeID: routeID)
 
     case let .routeAction(routeID, action: .myClasses(.delegate(.left(roomID)))):
       state.completedAIBattles[-1_000_000 - roomID] = nil
@@ -780,18 +830,18 @@ private extension ClassCoordinator {
       _,
       action: .members(.delegate(.removeMember(roomID: roomID, memberID: memberID, currentMemberID: currentMemberID)))
     ):
-      guard let classMockRepository else {
-        return .send(.inner(.memberMutationFailed(roomID, "멤버 변경을 사용할 수 없어요.")))
+      guard memberID != currentMemberID else {
+        return .send(.inner(.memberMutationFailed(roomID, "본인은 내보낼 수 없어요.")))
       }
-      return .run { send in
+      return .run { [classMemberUseCase, classUseCase] send in
         do {
-          let room = try await classMockRepository.removeMember(
-            roomID: roomID,
-            memberID: memberID,
-            currentMemberID: currentMemberID
-          )
-          let members = try await classMockRepository.fetchMembers(roomID: roomID)
-          await send(.inner(.memberMutationCompleted(room, members)))
+          try await classMemberUseCase.removeMember(classID: roomID, memberID: memberID)
+          let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
+          let rooms = try await classUseCase.fetchMyClasses()
+          guard let room = rooms.first(where: { $0.id == roomID }) else {
+            throw ClassError.invalidCode
+          }
+          await send(.inner(.memberMutationCompleted(room, memberList.members)))
         } catch {
           await send(.inner(.memberMutationFailed(roomID, error.localizedDescription)))
         }
@@ -806,23 +856,18 @@ private extension ClassCoordinator {
         name: name
       )))
     ):
-      guard let classMockRepository else {
-        return .send(.inner(.memberMutationFailed(roomID, "이름 변경을 사용할 수 없어요.")))
+      guard memberID == currentMemberID else {
+        return .send(.inner(.memberMutationFailed(roomID, "본인 이름만 바꿀 수 있어요.")))
       }
-      return .run { send in
+      return .run { [classMemberUseCase, classUseCase] send in
         do {
-          _ = try await classMockRepository.updateDisplayName(
-            roomID: roomID,
-            memberID: memberID,
-            currentMemberID: currentMemberID,
-            name: name
-          )
-          let members = try await classMockRepository.fetchMembers(roomID: roomID)
-          let rooms = try await classMockRepository.fetchMyClasses()
+          _ = try await classMemberUseCase.updateMyDisplayName(classID: roomID, name: name)
+          let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
+          let rooms = try await classUseCase.fetchMyClasses()
           guard let room = rooms.first(where: { $0.id == roomID }) else {
             throw ClassError.invalidCode
           }
-          await send(.inner(.memberMutationCompleted(room, members)))
+          await send(.inner(.memberMutationCompleted(room, memberList.members)))
         } catch {
           await send(.inner(.memberMutationFailed(roomID, error.localizedDescription)))
         }
@@ -1095,6 +1140,34 @@ private extension ClassCoordinator {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .detailLoaded(routeID, roomID, instanceID, requestID, room):
+      guard room.id == roomID,
+            state.routes.indices.contains(routeID),
+            case var .detail(detail) = state.routes[routeID].screen,
+            detail.room.id == roomID,
+            detail.instanceID == instanceID,
+            detail.activeLoadRequestID == requestID
+      else { return .none }
+      detail.room = room
+      detail.viewState = .loaded
+      detail.loadErrorMessage = nil
+      detail.activeLoadRequestID = nil
+      state.routes[screenAt: routeID] = .detail(detail)
+      return .none
+
+    case let .detailFailed(routeID, roomID, instanceID, requestID, message):
+      guard state.routes.indices.contains(routeID),
+            case var .detail(detail) = state.routes[routeID].screen,
+            detail.room.id == roomID,
+            detail.instanceID == instanceID,
+            detail.activeLoadRequestID == requestID
+      else { return .none }
+      detail.viewState = .error
+      detail.loadErrorMessage = message
+      detail.activeLoadRequestID = nil
+      state.routes[screenAt: routeID] = .detail(detail)
+      return .none
+
     case let .ticketRegistrationCompleted(routeID, instanceID, startDate, endDate):
       guard routeID == state.routes.count - 1,
             case let .ticket(completed)? = state.routes.last?.screen,

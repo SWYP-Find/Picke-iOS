@@ -22,7 +22,7 @@ public struct ClassDetailView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 상세") {
-        if store.room.role == .owner {
+        if store.viewState == .loaded, store.room.role == .owner {
           Button { send(.managementTapped) } label: {
             Image(systemName: "ellipsis")
               .font(.system(size: 20))
@@ -33,18 +33,15 @@ public struct ClassDetailView: View {
       }
       .foregroundStyle(.gray800)
 
-      ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-          VStack(alignment: .leading, spacing: 16) {
-            headerSection()
-            classInformation()
-          }
-          battleSection()
-          actionButtons()
-        }
-        .padding(16)
+      switch store.viewState {
+      case .loading:
+        detailSkeleton()
+      case .error:
+        PickeRetryErrorView(message: "클래스 정보를 불러오지 못했어요") { send(.retryTapped) }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+      case .loaded:
+        detailContent()
       }
-      .scrollIndicators(.hidden)
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
@@ -72,6 +69,42 @@ public struct ClassDetailView: View {
 }
 
 private extension ClassDetailView {
+  @ViewBuilder
+  func detailContent() -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
+          headerSection()
+          classInformation()
+        }
+        battleSection()
+        actionButtons()
+      }
+      .padding(16)
+    }
+    .scrollIndicators(.hidden)
+  }
+
+  @ViewBuilder
+  func detailSkeleton() -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 12) {
+          SkeletonView(.round(cornerRadius: 2)).frame(width: 56, height: 20)
+          SkeletonView(.round(cornerRadius: 2)).frame(width: 200, height: 29)
+        }
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 153)
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 112, height: 18)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 120)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 52)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 52)
+      }
+      .padding(16)
+    }
+    .scrollIndicators(.hidden)
+    .accessibilityLabel("클래스 정보를 불러오는 중")
+  }
+
   @ViewBuilder
   func headerSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -155,20 +188,10 @@ private extension ClassDetailView {
 
       Button { send(.battleTapped) } label: {
         HStack(spacing: 8) {
-          Group {
-            if store.room.battle.thumbnailURL == nil,
-               store.room.battle.id == ClassBattleSummary.mocks[0].id
-            {
-              Image(asset: .classClosedBattle)
-                .resizable()
-                .scaledToFill()
-            } else {
-              AsyncImage(url: store.room.battle.thumbnailURL) { image in
-                image.resizable().scaledToFill()
-              } placeholder: {
-                Color.beige600
-              }
-            }
+          AsyncImage(url: store.room.battle.thumbnailURL) { image in
+            image.resizable().scaledToFill()
+          } placeholder: {
+            Color.beige600
           }
           .frame(width: 76, height: 94)
           .clipShape(RoundedRectangle(cornerRadius: 2))
@@ -176,8 +199,10 @@ private extension ClassDetailView {
           VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
               HStack(spacing: 6) {
-                Text("#\(store.room.battle.categoryDisplayTitle)")
-                  .pickeBadge(.filled, size: .tag)
+                if !store.room.battle.categoryDisplayTitle.isEmpty {
+                  Text("#\(store.room.battle.categoryDisplayTitle)")
+                    .pickeBadge(.filled, size: .tag)
+                }
                 Text(store.room.battle.title)
                   .pretendardFont(family: .SemiBold, size: 14)
                   .foregroundStyle(.gray500)
@@ -188,14 +213,16 @@ private extension ClassDetailView {
                 .foregroundStyle(.gray300)
                 .lineLimit(2)
             }
-            HStack(spacing: 2) {
-              Spacer(minLength: 0)
-              Image(systemName: "clock")
-                .font(.system(size: 12))
-              Text("\(store.room.battle.durationMinutes)분")
-                .pretendardFont(family: .Medium, size: 12)
+            if store.room.battle.audioDuration > 0 {
+              HStack(spacing: 2) {
+                Spacer(minLength: 0)
+                Image(systemName: "clock")
+                  .font(.system(size: 12))
+                Text("\(store.room.battle.durationMinutes)분")
+                  .pretendardFont(family: .Medium, size: 12)
+              }
+              .foregroundStyle(.gray300)
             }
-            .foregroundStyle(.gray300)
           }
           .frame(height: 94)
           Spacer(minLength: 0)

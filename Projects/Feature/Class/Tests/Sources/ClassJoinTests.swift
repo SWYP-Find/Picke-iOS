@@ -45,6 +45,7 @@ struct ClassJoinTests {
   @Test
   func 참여코드를_조회하면_요청_식별자와_함께_클래스를_전달한다() async {
     let room = ClassRoom.mockJoinable
+    let preview = ClassJoinPreview(room: room)
     let requestID = UUID()
     let store = TestStore(initialState: ClassJoinFeature.State()) {
       ClassJoinFeature()
@@ -61,18 +62,18 @@ struct ClassJoinTests {
       $0.isLoading = true
       $0.activeFindRequestID = requestID
     }
-    await store.receive(\.inner, .found(.success(room), instanceID: nil, requestID: requestID)) {
+    await store.receive(\.inner, .found(.success(preview), instanceID: nil, requestID: requestID)) {
       $0.isLoading = false
       $0.activeFindRequestID = nil
     }
-    await store.receive(\.delegate, .found(room, instanceID: nil))
+    await store.receive(\.delegate, .found(preview, instanceID: nil))
   }
 
   @Test
   func 이름을_입력하고_참여하면_클래스_참여_델리게이트를_보낸다() async {
     let room = ClassRoom.mockJoinable
     let requestID = UUID()
-    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    var state = ClassJoinFeature.State(mode: .nickname, preview: .init(room: room), instanceID: nil)
     state.nickname = " 민지 "
     let store = TestStore(initialState: state) {
       ClassJoinFeature()
@@ -96,7 +97,7 @@ struct ClassJoinTests {
       instanceID: nil,
       requestID: requestID
     )) {
-      $0.preview = nil
+      $0.joinPreview = nil
       $0.isLoading = false
       $0.activeJoinRequestID = nil
     }
@@ -104,9 +105,8 @@ struct ClassJoinTests {
   }
 
   @Test
-  func 운영자_이름은_참여_API_호출_없이_목_저장소에_저장한다() async throws {
+  func 운영자_이름은_참여_API_호출_없이_멤버_API에_저장한다() async {
     let room = ClassRoom.mocks[0]
-    let repository = MockClassRepository(rooms: [room])
     let instanceID = UUID()
     let requestID = UUID()
     var state = ClassJoinFeature.State(mode: .ownerName, preview: room, instanceID: instanceID)
@@ -114,7 +114,11 @@ struct ClassJoinTests {
     let store = TestStore(initialState: state) {
       ClassJoinFeature()
     } withDependencies: {
-      $0.classMockRepository = repository
+      $0.classMemberUseCase = StubClassMemberUseCase { classID, name in
+        #expect(classID == room.id)
+        #expect(name == "새 운영자")
+        return ClassMember(id: 1, name: name, isOwner: true)
+      }
       $0.uuid = .constant(requestID)
       $0.classUseCase = StubClassUseCase(joinClass: { _, _ in
         Issue.record("운영자 이름 저장에서 joinClass를 호출하면 안 됩니다.")
@@ -139,9 +143,6 @@ struct ClassJoinTests {
     }
     await store.receive(\.delegate, .ownerNamed(room, instanceID: instanceID))
 
-    let memberID = try await repository.currentMemberID(roomID: room.id)
-    let members = try await repository.fetchMembers(roomID: room.id)
-    #expect(members.first(where: { $0.id == memberID })?.name == "새 운영자")
   }
 
   @Test
@@ -182,7 +183,7 @@ struct ClassJoinTests {
   @Test
   func 이름은_공백을_제외한_문자_기준_12자까지_참여할_수_있다() async {
     let room = ClassRoom.mockJoinable
-    let store = TestStore(initialState: ClassJoinFeature.State(mode: .nickname, preview: room)) {
+    let store = TestStore(initialState: ClassJoinFeature.State(mode: .nickname, preview: .init(room: room), instanceID: nil)) {
       ClassJoinFeature()
     }
     let twelveCharacters = String(repeating: "가", count: 11) + "👩🏽‍💻"
@@ -213,7 +214,7 @@ struct ClassJoinTests {
   @Test
   func 이름을_편집하면_서버와_이름_오류를_지우고_긴_이름은_로컬_오류를_우선한다() async {
     let room = ClassRoom.mockJoinable
-    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    var state = ClassJoinFeature.State(mode: .nickname, preview: .init(room: room), instanceID: nil)
     state.nickname = String(repeating: "가", count: 13)
     state.errorMessage = "이전 서버 오류"
     state.nicknameErrorMessage = ClassError.duplicateName.message
@@ -237,7 +238,7 @@ struct ClassJoinTests {
   func 중복된_이름만_이름_오류로_표시하고_일반_서버_오류는_별도로_표시한다() async {
     let room = ClassRoom.mockJoinable
     let joinRequestID = UUID()
-    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    var state = ClassJoinFeature.State(mode: .nickname, preview: .init(room: room), instanceID: nil)
     state.nickname = "민지"
     state.activeJoinRequestID = joinRequestID
     let duplicateStore = TestStore(initialState: state) { ClassJoinFeature() }
@@ -289,7 +290,7 @@ struct ClassJoinTests {
   func 이름_요청을_시작할_때_두_오류를_초기화한다() async {
     let room = ClassRoom.mockJoinable
     let requestID = UUID()
-    var state = ClassJoinFeature.State(mode: .nickname, preview: room)
+    var state = ClassJoinFeature.State(mode: .nickname, preview: .init(room: room), instanceID: nil)
     state.nickname = "민지"
     state.errorMessage = "이전 서버 오류"
     state.nicknameErrorMessage = ClassError.duplicateName.message
@@ -315,7 +316,7 @@ struct ClassJoinTests {
     )) {
       $0.isLoading = false
       $0.activeJoinRequestID = nil
-      $0.preview = nil
+      $0.joinPreview = nil
     }
     await store.receive(\.delegate, .joined(room, nickname: "민지", instanceID: nil))
   }
@@ -363,7 +364,7 @@ struct ClassJoinTests {
     }
     await store.receive(\.delegate.dismiss)
     await store.send(.inner(.found(
-      .success(room),
+      .success(ClassJoinPreview(room: room)),
       instanceID: instanceID,
       requestID: requestID
     )))
@@ -375,7 +376,7 @@ struct ClassJoinTests {
     let room = ClassRoom.mockJoinable
     let instanceID = UUID()
     let requestID = UUID()
-    var state = ClassJoinFeature.State(mode: .nickname, preview: room, instanceID: instanceID)
+    var state = ClassJoinFeature.State(mode: .nickname, preview: .init(room: room), instanceID: instanceID)
     state.nickname = "민지"
     state.isLoading = true
     state.activeJoinRequestID = requestID
@@ -392,7 +393,7 @@ struct ClassJoinTests {
       instanceID: instanceID,
       requestID: requestID
     )))
-    #expect(store.state.preview == room)
+    #expect(store.state.joinPreview == ClassJoinPreview(room: room))
   }
 
   @Test
@@ -407,7 +408,7 @@ struct ClassJoinTests {
     let store = TestStore(initialState: state) { ClassJoinFeature() }
 
     await store.send(.inner(.found(
-      .success(room),
+      .success(ClassJoinPreview(room: room)),
       instanceID: UUID(),
       requestID: currentRequestID
     )))
@@ -421,14 +422,14 @@ struct ClassJoinTests {
     #expect(store.state.errorMessage == nil)
 
     await store.send(.inner(.found(
-      .success(room),
+      .success(ClassJoinPreview(room: room)),
       instanceID: instanceID,
       requestID: currentRequestID
     ))) {
       $0.isLoading = false
       $0.activeFindRequestID = nil
     }
-    await store.receive(\.delegate, .found(room, instanceID: instanceID))
+    await store.receive(\.delegate, .found(ClassJoinPreview(room: room), instanceID: instanceID))
   }
 
   @Test
@@ -497,5 +498,25 @@ private struct StubClassUseCase: ClassInterface {
 
   func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
     nil
+  }
+}
+
+private struct StubClassMemberUseCase: ClassMemberInterface {
+  let update: @Sendable (Int, String) async throws -> ClassMember
+
+  init(update: @escaping @Sendable (Int, String) async throws -> ClassMember) {
+    self.update = update
+  }
+
+  func fetchMembers(classID _: Int) async throws -> ClassMemberList {
+    throw ClassError.unknown("사용하지 않는 API")
+  }
+
+  func updateMyDisplayName(classID: Int, name: String) async throws -> ClassMember {
+    try await update(classID, name)
+  }
+
+  func removeMember(classID _: Int, memberID _: Int) async throws {
+    throw ClassError.unknown("사용하지 않는 API")
   }
 }

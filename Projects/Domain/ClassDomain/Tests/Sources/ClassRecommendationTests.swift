@@ -2,6 +2,7 @@
 import ClassDomainInterface
 import Dependencies
 import Foundation
+import PickeCoreUtility
 import PickeNetwork
 import Testing
 
@@ -12,7 +13,10 @@ struct ClassRecommendationTests {
       filter: .init(keyword: "인간 자유", level: .high, categories: [.philosophy, .society])
     )
     let url = try request.url()
-    let parameters = try #require(request.parameters)
+    guard let parameters = request.parameters else {
+      Issue.record("추천 요청 쿼리가 누락됨")
+      return
+    }
     let json = try JSONEncoder().encode(parameters)
     let query = try #require(JSONSerialization.jsonObject(with: json) as? [String: String])
 
@@ -61,19 +65,18 @@ struct ClassRecommendationTests {
   }
 
   @Test
-  func 빈_추천_응답은_빈_목록이고_다른_클래스_기능은_목_저장소를_쓴다() async throws {
-    let json = #"{"statusCode":200,"data":{"items":[]}}"#
+  func 라이브_클래스_목록은_목_저장소가_아닌_서버를_쓴다() async throws {
+    let json = #"{"statusCode":200,"data":[]}"#
     let live = ClassLiveRepository(
       mock: MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: []),
-      recommendations: withDependencies {
+      api: withDependencies {
         $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
       } operation: {
         ClassRepositoryImpl()
       }
     )
 
-    #expect(try await live.fetchRecommendedBattles(filter: .init(category: .philosophy)).isEmpty)
-    #expect(try await live.fetchMyClasses().map(\.id) == [ClassRoom.mocks[0].id])
+    #expect(try await live.fetchMyClasses().isEmpty)
   }
 
   @Test
@@ -90,6 +93,152 @@ struct ClassRecommendationTests {
     } catch {
       #expect(error as? ClassError == .network("추천 조건 오류"))
     }
+  }
+
+  @Test
+  func 클래스_생성_요청은_서버_계약의_필드와_KST_시각을_보낸다() throws {
+    let deadline = try #require("2026-12-31T23:59:59".date(as: .serverDateTime))
+    let creation = ClassCreation(
+      name: "철학 토론",
+      deadline: deadline,
+      battleId: 12,
+      allowsAnonymousOpinion: false,
+      requiresComment: true,
+      ownerParticipates: false
+    )
+    let request = ClassroomService.create(creation)
+    guard let body = request.parameters else {
+      Issue.record("클래스 생성 요청 본문이 누락됨")
+      return
+    }
+    let json = try JSONEncoder().encode(body)
+    let fields = try #require(JSONSerialization.jsonObject(with: json) as? [String: Any])
+
+    #expect(try request.url().path == "/api/v1/classes")
+    #expect(request.method == .post)
+    #expect(fields["name"] as? String == "철학 토론")
+    #expect(fields["battleId"] as? Int == 12)
+    #expect(fields["topicVersionId"] == nil)
+    #expect(fields["deadline"] as? String == "2026-12-31T23:59:59")
+    #expect((fields["commentRequired"] as? Bool) == true)
+    #expect((fields["ownerParticipates"] as? Bool) == false)
+    #expect(fields["allowsAnonymousOpinion"] == nil)
+  }
+
+  @Test
+  func 마감일_미설정_클래스는_서버에_먼_미래_날짜를_보내지_않는다() throws {
+    let creation = ClassCreation(
+      name: "철학 토론",
+      deadline: .distantFuture,
+      battleId: 12,
+      allowsAnonymousOpinion: false,
+      requiresComment: false
+    )
+    guard let body = ClassroomService.create(creation).parameters else {
+      Issue.record("클래스 생성 요청 본문이 누락됨")
+      return
+    }
+    let json = try JSONEncoder().encode(body)
+    let fields = try #require(JSONSerialization.jsonObject(with: json) as? [String: Any])
+
+    #expect(fields["deadline"] == nil)
+  }
+
+  @Test
+  func 커스텀_클래스는_선택된_서버_주제_버전만_보낸다() throws {
+    let creation = ClassCreation(
+      name: "AI 토론",
+      deadline: .distantFuture,
+      topicVersionId: 12,
+      allowsAnonymousOpinion: false,
+      requiresComment: true
+    )
+    guard let body = ClassroomService.create(creation).parameters else {
+      Issue.record("클래스 생성 요청 본문이 누락됨")
+      return
+    }
+    let json = try JSONEncoder().encode(body)
+    let fields = try #require(JSONSerialization.jsonObject(with: json) as? [String: Any])
+
+    #expect(fields["topicVersionId"] as? Int == 12)
+    #expect(fields["battleId"] == nil)
+    #expect(fields["deadline"] == nil)
+  }
+
+  @Test
+  func 참여_미리보기는_실제_서버_필드만_해석한다() async throws {
+    let json = """
+    {"statusCode":200,"data":{
+      "inviteCode":"A7K2MP","name":"철학 토론","battleTitle":"AI 창작",
+      "battleThumbnailUrl":"https://example.com/a.png","battleType":"TTS",
+      "memberCount":12,"capacity":30,"closeAt":"2026-12-31T23:59:59"
+    }}
+    """
+    let repository = withDependencies {
+      $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
+    } operation: {
+      ClassRepositoryImpl()
+    }
+
+    let preview = try await repository.fetchClassPreview(joinCode: "A7K2MP")
+    #expect(preview.inviteCode == "A7K2MP")
+    #expect(preview.battleTitle == "AI 창작")
+    #expect(preview.capacity == 30)
+    #expect(preview.closeAt.formatted(.serverDateTime) == "2026-12-31T23:59:59")
+  }
+
+  @Test
+  func 내_클래스_목록은_서버_응답의_역할과_마감_상태를_반영한다() async throws {
+    let json = """
+    {"statusCode":200,"data":[{
+      "classId":5,"name":"철학 토론","myRole":"MEMBER","battleId":12,
+      "battleTitle":"AI 창작","battleThumbnailUrl":null,"battleType":"TTS",
+      "memberCount":12,"capacity":30,"closeAt":"2026-12-31T23:59:59",
+      "closed":true,"createdAt":"2026-10-21T10:00:00"
+    }]}
+    """
+    let repository = withDependencies {
+      $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
+    } operation: {
+      ClassRepositoryImpl()
+    }
+
+    let rooms = try await repository.fetchMyClasses()
+    let room = try #require(rooms.first)
+    #expect(rooms.count == 1)
+    #expect(room.id == 5)
+    #expect(room.battleType == .tts)
+    #expect(room.role == .member)
+    #expect(room.status == .closed)
+    #expect(room.memberCapacity == 30)
+  }
+
+  @Test
+  func 상세_응답의_선택적_마감일이_없으면_미설정으로_유지한다() async throws {
+    let json = """
+    {"statusCode":200,"data":{
+      "classId":5,"name":"철학 토론","inviteCode":null,"myRole":"MEMBER",
+      "battle":{"battleId":12,"title":"AI 창작","summary":"주제","thumbnailUrl":null},
+      "battleType":"CUSTOM",
+      "memberCount":12,"capacity":30,"deadline":null,"closeAt":"2026-12-31T23:59:59",
+      "closed":false,"commentRequired":true,"ownerParticipates":false
+    }}
+    """
+    let repository = withDependencies {
+      $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
+    } operation: {
+      ClassRepositoryImpl()
+    }
+
+    #expect(try ClassroomService.detail(5).url().path == "/api/v1/classes/5")
+    let room = try await repository.fetchClass(id: 5)
+    #expect(room.id == 5)
+    #expect(room.battleType == .custom)
+    #expect(room.joinCode.isEmpty)
+    #expect(room.role == .member)
+    #expect(room.requiresComment)
+    #expect(!room.ownerParticipates)
+    #expect(room.deadline == .distantFuture)
   }
 }
 

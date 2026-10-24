@@ -15,6 +15,22 @@ import Testing
 @MainActor
 struct ClassDetailTests {
   @Test
+  func 상세_조회_실패시_불완전한_목록_데이터로_진입하지_않고_재시도를_요청한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassDetailFeature.State(room: room)
+    state.viewState = .error
+    state.loadErrorMessage = "상세 정보를 불러올 수 없어요"
+    let store = TestStore(initialState: state) { ClassDetailFeature() }
+
+    await store.send(.view(.battleTapped))
+    await store.send(.view(.managementTapped))
+    await store.send(.view(.retryTapped))
+    await store.receive(\.delegate, .retryRequested(
+      roomID: room.id,
+      instanceID: state.instanceID
+    ))
+  }
+  @Test
   func 목_저장소가_있으면_배틀에_입장한다() async {
     let room = ClassRoom.mocks[0]
     let repository = MockClassRepository(rooms: [room], availableRooms: [])

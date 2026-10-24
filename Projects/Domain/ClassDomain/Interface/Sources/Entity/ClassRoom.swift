@@ -12,6 +12,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
   public let name: String
   public let joinCode: String
   public let battle: ClassBattleSummary
+  public let battleType: ClassBattleType
   public let deadline: Date
   public let memberCount: Int
   public let memberCapacity: Int?
@@ -33,12 +34,14 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     allowsAnonymousOpinion: Bool,
     requiresComment: Bool,
     ownerParticipates: Bool = true,
-    memberCapacity: Int? = nil
+    memberCapacity: Int? = nil,
+    battleType: ClassBattleType = .tts
   ) {
     self.id = id
     self.name = name
     self.joinCode = joinCode
     self.battle = battle
+    self.battleType = battleType
     self.deadline = deadline
     self.memberCount = memberCount
     self.memberCapacity = memberCapacity
