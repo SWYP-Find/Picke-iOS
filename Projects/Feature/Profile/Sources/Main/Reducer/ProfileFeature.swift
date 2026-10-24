@@ -25,6 +25,7 @@ public struct ProfileFeature {
     case battleHistory = "내 배틀 기록"
     case contentActivity = "내 콘텐츠 활동"
     case noticeEvent = "공지방 · 이벤트"
+    case ticketRegistration = "클래스 이용권"
 
     public var id: String { rawValue }
   }
