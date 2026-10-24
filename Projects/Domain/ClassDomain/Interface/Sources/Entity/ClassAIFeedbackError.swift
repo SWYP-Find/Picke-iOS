@@ -16,6 +16,7 @@ public enum ClassAIFeedbackError: Error, Equatable, Sendable {
   case insufficientInput
   case contextTooLong
   case generationFailed
+  case serverRetryAvailable
 
   public var isUnavailable: Bool {
     switch self {
@@ -26,7 +27,7 @@ public enum ClassAIFeedbackError: Error, Equatable, Sendable {
 
   public var isRetryable: Bool {
     switch self {
-    case .modelNotReady, .temporarilyUnavailable: return true
+    case .modelNotReady, .temporarilyUnavailable, .serverRetryAvailable: return true
     default: return false
     }
   }

@@ -50,6 +50,14 @@ extension ClassAIFeedbackUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassResultUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassResultInterface { ClassResultUseCaseImpl() }
+}
+
+extension ClassResultRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassResultInterface { ClassResultRepositoryImpl() }
+}
+
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
     ClassLiveRepository(
