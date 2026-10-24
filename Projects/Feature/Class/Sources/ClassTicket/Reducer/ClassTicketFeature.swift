@@ -3,6 +3,7 @@
 //  Class
 //
 
+import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 import PickeCoreUtility
@@ -15,10 +16,13 @@ public struct ClassTicketFeature {
   public struct State: Equatable {
     public var instanceID = UUID()
     public var phase: ClassTicketPhase = .entry
+    public var shouldCheckExistingTicket = true
     public var code = ""
     public var isChecking = false
     public var errorMessage: String?
     public var expandedFAQ: Int?
+    public var preview: ClassTicketPreview?
+    public var ticket: ClassTicket?
     public var registrationStartDate: Date?
     public var expirationDate: Date?
 
@@ -34,6 +38,33 @@ public struct ClassTicketFeature {
       phase == .overview ? "클래스 이용권" : "이용권 등록하기"
     }
 
+    public var capacity: Int? {
+      ticket?.capacity ?? preview?.capacity
+    }
+
+    public var ticketTitle: String {
+      capacity.map { "클래스 \($0)인 이용권" } ?? "클래스 이용권"
+    }
+
+    public var overviewTitle: String {
+      ticket?.status == .expired ? "만료된 이용권" : "사용 중인 이용권"
+    }
+
+    public var capacityDetail: String {
+      capacity.map { "클래스당 최대 \($0)명" } ?? "정원 정보 없음"
+    }
+
+    public var ticketPeriodText: String {
+      if phase == .preview, let preview {
+        return "등록 후 \(preview.usageMonths)개월"
+      }
+      return periodText
+    }
+
+    public var canRegister: Bool {
+      phase == .preview && preview != nil && !isChecking
+    }
+
     public var periodText: String {
       guard let registrationStartDate, let expirationDate else { return "" }
       return "\(registrationStartDate.formatted(.yearMonthDayDotted)) – \(expirationDate.formatted(.yearMonthDayDotted))"
@@ -43,12 +74,15 @@ public struct ClassTicketFeature {
   public enum Action: ViewAction, BindableAction {
     case binding(BindingAction<State>)
     case view(View)
-    case checkResponse(Result<Date, ClassTicketCheckError>)
+    case checkResponse(Result<ClassTicketPreview, ClassTicketError>)
+    case registrationResponse(Result<ClassTicket, ClassTicketError>)
+    case myTicketResponse(Result<ClassTicket, ClassTicketError>)
     case delegate(DelegateAction)
   }
 
   @CasePathable
   public enum View {
+    case onAppear
     case backTapped
     case checkTapped
     case confirmTapped
@@ -68,8 +102,7 @@ public struct ClassTicketFeature {
     case check(UUID)
   }
 
-  @Dependency(\.continuousClock) private var clock
-  @Dependency(\.date) private var date
+  @Dependency(\.classTicketUseCase) private var ticketUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -77,6 +110,7 @@ public struct ClassTicketFeature {
       switch action {
       case .binding(\.code):
         state.errorMessage = nil
+        state.preview = nil
         guard state.isChecking else { return .none }
         state.isChecking = false
         return .cancel(id: CancelID.check(state.instanceID))
@@ -84,10 +118,42 @@ public struct ClassTicketFeature {
       case .binding:
         return .none
 
+      case .view(.onAppear):
+        guard state.phase == .entry,
+              state.shouldCheckExistingTicket,
+              state.ticket == nil,
+              state.preview == nil,
+              !state.isChecking
+        else { return .none }
+        state.shouldCheckExistingTicket = false
+        state.isChecking = true
+        return .run { [ticketUseCase] send in
+          let result: Result<ClassTicket, ClassTicketError> = await Result {
+            try await ticketUseCase.fetchMyTicket()
+          }
+          .mapError(Self.mapError)
+          await send(.myTicketResponse(result))
+        }
+        .cancellable(id: CancelID.check(state.instanceID), cancelInFlight: true)
+
       case .view(.backTapped):
         return .send(.delegate(.dismiss))
 
       case .view(.confirmTapped):
+        if state.phase == .preview {
+          guard state.canRegister else { return .none }
+          state.isChecking = true
+          state.errorMessage = nil
+          let submittedCode = state.code.trimmingCharacters(in: .whitespacesAndNewlines)
+          return .run { [ticketUseCase] send in
+            let result: Result<ClassTicket, ClassTicketError> = await Result {
+              try await ticketUseCase.register(code: submittedCode)
+            }
+            .mapError(Self.mapError)
+            await send(.registrationResponse(result))
+          }
+          .cancellable(id: CancelID.check(state.instanceID), cancelInFlight: true)
+        }
         guard
           state.phase == .registered,
           let registrationStartDate = state.registrationStartDate,
@@ -111,11 +177,11 @@ public struct ClassTicketFeature {
         state.isChecking = true
         state.errorMessage = nil
         let submittedCode = state.code.trimmingCharacters(in: .whitespacesAndNewlines)
-        return .run { [clock, date] send in
-          try await clock.sleep(for: .milliseconds(350))
-          let result: Result<Date, ClassTicketCheckError> = submittedCode == "PICKE30"
-            ? .success(date.now)
-            : .failure(.invalidCode)
+        return .run { [ticketUseCase] send in
+          let result: Result<ClassTicketPreview, ClassTicketError> = await Result {
+            try await ticketUseCase.preview(code: submittedCode)
+          }
+          .mapError(Self.mapError)
           await send(.checkResponse(result))
         }
         .cancellable(id: CancelID.check(state.instanceID), cancelInFlight: true)
@@ -124,20 +190,53 @@ public struct ClassTicketFeature {
         guard state.phase == .entry, state.isChecking else { return .none }
         state.isChecking = false
         switch result {
-        case let .success(registeredAt):
-          let calendar = AppDateFormat.calendar
-          let start = calendar.startOfDay(for: registeredAt)
-          guard
-            let sixMonthsLater = calendar.date(byAdding: .month, value: 6, to: start),
-            let lastDay = calendar.date(byAdding: .day, value: -1, to: sixMonthsLater)
-          else { return .none }
-          state.registrationStartDate = start
-          state.expirationDate = lastDay
-          state.phase = .registered
-          return .send(.delegate(.registered(start, lastDay)))
+        case let .success(preview):
+          state.preview = preview
+          if preview.registeredByMe {
+            state.isChecking = true
+            return .run { [ticketUseCase] send in
+              let result: Result<ClassTicket, ClassTicketError> = await Result {
+                try await ticketUseCase.fetchMyTicket()
+              }
+              .mapError(Self.mapError)
+              await send(.myTicketResponse(result))
+            }
+            .cancellable(id: CancelID.check(state.instanceID), cancelInFlight: true)
+          }
+          state.phase = .preview
+        case let .failure(error):
+          state.errorMessage = error.message
+        }
+        return .none
 
-        case .failure:
-          state.errorMessage = "유효하지 않은 이용권 코드예요. 다시 확인해 주세요."
+      case let .registrationResponse(result):
+        guard state.phase == .preview, state.isChecking else { return .none }
+        state.isChecking = false
+        switch result {
+        case let .success(ticket):
+          state.ticket = ticket
+          state.registrationStartDate = ticket.activatedAt
+          state.expirationDate = ticket.expiresAt
+          state.phase = .registered
+          return .send(.delegate(.registered(ticket.activatedAt, ticket.expiresAt)))
+        case let .failure(error):
+          state.errorMessage = error.message
+        }
+        return .none
+
+      case let .myTicketResponse(result):
+        guard state.phase == .entry, state.isChecking else { return .none }
+        state.isChecking = false
+        switch result {
+        case let .success(ticket):
+          state.ticket = ticket
+          state.registrationStartDate = ticket.activatedAt
+          state.expirationDate = ticket.expiresAt
+          state.phase = .overview
+        case let .failure(error):
+          if error != .notFound {
+            state.errorMessage = error.message
+          }
         }
         return .none
 
@@ -145,5 +244,9 @@ public struct ClassTicketFeature {
         return .none
       }
     }
+  }
+
+  private static func mapError(_ error: Error) -> ClassTicketError {
+    (error as? ClassTicketError) ?? .network(error.localizedDescription)
   }
 }

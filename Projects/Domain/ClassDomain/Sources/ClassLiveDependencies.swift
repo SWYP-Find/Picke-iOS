@@ -14,6 +14,18 @@ extension ClassUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassTicketUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassTicketInterface {
+    ClassTicketUseCaseImpl()
+  }
+}
+
+extension ClassTicketRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassTicketInterface {
+    ClassTicketRepositoryImpl()
+  }
+}
+
 extension ClassBattleUseCaseDependency: DependencyKey {
   public static var liveValue: any ClassBattleInterface {
     ClassBattleUseCaseImpl()

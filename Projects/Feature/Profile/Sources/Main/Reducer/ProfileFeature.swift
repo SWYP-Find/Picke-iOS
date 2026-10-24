@@ -25,6 +25,7 @@ public struct ProfileFeature {
     case battleHistory = "내 배틀 기록"
     case contentActivity = "내 콘텐츠 활동"
     case noticeEvent = "공지방 · 이벤트"
+    case ticketRegistration = "클래스 이용권"
 
     public var id: String { rawValue }
   }
@@ -40,9 +41,10 @@ public struct ProfileFeature {
     public enum ViewState: Equatable {
       case loading
       case loaded
+      case error
     }
 
-    public var viewState: ViewState = .loaded
+    public var viewState: ViewState = .loading
     /// 닉네임 — /me/mypage 응답에서 주입.
     public var nickname: String = ""
     /// 사용자 코드 (앞에 `@` 표기) — /me/mypage 응답에서 주입.
@@ -95,6 +97,7 @@ public struct ProfileFeature {
   @CasePathable
   public enum View {
     case onAppear
+    case retryTapped
     case backTapped
     case notificationTapped
     case settingsTapped
@@ -204,6 +207,9 @@ extension ProfileFeature {
         .send(.async(.syncUnreadBadge))
       )
 
+    case .retryTapped:
+      return .send(.async(.fetchProfile))
+
     case .backTapped:
       return .send(.delegate(.backToHome))
 
@@ -284,9 +290,9 @@ extension ProfileFeature {
   ) -> Effect<Action> {
     switch action {
     case let .myPageResponse(result):
-      state.viewState = .loaded
       switch result {
       case let .success(myPage):
+        state.viewState = .loaded
         state.nickname = myPage.profile.nickname
         state.userCode = myPage.profile.userTag
         state.point = myPage.tier.currentPoint
@@ -295,6 +301,7 @@ extension ProfileFeature {
         state.philosopherImageURL = myPage.philosopher.imageURL.isEmpty ? nil : myPage.philosopher.imageURL
         state.profileImageURL = myPage.profile.characterImageURL.isEmpty ? nil : myPage.profile.characterImageURL
       case let .failure(error):
+        state.viewState = .error
         PickeLogger.error("[ProfileFeature] fetchMyPage failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
