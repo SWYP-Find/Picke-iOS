@@ -480,6 +480,10 @@ private struct StubClassUseCase: ClassInterface {
     try await fetchClass(joinCode)
   }
 
+  func fetchClass(id _: Int) async throws -> ClassRoom {
+    .mockJoinable
+  }
+
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
     try await joinClass(joinCode, nickname)
   }

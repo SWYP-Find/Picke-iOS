@@ -1085,6 +1085,11 @@ struct ClassCoordinatorTests {
     store.exhaustivity = .off
     #expect(store.state.showsTabBar)
     await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    await store.receive(\.inner, .deadlineDetailResponse(
+      routeID: 1,
+      roomID: room.id,
+      .success(room)
+    ))
     #expect(!store.state.showsTabBar)
     await store.send(.deadlineEdit(.presented(.view(.backTapped))))
     await store.receive(\.deadlineEdit.presented.delegate.dismiss)
@@ -2526,6 +2531,11 @@ struct ClassDeadlineSheetCoordinatorTests {
     store.exhaustivity = .off
 
     await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    await store.receive(\.inner, .deadlineDetailResponse(
+      routeID: 1,
+      roomID: room.id,
+      .success(room)
+    ))
     #expect(store.state.routes.count == 2)
     #expect(store.state.deadlineEdit?.room == room)
 
@@ -3077,6 +3087,10 @@ private actor SuspendedClassUseCase: ClassInterface {
 
   func fetchClass(joinCode: String) async throws -> ClassRoom {
     try await repository.fetchClass(joinCode: joinCode)
+  }
+
+  func fetchClass(id: Int) async throws -> ClassRoom {
+    try await repository.fetchClass(id: id)
   }
 
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {

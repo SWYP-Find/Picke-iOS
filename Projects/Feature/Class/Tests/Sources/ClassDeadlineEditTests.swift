@@ -92,48 +92,23 @@ struct ClassDeadlineEditTests {
   }
 
   @Test
-  func 기존_마감일을_끄면_distantFuture를_저장한다() async {
+  func 기존_마감일을_끄더라도_지원하지_않는_해제_요청을_보내지_않는다() async {
     let room = makeRoom(deadline: referenceNow.addingTimeInterval(86400))
-    let instanceID = UUID()
-    let requestID = UUID()
-    let repository = MockClassRepository(rooms: [room])
     let store = TestStore(initialState: ClassDeadlineEditFeature.State(
       room: room,
-      instanceID: instanceID,
+      instanceID: UUID(),
       referenceNow: referenceNow
-    )) { ClassDeadlineEditFeature() } withDependencies: {
-      $0.classUseCase = repository
-      $0.date.now = referenceNow
-      $0.uuid = .constant(requestID)
-    }
+    )) { ClassDeadlineEditFeature() }
 
-    await store.send(.view(.deadlineEnabledChanged(false))) {
-      $0.isDeadlineEnabled = false
-    }
-    #expect(store.state.canSave)
-    await store.send(.view(.saveTapped)) {
-      $0.activeRequestID = requestID
-      $0.isSaving = true
-    }
-    await store.receive(\.async, .save(
-      roomID: room.id,
-      deadline: .distantFuture,
-      instanceID: instanceID,
-      requestID: requestID
-    ))
-    let updated = makeRoom(deadline: .distantFuture)
-    await store.receive(\.inner, .saveResponse(
-      .success(updated),
-      roomID: room.id,
-      instanceID: instanceID,
-      requestID: requestID
-    ))
-    await store.receive(\.delegate, .saved(updated, instanceID: instanceID, requestID: requestID))
+    await store.send(.view(.deadlineEnabledChanged(false)))
+    #expect(!store.state.canSave)
+    await store.send(.view(.saveTapped))
+    await store.finish()
   }
 
   @Test
   func 저장_직전_현재_시간을_다시_검사한다() async {
-    let original = makeRoom(deadline: referenceNow.addingTimeInterval(86400))
+    let original = makeRoom(deadline: referenceNow.addingTimeInterval(60))
     let draft = referenceNow.addingTimeInterval(300)
     var state = ClassDeadlineEditFeature.State(
       room: original,

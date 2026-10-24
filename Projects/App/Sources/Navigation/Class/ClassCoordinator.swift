@@ -93,6 +93,7 @@ public struct ClassCoordinator {
 
   public enum AsyncAction: Equatable {}
   public enum InnerAction: Equatable {
+    case deadlineDetailResponse(routeID: Int, roomID: Int, Result<ClassRoom, ClassError>)
     case detailLoaded(routeID: Int, roomID: Int, instanceID: UUID, requestID: UUID, room: ClassRoom)
     case detailFailed(routeID: Int, roomID: Int, instanceID: UUID, requestID: UUID, message: String)
     case ticketRegistrationCompleted(routeID: Int, instanceID: UUID, startDate: Date, endDate: Date)
@@ -793,7 +794,11 @@ private extension ClassCoordinator {
             case let .myClasses(list)? = state.routes.last?.screen,
             list.rooms.contains(where: { $0.id == room.id })
       else { return .none }
-      return openDeadlineEditor(state: &state, room: room)
+      return .run { [classUseCase] send in
+        let result = await Result { try await classUseCase.fetchClass(id: room.id) }
+          .mapError(ClassError.from)
+        await send(.inner(.deadlineDetailResponse(routeID: routeID, roomID: room.id, result)))
+      }
 
     case let .routeAction(routeID, action: .detail(.delegate(.openDeadline(room)))):
       guard routeID == state.routes.count - 1,
@@ -837,10 +842,7 @@ private extension ClassCoordinator {
         do {
           try await classMemberUseCase.removeMember(classID: roomID, memberID: memberID)
           let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
-          let rooms = try await classUseCase.fetchMyClasses()
-          guard let room = rooms.first(where: { $0.id == roomID }) else {
-            throw ClassError.invalidCode
-          }
+          let room = try await classUseCase.fetchClass(id: roomID)
           await send(.inner(.memberMutationCompleted(room, memberList.members)))
         } catch {
           await send(.inner(.memberMutationFailed(roomID, error.localizedDescription)))
@@ -863,10 +865,7 @@ private extension ClassCoordinator {
         do {
           _ = try await classMemberUseCase.updateMyDisplayName(classID: roomID, name: name)
           let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
-          let rooms = try await classUseCase.fetchMyClasses()
-          guard let room = rooms.first(where: { $0.id == roomID }) else {
-            throw ClassError.invalidCode
-          }
+          let room = try await classUseCase.fetchClass(id: roomID)
           await send(.inner(.memberMutationCompleted(room, memberList.members)))
         } catch {
           await send(.inner(.memberMutationFailed(roomID, error.localizedDescription)))
@@ -1140,6 +1139,24 @@ private extension ClassCoordinator {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .deadlineDetailResponse(routeID, roomID, result):
+      guard routeID == state.routes.count - 1,
+            case var .myClasses(list)? = state.routes.last?.screen,
+            list.rooms.contains(where: { $0.id == roomID })
+      else { return .none }
+      switch result {
+      case let .success(room):
+        guard room.id == roomID else { return .none }
+        return openDeadlineEditor(state: &state, room: room)
+      case let .failure(error):
+        list.customAlert = .alert(
+          title: "클래스 정보를 불러오지 못했어요",
+          message: error.localizedDescription
+        )
+        state.routes[screenAt: routeID] = .myClasses(list)
+        return .none
+      }
+
     case let .detailLoaded(routeID, roomID, instanceID, requestID, room):
       guard room.id == roomID,
             state.routes.indices.contains(routeID),

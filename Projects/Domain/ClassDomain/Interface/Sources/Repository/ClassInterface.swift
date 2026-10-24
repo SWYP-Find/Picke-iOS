@@ -24,10 +24,6 @@ public protocol ClassInterface: Sendable {
 }
 
 public extension ClassInterface {
-  func fetchClass(id _: Int) async throws -> ClassRoom {
-    throw ClassError.unknown("클래스 상세 조회를 지원하지 않습니다.")
-  }
-
   func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {
     let room = try await fetchClass(joinCode: joinCode)
     return ClassJoinPreview(room: room)

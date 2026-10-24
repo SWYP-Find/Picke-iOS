@@ -16,13 +16,14 @@ struct ClassListItemDTO: Decodable, Sendable {
   let closed: Bool
 
   func toDomain() throws -> ClassRoom {
-    let date = try closeAt.classDate()
+    let closeDate = try closeAt.classDate()
     return ClassRoom(
       id: classId,
       name: name,
       joinCode: "",
       battle: .classProjection(id: battleId, title: battleTitle, thumbnailUrl: battleThumbnailUrl),
-      deadline: date,
+      deadline: .distantFuture,
+      closeAt: closeDate,
       memberCount: memberCount,
       role: try myRole.classRole(),
       status: closed ? .closed : .open,
@@ -68,6 +69,7 @@ struct ClassDetailDataDTO: Decodable, Sendable {
         thumbnailUrl: battle.thumbnailUrl
       ),
       deadline: try deadline.map { try $0.classDate() } ?? .distantFuture,
+      closeAt: try closeAt.classDate(),
       memberCount: memberCount,
       role: try myRole.classRole(),
       status: closed ? .closed : .open,
@@ -121,6 +123,7 @@ private extension ClassBattleSummary {
       philosopherB: "",
       optionBTitle: "",
       category: .philosophy,
+      categoryDisplayTitle: "",
       level: .middle,
       audioDuration: 0,
       viewCount: 0

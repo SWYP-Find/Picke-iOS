@@ -51,8 +51,6 @@ public struct ClassShareFeature {
     case enterClass(ClassRoom)
   }
 
-  @Dependency(\.classMockRepository) private var classMockRepository
-
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
@@ -78,10 +76,9 @@ extension ClassShareFeature {
       return .send(.delegate(.dismiss))
 
     case .enterClassTapped:
-      guard classMockRepository != nil else {
-        return .send(.delegate(.enterClass(state.room)))
-      }
-      return .send(.delegate(.nameOwner(state.room)))
+      return state.room.ownerParticipates
+        ? .send(.delegate(.nameOwner(state.room)))
+        : .send(.delegate(.enterClass(state.room)))
     }
   }
 }

@@ -211,6 +211,9 @@ struct ClassRecommendationTests {
     #expect(room.role == .member)
     #expect(room.status == .closed)
     #expect(room.memberCapacity == 30)
+    #expect(room.deadline == .distantFuture)
+    #expect(room.closeAt?.formatted(.serverDateTime) == "2026-12-31T23:59:59")
+    #expect(room.battle.categoryDisplayTitle.isEmpty)
   }
 
   @Test
@@ -239,6 +242,8 @@ struct ClassRecommendationTests {
     #expect(room.requiresComment)
     #expect(!room.ownerParticipates)
     #expect(room.deadline == .distantFuture)
+    #expect(room.closeAt?.formatted(.serverDateTime) == "2026-12-31T23:59:59")
+    #expect(room.battle.categoryDisplayTitle.isEmpty)
   }
 }
 

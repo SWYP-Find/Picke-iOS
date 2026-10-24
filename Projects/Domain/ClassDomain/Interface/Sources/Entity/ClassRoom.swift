@@ -14,6 +14,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
   public let battle: ClassBattleSummary
   public let battleType: ClassBattleType
   public let deadline: Date
+  public let closeAt: Date?
   public let memberCount: Int
   public let memberCapacity: Int?
   public let role: ClassRole
@@ -28,6 +29,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     joinCode: String,
     battle: ClassBattleSummary,
     deadline: Date,
+    closeAt: Date? = nil,
     memberCount: Int,
     role: ClassRole,
     status: ClassStatus,
@@ -43,6 +45,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     self.battle = battle
     self.battleType = battleType
     self.deadline = deadline
+    self.closeAt = closeAt
     self.memberCount = memberCount
     self.memberCapacity = memberCapacity
     self.role = role

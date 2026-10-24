@@ -117,18 +117,6 @@ public struct ClassSettingFeature {
       )
     }
 
-    public var aiCreation: ClassCreation? {
-      guard let aiBattle else { return nil }
-      return ClassCreation(
-        name: trimmedName,
-        deadline: isDeadlineEnabled ? deadline : .distantFuture,
-        battleId: aiBattle.id,
-        allowsAnonymousOpinion: false,
-        requiresComment: requiresComment,
-        ownerParticipates: ownerParticipates
-      )
-    }
-
     private var trimmedName: String {
       name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -153,7 +141,6 @@ public struct ClassSettingFeature {
 
   public enum AsyncAction: Equatable {
     case create(ClassCreation)
-    case createAI(ClassCreation, ClassBattleSummary)
   }
 
   @CasePathable
@@ -174,7 +161,6 @@ public struct ClassSettingFeature {
 
   @Dependency(\.date) private var date
   @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMockRepository) private var classMockRepository
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -264,14 +250,8 @@ extension ClassSettingFeature {
         return .none
       }
       if state.aiQuestion != nil {
-        guard classMockRepository != nil,
-              let creation = state.aiCreation,
-              let battle = state.aiBattle
-        else {
-          state.unavailableNotice = .init()
-          return .none
-        }
-        return .send(.async(.createAI(creation, battle)))
+        state.unavailableNotice = .init()
+        return .none
       }
       guard let creation = state.creation else { return .none }
       return .send(.async(.create(creation)))
@@ -295,18 +275,6 @@ extension ClassSettingFeature {
       }
       .cancellable(id: CancelID.create, cancelInFlight: true)
 
-    case let .createAI(creation, battle):
-      guard let classMockRepository else { return .none }
-      state.isLoading = true
-      state.errorMessage = nil
-      return .run { send in
-        let result = await Result {
-          try await classMockRepository.createClass(creation, battle: battle)
-        }
-        .mapError(ClassError.from)
-        await send(.inner(.created(result)))
-      }
-      .cancellable(id: CancelID.create, cancelInFlight: true)
     }
   }
 
