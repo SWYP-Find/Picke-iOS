@@ -223,7 +223,8 @@ struct ClassRecommendationTests {
       "classId":5,"name":"철학 토론","inviteCode":null,"myRole":"MEMBER",
       "battle":{"battleId":12,"title":"AI 창작","summary":"주제","thumbnailUrl":null},
       "battleType":"CUSTOM",
-      "memberCount":12,"capacity":30,"deadline":null,"closeAt":"2026-12-31T23:59:59",
+      "memberCount":12,"capacity":30,"deadline":null,"ticketExpiresAt":"2027-04-01T10:00:00",
+      "closeAt":"2026-12-31T23:59:59",
       "closed":false,"commentRequired":true,"ownerParticipates":false
     }}
     """
@@ -242,6 +243,7 @@ struct ClassRecommendationTests {
     #expect(room.requiresComment)
     #expect(!room.ownerParticipates)
     #expect(room.deadline == .distantFuture)
+    #expect(room.ticketExpiresAt == "2027-04-01T10:00:00".date(as: .serverDateTime))
     #expect(room.closeAt?.formatted(.serverDateTime) == "2026-12-31T23:59:59")
     #expect(room.battle.categoryDisplayTitle.isEmpty)
   }

@@ -92,6 +92,9 @@ public struct ClassCoordinatorView: View {
 
       case let .aiChat(chatStore):
         ClassAIChatView(store: chatStore)
+
+      case let .battleFlow(battleFlowStore):
+        ClassBattleFlowView(store: battleFlowStore)
       }
     }
     .allowsHitTesting(!store.isDeadlinePanelPresented)
