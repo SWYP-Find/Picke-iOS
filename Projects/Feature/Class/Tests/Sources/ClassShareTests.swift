@@ -42,22 +42,32 @@ struct ClassShareTests {
   }
 
   @Test
-  func 클래스로_이동하면_이동_델리게이트를_보낸다() async {
-    let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
+  func 운영자가_참여하지_않는_클래스로_바로_이동한다() async {
+    let nonParticipatingRoom = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: false
+    )
+    let store = TestStore(initialState: ClassShareFeature.State(room: nonParticipatingRoom)) {
       ClassShareFeature()
     }
 
     await store.send(.view(.enterClassTapped))
-    await store.receive(\.delegate.enterClass)
+    await store.receive(\.delegate, .enterClass(nonParticipatingRoom))
   }
 
   @Test
-  func 목_클래스에서는_운영자_이름_경로를_요청한다() async {
-    let repository = MockClassRepository(rooms: [room])
+  func 운영자가_참여하는_클래스에서는_운영자_이름_경로를_요청한다() async {
     let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
       ClassShareFeature()
-    } withDependencies: {
-      $0.classMockRepository = repository
     }
 
     await store.send(.view(.enterClassTapped))
@@ -66,11 +76,8 @@ struct ClassShareTests {
 
   @Test
   func 이름_경로_요청은_공유_화면을_유지한다() async {
-    let repository = MockClassRepository(rooms: [room])
     let store = TestStore(initialState: ClassShareFeature.State(room: room)) {
       ClassShareFeature()
-    } withDependencies: {
-      $0.classMockRepository = repository
     }
 
     await store.send(.view(.enterClassTapped))

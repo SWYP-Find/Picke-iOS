@@ -12,13 +12,22 @@ public protocol ClassInterface: Sendable {
   func fetchMyClasses() async throws -> [ClassRoom]
   func fetchRecommendedBattles(filter: ClassTopicFilter) async throws -> [ClassBattleSummary]
   func createClass(_ creation: ClassCreation) async throws -> ClassRoom
+  func fetchClass(id: Int) async throws -> ClassRoom
   func fetchClass(joinCode: String) async throws -> ClassRoom
+  func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom
   func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom
   func deleteClass(id: Int) async throws
   func leaveClass(id: Int) async throws
   func fetchReport(roomID: Int) async throws -> ClassReport?
   func fetchOwnerDashboard(roomID: Int) async throws -> ClassOwnerDashboardData?
+}
+
+public extension ClassInterface {
+  func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {
+    let room = try await fetchClass(joinCode: joinCode)
+    return ClassJoinPreview(room: room)
+  }
 }
 
 public enum ClassRepositoryDependency: TestDependencyKey {

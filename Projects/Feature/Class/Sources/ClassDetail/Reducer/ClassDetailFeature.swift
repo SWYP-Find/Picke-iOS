@@ -17,14 +17,26 @@ public struct ClassDetailFeature {
 
   @ObservableState
   public struct State: Equatable {
+    public enum ViewState: Equatable {
+      case loading
+      case error
+      case loaded
+    }
+
     public var room: ClassRoom
+    public let instanceID: UUID
+    public var viewState: ViewState = .loaded
+    public var loadErrorMessage: String?
+    public var activeLoadRequestID: UUID?
     @Presents public var modal: ClassModalFeature.State?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var isLoading = false
     public var errorMessage: String?
 
     public init(room: ClassRoom) {
+      @Dependency(\.uuid) var uuid
       self.room = room
+      instanceID = uuid()
     }
 
     /// 마감일을 끈 클래스는 `.distantFuture` 로 만들어지므로 날짜 대신 안내 문구를 보여준다.
@@ -50,6 +62,7 @@ public struct ClassDetailFeature {
 
   public enum View {
     case backTapped
+    case retryTapped
     case membersTapped
     case battleTapped
     case reportTapped
@@ -64,6 +77,7 @@ public struct ClassDetailFeature {
 
   public enum DelegateAction: Equatable {
     case dismiss
+    case retryRequested(roomID: Int, instanceID: UUID)
     case openMembers(ClassRoom)
     case openBattle(ClassRoom)
     case openClosedBattle(ClassRoom)
@@ -98,6 +112,9 @@ public struct ClassDetailFeature {
         return handleCustomAlertAction(state: &state, action: alertAction)
       case let .dataUpdated(room):
         state.room = room
+        state.viewState = .loaded
+        state.activeLoadRequestID = nil
+        state.loadErrorMessage = nil
         return .none
       case .delegate:
         return .none
@@ -152,9 +169,17 @@ extension ClassDetailFeature {
     switch action {
     case .backTapped:
       return .send(.delegate(.dismiss))
+    case .retryTapped:
+      guard state.viewState == .error else { return .none }
+      return .send(.delegate(.retryRequested(
+        roomID: state.room.id,
+        instanceID: state.instanceID
+      )))
     case .membersTapped:
+      guard state.viewState == .loaded else { return .none }
       return .send(.delegate(.openMembers(state.room)))
     case .battleTapped:
+      guard state.viewState == .loaded else { return .none }
       guard state.canParticipateInBattle else { return .none }
       if state.room.status == .closed {
         return .send(.delegate(.openClosedBattle(state.room)))
@@ -168,8 +193,10 @@ extension ClassDetailFeature {
       }
       return .send(.delegate(.openBattle(state.room)))
     case .reportTapped:
+      guard state.viewState == .loaded else { return .none }
       return .send(.delegate(.openReport(state.room)))
     case .managementTapped:
+      guard state.viewState == .loaded else { return .none }
       guard state.room.role == .owner else { return .none }
       state.modal = .init(kind: .management)
       return .none
@@ -177,16 +204,19 @@ extension ClassDetailFeature {
       state.modal = nil
       return .none
     case .codeTapped:
+      guard state.viewState == .loaded else { return .none }
       state.modal = .init(kind: .code)
       return .none
     case .codeDismissed:
       state.modal = nil
       return .none
     case .deadlineTapped:
+      guard state.viewState == .loaded else { return .none }
       guard state.room.role == .owner else { return .none }
       state.modal = nil
       return .send(.delegate(.openDeadline(state.room)))
     case .deleteTapped:
+      guard state.viewState == .loaded else { return .none }
       guard state.room.role == .owner else { return .none }
       state.modal = nil
       state.customAlert = CustomAlertState(

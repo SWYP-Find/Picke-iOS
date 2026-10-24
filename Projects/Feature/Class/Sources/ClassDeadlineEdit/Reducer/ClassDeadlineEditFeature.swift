@@ -53,9 +53,10 @@ public struct ClassDeadlineEditFeature {
     }
 
     public var canSave: Bool {
-      guard room.role == .owner, !isSaving, validationMessage == nil else { return false }
-      let proposed = isDeadlineEnabled ? draftDeadline : .distantFuture
-      return proposed != room.deadline
+      guard room.role == .owner, isDeadlineEnabled, !isSaving, validationMessage == nil else {
+        return false
+      }
+      return room.deadline == .distantFuture || draftDeadline > room.deadline
     }
   }
 
@@ -119,6 +120,7 @@ public struct ClassDeadlineEditFeature {
         )
       case let .view(.deadlineEnabledChanged(enabled)):
         guard !state.isSaving else { return .none }
+        guard enabled || state.room.deadline == .distantFuture else { return .none }
         state.isDeadlineEnabled = enabled
         state.errorMessage = nil
         if enabled, state.room.deadline == .distantFuture {
@@ -131,7 +133,7 @@ public struct ClassDeadlineEditFeature {
         return .none
       case .view(.saveTapped):
         guard state.canSave else { return .none }
-        guard !state.isDeadlineEnabled || state.draftDeadline >= date.now else {
+        guard state.draftDeadline >= date.now else {
           state.errorMessage = "현재 이후 시간을 선택해 주세요."
           return .none
         }
@@ -141,7 +143,7 @@ public struct ClassDeadlineEditFeature {
         state.errorMessage = nil
         return .send(.async(.save(
           roomID: state.room.id,
-          deadline: state.isDeadlineEnabled ? state.draftDeadline : .distantFuture,
+          deadline: state.draftDeadline,
           instanceID: state.instanceID,
           requestID: requestID
         )))

@@ -147,7 +147,8 @@ public actor MockClassRepository: ClassInterface {
       id: memberID,
       name: trimmed,
       isOwner: members[index].isOwner,
-      avatar: members[index].avatar
+      avatar: members[index].avatar,
+      characterURL: members[index].characterURL
     )
     members[index] = updated
     membersByRoom[roomID] = members
@@ -239,7 +240,8 @@ public actor MockClassRepository: ClassInterface {
       status: .open,
       allowsAnonymousOpinion: creation.allowsAnonymousOpinion,
       requiresComment: creation.requiresComment,
-      ownerParticipates: creation.ownerParticipates
+      ownerParticipates: creation.ownerParticipates,
+      battleType: battle.id < 0 ? .custom : .tts
     )
     rooms.append(room)
     reports[id] = nil
@@ -247,6 +249,13 @@ public actor MockClassRepository: ClassInterface {
     membersByRoom[id] = [ClassMember(id: 1, name: "운영자", isOwner: true)]
     currentMemberIDs[id] = 1
     nextMemberIDs[id] = 2
+    return room
+  }
+
+  public func fetchClass(id: Int) async throws -> ClassRoom {
+    guard let room = (rooms + availableRooms).first(where: { $0.id == id }) else {
+      throw ClassError.invalidCode
+    }
     return room
   }
 
@@ -289,7 +298,8 @@ public actor MockClassRepository: ClassInterface {
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
       ownerParticipates: room.ownerParticipates,
-      memberCapacity: room.memberCapacity
+      memberCapacity: room.memberCapacity,
+      battleType: room.battleType
     )
     rooms.append(joined)
     availableRooms.remove(at: index)
@@ -319,7 +329,8 @@ public actor MockClassRepository: ClassInterface {
       allowsAnonymousOpinion: room.allowsAnonymousOpinion,
       requiresComment: room.requiresComment,
       ownerParticipates: room.ownerParticipates,
-      memberCapacity: room.memberCapacity
+      memberCapacity: room.memberCapacity,
+      battleType: room.battleType
     )
     rooms[index] = updated
     return updated
@@ -380,7 +391,8 @@ private extension ClassRoom {
       allowsAnonymousOpinion: allowsAnonymousOpinion,
       requiresComment: requiresComment,
       ownerParticipates: ownerParticipates,
-      memberCapacity: memberCapacity
+      memberCapacity: memberCapacity,
+      battleType: battleType
     )
   }
 }

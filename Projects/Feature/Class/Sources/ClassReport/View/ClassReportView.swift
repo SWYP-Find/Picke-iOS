@@ -104,9 +104,11 @@ private extension ClassReportView {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
         statusBadge()
-        Text("#\(store.room.battle.categoryDisplayTitle)")
-          .frame(minHeight: 17)
-          .pickeBadge(.filled, size: .tag)
+        if !store.room.battle.categoryDisplayTitle.isEmpty {
+          Text("#\(store.room.battle.categoryDisplayTitle)")
+            .frame(minHeight: 17)
+            .pickeBadge(.filled, size: .tag)
+        }
       }
       VStack(alignment: .leading, spacing: 8) {
         Text(store.room.battle.title)

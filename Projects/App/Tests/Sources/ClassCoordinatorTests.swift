@@ -1085,6 +1085,11 @@ struct ClassCoordinatorTests {
     store.exhaustivity = .off
     #expect(store.state.showsTabBar)
     await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    await store.receive(\.inner, .deadlineDetailResponse(
+      routeID: 1,
+      roomID: room.id,
+      .success(room)
+    ))
     #expect(!store.state.showsTabBar)
     await store.send(.deadlineEdit(.presented(.view(.backTapped))))
     await store.receive(\.deadlineEdit.presented.delegate.dismiss)
@@ -2219,7 +2224,7 @@ struct ClassParticipantPushTests {
 
   @Test
   func 코드_조회_성공은_이름_화면을_push하고_중복응답은_무시한다() async {
-    let room = ClassRoom.mockJoinable
+    let preview = ClassJoinPreview(room: .mockJoinable)
     let codeID = UUID(202)
     let nicknameID = UUID(203)
     var state = ClassCoordinator.State()
@@ -2229,14 +2234,14 @@ struct ClassParticipantPushTests {
     }
 
     await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.found(
-      room,
+      preview,
       instanceID: codeID
     )))))) {
-      $0.routes.push(.join(.init(mode: .nickname, preview: room, instanceID: nicknameID)))
+      $0.routes.push(.join(.init(mode: .nickname, preview: preview, instanceID: nicknameID)))
       $0.participantJoinInstanceIDs = [codeID, nicknameID]
     }
     await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.found(
-      room,
+      preview,
       instanceID: codeID
     ))))))
     #expect(store.state.routes.count == 3)
@@ -2437,6 +2442,81 @@ struct ClassDeadlineSheetCoordinatorTests {
   }
 
   @Test
+  func 목록에서_연_상세는_서버_상세로_갱신한다() async {
+    let room = ClassRoom.mocks[0]
+    let projection = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: "",
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: false,
+      requiresComment: false
+    )
+    var list = MyClassFeature.State()
+    list.rooms = [projection]
+    list.viewState = .loaded
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(list))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classUseCase = MockClassRepository(rooms: [room], availableRooms: [])
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .myClasses(.delegate(.openRoom(projection)))
+    )))
+    guard case let .detail(pending)? = store.state.routes.last?.screen,
+          let requestID = pending.activeLoadRequestID
+    else {
+      Issue.record("상세 조회가 시작되지 않음")
+      return
+    }
+    #expect(pending.viewState == .loading)
+    await store.receive(\.inner, .detailLoaded(
+      routeID: 2,
+      roomID: room.id,
+      instanceID: pending.instanceID,
+      requestID: requestID,
+      room: room
+    ))
+    guard case let .detail(loaded)? = store.state.routes.last?.screen else {
+      Issue.record("상세 경로가 유지되지 않음")
+      return
+    }
+    #expect(loaded.viewState == .loaded)
+    #expect(loaded.room.joinCode == room.joinCode)
+    #expect(loaded.room.requiresComment == room.requiresComment)
+  }
+
+  @Test
+  func 교체된_상세_경로는_이전_조회_응답을_무시한다() async {
+    let room = ClassRoom.mocks[0]
+    var oldDetail = ClassDetailFeature.State(room: room)
+    let requestID = UUID()
+    oldDetail.viewState = .loading
+    oldDetail.activeLoadRequestID = requestID
+    let newDetail = ClassDetailFeature.State(room: room)
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(newDetail))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.inner(.detailLoaded(
+      routeID: 1,
+      roomID: room.id,
+      instanceID: oldDetail.instanceID,
+      requestID: requestID,
+      room: room
+    )))
+    #expect(store.state.routes[1].screen == .detail(newDetail))
+  }
+
+  @Test
   func 세_화면에서_현재_경로를_유지하며_마감일_시트를_연다() async {
     let room = ClassRoom.mocks[0]
     var list = MyClassFeature.State()
@@ -2451,6 +2531,11 @@ struct ClassDeadlineSheetCoordinatorTests {
     store.exhaustivity = .off
 
     await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    await store.receive(\.inner, .deadlineDetailResponse(
+      routeID: 1,
+      roomID: room.id,
+      .success(room)
+    ))
     #expect(store.state.routes.count == 2)
     #expect(store.state.deadlineEdit?.room == room)
 
@@ -3002,6 +3087,10 @@ private actor SuspendedClassUseCase: ClassInterface {
 
   func fetchClass(joinCode: String) async throws -> ClassRoom {
     try await repository.fetchClass(joinCode: joinCode)
+  }
+
+  func fetchClass(id: Int) async throws -> ClassRoom {
+    try await repository.fetchClass(id: id)
   }
 
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {

@@ -26,8 +26,16 @@ public struct ClassUseCaseImpl: ClassInterface {
     try await repository.createClass(creation)
   }
 
+  public func fetchClass(id: Int) async throws -> ClassRoom {
+    try await repository.fetchClass(id: id)
+  }
+
   public func fetchClass(joinCode: String) async throws -> ClassRoom {
     try await repository.fetchClass(joinCode: joinCode)
+  }
+
+  public func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {
+    try await repository.fetchClassPreview(joinCode: joinCode)
   }
 
   public func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
