@@ -1453,6 +1453,17 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       return store
     }
 
+    let empty = joinStore()
+    try await save(
+      "join-empty-code-push-resized-375x812",
+      view: AnyView(ClassCoordinatorView(store: empty)),
+      ready: {
+        guard case let .join(code)? = empty.routes.last?.screen else { return false }
+        return empty.routes.count == 2 && code.mode == .code && code.joinCode.isEmpty
+      },
+      viewport: CGSize(width: 375, height: 812)
+    )
+
     let valid = joinStore()
     valid.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, room.joinCode))))))
     try await save(
