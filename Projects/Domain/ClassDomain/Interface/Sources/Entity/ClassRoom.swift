@@ -14,6 +14,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
   public let battle: ClassBattleSummary
   public let battleType: ClassBattleType
   public let deadline: Date
+  public let ticketExpiresAt: Date?
   public let closeAt: Date?
   public let memberCount: Int
   public let memberCapacity: Int?
@@ -37,7 +38,8 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     requiresComment: Bool,
     ownerParticipates: Bool = true,
     memberCapacity: Int? = nil,
-    battleType: ClassBattleType = .tts
+    battleType: ClassBattleType = .tts,
+    ticketExpiresAt: Date? = nil
   ) {
     self.id = id
     self.name = name
@@ -45,6 +47,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     self.battle = battle
     self.battleType = battleType
     self.deadline = deadline
+    self.ticketExpiresAt = ticketExpiresAt
     self.closeAt = closeAt
     self.memberCount = memberCount
     self.memberCapacity = memberCapacity

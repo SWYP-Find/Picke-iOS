@@ -36,7 +36,7 @@ struct ClassDeadlineEditTests {
     studentState.draftDeadline = changedDeadline
     #expect(ownerState.canSave)
     #expect(!studentState.canSave)
-    #expect(ownerState.minimumSelectableDate == referenceNow)
+    #expect(ownerState.minimumSelectableDate == original.deadline)
   }
 
   @Test
@@ -52,7 +52,7 @@ struct ClassDeadlineEditTests {
   }
 
   @Test
-  func 마감일을_끄고_다시_켜면_7일_후_선택일을_사용한다() async {
+  func 마감일이_없는_클래스는_새_마감일을_설정할_수_없다() async {
     let room = makeRoom(deadline: .distantFuture)
     let instanceID = UUID()
     let store = TestStore(initialState: ClassDeadlineEditFeature.State(
@@ -66,14 +66,7 @@ struct ClassDeadlineEditTests {
     #expect(!store.state.isDeadlineEnabled)
     #expect(!store.state.canSave)
     #expect(store.state.selectedDeadlineText == "마감일 없음")
-    await store.send(.view(.deadlineEnabledChanged(true))) {
-      $0.isDeadlineEnabled = true
-      $0.draftDeadline = referenceNow.addingTimeInterval(604_800)
-    }
-    #expect(store.state.canSave)
-    await store.send(.view(.deadlineEnabledChanged(false))) {
-      $0.isDeadlineEnabled = false
-    }
+    await store.send(.view(.deadlineEnabledChanged(true)))
     #expect(!store.state.canSave)
   }
 
@@ -86,13 +79,13 @@ struct ClassDeadlineEditTests {
       referenceNow: referenceNow
     )
     #expect(state.draftDeadline == past)
-    #expect(state.minimumSelectableDate == past)
-    #expect(state.validationMessage == "현재 이후 시간을 선택해 주세요.")
+    #expect(state.minimumSelectableDate == referenceNow)
+    #expect(state.validationMessage == "마감일은 기존 마감일보다 뒤로 연장만 할 수 있습니다.")
     #expect(!state.canSave)
   }
 
   @Test
-  func 기존_마감일을_끄더라도_지원하지_않는_해제_요청을_보내지_않는다() async {
+  func 기존_마감일을_끄거나_앞당길_수_없다() async {
     let room = makeRoom(deadline: referenceNow.addingTimeInterval(86400))
     let store = TestStore(initialState: ClassDeadlineEditFeature.State(
       room: room,
@@ -101,15 +94,38 @@ struct ClassDeadlineEditTests {
     )) { ClassDeadlineEditFeature() }
 
     await store.send(.view(.deadlineEnabledChanged(false)))
+    #expect(store.state.isDeadlineEnabled)
+    await store.send(.binding(.set(\.draftDeadline, room.deadline.addingTimeInterval(-60)))) {
+      $0.draftDeadline = room.deadline.addingTimeInterval(-60)
+    }
     #expect(!store.state.canSave)
+    #expect(store.state.validationMessage == "마감일은 기존 마감일보다 뒤로 연장만 할 수 있습니다.")
     await store.send(.view(.saveTapped))
-    await store.finish()
+  }
+
+  @Test
+  func 이용권_종료일_이후는_저장할_수_없다() {
+    let expiration = referenceNow.addingTimeInterval(172_800)
+    let room = makeRoom(
+      deadline: referenceNow.addingTimeInterval(86400),
+      ticketExpiresAt: expiration
+    )
+    var state = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: referenceNow
+    )
+    state.draftDeadline = expiration.addingTimeInterval(1)
+    #expect(!state.canSave)
+    #expect(state.validationMessage == "마감일은 이용권 종료일 이전이어야 합니다.")
+    state.draftDeadline = expiration
+    #expect(state.canSave)
   }
 
   @Test
   func 저장_직전_현재_시간을_다시_검사한다() async {
-    let original = makeRoom(deadline: referenceNow.addingTimeInterval(60))
-    let draft = referenceNow.addingTimeInterval(300)
+    let original = makeRoom(deadline: referenceNow.addingTimeInterval(86400))
+    let draft = original.deadline.addingTimeInterval(300)
     var state = ClassDeadlineEditFeature.State(
       room: original,
       instanceID: UUID(),
@@ -253,7 +269,8 @@ struct ClassDeadlineEditTests {
 
   private func makeRoom(
     deadline: Date,
-    role: ClassRole = .owner
+    role: ClassRole = .owner,
+    ticketExpiresAt: Date? = nil
   ) -> ClassRoom {
     let source = ClassRoom.mocks[0]
     return ClassRoom(
@@ -268,7 +285,8 @@ struct ClassDeadlineEditTests {
       allowsAnonymousOpinion: source.allowsAnonymousOpinion,
       requiresComment: source.requiresComment,
       ownerParticipates: source.ownerParticipates,
-      memberCapacity: source.memberCapacity
+      memberCapacity: source.memberCapacity,
+      ticketExpiresAt: ticketExpiresAt
     )
   }
 }
