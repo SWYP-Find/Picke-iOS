@@ -1453,8 +1453,37 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       return store
     }
 
+    let empty = joinStore()
+    try await save(
+      "join-empty-code-push-resized-375x812",
+      view: AnyView(ClassCoordinatorView(store: empty)),
+      ready: {
+        guard case let .join(code)? = empty.routes.last?.screen else { return false }
+        return empty.routes.count == 2 && code.mode == .code && code.joinCode.isEmpty
+      },
+      viewport: CGSize(width: 375, height: 812)
+    )
+
     let valid = joinStore()
     valid.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, room.joinCode))))))
+    var directState = ClassJoinFeature.State()
+    directState.joinCode = room.joinCode
+    let directStore = Store(initialState: directState) { ClassJoinFeature() }
+    let (directImage, _) = try await capture(
+      AnyView(ClassJoinView(store: directStore)),
+      ready: { directStore.canFindClass },
+      includeScrollBottom: false,
+      viewport: CGSize(width: 402, height: 874)
+    )
+    let directText = try recognizedAuditText(in: directImage, name: "join-valid-code-direct-402")
+    XCTAssertTrue(directText.contains("공유받은코드로"), "Expected the current join screen in the capture")
+    try XCTUnwrap(directImage.pngData()).write(
+      to: directory.appendingPathComponent("join-valid-code-direct-402.png")
+    )
+    let directAttachment = XCTAttachment(image: directImage)
+    directAttachment.name = "join-valid-code-direct-402"
+    directAttachment.lifetime = .keepAlways
+    add(directAttachment)
     try await save(
       "join-valid-code-push",
       view: AnyView(ClassCoordinatorView(store: valid)),
@@ -2097,9 +2126,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
   @MainActor
   func testClassRecommendLayout() async throws {
-    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
-      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify recommendation layout")
-    }
     // Local fixture: the shared Class/AI-setting filter below stays unchanged.
     let topic = "AI와 인간 사이의 윤리와 사상에 대해서"
     let scenarios: [(String, ClassRecommendFeature.Mode, CGSize, String)] = [
@@ -2202,9 +2228,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
   @MainActor
   func testClassBattlePreviewReferenceCapture() async throws {
-    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
-      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify preview layout")
-    }
     let state = ClassBattlePreviewReferenceFixture.makeState()
     let store = Store(initialState: state) {
       ClassBattlePreviewFeature()
@@ -2651,6 +2674,26 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         }
       }
     }
+  }
+
+  @MainActor
+  func testClassTopicReferenceCapture() async throws {
+    var state = ClassTopicFeature.State()
+    state.categories = [.philosophy]
+    let store = Store(initialState: state) { ClassTopicFeature() }
+    let (image, _) = try await capture(
+      AnyView(ClassTopicView(store: store)),
+      ready: nil,
+      includeScrollBottom: false,
+      viewport: CGSize(width: 402, height: 874)
+    )
+    let text = try recognizedAuditText(in: image, name: "class-topic-402")
+    XCTAssertTrue(text.contains("어떤주제로"))
+    XCTAssertTrue(text.contains("조건에맞는콘텐츠보기"))
+    let attachment = XCTAttachment(image: image)
+    attachment.name = "class-topic-402.png"
+    attachment.lifetime = .keepAlways
+    add(attachment)
   }
 
   @MainActor

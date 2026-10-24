@@ -16,6 +16,7 @@ public struct PickeCommentInputBar: View {
   private let isSendEnabled: Bool
   private let isSubmitting: Bool
   private let isCompact: Bool
+  private let characterLimit: Int?
   private let onSend: () -> Void
   private var focus: FocusState<Bool>.Binding
 
@@ -26,6 +27,7 @@ public struct PickeCommentInputBar: View {
     isSendEnabled: Bool,
     isSubmitting: Bool = false,
     isCompact: Bool = false,
+    characterLimit: Int? = nil,
     onSend: @escaping () -> Void
   ) {
     _text = text
@@ -34,6 +36,7 @@ public struct PickeCommentInputBar: View {
     self.isSendEnabled = isSendEnabled
     self.isSubmitting = isSubmitting
     self.isCompact = isCompact
+    self.characterLimit = characterLimit
     self.onSend = onSend
   }
 
@@ -108,17 +111,28 @@ private extension PickeCommentInputBar {
       .pretendardFont(.regular13)
       .foregroundStyle(.gray400)
       .focused(focus)
+      .lineLimit(1 ... 3)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .padding(.horizontal, 12)
-      .padding(.vertical, 8)
+      .padding(.top, 8)
+      .padding(.bottom, characterLimit == nil ? 8 : 24)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(.inputTextareaBackgroundDefault)
+      .overlay(alignment: .bottomTrailing) {
+        if let characterLimit {
+          Text("\(characterLimit - text.count)/\(characterLimit)")
+            .pretendardFont(.labelSmall)
+            .foregroundStyle(.gray400)
+            .padding(.trailing, 12)
+            .padding(.bottom, 8)
+        }
+      }
   }
 
   var sendButton: some View {
     Button { onSend() } label: {
-      Image(systemName: "paperplane.fill")
-        .font(.system(size: 16, weight: .semibold))
+      Image(systemName: "paperplane")
+        .pretendardFont(family: .Medium, size: 22)
         .foregroundStyle(.iconGrayInverse)
         .frame(width: 36, height: 36)
         .background(
@@ -128,6 +142,7 @@ private extension PickeCommentInputBar {
     }
     .buttonStyle(.plain)
     .disabled(!isSendEnabled)
+    .accessibilityLabel("보내기")
   }
 }
 

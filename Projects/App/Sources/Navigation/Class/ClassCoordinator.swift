@@ -542,6 +542,17 @@ private extension ClassCoordinator {
       state.routes.push(.join(.init(mode: .nickname, preview: room, instanceID: uuid())))
       return .none
 
+    case let .routeAction(routeID, action: .join(.delegate(.createClassRequested))):
+      guard routeID == state.routes.count - 1,
+            case let .join(join)? = state.routes.last?.screen,
+            join.mode == .code,
+            state.routes.count == 2,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.startMethod(.init()))
+      return .none
+
     case let .routeAction(routeID, action: .join(.delegate(.dismiss))):
       guard routeID == state.routes.count - 1,
             case let .join(join)? = state.routes.last?.screen

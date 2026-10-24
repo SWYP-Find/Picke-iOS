@@ -2189,6 +2189,35 @@ struct ClassParticipantPushTests {
   }
 
   @Test
+  func 참여_코드_화면에서_새_클래스_만들기를_누르면_방식_선택을_push한다() async {
+    let codeID = UUID(205)
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.createClassRequested))))) {
+      $0.routes.push(.startMethod(.init()))
+      $0.participantJoinInstanceIDs = [codeID]
+    }
+    #expect(store.state.routes.count == 3)
+  }
+
+  @Test
+  func 이름_입력_화면의_생성_요청은_방식_선택을_열지_않는다() async {
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: UUID(206))))
+    state.routes.push(.join(.init(
+      mode: .nickname,
+      preview: .mockJoinable,
+      instanceID: UUID(207)
+    )))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.createClassRequested)))))
+    #expect(store.state.routes.count == 3)
+  }
+
+  @Test
   func 코드_조회_성공은_이름_화면을_push하고_중복응답은_무시한다() async {
     let room = ClassRoom.mockJoinable
     let codeID = UUID(202)

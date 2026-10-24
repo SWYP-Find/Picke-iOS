@@ -19,6 +19,55 @@ import XCTest
 /// Opt-in captures of the mounted global comment and reply screens for design review.
 final class CommentFinalDesignTests: XCTestCase {
   @MainActor
+  func testReplyCannotSendMoreThan200Characters() async {
+    var state = CommentReplyFeature.State(perspectiveId: 1)
+    state.replyText = String(repeating: "가", count: 200)
+    XCTAssertTrue(state.isSendEnabled)
+
+    state.replyText.append("나")
+    XCTAssertFalse(state.isSendEnabled)
+
+    var parentEditingState = state
+    parentEditingState.editingParent = true
+    XCTAssertNil(parentEditingState.replyCharacterLimit)
+    XCTAssertTrue(parentEditingState.isSendEnabled)
+
+    var replyEditingState = state
+    replyEditingState.editingCommentId = 1
+    XCTAssertEqual(replyEditingState.replyCharacterLimit, 200)
+    XCTAssertFalse(replyEditingState.isSendEnabled)
+
+    replyEditingState.replyText = String(repeating: "가", count: 200) + "\n"
+    XCTAssertFalse(replyEditingState.isSendEnabled)
+
+    let store = TestStore(initialState: state) { CommentReplyFeature() }
+    await store.send(.view(.sendTapped))
+    XCTAssertEqual(store.state.replyText.count, 201)
+  }
+
+  @MainActor
+  func testBeginningReplyEditClearsParentEditAndKeepsOverlongText() async {
+    let original = String(repeating: "가", count: 201)
+    let store = TestStore(initialState: CommentReplyFeature.State(perspectiveId: 1)) {
+      CommentReplyFeature()
+    }
+
+    await store.send(.view(.parentMenu(.edit))) {
+      $0.editingParent = true
+      $0.replyText = $0.parentComment.content
+    }
+    await store.send(.view(.beginEditing(commentId: 7, content: original))) {
+      $0.editingParent = false
+      $0.editingCommentId = 7
+      $0.replyText = original
+    }
+    XCTAssertEqual(store.state.replyText, original)
+    XCTAssertFalse(store.state.isSendEnabled)
+    await store.send(.view(.sendTapped))
+    XCTAssertEqual(store.state.replyText, original)
+  }
+
+  @MainActor
   func testReplyEditTakesInputFocus() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify reply input focus")
@@ -68,7 +117,6 @@ final class CommentFinalDesignTests: XCTestCase {
 
     window.endEditing(true)
     try await waitFor("parent focus released") { !hasFocusedInput(in: window) }
-    store.send(.binding(.set(\CommentReplyFeature.State.editingParent, false)))
     store.send(.view(.replyMenu(id: reply.id, action: .edit)))
     try await waitFor("reply focus after parent edit") { hasFocusedInput(in: window) }
     XCTAssertFalse(store.editingParent)
@@ -215,7 +263,6 @@ final class CommentFinalDesignTests: XCTestCase {
 
     replyWindow.endEditing(true)
     try await waitFor("parent focus released before reply edit") { !hasFocusedInput(in: replyWindow) }
-    replyStore.send(.binding(.set(\CommentReplyFeature.State.editingParent, false)))
     replyStore.send(.view(.replyMenu(id: lastReply.id, action: .edit)))
     try await waitFor("reply focus after parent edit") { hasFocusedInput(in: replyWindow) }
     XCTAssertFalse(replyStore.editingParent)

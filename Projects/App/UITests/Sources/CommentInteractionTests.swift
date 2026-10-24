@@ -110,13 +110,13 @@ private extension CommentInteractionTests {
     }
     capture(in: app, name: scenario + "-reply-open")
 
-    let replyComposer = try composer(in: app, placeholder: "내용을 입력하세요", empty: true)
+    let replyComposer = try composer(in: app, placeholder: "자유롭게 의견을 써주세요.", empty: true)
     XCTAssertFalse(try sendButton(in: app, scenario: "global", composer: replyComposer).isEnabled)
     replyComposer.tap()
     try await waitForKeyboard(in: app, visible: true, name: scenario + "-reply-keyboard")
     replyComposer.typeText(reply)
     try await wait(in: app, for: "complete reply draft") { $0.replyText == self.reply }
-    let filledReplyComposer = try composer(in: app, placeholder: "내용을 입력하세요", empty: false)
+    let filledReplyComposer = try composer(in: app, placeholder: "자유롭게 의견을 써주세요.", empty: false)
     XCTAssertEqual(filledReplyComposer.value as? String, reply)
     let replySend = try sendButton(in: app, scenario: "global", composer: filledReplyComposer)
     XCTAssertTrue(replySend.isEnabled && replySend.isHittable)
@@ -133,7 +133,7 @@ private extension CommentInteractionTests {
       $0.routeCount == 2 && $0.replyContents.filter { $0 == self.reply }.count == 1
         && $0.replyText.isEmpty
     }
-    let postedReplyComposer = try composer(in: app, placeholder: "내용을 입력하세요", empty: true)
+    let postedReplyComposer = try composer(in: app, placeholder: "자유롭게 의견을 써주세요.", empty: true)
     XCTAssertFalse(try sendButton(in: app, scenario: "global", composer: postedReplyComposer).isEnabled)
     try await waitForKeyboard(in: app, visible: false, name: scenario + "-reply-posted")
     capture(in: app, name: scenario + "-reply-posted")
@@ -181,9 +181,11 @@ private extension CommentInteractionTests {
     composer: XCUIElement
   ) throws -> XCUIElement {
     if scenario != "class" {
-      let buttons = app.buttons.matching(NSPredicate(format: "label == %@", "보내기"))
-        .allElementsBoundByIndex.filter { $0.exists && $0.frame.width > 0 }
-      guard buttons.count == 1, isNearComposer(buttons[0], composer: composer) else {
+      let buttons = app.buttons.allElementsBoundByIndex.filter {
+        $0.exists && $0.isHittable && ($0.label == "보내기" || $0.label == "paperplane")
+          && isNearComposer($0, composer: composer)
+      }
+      guard buttons.count == 1 else {
         capture(in: app, name: "send-ambiguous")
         attachText(
           geometryDescription(in: app, composer: composer, send: buttons.first),
