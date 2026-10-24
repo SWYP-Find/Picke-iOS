@@ -55,7 +55,7 @@ public struct ClassReportFeature {
 
     public var myOpinionsButtonTitle: String {
       if classResult != nil, feedback == nil { return "내가 남긴 의견 보기" }
-      "내가 남긴 의견 \(myOpinionCount)개 보기"
+      return "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
     public var showsSummaryLayout: Bool {
