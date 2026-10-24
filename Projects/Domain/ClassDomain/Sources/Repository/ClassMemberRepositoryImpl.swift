@@ -44,13 +44,6 @@ public struct ClassMemberRepositoryImpl: ClassMemberInterface {
   }
 
   private static func classError(_ error: Error) -> ClassError {
-    guard let networkError = error as? PickeNetworkError else { return ClassError.from(error) }
-    if case let .response(response) = networkError {
-      switch response.code {
-      case "CLASS_409_NAME": return .duplicateName
-      default: return .network(response.message ?? "멤버 요청을 처리하지 못했어요.")
-      }
-    }
-    return ClassError.from(networkError)
+    ClassErrorMapper.map(error, fallback: "멤버 요청을 처리하지 못했어요.")
   }
 }
