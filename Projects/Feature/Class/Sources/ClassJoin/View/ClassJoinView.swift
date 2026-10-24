@@ -24,7 +24,9 @@ public struct ClassJoinView: View {
     VStack(spacing: 0) {
       PickeNavigationBar(
         onBack: { send(.backTapped) },
-        centerTitle: store.mode == .ownerName ? "이름 입력" : "클래스 참여"
+        centerTitle: store.mode == .code ? nil : (store.mode == .ownerName ? "이름 입력" : "클래스 참여"),
+        leadingTitle: store.mode == .code ? "클래스 참여" : nil,
+        leadingSpacing: 12
       )
       .foregroundStyle(.gray500)
 
@@ -50,6 +52,7 @@ public struct ClassJoinView: View {
         .padding(.vertical, 16)
     }
     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+    .ignoresSafeArea(.container, edges: store.mode == .code ? .bottom : [])
     .screenBackground(.surfaceBeigeDefault)
     .hidesSystemBars()
   }

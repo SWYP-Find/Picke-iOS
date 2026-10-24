@@ -16,6 +16,7 @@ public struct PickeNavigationBar<Trailing: View>: View {
   private let centerIcon: Image?
   private let centerTitle: String?
   private let leadingTitle: String?
+  private let leadingSpacing: CGFloat
   private let trailing: () -> Trailing
 
   public init(
@@ -23,12 +24,14 @@ public struct PickeNavigationBar<Trailing: View>: View {
     centerIcon: Image? = nil,
     centerTitle: String? = nil,
     leadingTitle: String? = nil,
+    leadingSpacing: CGFloat = 4,
     @ViewBuilder trailing: @escaping () -> Trailing
   ) {
     self.onBack = onBack
     self.centerIcon = centerIcon
     self.centerTitle = centerTitle
     self.leadingTitle = leadingTitle
+    self.leadingSpacing = leadingSpacing
     self.trailing = trailing
   }
 
@@ -37,12 +40,14 @@ public struct PickeNavigationBar<Trailing: View>: View {
       centerArea
 
       HStack(spacing: 4) {
-        leadingArea
-        if let leadingTitle {
-          Text(leadingTitle)
-            .pretendardFont(.headingMedium)
-            .kerning(-0.4)
-            .lineLimit(1)
+        HStack(spacing: leadingSpacing) {
+          leadingArea
+          if let leadingTitle {
+            Text(leadingTitle)
+              .pretendardFont(.headingMedium)
+              .kerning(-0.4)
+              .lineLimit(1)
+          }
         }
         Spacer()
         trailing()
@@ -95,13 +100,15 @@ public extension PickeNavigationBar where Trailing == EmptyView {
     onBack: (() -> Void)? = nil,
     centerIcon: Image? = nil,
     centerTitle: String? = nil,
-    leadingTitle: String? = nil
+    leadingTitle: String? = nil,
+    leadingSpacing: CGFloat = 4
   ) {
     self.init(
       onBack: onBack,
       centerIcon: centerIcon,
       centerTitle: centerTitle,
-      leadingTitle: leadingTitle
+      leadingTitle: leadingTitle,
+      leadingSpacing: leadingSpacing
     ) { EmptyView() }
   }
 }

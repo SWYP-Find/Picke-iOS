@@ -1466,6 +1466,24 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
     let valid = joinStore()
     valid.send(.router(.routeAction(id: 1, action: .join(.binding(.set(\.joinCode, room.joinCode))))))
+    var directState = ClassJoinFeature.State()
+    directState.joinCode = room.joinCode
+    let directStore = Store(initialState: directState) { ClassJoinFeature() }
+    let (directImage, _) = try await capture(
+      AnyView(ClassJoinView(store: directStore)),
+      ready: { directStore.canFindClass },
+      includeScrollBottom: false,
+      viewport: CGSize(width: 402, height: 874)
+    )
+    let directText = try recognizedAuditText(in: directImage, name: "join-valid-code-direct-402")
+    XCTAssertTrue(directText.contains("공유받은코드로"), "Expected the current join screen in the capture")
+    try XCTUnwrap(directImage.pngData()).write(
+      to: directory.appendingPathComponent("join-valid-code-direct-402.png")
+    )
+    let directAttachment = XCTAttachment(image: directImage)
+    directAttachment.name = "join-valid-code-direct-402"
+    directAttachment.lifetime = .keepAlways
+    add(directAttachment)
     try await save(
       "join-valid-code-push",
       view: AnyView(ClassCoordinatorView(store: valid)),
