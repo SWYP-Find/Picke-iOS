@@ -23,6 +23,7 @@ let project = Project.makeModule(
     .service(.audioPlayer, .interface),
     .service(.analytics, .interface),
     .domain(.battle, .interface),
+    .domain(.auth, .interface),
     .domain(.classroom, .interface),
     .domain(.home, .interface),
     .SPM.composableArchitecture,

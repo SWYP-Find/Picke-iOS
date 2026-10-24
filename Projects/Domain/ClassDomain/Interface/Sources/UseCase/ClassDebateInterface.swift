@@ -4,7 +4,12 @@ import Foundation
 public protocol ClassDebateInterface: Sendable {
   func fetch(classID: Int) async throws -> ClassDebate
   func start(classID: Int) async throws -> ClassDebate
-  func submitReply(classID: Int, round: Int, content: String, requestKey: UUID) async throws -> ClassDebate
+  func submitReply(
+    classID: Int,
+    round: Int,
+    content: String,
+    requestKey: UUID
+  ) async throws -> ClassDebate
   func retry(classID: Int) async throws -> ClassDebate
 }
 
@@ -30,7 +35,12 @@ private struct UnimplementedClassDebateUseCase: ClassDebateInterface {
     throw ClassAIChatError.unavailable
   }
 
-  func submitReply(classID _: Int, round _: Int, content _: String, requestKey _: UUID) async throws -> ClassDebate {
+  func submitReply(
+    classID _: Int,
+    round _: Int,
+    content _: String,
+    requestKey _: UUID
+  ) async throws -> ClassDebate {
     throw ClassAIChatError.unavailable
   }
 

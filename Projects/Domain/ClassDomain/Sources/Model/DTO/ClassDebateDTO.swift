@@ -15,11 +15,16 @@ struct ClassDebateDTO: Decodable, Sendable {
     let speaker: String
     let content: String
 
-    func toDomain() throws -> ClassDebate.Message {
-      guard let speaker = ClassDebate.Message.Speaker(rawValue: speaker) else {
+    func toDomain() throws -> ClassDebateMessage {
+      guard let speaker = ClassDebateSpeaker(rawValue: speaker) else {
         throw ClassAIChatError.invalidOutput
       }
-      return ClassDebate.Message(id: messageId, round: round, speaker: speaker, content: content)
+      return ClassDebateMessage(
+        id: messageId,
+        round: round,
+        speaker: speaker,
+        content: content
+      )
     }
   }
 
@@ -37,7 +42,7 @@ struct ClassDebateDTO: Decodable, Sendable {
   let replyMaxLength: Int
 
   func toDomain() throws -> ClassDebate {
-    guard let status = ClassDebate.Status(rawValue: status) else {
+    guard let status = ClassDebateStatus(rawValue: status) else {
       throw ClassAIChatError.invalidOutput
     }
     return try ClassDebate(

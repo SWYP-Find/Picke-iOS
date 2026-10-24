@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import AuthDomainInterface
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -29,6 +30,7 @@ public struct ClassAIChatFeature {
     public var isTerminal = false
     public var isModelAvailable = true
     public var canRetrySession = false
+    public var transportRetryAvailable = false
     public var errorMessage: String?
     public var hasStarted = false
     public var sessionRequestID: UUID?
@@ -121,6 +123,7 @@ public struct ClassAIChatFeature {
       isCompleted = debate.status == .completed
       isModelAvailable = true
       canRetrySession = debate.canRetry
+      transportRetryAvailable = false
       errorMessage = debate.status == .failed ? ClassAIChatError.temporarilyUnavailable.localizedDescription : nil
     }
   }
@@ -150,8 +153,8 @@ public struct ClassAIChatFeature {
     case sessionFailed(UUID, ClassAIChatError)
     case responseReceived(UUID, [String])
     case responseFailed(UUID, ClassAIChatError)
-    case debateLoaded(UUID, Result<ClassDebate, ClassAIChatError>)
-    case replyLoaded(UUID, Result<ClassDebate, ClassAIChatError>)
+    case debateLoaded(UUID, Result<ClassDebate, AuthError>)
+    case replyLoaded(UUID, Result<ClassDebate, AuthError>)
   }
 
   @CasePathable
@@ -197,7 +200,7 @@ extension ClassAIChatFeature {
     case .onAppear, .retryTapped:
       guard state.sessionRequestID == nil, state.responseRequestID == nil else { return .none }
       let isRetry = action == .retryTapped
-      if isRetry, state.debate != nil, state.debate?.canRetry != true {
+      if isRetry, !state.canRetrySession {
         return .none
       }
       let requestID = UUID()
@@ -205,7 +208,8 @@ extension ClassAIChatFeature {
       state.isGenerating = true
       state.errorMessage = nil
       let roomID = state.room.id
-      let retryServerGeneration = isRetry && state.debate?.canRetry == true
+      let retryServerGeneration = isRetry && !state.transportRetryAvailable
+        && state.debate?.canRetry == true
       return .run { send in
         do {
           let initial: ClassDebate
@@ -229,7 +233,7 @@ extension ClassAIChatFeature {
           return
         } catch {
           guard !Task.isCancelled else { return }
-          await send(.inner(.debateLoaded(requestID, .failure(error as? ClassAIChatError ?? .temporarilyUnavailable))))
+          await send(.inner(.debateLoaded(requestID, .failure(AuthError.from(error)))))
         }
       }
       .cancellable(id: CancelID.session, cancelInFlight: true)
@@ -310,7 +314,7 @@ extension ClassAIChatFeature {
           return
         } catch {
           guard !Task.isCancelled else { return }
-          await send(.inner(.replyLoaded(requestID, .failure(error as? ClassAIChatError ?? .temporarilyUnavailable))))
+          await send(.inner(.replyLoaded(requestID, .failure(AuthError.from(error)))))
         }
       }
       .cancellable(id: CancelID.response, cancelInFlight: true)
@@ -341,6 +345,7 @@ extension ClassAIChatFeature {
       case let .failure(error):
         state.errorMessage = error.localizedDescription
         state.canRetrySession = true
+        state.transportRetryAvailable = true
       }
       return .none
 

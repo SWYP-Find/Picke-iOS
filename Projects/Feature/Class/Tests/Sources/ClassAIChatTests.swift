@@ -4,6 +4,7 @@
 //
 
 @testable import Class
+import AuthDomainInterface
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
@@ -42,8 +43,35 @@ struct ClassAIChatTests {
     }
   }
 
+  private struct TransportRetryStub: ClassDebateInterface {
+    let debate: ClassDebate
+    let spy: TransportRetrySpy
+
+    func fetch(classID _: Int) async throws -> ClassDebate {
+      try await spy.fetch(debate)
+    }
+
+    func start(classID _: Int) async throws -> ClassDebate {
+      debate
+    }
+
+    func submitReply(
+      classID _: Int,
+      round _: Int,
+      content _: String,
+      requestKey _: UUID
+    ) async throws -> ClassDebate {
+      debate
+    }
+
+    func retry(classID _: Int) async throws -> ClassDebate {
+      await spy.recordServerRetry()
+      return debate
+    }
+  }
+
   private func debate(
-    status: ClassDebate.Status = .waitingUser,
+    status: ClassDebateStatus = .waitingUser,
     canReply: Bool = true,
     canRetry: Bool = false,
     round: Int = 1
@@ -140,6 +168,36 @@ struct ClassAIChatTests {
   }
 
   @Test
+  func 기존_토론_조회가_실패하면_서버_생성_재시도_대신_다시_조회한다() async throws {
+    let response = debate()
+    let spy = TransportRetrySpy()
+    var initial = state()
+    initial.apply(response)
+    let store = TestStore(initialState: initial) { ClassAIChatFeature() } withDependencies: {
+      $0.classDebateUseCase = TransportRetryStub(debate: response, spy: spy)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    let failedRequestID = try #require(store.state.sessionRequestID)
+    await store.receive(
+      \.inner,
+      .debateLoaded(failedRequestID, .failure(AuthError.from(ClassAIChatError.temporarilyUnavailable)))
+    )
+    #expect(store.state.canRetrySession)
+    #expect(store.state.transportRetryAvailable)
+
+    await store.send(.view(.retryTapped))
+    let retryRequestID = try #require(store.state.sessionRequestID)
+    await store.receive(\.inner, .debateLoaded(retryRequestID, .success(response)))
+
+    let calls = await spy.calls
+    #expect(calls.fetch == 2)
+    #expect(calls.serverRetry == 0)
+    #expect(!store.state.transportRetryAvailable)
+  }
+
+  @Test
   func 반박은_현재_라운드와_요청키로_서버에_제출하고_완료_응답을_따른다() async throws {
     let spy = DebateSpy()
     var initial = state()
@@ -175,5 +233,26 @@ private actor DebateSpy {
 
   func record(round: Int, content: String, requestKey: UUID) {
     submission = .init(round: round, content: content, requestKey: requestKey)
+  }
+}
+
+private actor TransportRetrySpy {
+  private var fetchCount = 0
+  private var serverRetryCount = 0
+
+  var calls: (fetch: Int, serverRetry: Int) {
+    (fetchCount, serverRetryCount)
+  }
+
+  func fetch(_ debate: ClassDebate) throws -> ClassDebate {
+    fetchCount += 1
+    if fetchCount == 1 {
+      throw ClassAIChatError.temporarilyUnavailable
+    }
+    return debate
+  }
+
+  func recordServerRetry() {
+    serverRetryCount += 1
   }
 }

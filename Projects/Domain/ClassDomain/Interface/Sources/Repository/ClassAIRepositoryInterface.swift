@@ -35,9 +35,12 @@ private struct UnimplementedClassAIRepository: ClassAIRepositoryInterface {
     throw ClassAIChatError.noSession
   }
 
-  func submitDebateReply(classID _: Int, round _: Int, content _: String,
-                         requestKey _: UUID) async throws -> ClassDebate
-  {
+  func submitDebateReply(
+    classID _: Int,
+    round _: Int,
+    content _: String,
+    requestKey _: UUID
+  ) async throws -> ClassDebate {
     throw ClassAIChatError.noSession
   }
 

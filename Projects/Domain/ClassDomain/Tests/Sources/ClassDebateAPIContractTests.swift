@@ -7,7 +7,7 @@ import Testing
 struct ClassDebateAPIContractTests {
   @Test
   func 토론_경로와_반박_본문이_명세와_일치한다() throws {
-    let key = UUID(uuidString: "4F0B5C3E-6A8D-4F6B-9A51-2F3D1C7E9B10")!
+    let key = try #require(UUID(uuidString: "4F0B5C3E-6A8D-4F6B-9A51-2F3D1C7E9B10"))
     let fetch = ClassDebateService.fetch(5)
     let start = ClassDebateService.start(5)
     let reply = ClassDebateService.submitReply(
