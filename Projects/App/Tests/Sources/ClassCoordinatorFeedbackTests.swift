@@ -32,7 +32,7 @@ struct ClassCoordinatorFeedbackTests {
     state.routes.push(.report(first))
     state.routes.push(.report(removed))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
-      $0.classAIFeedbackUseCase = generator
+      $0.classResultUseCase = generator
       $0.uuid = .incrementing
     }
     store.exhaustivity = .off
@@ -72,7 +72,7 @@ struct ClassCoordinatorFeedbackTests {
     state.routes.push(.detail(.init(room: room)))
     state.routes.push(.report(original))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
-      $0.classAIFeedbackUseCase = generator
+      $0.classResultUseCase = generator
       $0.uuid = .incrementing
     }
     store.exhaustivity = .off
@@ -119,7 +119,7 @@ struct ClassCoordinatorFeedbackTests {
     state.routes.push(.detail(.init(room: room)))
     state.routes.push(.ownerDashboard(original))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
-      $0.classAIFeedbackUseCase = generator
+      $0.classResultUseCase = generator
       $0.uuid = .incrementing
     }
     store.exhaustivity = .off
@@ -179,9 +179,36 @@ private extension ClassAIPersonalFeedback {
   )
 }
 
-private actor SuspendedFeedbackGenerator: ClassAIFeedbackInterface {
+private actor SuspendedFeedbackGenerator: ClassResultInterface {
+  private enum Request {
+    case personal(CheckedContinuation<ClassAIPersonalFeedback, Error>)
+    case insight(CheckedContinuation<ClassAIInsight, Error>)
+
+    func resume(with result: ClassAIFeedbackResult) {
+      switch (self, result) {
+      case let (.personal(continuation), .personal(feedback)):
+        continuation.resume(returning: feedback)
+      case let (.insight(continuation), .serverInsight(insight)):
+        continuation.resume(returning: insight)
+      case let (.insight(continuation), .classInsight(text)):
+        continuation.resume(returning: ClassAIInsight(text: text))
+      case let (.personal(continuation), _):
+        continuation.resume(throwing: ClassAIFeedbackError.generationFailed)
+      case let (.insight(continuation), _):
+        continuation.resume(throwing: ClassAIFeedbackError.generationFailed)
+      }
+    }
+
+    func cancel() {
+      switch self {
+      case let .personal(continuation): continuation.resume(throwing: CancellationError())
+      case let .insight(continuation): continuation.resume(throwing: CancellationError())
+      }
+    }
+  }
+
   private var nextRequestID = 0
-  private var requests: [Int: CheckedContinuation<ClassAIFeedbackResult, Error>] = [:]
+  private var requests: [Int: Request] = [:]
   private var startedCount = 0
   private var startWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
   private(set) var cancelledRequestIDs: [Int] = []
@@ -197,15 +224,33 @@ private actor SuspendedFeedbackGenerator: ClassAIFeedbackInterface {
     requestID: Int,
     result: ClassAIFeedbackResult
   ) {
-    requests.removeValue(forKey: requestID)?.resume(returning: result)
+    requests.removeValue(forKey: requestID)?.resume(with: result)
   }
 
-  func generate(context _: ClassAIFeedbackContext) async throws -> ClassAIFeedbackResult {
+  func fetch(roomID _: Int) async throws -> ClassResult {
+    throw ClassError.network("이 테스트는 결과 조회를 사용하지 않습니다.")
+  }
+
+  func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    try await suspend { .personal($0) }
+  }
+
+  func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+    try await suspend { .insight($0) }
+  }
+
+  func retryInsight(roomID _: Int) async throws {
+    throw ClassAIFeedbackError.generationFailed
+  }
+
+  private func suspend<T: Sendable>(
+    request: @escaping @Sendable (CheckedContinuation<T, Error>) -> Request
+  ) async throws -> T {
     nextRequestID += 1
     let requestID = nextRequestID
     return try await withTaskCancellationHandler {
       try await withCheckedThrowingContinuation { continuation in
-        requests[requestID] = continuation
+        requests[requestID] = request(continuation)
         startedCount += 1
         let ready = startWaiters.filter { startedCount >= $0.0 }
         startWaiters.removeAll { startedCount >= $0.0 }
@@ -219,8 +264,8 @@ private actor SuspendedFeedbackGenerator: ClassAIFeedbackInterface {
   }
 
   private func cancel(_ requestID: Int) {
-    guard let continuation = requests.removeValue(forKey: requestID) else { return }
+    guard let request = requests.removeValue(forKey: requestID) else { return }
     cancelledRequestIDs.append(requestID)
-    continuation.resume(throwing: CancellationError())
+    request.cancel()
   }
 }
