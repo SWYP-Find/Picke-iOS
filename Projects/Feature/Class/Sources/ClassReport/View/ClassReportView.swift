@@ -31,7 +31,7 @@ public struct ClassReportView: View {
       reportTitle()
         .padding(.vertical, 12)
       if store.sourceViewState == .failed {
-        PickeRetryErrorView(message: store.sourceError?.message ?? "리포트를 불러오지 못했어요") { send(.retryTapped) }
+        PickeRetryErrorView(message: store.sourceErrorMessage) { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if store.sourceViewState == .loading {
         sourceSkeleton()
@@ -84,10 +84,7 @@ private extension ClassReportView {
               Rectangle().fill(.beige600).frame(width: 1, height: 38)
               activityCount("\(result.stats.postVoteCount)", label: "사후투표")
             }
-            Text(
-              "참여율 \(result.stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
-                + "의견 작성률 \(result.stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
-            )
+            Text(store.serverParticipationSummary)
             .pretendardFont(.regular13)
             .foregroundStyle(.gray700)
           }
@@ -130,7 +127,7 @@ private extension ClassReportView {
             } else if result.myReportState == "BEFORE_CLOSE" {
               unavailableReport(
                 title: "마감 후 AI 피드백을 볼 수 있어요",
-                message: "\(result.closeAt.formatted(.dottedDateTimeWithWeekday)) 이후 제공돼요."
+                message: store.serverFeedbackAvailabilityMessage
               )
             } else {
               feedbackStatus()
@@ -159,17 +156,11 @@ private extension ClassReportView {
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .pending:
-      unavailableReport(title: "생각을 정리하고 있어요", message: "잠시 뒤 다시 확인해 주세요.")
+      unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
     case .failure:
-      if store.feedbackError == .resultExpired {
-        unavailableReport(title: "결과 열람 기간이 끝났어요", message: "이용권 종료 후 열람 기간을 확인해 주세요.")
-      } else if store.feedbackError == .accessDenied {
-        unavailableReport(title: "피드백을 볼 권한이 없어요", message: "클래스 참여 상태를 확인해 주세요.")
-      } else {
-        unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "서버에서 피드백을 준비하지 못했어요.")
-      }
+      unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
     case .unavailable:
-      unavailableReport(title: "AI 피드백을 사용할 수 없어요", message: "참여 결과를 확인해 주세요.")
+      unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
     case .ready:
       EmptyView()
     }
@@ -206,9 +197,7 @@ private extension ClassReportView {
           .foregroundStyle(.gray800)
           .lineLimit(2)
           .frame(minHeight: 31)
-        Text(store.room.deadline == .distantFuture
-          ? "마감일 없음"
-          : store.room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지")
+        Text(store.deadlineText)
           .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
           .frame(minHeight: 18)

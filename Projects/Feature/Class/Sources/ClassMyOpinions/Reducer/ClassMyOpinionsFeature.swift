@@ -70,6 +70,10 @@ public struct ClassMyOpinionsFeature {
     case dismiss
   }
 
+  public enum CancelID: Hashable, Sendable {
+    case fetch
+  }
+
   @Dependency(\.classBattleUseCase) private var classBattleUseCase
 
   public var body: some Reducer<State, Action> {
@@ -82,7 +86,7 @@ public struct ClassMyOpinionsFeature {
         guard state.classID != nil, !state.isLoading else { return .none }
         return .send(.async(.fetch))
       case .view(.backTapped):
-        return .send(.delegate(.dismiss))
+        return .merge(.cancel(id: CancelID.fetch), .send(.delegate(.dismiss)))
       case .async(.fetch):
         guard let classID = state.classID else { return .none }
         state.isLoading = true
@@ -92,6 +96,7 @@ public struct ClassMyOpinionsFeature {
             .mapError { ($0 as? ClassBattleError) ?? .network($0.localizedDescription) }
           await send(.inner(.perspectivesResponse(result)))
         }
+        .cancellable(id: CancelID.fetch, cancelInFlight: true)
       case let .inner(.perspectivesResponse(result)):
         state.isLoading = false
         switch result {

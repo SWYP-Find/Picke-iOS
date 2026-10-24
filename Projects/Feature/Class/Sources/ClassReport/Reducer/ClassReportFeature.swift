@@ -8,6 +8,7 @@
 import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
+import PickeCoreUtility
 
 @Reducer
 public struct ClassReportFeature {
@@ -29,6 +30,49 @@ public struct ClassReportFeature {
     public var feedbackRequestID: UUID?
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
+
+    public var sourceErrorMessage: String {
+      sourceError?.message ?? "리포트를 불러오지 못했어요"
+    }
+
+    public var serverParticipationSummary: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "참여율 \(stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
+        + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
+    public var deadlineText: String {
+      room.deadline == .distantFuture
+        ? "마감일 없음"
+        : room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
+    }
+
+    public var serverFeedbackAvailabilityMessage: String {
+      guard let closeAt = classResult?.closeAt else { return "" }
+      return "\(closeAt.formatted(.dottedDateTimeWithWeekday)) 이후 제공돼요."
+    }
+
+    public var feedbackStatusTitle: String {
+      switch feedbackViewState {
+      case .pending: return "생각을 정리하고 있어요"
+      case .failure:
+        if feedbackError == .resultExpired { return "결과 열람 기간이 끝났어요" }
+        if feedbackError == .accessDenied { return "피드백을 볼 권한이 없어요" }
+        return "AI 피드백을 표시할 수 없어요"
+      default: return "AI 피드백을 사용할 수 없어요"
+      }
+    }
+
+    public var feedbackStatusMessage: String {
+      switch feedbackViewState {
+      case .pending: return "잠시 뒤 다시 확인해 주세요."
+      case .failure:
+        if feedbackError == .resultExpired { return "이용권 종료 후 열람 기간을 확인해 주세요." }
+        if feedbackError == .accessDenied { return "클래스 참여 상태를 확인해 주세요." }
+        return "서버에서 피드백을 준비하지 못했어요."
+      default: return "참여 결과를 확인해 주세요."
+      }
+    }
 
     public var feedbackViewState: ClassReportFeedbackViewState {
       if let feedback {

@@ -31,7 +31,7 @@ public struct ClassOwnerDashboardView: View {
       if store.sourceViewState == .loading {
         sourceSkeleton()
       } else if store.sourceViewState == .failed {
-        PickeRetryErrorView(message: store.sourceError?.message ?? "클래스 현황을 불러오지 못했어요") { send(.retryTapped) }
+        PickeRetryErrorView(message: store.sourceErrorMessage) { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
         TabView(selection: $store.selectedTab.sending(\.view.tabSelected)) {
@@ -92,19 +92,13 @@ private extension ClassOwnerDashboardView {
       }
       .accessibilityLabel("AI 인사이트를 불러오는 중")
     case .pending:
-      unavailableContent("AI 인사이트를 정리하고 있어요. 잠시 뒤 다시 확인해 주세요.")
+      unavailableContent(store.insightStatusMessage)
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 인사이트를 불러오지 못했어요") { send(.insightRetryTapped) }
     case .failure:
-      if store.insightError == .resultExpired {
-        unavailableContent("결과 열람 기간이 끝났어요")
-      } else if store.insightError == .accessDenied {
-        unavailableContent("인사이트를 볼 권한이 없어요")
-      } else {
-        unavailableContent("AI 인사이트를 표시할 수 없어요")
-      }
+      unavailableContent(store.insightStatusMessage)
     case .unavailable:
-      unavailableContent("AI 인사이트를 사용할 수 없어요")
+      unavailableContent(store.insightStatusMessage)
     case .ready:
       EmptyView()
     }
@@ -120,19 +114,13 @@ private extension ClassOwnerDashboardView {
       }
       .accessibilityLabel("AI 피드백을 불러오는 중")
     case .pending:
-      unavailableContent("AI 피드백을 정리하고 있어요. 잠시 뒤 다시 확인해 주세요.")
+      unavailableContent(store.feedbackStatusMessage)
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .failure:
-      if store.feedbackError == .resultExpired {
-        unavailableContent("결과 열람 기간이 끝났어요")
-      } else if store.feedbackError == .accessDenied {
-        unavailableContent("피드백을 볼 권한이 없어요")
-      } else {
-        unavailableContent("AI 피드백을 표시할 수 없어요")
-      }
+      unavailableContent(store.feedbackStatusMessage)
     case .unavailable:
-      unavailableContent("AI 피드백을 사용할 수 없어요")
+      unavailableContent(store.feedbackStatusMessage)
     case .ready:
       EmptyView()
     }
@@ -350,18 +338,18 @@ private extension ClassOwnerDashboardView {
       VStack(spacing: 12) {
         participationRow(
           "배틀 참여율",
-          value: "\(result.stats.participationRate.formatted(.number.precision(.fractionLength(1))))%",
+          value: store.serverParticipationRate,
           detail: "참여를 완료한 멤버",
-          count: "\(result.stats.completedCount) / \(result.stats.activeMemberCount)명",
-          progress: CGFloat(result.stats.participationRate / 100),
+          count: store.serverParticipationCount,
+          progress: CGFloat(store.serverParticipationProgress),
           tint: .primary500
         )
         participationRow(
           "댓글 작성율",
-          value: "\(result.stats.commentRate.formatted(.number.precision(.fractionLength(1))))%",
+          value: store.serverCommentRate,
           detail: "댓글을 남긴 멤버",
-          count: "\(result.stats.commentWriterCount) / \(result.stats.activeMemberCount)명",
-          progress: CGFloat(result.stats.commentRate / 100),
+          count: store.serverCommentCount,
+          progress: CGFloat(store.serverCommentProgress),
           tint: .secondary500
         )
       }
@@ -375,7 +363,7 @@ private extension ClassOwnerDashboardView {
           HStack {
             Text(option.title)
             Spacer()
-            Text("\(option.postVoteCount)명 · \(option.postVoteRatio.formatted(.number.precision(.fractionLength(1))))%")
+            Text(store.serverOptionSummaries[option.id] ?? "")
           }
           .pretendardFont(.semiBold12)
           .foregroundStyle(.gray800)
