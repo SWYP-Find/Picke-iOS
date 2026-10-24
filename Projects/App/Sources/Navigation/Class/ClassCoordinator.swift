@@ -700,8 +700,8 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .battlePreview(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question, filter)))):
-      state.routes.push(.setting(.init(aiQuestion: question, filter: filter, instanceID: uuid())))
+    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(version, filter)))):
+      state.routes.push(.setting(.init(topicVersion: version, filter: filter, instanceID: uuid())))
       return .none
 
     case let .routeAction(routeID, action: .setting(.delegate(.editDeadline(instanceID)))):
