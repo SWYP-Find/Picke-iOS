@@ -14,6 +14,18 @@ extension ClassUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassMemberUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassMemberInterface {
+    ClassMemberUseCaseImpl()
+  }
+}
+
+extension ClassMemberRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassMemberInterface {
+    ClassMemberRepositoryImpl()
+  }
+}
+
 extension ClassAIChatUseCaseDependency: DependencyKey {
   public static var liveValue: any ClassAIChatInterface {
     ClassAIChatUseCaseImpl()
@@ -30,7 +42,7 @@ extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
     ClassLiveRepository(
       mock: ClassMockRepositoryStorage.shared,
-      recommendations: ClassRepositoryImpl()
+      api: ClassRepositoryImpl()
     )
   }
 }

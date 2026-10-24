@@ -135,8 +135,10 @@ private extension ClassOwnerDashboardView {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 8) {
         statusBadge()
-        Text("#\(store.room.battle.categoryDisplayTitle)")
-          .pickeBadge(.filled, size: .tag)
+        if !store.room.battle.categoryDisplayTitle.isEmpty {
+          Text("#\(store.room.battle.categoryDisplayTitle)")
+            .pickeBadge(.filled, size: .tag)
+        }
       }
       Text(store.room.battle.title)
         .pretendardFont(.semiBold24)

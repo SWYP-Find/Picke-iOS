@@ -87,8 +87,10 @@ private extension ClassClosedBattleView {
   func battleInformation() -> some View {
     VStack(alignment: .leading, spacing: 0) {
       HStack {
-        Text("#\(store.room.battle.categoryDisplayTitle)")
-          .pickeBadge(.filled, size: .tag)
+        if !store.room.battle.categoryDisplayTitle.isEmpty {
+          Text("#\(store.room.battle.categoryDisplayTitle)")
+            .pickeBadge(.filled, size: .tag)
+        }
         Spacer()
         if store.room.battle.commentCount > 0 {
           Label("\(store.room.battle.commentCount)", systemImage: "bubble")

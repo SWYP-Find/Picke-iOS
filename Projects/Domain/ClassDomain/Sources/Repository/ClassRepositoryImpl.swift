@@ -17,7 +17,12 @@ public struct ClassRepositoryImpl: ClassInterface {
   public init() {}
 
   public func fetchMyClasses() async throws -> [ClassRoom] {
-    throw ClassError.network(Self.unavailableMessage)
+    do {
+      let data = try await client.send(ClassroomService.myClasses, as: [ClassListItemDTO].self)
+      return try data.map { try $0.toDomain() }
+    } catch {
+      throw Self.classError(error)
+    }
   }
 
   public func fetchRecommendedBattles(filter: ClassTopicFilter) async throws -> [ClassBattleSummary] {
@@ -38,28 +43,79 @@ public struct ClassRepositoryImpl: ClassInterface {
     }
   }
 
-  public func createClass(_: ClassCreation) async throws -> ClassRoom {
-    throw ClassError.network(Self.unavailableMessage)
+  public func createClass(_ creation: ClassCreation) async throws -> ClassRoom {
+    do {
+      let data = try await client.send(ClassroomService.create(creation), as: ClassDetailDataDTO.self)
+      return try data.toDomain()
+    } catch {
+      throw Self.classError(error)
+    }
+  }
+
+  public func fetchClass(id: Int) async throws -> ClassRoom {
+    do {
+      let data = try await client.send(ClassroomService.detail(id), as: ClassDetailDataDTO.self)
+      return try data.toDomain()
+    } catch {
+      throw Self.classError(error)
+    }
   }
 
   public func fetchClass(joinCode _: String) async throws -> ClassRoom {
-    throw ClassError.network(Self.unavailableMessage)
+    throw ClassError.unknown("참여 미리보기는 클래스 상세를 제공하지 않습니다.")
   }
 
-  public func joinClass(joinCode _: String, nickname _: String) async throws -> ClassRoom {
-    throw ClassError.network(Self.unavailableMessage)
+  public func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {
+    do {
+      let data = try await client.send(
+        ClassroomService.joinPreview(joinCode),
+        as: ClassJoinPreviewDataDTO.self
+      )
+      return try data.toDomain()
+    } catch {
+      throw Self.classError(error)
+    }
   }
 
-  public func updateDeadline(id _: Int, deadline _: Date) async throws -> ClassRoom {
-    throw ClassError.network(Self.unavailableMessage)
+  public func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
+    do {
+      let data = try await client.send(
+        ClassroomService.join(code: joinCode, nickname: nickname),
+        as: ClassDetailDataDTO.self
+      )
+      return try data.toDomain()
+    } catch {
+      throw Self.classError(error)
+    }
   }
 
-  public func deleteClass(id _: Int) async throws {
-    throw ClassError.network(Self.unavailableMessage)
+  public func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom {
+    do {
+      _ = try await client.send(
+        ClassroomService.updateDeadline(id: id, deadline: deadline),
+        as: PickeEmptyResponse.self
+      )
+      let data = try await client.send(ClassroomService.detail(id), as: ClassDetailDataDTO.self)
+      return try data.toDomain()
+    } catch {
+      throw Self.classError(error)
+    }
   }
 
-  public func leaveClass(id _: Int) async throws {
-    throw ClassError.network(Self.unavailableMessage)
+  public func deleteClass(id: Int) async throws {
+    do {
+      _ = try await client.send(ClassroomService.delete(id), as: PickeEmptyResponse.self)
+    } catch {
+      throw Self.classError(error)
+    }
+  }
+
+  public func leaveClass(id: Int) async throws {
+    do {
+      _ = try await client.send(ClassroomService.leave(id), as: PickeEmptyResponse.self)
+    } catch {
+      throw Self.classError(error)
+    }
   }
 
   public func fetchReport(roomID _: Int) async throws -> ClassReport? {
@@ -68,5 +124,19 @@ public struct ClassRepositoryImpl: ClassInterface {
 
   public func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
     throw ClassError.network(Self.unavailableMessage)
+  }
+
+  private static func classError(_ error: Error) -> ClassError {
+    guard let networkError = error as? PickeNetworkError else { return ClassError.from(error) }
+    if case let .response(response) = networkError {
+      switch response.code {
+      case "CLASS_404_CODE": return .invalidCode
+      case "CLASS_409_CLOSED", "CLASS_409_TICKET_ENDED": return .closed
+      case "CLASS_409_JOINED": return .alreadyJoined
+      case "CLASS_409_NAME": return .duplicateName
+      default: return .network(response.message ?? "클래스 요청을 처리하지 못했습니다.")
+      }
+    }
+    return ClassError.from(networkError)
   }
 }

@@ -136,9 +136,10 @@ private extension MyClassRoomCard {
     .foregroundStyle(.gray300)
   }
 
-  /// 마감일을 끈 클래스(`.distantFuture`)는 표시하지 않는다.
+  /// 목록에서는 이용권 만료도 반영된 실제 마감 시각을 표시한다.
   var deadlineText: String? {
-    guard room.deadline != .distantFuture else { return nil }
-    return "\(room.deadline.formatted(.dottedDateTimeWithWeekday))까지"
+    guard let closeAt = room.closeAt ?? (room.deadline == .distantFuture ? nil : room.deadline)
+    else { return nil }
+    return "\(closeAt.formatted(.dottedDateTimeWithWeekday))까지"
   }
 }

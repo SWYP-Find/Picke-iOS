@@ -1,41 +1,49 @@
 import ClassDomainInterface
 import Foundation
 
-/// 아직 서버에 연결되지 않은 클래스 기능은 공유 목 상태를 유지한다.
+/// 아직 서버에 연결되지 않은 리포트 기능만 공유 목 상태를 유지한다.
 struct ClassLiveRepository: ClassInterface {
   let mock: any ClassInterface
-  let recommendations: any ClassInterface
+  let api: any ClassInterface
 
   func fetchMyClasses() async throws -> [ClassRoom] {
-    try await mock.fetchMyClasses()
+    try await api.fetchMyClasses()
   }
 
   func fetchRecommendedBattles(filter: ClassTopicFilter) async throws -> [ClassBattleSummary] {
-    try await recommendations.fetchRecommendedBattles(filter: filter)
+    try await api.fetchRecommendedBattles(filter: filter)
   }
 
   func createClass(_ creation: ClassCreation) async throws -> ClassRoom {
-    try await mock.createClass(creation)
+    try await api.createClass(creation)
+  }
+
+  func fetchClass(id: Int) async throws -> ClassRoom {
+    try await api.fetchClass(id: id)
   }
 
   func fetchClass(joinCode: String) async throws -> ClassRoom {
-    try await mock.fetchClass(joinCode: joinCode)
+    try await api.fetchClass(joinCode: joinCode)
+  }
+
+  func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {
+    try await api.fetchClassPreview(joinCode: joinCode)
   }
 
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom {
-    try await mock.joinClass(joinCode: joinCode, nickname: nickname)
+    try await api.joinClass(joinCode: joinCode, nickname: nickname)
   }
 
   func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom {
-    try await mock.updateDeadline(id: id, deadline: deadline)
+    try await api.updateDeadline(id: id, deadline: deadline)
   }
 
   func deleteClass(id: Int) async throws {
-    try await mock.deleteClass(id: id)
+    try await api.deleteClass(id: id)
   }
 
   func leaveClass(id: Int) async throws {
-    try await mock.leaveClass(id: id)
+    try await api.leaveClass(id: id)
   }
 
   func fetchReport(roomID: Int) async throws -> ClassReport? {

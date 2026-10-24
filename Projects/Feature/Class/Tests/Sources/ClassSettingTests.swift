@@ -38,18 +38,13 @@ struct ClassSettingTests {
   }
 
   @Test
-  func 운영자_참여_선택은_일반과_AI_클래스_생성_요청에_전달된다() {
+  func 운영자_참여_선택은_일반_클래스_생성_요청에_전달된다() {
     var regular = ClassSettingFeature.State(battle: battle, deadline: deadline)
     regular.name = "일반 토론"
     #expect(regular.creation?.ownerParticipates == false)
     regular.ownerParticipates = true
     #expect(regular.creation?.ownerParticipates == true)
 
-    var ai = ClassSettingFeature.State(aiQuestion: ClassAIQuestion.examples[0], filter: .init(), deadline: deadline)
-    ai.name = "AI 토론"
-    #expect(ai.aiCreation?.ownerParticipates == false)
-    ai.ownerParticipates = true
-    #expect(ai.aiCreation?.ownerParticipates == true)
   }
 
   @Test
@@ -122,7 +117,6 @@ struct ClassSettingTests {
       ClassSettingFeature()
     } withDependencies: {
       $0.date.now = deadline.addingTimeInterval(1)
-      $0.classMockRepository = nil
       $0.classUseCase = FailingClassUseCase()
     }
 
@@ -149,7 +143,7 @@ struct ClassSettingTests {
   }
 
   @Test
-  func AI_질문_필드를_목_배틀과_생성_요청으로_변환한다() throws {
+  func AI_질문_필드를_화면용_배틀로_변환한다() throws {
     let question = ClassAIQuestion.examples[0]
     var state = ClassSettingFeature.State(
       aiQuestion: question,
@@ -173,9 +167,7 @@ struct ClassSettingTests {
     #expect(battle.level == .high)
     #expect(battle.audioDuration == 0)
     #expect(battle.viewCount == 0)
-    #expect(state.aiCreation?.name == "2학년 3반")
-    #expect(state.aiCreation?.battleId == battle.id)
-    #expect(state.aiCreation?.requiresComment == true)
+    #expect(state.creation == nil)
   }
 
   @Test
@@ -202,7 +194,7 @@ struct ClassSettingTests {
   }
 
   @Test
-  func 목_저장소가_있을_때_AI_클래스를_만들고_라이브_유스케이스는_호출하지_않는다() async throws {
+  func 목_저장소가_있어도_AI_질문은_실제_주제_API_전까지_생성하지_않는다() async {
     let repository = MockClassRepository(rooms: [], availableRooms: [])
     var state = ClassSettingFeature.State(
       aiQuestion: ClassAIQuestion.examples[1],
@@ -210,8 +202,6 @@ struct ClassSettingTests {
       deadline: deadline
     )
     state.name = "AI 토론"
-    let creation = try #require(state.aiCreation)
-    let battle = try #require(state.aiBattle)
     let store = TestStore(initialState: state) {
       ClassSettingFeature()
     } withDependencies: {
@@ -219,19 +209,10 @@ struct ClassSettingTests {
       $0.classMockRepository = repository
       $0.classUseCase = FailingClassUseCase()
     }
-    store.exhaustivity = .off
-
-    await store.send(.view(.createTapped))
-    try await store.receive(\.async, .createAI(creation, battle)) {
-      $0.isLoading = true
+    await store.send(.view(.createTapped)) {
+      $0.unavailableNotice = .init()
     }
-    await store.receive(\.inner.created) {
-      $0.isLoading = false
-    }
-    await store.receive(\.delegate.created)
-    let rooms = try await repository.fetchMyClasses()
-    #expect(rooms.count == 1)
-    #expect(rooms[0].battle == battle)
+    await store.finish()
   }
 }
 
@@ -251,6 +232,10 @@ private struct FailingClassUseCase: ClassInterface {
   }
 
   func fetchClass(joinCode _: String) async throws -> ClassRoom {
+    fatalError("live use case called")
+  }
+
+  func fetchClass(id _: Int) async throws -> ClassRoom {
     fatalError("live use case called")
   }
 

@@ -27,6 +27,7 @@ public struct ClassJoinFeature {
     public var joinCode = ""
     public var nickname = ""
     public var preview: ClassRoom?
+    public var joinPreview: ClassJoinPreview? = nil
     public let instanceID: UUID?
     public var activeFindRequestID: UUID?
     public var activeJoinRequestID: UUID?
@@ -42,6 +43,16 @@ public struct ClassJoinFeature {
     ) {
       self.mode = mode
       self.preview = preview
+      self.instanceID = instanceID
+    }
+
+    public init(
+      mode: Mode,
+      preview: ClassJoinPreview,
+      instanceID: UUID?
+    ) {
+      self.mode = mode
+      joinPreview = preview
       self.instanceID = instanceID
     }
 
@@ -76,7 +87,7 @@ public struct ClassJoinFeature {
 
     public var canJoin: Bool {
       (mode == .nickname || mode == .ownerName)
-        && preview != nil
+        && (mode == .nickname ? joinPreview != nil : preview != nil)
         && (1 ... Self.nicknameLimit).contains(nicknameCharacterCount)
         && !isLoading
     }
@@ -107,7 +118,7 @@ public struct ClassJoinFeature {
 
   @CasePathable
   public enum InnerAction: Equatable {
-    case found(Result<ClassRoom, ClassError>, instanceID: UUID?, requestID: UUID)
+    case found(Result<ClassJoinPreview, ClassError>, instanceID: UUID?, requestID: UUID)
     case joined(Result<ClassRoom, ClassError>, nickname: String, instanceID: UUID?, requestID: UUID)
     case ownerNamed(Result<ClassRoom, ClassError>, instanceID: UUID, requestID: UUID)
   }
@@ -116,7 +127,7 @@ public struct ClassJoinFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case createClassRequested
-    case found(ClassRoom, instanceID: UUID?)
+    case found(ClassJoinPreview, instanceID: UUID?)
     case joined(ClassRoom, nickname: String, instanceID: UUID?)
     case ownerNamed(ClassRoom, instanceID: UUID)
   }
@@ -128,7 +139,7 @@ public struct ClassJoinFeature {
   }
 
   @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMockRepository) private var classMockRepository
+  @Dependency(\.classMemberUseCase) private var classMemberUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -193,13 +204,14 @@ extension ClassJoinFeature {
       return .send(.delegate(.createClassRequested))
 
     case .joinTapped:
-      guard state.canJoin, let room = state.preview else { return .none }
+      guard state.canJoin else { return .none }
       let nickname = state.nickname.trimmingCharacters(in: .whitespacesAndNewlines)
       switch state.mode {
       case .nickname:
-        return .send(.async(.join(joinCode: room.joinCode, nickname: nickname)))
+        guard let preview = state.joinPreview else { return .none }
+        return .send(.async(.join(joinCode: preview.inviteCode, nickname: nickname)))
       case .ownerName:
-        guard let instanceID = state.instanceID else { return .none }
+        guard let room = state.preview, let instanceID = state.instanceID else { return .none }
         return .send(.async(.nameOwner(
           roomID: room.id,
           nickname: nickname,
@@ -225,7 +237,7 @@ extension ClassJoinFeature {
       state.nicknameErrorMessage = nil
       return .run { [classUseCase, instanceID = state.instanceID] send in
         let result = await Result {
-          try await classUseCase.fetchClass(joinCode: code)
+          try await classUseCase.fetchClassPreview(joinCode: code)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -260,18 +272,10 @@ extension ClassJoinFeature {
       state.activeOwnerRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classMockRepository] send in
+      return .run { [classMemberUseCase, room = state.preview] send in
         let result = await Result { () async throws -> ClassRoom in
-          guard let classMockRepository else { throw ClassError.unknown("이름을 저장할 수 없어요.") }
-          let memberID = try await classMockRepository.currentMemberID(roomID: roomID)
-          _ = try await classMockRepository.updateDisplayName(
-            roomID: roomID,
-            memberID: memberID,
-            currentMemberID: memberID,
-            name: nickname
-          )
-          let rooms = try await classMockRepository.fetchMyClasses()
-          guard let room = rooms.first(where: { $0.id == roomID }) else { throw ClassError.invalidCode }
+          _ = try await classMemberUseCase.updateMyDisplayName(classID: roomID, name: nickname)
+          guard let room else { throw ClassError.invalidCode }
           return room
         }
         .mapError(ClassError.from)
@@ -297,6 +301,7 @@ extension ClassJoinFeature {
       state.isLoading = false
       state.activeJoinRequestID = nil
       state.preview = nil
+      state.joinPreview = nil
       return .send(.delegate(.joined(room, nickname: nickname, instanceID: instanceID)))
 
     case let .ownerNamed(.success(room), instanceID, requestID):

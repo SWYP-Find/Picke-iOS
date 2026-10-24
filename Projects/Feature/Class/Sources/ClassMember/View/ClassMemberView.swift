@@ -95,11 +95,11 @@ private extension ClassMemberView {
   @ViewBuilder
   func navigationBar() -> some View {
     PickeNavigationBar(centerTitle: "클래스 멤버")
-    .foregroundStyle(.gray500)
-    .overlay(alignment: .leading) {
-      backButton
-        .padding(.leading, 6)
-    }
+      .foregroundStyle(.gray500)
+      .overlay(alignment: .leading) {
+        backButton
+          .padding(.leading, 6)
+      }
   }
 
   var backButton: some View {
@@ -182,8 +182,8 @@ private extension ClassMemberView {
   @ViewBuilder
   func memberRow(_ member: ClassMember) -> some View {
     HStack(spacing: 8) {
-      if let avatar = member.avatar {
-        memberAvatar(avatar)
+      if member.characterURL != nil || member.avatar != nil {
+        memberAvatar(member)
       }
 
       Text(member.name)
@@ -219,17 +219,30 @@ private extension ClassMemberView {
       }
     }
     .frame(minHeight: 36)
-    .padding(.vertical, member.avatar == nil ? 10 : 16)
+    .padding(.vertical, member.characterURL == nil && member.avatar == nil ? 10 : 16)
     .overlay(alignment: .bottom) { Rectangle().fill(.beige600).frame(height: 1) }
   }
 
-  func memberAvatar(_ avatar: ClassMemberAvatar) -> some View {
-    Image(asset: avatar.imageAsset)
-      .resizable()
-      .scaledToFit()
-      .frame(width: 36, height: 36)
-      .clipShape(Circle())
-      .accessibilityHidden(true)
+  @ViewBuilder
+  func memberAvatar(_ member: ClassMember) -> some View {
+    Group {
+      if let url = member.characterURL {
+        AsyncImage(url: url) { phase in
+          if let image = phase.image {
+            image.resizable().scaledToFill()
+          } else if phase.error != nil, let avatar = member.avatar {
+            Image(asset: avatar.imageAsset).resizable().scaledToFit()
+          } else {
+            Circle().fill(.gray100)
+          }
+        }
+      } else if let avatar = member.avatar {
+        Image(asset: avatar.imageAsset).resizable().scaledToFit()
+      }
+    }
+    .frame(width: 36, height: 36)
+    .clipShape(Circle())
+    .accessibilityHidden(true)
   }
 
   func memberTag(_ title: String) -> some View {
