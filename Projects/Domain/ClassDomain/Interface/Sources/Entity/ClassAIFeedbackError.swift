@@ -17,6 +17,9 @@ public enum ClassAIFeedbackError: Error, Equatable, Sendable {
   case contextTooLong
   case generationFailed
   case serverRetryAvailable
+  case accessDenied
+  case resultExpired
+  case invalidResponse
 
   public var isUnavailable: Bool {
     switch self {

@@ -1,6 +1,16 @@
 import ClassDomainInterface
 
 struct ClassPersonalReportDTO: Decodable, Sendable {
+  struct VoteOption: Decodable, Sendable {
+    let optionId: Int
+    let title: String
+    let stance: String?
+
+    func toDomain() -> ClassAIFeedbackVoteChoice {
+      ClassAIFeedbackVoteChoice(id: optionId, title: title, stance: stance)
+    }
+  }
+
   struct Point: Decodable, Sendable {
     let title: String
     let body: String
@@ -34,7 +44,12 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
     let coverage: String?
     let excludedCount: Int?
 
-    func toDomain() -> ClassAIPersonalFeedback {
+    func toDomain(
+      preOption: VoteOption?,
+      postOption: VoteOption?,
+      perspectiveCount: Int,
+      commentCount: Int
+    ) -> ClassAIPersonalFeedback {
       let points = [strength, nextFocus].compactMap(\.self).map {
         ClassAIFeedbackPoint(title: $0.title, detail: $0.body)
       }
@@ -46,19 +61,32 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
         nextHint: "",
         evidence: evidence?.map { $0.toDomain() } ?? [],
         coverage: coverage,
-        excludedCount: excludedCount ?? 0
+        excludedCount: excludedCount ?? 0,
+        preOption: preOption?.toDomain(),
+        postOption: postOption?.toDomain(),
+        perspectiveCount: perspectiveCount,
+        commentCount: commentCount
       )
     }
   }
 
   let state: String
   let feedback: Feedback?
+  let preOption: VoteOption?
+  let postOption: VoteOption?
+  let perspectiveCount: Int?
+  let commentCount: Int?
 
   func toDomain() throws -> ClassAIPersonalFeedback {
     switch state {
     case "SUCCEEDED", "LIMITED":
       guard let feedback else { throw ClassAIFeedbackError.generationFailed }
-      return feedback.toDomain()
+      return feedback.toDomain(
+        preOption: preOption,
+        postOption: postOption,
+        perspectiveCount: perspectiveCount ?? 0,
+        commentCount: commentCount ?? 0
+      )
     case "BEFORE_CLOSE", "PENDING", "GENERATING":
       throw ClassAIFeedbackError.modelNotReady
     case "NOT_ELIGIBLE":

@@ -11,6 +11,11 @@ public struct ClassResultRepositoryImpl: ClassResultInterface {
     do {
       let payload = try await client.send(ClassResultService.result(roomID), as: ClassResultDTO.self)
       return try payload.toDomain()
+    } catch let error as PickeNetworkError {
+      if case let .response(response) = error {
+        throw Self.resultError(code: response.code, message: response.message)
+      }
+      throw ClassError.from(error)
     } catch {
       throw ClassError.from(error)
     }
@@ -43,16 +48,33 @@ public struct ClassResultRepositoryImpl: ClassResultInterface {
     }
   }
 
+  static func resultError(
+    code: String?,
+    message: String?
+  ) -> ClassError {
+    switch code {
+    case "CLASS_409_RESULT_EXPIRED": return .resultExpired
+    case "CLASS_403_MEMBER", "CLASS_403_OWNER": return .accessDenied
+    default: return .network(message ?? "클래스 결과를 불러오지 못했어요.")
+    }
+  }
+
+  static func feedbackError(code: String?) -> ClassAIFeedbackError {
+    switch code {
+    case "CLASS_409_REPORT_RETRY": return .generationFailed
+    case "CLASS_409_RESULT_EXPIRED": return .resultExpired
+    case "CLASS_403_MEMBER", "CLASS_403_OWNER": return .accessDenied
+    default: return .temporarilyUnavailable
+    }
+  }
+
   private static func feedbackError(_ error: Error) -> ClassAIFeedbackError {
     if let mapped = error as? ClassAIFeedbackError { return mapped }
+    if error is DecodingError { return .invalidResponse }
     if let networkError = error as? PickeNetworkError,
        case let .response(response) = networkError
     {
-      switch response.code {
-      case "CLASS_409_REPORT_RETRY": return .generationFailed
-      case "CLASS_409_RESULT_EXPIRED", "CLASS_403_MEMBER", "CLASS_403_OWNER": return .insufficientInput
-      default: return .temporarilyUnavailable
-      }
+      return feedbackError(code: response.code)
     }
     return .temporarilyUnavailable
   }

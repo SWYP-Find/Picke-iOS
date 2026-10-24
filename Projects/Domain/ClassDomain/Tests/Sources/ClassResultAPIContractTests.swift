@@ -5,6 +5,15 @@ import Testing
 
 struct ClassResultAPIContractTests {
   @Test
+  func 결과_열람_만료와_권한_오류를_구분한다() {
+    #expect(ClassResultRepositoryImpl.resultError(code: "CLASS_409_RESULT_EXPIRED", message: nil) == .resultExpired)
+    #expect(ClassResultRepositoryImpl.resultError(code: "CLASS_403_MEMBER", message: nil) == .accessDenied)
+    #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_409_RESULT_EXPIRED") == .resultExpired)
+    #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_403_OWNER") == .accessDenied)
+    #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_409_REPORT_RETRY") == .generationFailed)
+  }
+
+  @Test
   func 결과_리포트_인사이트_경로를_분리한다() {
     #expect(ClassResultService.result(5).path == "classes/5/result")
     #expect(ClassResultService.myReport(5).path == "classes/5/result/my-report")
@@ -59,6 +68,10 @@ struct ClassResultAPIContractTests {
     let json = """
     {
       "state": "SUCCEEDED",
+      "preOption": { "optionId": 31, "title": "창작이다", "stance": "처음 의견" },
+      "postOption": { "optionId": 32, "title": "창작이 아니다", "stance": "바뀐 의견" },
+      "perspectiveCount": 1,
+      "commentCount": 2,
       "feedback": {
         "headline": "판단을 바꾼 이유", "judgmentBasis": "근거를 비교했어요",
         "strength": null, "nextFocus": null, "nextQuestion": "왜 그럴까요?",
@@ -77,6 +90,10 @@ struct ClassResultAPIContractTests {
     #expect(feedback.evidence.first?.sourceID == 50)
     #expect(feedback.evidence.first?.content == "삭제되지 않은 원문")
     #expect(feedback.evidence.first?.quote == "짧은 인용")
+    #expect(feedback.preOption?.id == 31)
+    #expect(feedback.postOption?.title == "창작이 아니다")
+    #expect(feedback.perspectiveCount == 1)
+    #expect(feedback.commentCount == 2)
   }
 
   @Test
