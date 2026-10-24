@@ -1,7 +1,6 @@
 @testable import ClassDomain
 import ClassDomainInterface
 import Foundation
-import PickeNetwork
 import Testing
 
 struct ClassErrorMappingTests {
@@ -32,24 +31,16 @@ struct ClassErrorMappingTests {
     code: String,
     expected: ClassError
   ) {
-    let error = PickeNetworkError.response(ResponseError(httpStatus: 409, code: code, message: "서버 문구"))
-    #expect(ClassErrorMapper.map(error, fallback: "기본 문구") == expected)
+    #expect(ClassErrorMapper.map(code: code, message: "서버 문구", fallback: "기본 문구") == expected)
   }
 
   @Test
   func 모르는_코드는_서버_메시지를_보여준다() {
-    let error = PickeNetworkError.response(ResponseError(httpStatus: 400, code: "COMMON_400", message: "형식을 확인해 주세요."))
-    #expect(ClassErrorMapper.map(error, fallback: "기본 문구") == .network("형식을 확인해 주세요."))
+    #expect(ClassErrorMapper.map(code: "COMMON_400", message: "형식을 확인해 주세요.", fallback: "기본 문구") == .network("형식을 확인해 주세요."))
   }
 
   @Test
   func 메시지가_없으면_기본_문구를_보여준다() {
-    let error = PickeNetworkError.response(ResponseError(httpStatus: 500))
-    #expect(ClassErrorMapper.map(error, fallback: "기본 문구") == .network("기본 문구"))
-  }
-
-  @Test
-  func 이미_클래스_에러면_그대로_둔다() {
-    #expect(ClassErrorMapper.map(ClassError.full, fallback: "기본 문구") == .full)
+    #expect(ClassErrorMapper.map(code: nil, message: nil, fallback: "기본 문구") == .network("기본 문구"))
   }
 }

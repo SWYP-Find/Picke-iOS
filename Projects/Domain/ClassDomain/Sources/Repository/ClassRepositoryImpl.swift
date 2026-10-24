@@ -127,6 +127,12 @@ public struct ClassRepositoryImpl: ClassInterface {
   }
 
   private static func classError(_ error: Error) -> ClassError {
-    ClassErrorMapper.map(error, fallback: "클래스 요청을 처리하지 못했습니다.")
+    guard let networkError = error as? PickeNetworkError else { return ClassError.from(error) }
+    guard case let .response(response) = networkError else { return ClassError.from(networkError) }
+    return ClassErrorMapper.map(
+      code: response.code,
+      message: response.message,
+      fallback: "클래스 요청을 처리하지 못했습니다."
+    )
   }
 }

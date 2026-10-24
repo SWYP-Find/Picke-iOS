@@ -7,21 +7,19 @@
 
 import ClassDomainInterface
 import Foundation
-import PickeNetwork
 
 /// 클래스 생성·조회·참여·멤버 API 의 서버 에러 코드(명세 10장)를 `ClassError` 로 바꾼다.
 /// 매핑에 없는 코드는 서버 메시지를, 메시지도 없으면 `fallback` 을 그대로 보여준다.
 enum ClassErrorMapper {
   static func map(
-    _ error: Error,
+    code: String?,
+    message: String?,
     fallback: String
   ) -> ClassError {
-    guard let networkError = error as? PickeNetworkError else { return ClassError.from(error) }
-    guard case let .response(response) = networkError else { return ClassError.from(networkError) }
-    if let mapped = response.code.flatMap(classError(code:)) {
+    if let mapped = code.flatMap(classError(code:)) {
       return mapped
     }
-    return .network(response.message ?? fallback)
+    return .network(message ?? fallback)
   }
 
   private static func classError(code: String) -> ClassError? {
