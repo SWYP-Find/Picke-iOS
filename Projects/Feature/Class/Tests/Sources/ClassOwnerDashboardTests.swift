@@ -256,17 +256,21 @@ struct ClassOwnerDashboardTests {
 
   private struct ResultStub: ClassResultInterface {
     let result: Result<ClassResult, ClassError>
+    var feedback: ClassAIPersonalFeedback? = nil
+    var insight: ClassAIInsight? = nil
 
     func fetch(roomID _: Int) async throws -> ClassResult {
       try result.get()
     }
 
     func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
-      throw ClassAIFeedbackError.temporarilyUnavailable
+      guard let feedback else { throw ClassAIFeedbackError.temporarilyUnavailable }
+      return feedback
     }
 
     func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
-      throw ClassAIFeedbackError.temporarilyUnavailable
+      guard let insight else { throw ClassAIFeedbackError.temporarilyUnavailable }
+      return insight
     }
 
     func retryInsight(roomID _: Int) async throws {
@@ -316,6 +320,57 @@ struct ClassOwnerDashboardTests {
     #expect(store.state.opinions.isEmpty)
     #expect(store.state.metrics == nil)
     await store.send(.view(.onAppear))
+  }
+
+  @Test
+  func 참여_운영자는_서버_인사이트와_개인_리포트를_함께_받는다() async {
+    let room = ClassRoom.mocks[0]
+    let requestID = UUID()
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.requestID = requestID
+    let result = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: serverResult(room).stats,
+      myReportState: "SUCCEEDED",
+      insightState: "SUCCEEDED"
+    )
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: "개인 결과",
+      summaryDetail: "참여 분석",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      perspectiveCount: 2
+    )
+    let insight = ClassAIInsight(text: "운영 인사이트")
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(
+        result: .success(result),
+        feedback: feedback,
+        insight: insight
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.resultResponse(
+      instanceID: state.instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(result)
+    )))
+    await store.receive(\.async.generateInsight)
+    await store.receive(\.async.generatePersonal)
+    await store.receive(\.inner.insightResponse)
+    await store.receive(\.inner.feedbackResponse)
+    #expect(store.state.generatedInsight == insight.text)
+    #expect(store.state.generatedFeedback == feedback)
+    #expect(store.state.myOpinionCount == 2)
+    await store.send(.view(.tabSelected(.report)))
+    await store.send(.view(.myOpinionsTapped))
+    await store.receive(\.delegate.openMyOpinions)
   }
 
   @Test

@@ -122,7 +122,8 @@ public struct ClassOwnerDashboardFeature {
     }
 
     public var myOpinionCount: Int {
-      myOpinions.count
+      if classResult != nil { return generatedFeedback?.perspectiveCount ?? 0 }
+      return myOpinions.count
     }
 
     public var myOpinions: [ClassReportOpinion] {
@@ -376,7 +377,7 @@ extension ClassOwnerDashboardFeature {
     case .myOpinionsTapped:
       guard state.selectedTab == .report,
             state.sourceViewState == .ready,
-            state.report != nil,
+            state.report != nil || state.classResult?.myReportState != nil,
             state.management == nil
       else { return .none }
       return .send(.delegate(.openMyOpinions(state.instanceID)))
@@ -521,8 +522,18 @@ extension ClassOwnerDashboardFeature {
       case let .success(classResult):
         state.classResult = classResult
         state.sourceViewState = .ready
-        if classResult.insightState != nil {
+        switch (classResult.insightState != nil, classResult.myReportState != nil) {
+        case (true, true):
+          return .merge(
+            .send(.async(.generateInsight)),
+            .send(.async(.generatePersonal))
+          )
+        case (true, false):
           return .send(.async(.generateInsight))
+        case (false, true):
+          return .send(.async(.generatePersonal))
+        case (false, false):
+          return .none
         }
       case .failure:
         state.classResult = nil

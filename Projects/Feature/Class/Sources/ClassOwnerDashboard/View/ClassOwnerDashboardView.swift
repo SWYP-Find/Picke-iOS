@@ -415,7 +415,7 @@ private extension ClassOwnerDashboardView {
   @ViewBuilder
   func reportPage() -> some View {
     VStack(alignment: .leading, spacing: 24) {
-      if store.classResult != nil {
+      if let classResult = store.classResult {
         dashboardSection("AI 인사이트") {
           if case let .ready(insight) = store.insightViewState {
             serverInsightContent(insight)
@@ -424,7 +424,22 @@ private extension ClassOwnerDashboardView {
           }
         }
         dashboardSection("내 투표 결과") {
-          unavailableContent("참여하지 않은 운영자에게 개인 투표 결과는 제공되지 않아요")
+          if classResult.myReportState == nil {
+            unavailableContent("참여하지 않은 운영자에게 개인 투표 결과는 제공되지 않아요")
+          } else if case let .ready(feedback) = store.feedbackViewState {
+            serverPersonalVoteContent(feedback)
+          } else {
+            feedbackStatus()
+          }
+        }
+        if classResult.myReportState != nil {
+          dashboardSection("AI 피드백") {
+            if case let .ready(feedback) = store.feedbackViewState {
+              serverPersonalFeedbackContent(feedback)
+            } else {
+              feedbackStatus()
+            }
+          }
         }
       } else {
         dashboardSection("내 투표 결과") {
@@ -519,6 +534,49 @@ private extension ClassOwnerDashboardView {
         }
       }
     }
+  }
+
+  @ViewBuilder
+  func serverPersonalVoteContent(_ feedback: ClassAIPersonalFeedback) -> some View {
+    VStack(alignment: .leading, spacing: 16) {
+      HStack(spacing: 8) {
+        reportChoice("사전 선택", value: feedback.preOption?.title ?? "선택 없음")
+        reportChoice("사후 선택", value: feedback.postOption?.title ?? "선택 없음")
+      }
+      HStack(spacing: 0) {
+        reportActivity("\(feedback.perspectiveCount)", label: "의견")
+        Rectangle().fill(.beige600).frame(width: 1, height: 36)
+        reportActivity("\(feedback.commentCount)", label: "댓글")
+      }
+    }
+    .padding(16)
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+  }
+
+  @ViewBuilder
+  func serverPersonalFeedbackContent(_ feedback: ClassAIPersonalFeedback) -> some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Text(feedback.summaryTitle)
+        .pretendardFont(.semiBold15)
+      Text(feedback.summaryDetail)
+        .pretendardFont(.bodySmall)
+      ForEach(feedback.points.indices, id: \.self) { index in
+        reportInsight(feedback.points[index].title, detail: feedback.points[index].detail)
+      }
+      if !feedback.nextQuestion.isEmpty {
+        reportInsight("다음 생각", detail: feedback.nextQuestion)
+      }
+      if let coverage = feedback.coverageDescription {
+        Text(coverage).pretendardFont(.regular13)
+      }
+      ForEach(feedback.evidence.indices, id: \.self) { index in
+        Text(feedback.evidence[index].quote ?? feedback.evidence[index].content)
+          .pretendardFont(.regular13)
+      }
+      myOpinionsButton
+    }
+    .padding(16)
+    .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
   }
 
   @ViewBuilder

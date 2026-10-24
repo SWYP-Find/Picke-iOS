@@ -49,10 +49,12 @@ public struct ClassReportFeature {
     }
 
     public var myOpinionCount: Int {
-      report?.resolvedOpinions.count ?? 0
+      if classResult != nil { return feedback?.perspectiveCount ?? 0 }
+      return report?.resolvedOpinions.count ?? 0
     }
 
     public var myOpinionsButtonTitle: String {
+      if classResult != nil, feedback == nil { return "내가 남긴 의견 보기" }
       "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
@@ -168,7 +170,8 @@ extension ClassReportFeature {
       state.selectedTab = tab
       return .none
     case .myOpinionsTapped:
-      guard state.sourceViewState == .ready, state.report != nil else { return .none }
+      guard state.sourceViewState == .ready,
+            state.report != nil || state.classResult?.myReportState != nil else { return .none }
       return .send(.delegate(.openMyOpinions(state.instanceID)))
     }
   }

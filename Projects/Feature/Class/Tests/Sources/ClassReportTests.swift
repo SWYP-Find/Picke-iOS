@@ -128,6 +128,20 @@ struct ClassReportTests {
     #expect(store.state.classResult == response)
     #expect(store.state.feedback == feedback)
     #expect(store.state.feedbackViewState == .ready(feedback))
+    await store.send(.view(.myOpinionsTapped))
+    await store.receive(\.delegate.openMyOpinions)
+  }
+
+  @Test
+  func 개인_결과가_로딩_중이어도_내_의견으로_이동한다() async {
+    let room = ClassRoom.mockClosedSociety
+    var state = ClassReportFeature.State(room: room, instanceID: UUID())
+    state.classResult = result(room: room, reportState: "PENDING")
+    state.sourceViewState = .ready
+    let store = TestStore(initialState: state) { ClassReportFeature() }
+    #expect(store.state.myOpinionsButtonTitle == "내가 남긴 의견 보기")
+    await store.send(.view(.myOpinionsTapped))
+    await store.receive(\.delegate.openMyOpinions)
   }
 
   @Test

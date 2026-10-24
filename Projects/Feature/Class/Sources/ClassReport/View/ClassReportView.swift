@@ -137,6 +137,9 @@ private extension ClassReportView {
             }
           }
         }
+        if result.myReportState != nil {
+          reportCard { myOpinionsSection }
+        }
       }
       .padding(16)
     }
