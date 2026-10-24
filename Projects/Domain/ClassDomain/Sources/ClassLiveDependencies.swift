@@ -38,6 +38,14 @@ extension ClassAIFeedbackUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassTopicDraftUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassTopicDraftInterface { ClassTopicDraftUseCaseImpl() }
+}
+
+extension ClassTopicDraftRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassTopicDraftInterface { ClassTopicDraftRepositoryImpl() }
+}
+
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
     ClassLiveRepository(

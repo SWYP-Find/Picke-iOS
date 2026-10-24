@@ -44,7 +44,7 @@ struct ClassRecommendTests {
   }
 
   @Test
-  func 조건_수정은_닫고_다시_추천은_질문을_회전하며_선택을_해제한다() async {
+  func 조건_수정은_화면을_닫고_다시_추천은_서버에_요청한다() async {
     let editStore = TestStore(initialState: ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)) {
       ClassRecommendFeature()
     }
@@ -52,12 +52,24 @@ struct ClassRecommendTests {
     await editStore.receive(\.delegate, .dismiss)
 
     var state = ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)
-    state.questions = ClassAIQuestion.examples
-    state.selectedQuestionId = ClassAIQuestion.examples.first?.id
-    let recommendStore = TestStore(initialState: state) { ClassRecommendFeature() }
+    state.draft = topicDraft
+    state.questions = topicDraft.candidates.compactMap(ClassAIQuestion.init(candidate:))
+    state.selectedQuestionId = 3
+    state.viewState = .loaded
+    let recommendStore = TestStore(initialState: state) { ClassRecommendFeature() } withDependencies: {
+      $0.classTopicDraftUseCase = StubTopicDraftUseCase(draft: topicDraft, version: topicVersion)
+    }
     await recommendStore.send(.view(.recommendAgainTapped)) {
-      $0.questions = Array(ClassAIQuestion.examples.dropFirst()) + ClassAIQuestion.examples.prefix(1)
       $0.selectedQuestionId = nil
+    }
+    await recommendStore.receive(\.async, .suggest(draftID: topicDraft.id)) {
+      $0.isLoading = true
+      $0.viewState = .loading
+    }
+    await recommendStore.receive(\.inner, .suggestionStarted(topicDraft))
+    await recommendStore.receive(\.inner, .draft(.success(topicDraft))) {
+      $0.isLoading = false
+      $0.viewState = .loaded
     }
   }
 
@@ -142,10 +154,10 @@ struct ClassRecommendTests {
   }
 
   @Test
-  func AI_예시는_첫_화면부터_준비되고_빈_배틀_결과는_조회_완료_후에만_표시된다() {
+  func AI_질문과_빈_배틀_결과는_서버_조회_완료_후에만_표시된다() {
     let ai = ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)
-    #expect(ai.questions == ClassAIQuestion.examples)
-    #expect(ai.viewState == .loaded)
+    #expect(ai.questions.isEmpty)
+    #expect(ai.viewState == .loading)
 
     var existing = ClassRecommendFeature.State(filter: .init())
     #expect(existing.viewState == .loading)
@@ -166,17 +178,96 @@ struct ClassRecommendTests {
   }
 
   @Test
-  func AI_예시_질문을_선택하면_설정_경로로_전달한다() async {
+  func AI_후보를_선택하면_서버_주제_버전을_설정_경로로_전달한다() async {
     let filter = ClassTopicFilter(keyword: "뫼르소", level: .high, category: .literature)
     let store = TestStore(initialState: ClassRecommendFeature.State(filter: filter, mode: .aiQuestions)) {
       ClassRecommendFeature()
+    } withDependencies: {
+      $0.classTopicDraftUseCase = StubTopicDraftUseCase(draft: topicDraft, version: topicVersion)
     }
 
     await store.send(.view(.onAppear))
-    await store.send(.view(.questionTapped(1))) {
-      $0.selectedQuestionId = 1
+    await store.receive(\.async, .createDraft(filter)) {
+      $0.isLoading = true
+    }
+    await store.receive(\.inner, .draftCreated(.success(topicDraft))) {
+      $0.draft = topicDraft
+    }
+    await store.receive(\.async, .suggest(draftID: topicDraft.id))
+    await store.receive(\.inner, .suggestionStarted(topicDraft))
+    await store.receive(\.inner, .draft(.success(topicDraft))) {
+      $0.isLoading = false
+      $0.questions = topicDraft.candidates.compactMap(ClassAIQuestion.init(candidate:))
+      $0.viewState = .loaded
+    }
+    await store.send(.view(.questionTapped(3))) {
+      $0.selectedQuestionId = 3
     }
     await store.send(.view(.selectTapped))
-    await store.receive(\.delegate, .selectAIQuestion(ClassAIQuestion.examples[0], filter))
+    await store.receive(\.async, .select(draftID: topicDraft.id, batchNo: topicDraft.batchNo, candidateID: 3)) {
+      $0.isLoading = true
+    }
+    await store.receive(\.inner, .selected(.success(topicVersion))) {
+      $0.isLoading = false
+    }
+    await store.receive(\.delegate, .selectAIQuestion(topicVersion, filter))
+  }
+
+  private var topicDraft: ClassTopicDraft {
+    ClassTopicDraft(
+      id: 7,
+      topicSeed: "뫼르소",
+      difficulty: "INTERMEDIATE",
+      categories: ["문학"],
+      suggestStatus: "SUCCEEDED",
+      clarificationMessage: nil,
+      batchNo: 1,
+      remainingSuggestions: 2,
+      remainingValidations: 3,
+      candidates: [
+        ClassTopicCandidate(
+          id: 3,
+          question: "감정을 표현해야 하나요?",
+          description: "표현의 자유를 토론해요.",
+          category: "문학",
+          difficulty: "INTERMEDIATE",
+          options: [
+            .init(label: "해야 한다", rationale: "공감", philosopher: "KANT"),
+            .init(label: "선택이다", rationale: "자유", philosopher: nil),
+          ]
+        ),
+      ],
+      latestVersion: nil
+    )
+  }
+
+  private var topicVersion: ClassTopicVersion {
+    ClassTopicVersion(
+      id: 12,
+      draftID: 7,
+      versionNo: 1,
+      source: "CANDIDATE",
+      question: "감정을 표현해야 하나요?",
+      description: "표현의 자유를 토론해요.",
+      category: "문학",
+      difficulty: "INTERMEDIATE",
+      options: [
+        .init(position: "A", label: "해야 한다", rationale: "공감", philosopher: "KANT", philosopherName: "칸트", philosopherImageKey: nil),
+        .init(position: "B", label: "선택이다", rationale: "자유", philosopher: nil, philosopherName: nil, philosopherImageKey: nil),
+      ]
+    )
+  }
+}
+
+private struct StubTopicDraftUseCase: ClassTopicDraftInterface {
+  let draft: ClassTopicDraft
+  let version: ClassTopicVersion
+
+  func create(filter: ClassTopicFilter) async throws -> ClassTopicDraft { draft }
+  func fetch(id: Int) async throws -> ClassTopicDraft { draft }
+  func suggest(id: Int, filter: ClassTopicFilter?) async throws -> ClassTopicDraft { draft }
+  func select(draftID: Int, batchNo: Int, candidateID: Int) async throws -> ClassTopicVersion { version }
+  func validate(draftID: Int, baseVersionID: Int, candidate: ClassTopicCandidate) async throws -> ClassTopicValidation {
+    ClassTopicValidation(valid: true, issues: [], validatedTopicVersionID: version.id, remainingValidations: 2, version: version)
   }
 }

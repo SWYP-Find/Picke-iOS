@@ -31,6 +31,7 @@ public struct ClassRecommendFeature {
     public var mode: Mode
     public var battles: [ClassBattleSummary] = []
     public var questions: [ClassAIQuestion] = []
+    public var draft: ClassTopicDraft?
     public var selectedBattleId: Int?
     public var selectedQuestionId: Int?
     public var viewState: ViewState = .loading
@@ -42,10 +43,6 @@ public struct ClassRecommendFeature {
     ) {
       self.filter = filter
       self.mode = mode
-      if mode == .aiQuestions {
-        questions = ClassAIQuestion.examples
-        viewState = questions.isEmpty ? .empty : .loaded
-      }
     }
 
     public var conditionTitles: [String] {
@@ -94,6 +91,7 @@ public struct ClassRecommendFeature {
   @CasePathable
   public enum View {
     case onAppear
+    case onDisappear
     case retryTapped
     case backTapped
     case editConditionTapped
@@ -106,25 +104,36 @@ public struct ClassRecommendFeature {
 
   public enum AsyncAction: Equatable {
     case fetch(ClassTopicFilter)
+    case createDraft(ClassTopicFilter)
+    case suggest(draftID: Int)
+    case poll(draftID: Int)
+    case select(draftID: Int, batchNo: Int, candidateID: Int)
   }
 
   public enum InnerAction: Equatable {
     case battles(Result<[ClassBattleSummary], ClassError>)
+    case draftCreated(Result<ClassTopicDraft, ClassError>)
+    case suggestionStarted(ClassTopicDraft)
+    case draft(Result<ClassTopicDraft, ClassError>)
+    case selected(Result<ClassTopicVersion, ClassError>)
   }
 
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
     case select(ClassBattleSummary)
-    case selectAIQuestion(ClassAIQuestion, ClassTopicFilter)
+    case selectAIQuestion(ClassTopicVersion, ClassTopicFilter)
     case previewRequested(ClassBattleSummary)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetch
+    case draft
+    case select
   }
 
   @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classTopicDraftUseCase) private var topicDraftUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -155,17 +164,33 @@ extension ClassRecommendFeature {
     switch action {
     case .onAppear:
       if state.mode == .aiQuestions {
-        if state.questions.isEmpty {
-          state.questions = ClassAIQuestion.examples
+        guard !state.isLoading else { return .none }
+        if let draft = state.draft {
+          switch draft.suggestStatus {
+          case "GENERATING": return .send(.async(.poll(draftID: draft.id)))
+          case "NONE": return .send(.async(.suggest(draftID: draft.id)))
+          default: return .none
+          }
         }
-        state.viewState = state.questions.isEmpty ? .empty : .loaded
-        return .none
+        return .send(.async(.createDraft(state.filter)))
       }
       guard state.viewState == .loading, !state.isLoading else { return .none }
       return .send(.async(.fetch(state.filter)))
 
+    case .onDisappear:
+      state.isLoading = false
+      if !state.questions.isEmpty { state.viewState = .loaded }
+      return .merge(
+        .cancel(id: CancelID.fetch),
+        .cancel(id: CancelID.draft),
+        .cancel(id: CancelID.select)
+      )
+
     case .retryTapped:
-      guard state.mode == .existingContent else { return .none }
+      if state.mode == .aiQuestions {
+        if let draft = state.draft { return .send(.async(.suggest(draftID: draft.id))) }
+        return .send(.async(.createDraft(state.filter)))
+      }
       return .send(.async(.fetch(state.filter)))
 
     case .backTapped, .editConditionTapped:
@@ -181,11 +206,10 @@ extension ClassRecommendFeature {
       return .none
 
     case .recommendAgainTapped:
-      guard state.mode == .aiQuestions else { return .none }
-      state.questions = Array(state.questions.dropFirst()) + state.questions.prefix(1)
+      guard state.mode == .aiQuestions, let draft = state.draft,
+            draft.remainingSuggestions > 0, !state.isLoading else { return .none }
       state.selectedQuestionId = nil
-      state.viewState = state.questions.isEmpty ? .empty : .loaded
-      return .none
+      return .send(.async(.suggest(draftID: draft.id)))
 
     case let .previewTapped(id):
       guard state.mode == .existingContent,
@@ -195,8 +219,9 @@ extension ClassRecommendFeature {
 
     case .selectTapped:
       if state.mode == .aiQuestions {
-        guard let question = state.selectedQuestion else { return .none }
-        return .send(.delegate(.selectAIQuestion(question, state.filter)))
+        guard let draft = state.draft, let candidateID = state.selectedQuestionId,
+              draft.batchNo > 0, !state.isLoading else { return .none }
+        return .send(.async(.select(draftID: draft.id, batchNo: draft.batchNo, candidateID: candidateID)))
       }
       guard let battle = state.selectedBattle else { return .none }
       return .send(.delegate(.select(battle)))
@@ -221,6 +246,61 @@ extension ClassRecommendFeature {
         await send(.inner(.battles(result)))
       }
       .cancellable(id: CancelID.fetch, cancelInFlight: true)
+
+    case let .createDraft(filter):
+      state.isLoading = true
+      state.viewState = .loading
+      return .run { [topicDraftUseCase] send in
+        let result = await Result {
+          try await topicDraftUseCase.create(filter: filter)
+        }
+        .mapError(ClassError.from)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.draftCreated(result)))
+      }
+      .cancellable(id: CancelID.draft, cancelInFlight: true)
+
+    case let .suggest(draftID):
+      state.isLoading = true
+      state.viewState = .loading
+      return .run { [topicDraftUseCase] send in
+        let result = await Result {
+          let draft = try await topicDraftUseCase.suggest(id: draftID, filter: nil)
+          guard !Task.isCancelled else { throw CancellationError() }
+          await send(.inner(.suggestionStarted(draft)))
+          return try await Self.pollSuggestion(draft: draft, useCase: topicDraftUseCase)
+        }
+        .mapError(ClassError.from)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.draft(result)))
+      }
+      .cancellable(id: CancelID.draft, cancelInFlight: true)
+
+    case let .poll(draftID):
+      state.isLoading = true
+      state.viewState = .loading
+      return .run { [topicDraftUseCase] send in
+        let result = await Result {
+          let draft = try await topicDraftUseCase.fetch(id: draftID)
+          return try await Self.pollSuggestion(draft: draft, useCase: topicDraftUseCase)
+        }
+        .mapError(ClassError.from)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.draft(result)))
+      }
+      .cancellable(id: CancelID.draft, cancelInFlight: true)
+
+    case let .select(draftID, batchNo, candidateID):
+      state.isLoading = true
+      return .run { [topicDraftUseCase] send in
+        let result = await Result {
+          try await topicDraftUseCase.select(draftID: draftID, batchNo: batchNo, candidateID: candidateID)
+        }
+        .mapError(ClassError.from)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.selected(result)))
+      }
+      .cancellable(id: CancelID.select, cancelInFlight: true)
     }
   }
 
@@ -241,6 +321,62 @@ extension ClassRecommendFeature {
         }
       }
       return .none
+
+    case let .draftCreated(result):
+      switch result {
+      case let .success(draft):
+        state.draft = draft
+        return .send(.async(.suggest(draftID: draft.id)))
+      case .failure:
+        state.isLoading = false
+        state.viewState = .error
+        return .none
+      }
+
+    case let .suggestionStarted(draft):
+      state.draft = draft
+      return .none
+
+    case let .draft(result):
+      state.isLoading = false
+      switch result {
+      case let .success(draft):
+        state.draft = draft
+        state.questions = draft.candidates.compactMap(ClassAIQuestion.init(candidate:))
+        state.selectedQuestionId = nil
+        state.viewState = state.questions.isEmpty ? .empty : .loaded
+      case .failure:
+        state.viewState = .error
+      }
+      return .none
+
+    case let .selected(result):
+      state.isLoading = false
+      switch result {
+      case let .success(version):
+        return .send(.delegate(.selectAIQuestion(version, state.filter)))
+      case .failure:
+        state.viewState = .error
+        return .none
+      }
     }
+  }
+
+  private static func pollSuggestion(
+    draft: ClassTopicDraft,
+    useCase: any ClassTopicDraftInterface
+  ) async throws -> ClassTopicDraft {
+    var current = draft
+    for _ in 0 ..< 90 where current.suggestStatus == "GENERATING" {
+      try await Task.sleep(for: .seconds(2))
+      current = try await useCase.fetch(id: draft.id)
+    }
+    guard current.suggestStatus != "GENERATING" else {
+      throw ClassError.unknown("AI 주제 생성 시간이 초과됐어요. 다시 확인해 주세요.")
+    }
+    guard current.suggestStatus == "SUCCEEDED" else {
+      throw ClassError.unknown(current.clarificationMessage ?? "AI 주제를 만들지 못했어요. 조건을 확인해 주세요.")
+    }
+    return current
   }
 }
