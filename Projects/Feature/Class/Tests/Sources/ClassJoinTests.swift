@@ -24,6 +24,25 @@ struct ClassJoinTests {
   }
 
   @Test
+  func 새_클래스_만들기는_코드_입력_중에만_요청한다() async {
+    let codeStore = TestStore(initialState: ClassJoinFeature.State(mode: .code)) {
+      ClassJoinFeature()
+    }
+    await codeStore.send(.view(.createClassTapped))
+    await codeStore.receive(\.delegate.createClassRequested)
+
+    var loadingState = ClassJoinFeature.State(mode: .code)
+    loadingState.isLoading = true
+    let loadingStore = TestStore(initialState: loadingState) { ClassJoinFeature() }
+    await loadingStore.send(.view(.createClassTapped))
+
+    let nicknameStore = TestStore(initialState: ClassJoinFeature.State(mode: .nickname)) {
+      ClassJoinFeature()
+    }
+    await nicknameStore.send(.view(.createClassTapped))
+  }
+
+  @Test
   func 참여코드를_조회하면_요청_식별자와_함께_클래스를_전달한다() async {
     let room = ClassRoom.mockJoinable
     let requestID = UUID()

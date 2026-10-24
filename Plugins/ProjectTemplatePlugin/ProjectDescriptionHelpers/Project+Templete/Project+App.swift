@@ -21,6 +21,7 @@ public extension Scheme {
       name: name,
       shared: true,
       buildAction: .buildAction(targets: ["\(appName)"]),
+      testAction: .targets(["\(appName)Tests"], configuration: .stage),
       runAction: .runAction(configuration: configuration, executable: "\(appName)"),
       archiveAction: .archiveAction(configuration: configuration),
       profileAction: .profileAction(configuration: configuration, executable: "\(appName)"),

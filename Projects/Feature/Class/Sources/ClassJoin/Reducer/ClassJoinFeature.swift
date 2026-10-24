@@ -95,6 +95,7 @@ public struct ClassJoinFeature {
     case backTapped
     case findTapped
     case joinTapped
+    case createClassTapped
   }
 
   @CasePathable
@@ -114,6 +115,7 @@ public struct ClassJoinFeature {
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
+    case createClassRequested
     case found(ClassRoom, instanceID: UUID?)
     case joined(ClassRoom, nickname: String, instanceID: UUID?)
     case ownerNamed(ClassRoom, instanceID: UUID)
@@ -185,6 +187,10 @@ extension ClassJoinFeature {
     case .findTapped:
       guard state.canFindClass else { return .none }
       return .send(.async(.find(state.joinCode)))
+
+    case .createClassTapped:
+      guard state.mode == .code, !state.isLoading else { return .none }
+      return .send(.delegate(.createClassRequested))
 
     case .joinTapped:
       guard state.canJoin, let room = state.preview else { return .none }
