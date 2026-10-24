@@ -254,9 +254,8 @@ private extension ClassAIVoteView {
     HStack(spacing: 0) {
       optionCard(
         id: 1,
-        title: store.room.battle.optionATitle,
-        subtitle: store.room.battle.optionADescription
-          ?? store.room.battle.philosopherA
+        title: store.optionATitle,
+        subtitle: store.optionASubtitle
       )
       Text("vs")
         .pretendardFont(.semiBold11)
@@ -267,9 +266,8 @@ private extension ClassAIVoteView {
         .zIndex(1)
       optionCard(
         id: 2,
-        title: store.room.battle.optionBTitle,
-        subtitle: store.room.battle.optionBDescription
-          ?? store.room.battle.philosopherB
+        title: store.optionBTitle,
+        subtitle: store.optionBSubtitle
       )
     }
     .fixedSize(horizontal: false, vertical: true)
