@@ -68,7 +68,6 @@ struct ClassRecommendationTests {
   func 라이브_클래스_목록은_목_저장소가_아닌_서버를_쓴다() async throws {
     let json = #"{"statusCode":200,"data":[]}"#
     let live = ClassLiveRepository(
-      mock: MockClassRepository(rooms: [ClassRoom.mocks[0]], availableRooms: []),
       api: withDependencies {
         $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
       } operation: {

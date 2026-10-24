@@ -84,19 +84,6 @@ extension ClassTopicDraftRepositoryDependency: DependencyKey {
 
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
-    ClassLiveRepository(
-      mock: ClassMockRepositoryStorage.shared,
-      api: ClassRepositoryImpl()
-    )
+    ClassLiveRepository(api: ClassRepositoryImpl())
   }
-}
-
-extension ClassMockRepositoryDependency: DependencyKey {
-  public static var liveValue: MockClassRepository? {
-    ClassMockRepositoryStorage.shared
-  }
-}
-
-private enum ClassMockRepositoryStorage {
-  static let shared = MockClassRepository()
 }
