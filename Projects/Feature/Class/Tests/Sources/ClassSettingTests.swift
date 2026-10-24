@@ -38,13 +38,18 @@ struct ClassSettingTests {
   }
 
   @Test
-  func 운영자_참여_선택은_일반_클래스_생성_요청에_전달된다() {
+  func 운영자_참여_선택은_일반과_AI_클래스_생성_요청에_전달된다() {
     var regular = ClassSettingFeature.State(battle: battle, deadline: deadline)
     regular.name = "일반 토론"
     #expect(regular.creation?.ownerParticipates == false)
     regular.ownerParticipates = true
     #expect(regular.creation?.ownerParticipates == true)
 
+    var ai = ClassSettingFeature.State(topicVersion: topicVersion, filter: .init(), deadline: deadline)
+    ai.name = "AI 토론"
+    #expect(ai.aiCreation?.ownerParticipates == false)
+    ai.ownerParticipates = true
+    #expect(ai.aiCreation?.ownerParticipates == true)
   }
 
   @Test
@@ -117,6 +122,7 @@ struct ClassSettingTests {
       ClassSettingFeature()
     } withDependencies: {
       $0.date.now = deadline.addingTimeInterval(1)
+      $0.classMockRepository = nil
       $0.classUseCase = FailingClassUseCase()
     }
 
@@ -143,8 +149,20 @@ struct ClassSettingTests {
   }
 
   @Test
-  func AI_질문_필드를_화면용_배틀로_변환한다() throws {
-    let question = ClassAIQuestion.examples[0]
+  func AI_질문_필드를_목_배틀과_생성_요청으로_변환한다() throws {
+    let example = ClassAIQuestion.examples[0]
+    let question = ClassAIQuestion(
+      id: example.id,
+      category: "도덕",
+      title: example.title,
+      summary: example.summary,
+      optionATitle: example.optionATitle,
+      optionADescription: example.optionADescription,
+      philosopherAName: example.philosopherAName,
+      optionBTitle: example.optionBTitle,
+      optionBDescription: example.optionBDescription,
+      philosopherBName: example.philosopherBName
+    )
     var state = ClassSettingFeature.State(
       aiQuestion: question,
       filter: .init(level: .high, category: .literature),
@@ -167,12 +185,24 @@ struct ClassSettingTests {
     #expect(battle.level == .high)
     #expect(battle.audioDuration == 0)
     #expect(battle.viewCount == 0)
-    #expect(state.creation == nil)
+    #expect(state.aiCreation == nil)
   }
 
   @Test
   func 이름이_없는_AI_선택지의_설명과_카테고리를_따로_보존한다() throws {
-    let question = ClassAIQuestion.examples[1]
+    let example = ClassAIQuestion.examples[1]
+    let question = ClassAIQuestion(
+      id: example.id,
+      category: "범죄",
+      title: example.title,
+      summary: example.summary,
+      optionATitle: example.optionATitle,
+      optionADescription: example.optionADescription,
+      philosopherAName: example.philosopherAName,
+      optionBTitle: example.optionBTitle,
+      optionBDescription: example.optionBDescription,
+      philosopherBName: example.philosopherBName
+    )
     let state = ClassSettingFeature.State(
       aiQuestion: question,
       filter: .init(level: .adult, category: .society),
@@ -194,7 +224,7 @@ struct ClassSettingTests {
   }
 
   @Test
-  func 목_저장소가_있어도_AI_질문은_실제_주제_API_전까지_생성하지_않는다() async {
+  func 목_저장소가_있어도_서버_주제_버전이_없으면_AI_클래스를_만들지_않는다() async {
     let repository = MockClassRepository(rooms: [], availableRooms: [])
     var state = ClassSettingFeature.State(
       aiQuestion: ClassAIQuestion.examples[1],
@@ -214,6 +244,35 @@ struct ClassSettingTests {
     }
     await store.finish()
   }
+
+  @Test
+  func 서버_주제_버전으로_AI_클래스_생성_요청을_만든다() {
+    var state = ClassSettingFeature.State(topicVersion: topicVersion, filter: .init(), deadline: deadline)
+    state.name = "AI 토론"
+    state.requiresComment = true
+
+    #expect(state.creation?.battleId == nil)
+    #expect(state.creation?.topicVersionId == 12)
+    #expect(state.creation?.requiresComment == true)
+    #expect(state.aiQuestion?.title == topicVersion.question)
+  }
+
+  private var topicVersion: ClassTopicVersion {
+    ClassTopicVersion(
+      id: 12,
+      draftID: 7,
+      versionNo: 1,
+      source: "CANDIDATE",
+      question: "감정을 표현해야 하나요?",
+      description: "표현의 자유를 토론해요.",
+      category: "문학",
+      difficulty: "INTERMEDIATE",
+      options: [
+        .init(position: "A", label: "해야 한다", rationale: "공감", philosopher: "KANT", philosopherName: "칸트", philosopherImageKey: nil),
+        .init(position: "B", label: "선택이다", rationale: "자유", philosopher: nil, philosopherName: nil, philosopherImageKey: nil),
+      ]
+    )
+  }
 }
 
 private struct FailingClassUseCase: ClassInterface {
@@ -232,10 +291,6 @@ private struct FailingClassUseCase: ClassInterface {
   }
 
   func fetchClass(joinCode _: String) async throws -> ClassRoom {
-    fatalError("live use case called")
-  }
-
-  func fetchClass(id _: Int) async throws -> ClassRoom {
     fatalError("live use case called")
   }
 

@@ -541,6 +541,7 @@ private extension ClassCoordinator {
       else { return .none }
       overview.registrationStartDate = startDate
       overview.expirationDate = endDate
+      overview.ticket = registered.ticket
       state.routes[screenAt: routeID - 1] = .ticket(overview)
       if routeID >= 3,
          case var .ticket(original) = state.routes[routeID - 2].screen,
@@ -548,6 +549,7 @@ private extension ClassCoordinator {
       {
         original.registrationStartDate = startDate
         original.expirationDate = endDate
+        original.ticket = registered.ticket
         state.routes[screenAt: routeID - 2] = .ticket(original)
       }
       return .none
@@ -557,7 +559,9 @@ private extension ClassCoordinator {
             case let .ticket(overview)? = state.routes.last?.screen,
             overview.phase == .overview
       else { return .none }
-      state.routes.push(.ticket(.init(instanceID: uuid())))
+      var registration = ClassTicketFeature.State(instanceID: uuid())
+      registration.shouldCheckExistingTicket = false
+      state.routes.push(.ticket(registration))
       return .none
 
     case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):
@@ -687,8 +691,8 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .battlePreview(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
-    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(question, filter)))):
-      state.routes.push(.setting(.init(aiQuestion: question, filter: filter, instanceID: uuid())))
+    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(version, filter)))):
+      state.routes.push(.setting(.init(topicVersion: version, filter: filter, instanceID: uuid())))
       return .none
 
     case let .routeAction(routeID, action: .setting(.delegate(.editDeadline(instanceID)))):
@@ -1217,6 +1221,7 @@ private extension ClassCoordinator {
         var overview = previous
         overview.registrationStartDate = startDate
         overview.expirationDate = endDate
+        overview.ticket = completed.ticket
         state.routes[screenAt: routeID - 1] = .ticket(overview)
         if routeID >= 3,
            case var .ticket(original) = state.routes[routeID - 2].screen,
@@ -1224,6 +1229,7 @@ private extension ClassCoordinator {
         {
           original.registrationStartDate = startDate
           original.expirationDate = endDate
+          original.ticket = completed.ticket
           state.routes[screenAt: routeID - 2] = .ticket(original)
         }
         return .none
@@ -1231,6 +1237,7 @@ private extension ClassCoordinator {
 
       var overview = ClassTicketFeature.State(instanceID: uuid())
       overview.phase = .overview
+      overview.ticket = completed.ticket
       overview.registrationStartDate = startDate
       overview.expirationDate = endDate
       state.routes.push(.ticket(overview))
