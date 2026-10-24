@@ -44,6 +44,18 @@ extension ClassAIChatUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassDebateUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassDebateInterface {
+    ClassDebateUseCaseImpl()
+  }
+}
+
+extension ClassAIRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassAIRepositoryInterface {
+    ClassAIRepositoryImpl()
+  }
+}
+
 extension ClassAIFeedbackUseCaseDependency: DependencyKey {
   public static var liveValue: any ClassAIFeedbackInterface {
     ClassAIFeedbackUseCaseImpl()
