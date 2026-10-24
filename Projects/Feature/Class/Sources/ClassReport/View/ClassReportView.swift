@@ -31,7 +31,7 @@ public struct ClassReportView: View {
       reportTitle()
         .padding(.vertical, 12)
       if store.sourceViewState == .failed {
-        PickeRetryErrorView(message: "리포트를 불러오지 못했어요") { send(.retryTapped) }
+        PickeRetryErrorView(message: store.sourceError?.message ?? "리포트를 불러오지 못했어요") { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if store.sourceViewState == .loading {
         sourceSkeleton()
@@ -161,7 +161,13 @@ private extension ClassReportView {
     case .pending:
       unavailableReport(title: "생각을 정리하고 있어요", message: "잠시 뒤 다시 확인해 주세요.")
     case .failure:
-      unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "서버에서 피드백을 준비하지 못했어요.")
+      if store.feedbackError == .resultExpired {
+        unavailableReport(title: "결과 열람 기간이 끝났어요", message: "이용권 종료 후 열람 기간을 확인해 주세요.")
+      } else if store.feedbackError == .accessDenied {
+        unavailableReport(title: "피드백을 볼 권한이 없어요", message: "클래스 참여 상태를 확인해 주세요.")
+      } else {
+        unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "서버에서 피드백을 준비하지 못했어요.")
+      }
     case .unavailable:
       unavailableReport(title: "AI 피드백을 사용할 수 없어요", message: "참여 결과를 확인해 주세요.")
     case .ready:

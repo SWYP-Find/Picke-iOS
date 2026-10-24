@@ -21,6 +21,7 @@ public struct ClassReportFeature {
     public var classResult: ClassResult?
     public var selectedTab: ClassReportTab = .summary
     public var sourceViewState: ClassReportSourceViewState = .loading
+    public var sourceError: ClassError?
     public var requestID: UUID?
     public var feedback: ClassAIPersonalFeedback?
     public var feedbackContext: ClassAIFeedbackContext?
@@ -183,6 +184,7 @@ extension ClassReportFeature {
     switch action {
     case .fetch:
       state.classResult = nil
+      state.sourceError = nil
       state.feedbackRequestID = nil
       state.feedback = nil
       state.feedbackContext = nil
@@ -252,10 +254,12 @@ extension ClassReportFeature {
       switch result {
       case let .success(classResult):
         state.classResult = classResult
+        state.sourceError = nil
         state.sourceViewState = .ready
         return classResult.myReportState == nil ? .none : .send(.async(.generateFeedback))
-      case .failure:
+      case let .failure(error):
         state.classResult = nil
+        state.sourceError = error
         state.sourceViewState = .failed
         return .none
       }

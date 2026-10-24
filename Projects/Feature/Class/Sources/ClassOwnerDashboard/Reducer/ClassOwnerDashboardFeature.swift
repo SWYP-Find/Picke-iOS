@@ -66,6 +66,7 @@ public struct ClassOwnerDashboardFeature {
     public var report: ClassReport?
     public var metrics: ClassParticipationMetrics?
     public var sourceViewState: ClassOwnerDashboardSourceViewState = .loading
+    public var sourceError: ClassError?
     public var requestID: UUID?
     @Presents public var management: ClassModalFeature.State?
 
@@ -427,6 +428,7 @@ extension ClassOwnerDashboardFeature {
       let requestID = uuid()
       state.requestID = requestID
       state.sourceViewState = .loading
+      state.sourceError = nil
       let fetch = Effect<Action>.run { [
         classResultUseCase,
         instanceID = state.instanceID,
@@ -521,6 +523,7 @@ extension ClassOwnerDashboardFeature {
       switch result {
       case let .success(classResult):
         state.classResult = classResult
+        state.sourceError = nil
         state.sourceViewState = .ready
         switch (classResult.insightState != nil, classResult.myReportState != nil) {
         case (true, true):
@@ -535,8 +538,9 @@ extension ClassOwnerDashboardFeature {
         case (false, false):
           return .none
         }
-      case .failure:
+      case let .failure(error):
         state.classResult = nil
+        state.sourceError = error
         state.sourceViewState = .failed
       }
       return .none

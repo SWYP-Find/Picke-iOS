@@ -31,7 +31,7 @@ public struct ClassOwnerDashboardView: View {
       if store.sourceViewState == .loading {
         sourceSkeleton()
       } else if store.sourceViewState == .failed {
-        PickeRetryErrorView(message: "클래스 현황을 불러오지 못했어요") { send(.retryTapped) }
+        PickeRetryErrorView(message: store.sourceError?.message ?? "클래스 현황을 불러오지 못했어요") { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else {
         TabView(selection: $store.selectedTab.sending(\.view.tabSelected)) {
@@ -96,7 +96,13 @@ private extension ClassOwnerDashboardView {
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 인사이트를 불러오지 못했어요") { send(.insightRetryTapped) }
     case .failure:
-      unavailableContent("AI 인사이트를 표시할 수 없어요")
+      if store.insightError == .resultExpired {
+        unavailableContent("결과 열람 기간이 끝났어요")
+      } else if store.insightError == .accessDenied {
+        unavailableContent("인사이트를 볼 권한이 없어요")
+      } else {
+        unavailableContent("AI 인사이트를 표시할 수 없어요")
+      }
     case .unavailable:
       unavailableContent("AI 인사이트를 사용할 수 없어요")
     case .ready:
@@ -118,7 +124,13 @@ private extension ClassOwnerDashboardView {
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .failure:
-      unavailableContent("AI 피드백을 표시할 수 없어요")
+      if store.feedbackError == .resultExpired {
+        unavailableContent("결과 열람 기간이 끝났어요")
+      } else if store.feedbackError == .accessDenied {
+        unavailableContent("피드백을 볼 권한이 없어요")
+      } else {
+        unavailableContent("AI 피드백을 표시할 수 없어요")
+      }
     case .unavailable:
       unavailableContent("AI 피드백을 사용할 수 없어요")
     case .ready:

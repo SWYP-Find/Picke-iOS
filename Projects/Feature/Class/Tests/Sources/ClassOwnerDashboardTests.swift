@@ -388,6 +388,7 @@ struct ClassOwnerDashboardTests {
     await store.receive(\.async.fetchDashboard)
     await store.receive(\.inner.resultResponse)
     #expect(store.state.sourceViewState == .failed)
+    #expect(store.state.sourceError == .network("연결 실패"))
     await store.send(.view(.retryTapped))
     await store.receive(\.async.fetchDashboard)
     await store.receive(\.inner.resultResponse)

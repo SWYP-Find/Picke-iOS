@@ -160,5 +160,22 @@ struct ClassReportTests {
 
     #expect(store.state.sourceViewState == .failed)
     #expect(store.state.classResult == nil)
+    #expect(store.state.sourceError == .network("연결 실패"))
+  }
+
+  @Test
+  func 결과_열람_기간_만료는_일반_피드백_부족과_구분한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .failure(.resultExpired))
+    }
+    store.exhaustivity = .off
+    await store.send(.view(.onAppear))
+    await store.receive(\.async.fetch)
+    await store.receive(\.inner.resultResponse)
+    #expect(store.state.sourceError == .resultExpired)
   }
 }
