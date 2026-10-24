@@ -130,6 +130,8 @@ extension ProfileCoordinator {
         state.routes.push(.battleRecord(.init()))
       case .contentActivity:
         state.routes.push(.contentActivity(.init()))
+      case .ticketRegistration:
+        break
       case .noticeEvent:
         state.routes.push(.notice(.init()))
       }

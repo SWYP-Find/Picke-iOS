@@ -1,9 +1,5 @@
-//
-//  ClassTicketTests.swift
-//  ClassTests
-//
-
 @testable import Class
+import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 import PickeCoreUtility
@@ -12,187 +8,207 @@ import Testing
 @MainActor
 struct ClassTicketTests {
   @Test
-  func 유효한_Mock_코드는_확인_뒤_등록되고_서울_날짜를_표시한다() async throws {
-    let clock = TestClock()
-    let registeredAt = try #require("2026.10.09".date(as: .yearMonthDayDotted))
-    var state = ClassTicketFeature.State()
-    state.code = "PICKE30"
-    let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
-      $0.continuousClock = clock
-      $0.date = .constant(registeredAt)
+  func 진입_시_내_이용권이_있으면_개요를_표시한다() async {
+    let start = Date(timeIntervalSince1970: 1_780_000_000)
+    let end = Date(timeIntervalSince1970: 1_795_000_000)
+    let ticket = ClassTicket(
+      id: 3,
+      capacity: 30,
+      status: .active,
+      activatedAt: start,
+      expiresAt: end,
+      remainingDays: 162,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_797_592_000)
+    )
+    let store = TestStore(initialState: ClassTicketFeature.State()) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .success(ticket))
     }
 
-    await store.send(.view(.checkTapped)) {
+    await store.send(.view(.onAppear)) {
+      $0.shouldCheckExistingTicket = false
       $0.isChecking = true
     }
-    await clock.advance(by: .milliseconds(350))
-    await store.receive(\.checkResponse) {
+    await store.receive(\.myTicketResponse) {
       $0.isChecking = false
-      $0.phase = .registered
-      $0.registrationStartDate = registeredAt
-      $0.expirationDate = "2027.04.08".date(as: .yearMonthDayDotted)
+      $0.ticket = ticket
+      $0.registrationStartDate = start
+      $0.expirationDate = end
+      $0.phase = .overview
     }
-    await store.receive(\.delegate, .registered(
-      registeredAt,
-      try #require("2027.04.08".date(as: .yearMonthDayDotted))
-    ))
-    #expect(store.state.periodText == "2026.10.09 – 2027.04.08")
+    await store.send(.view(.onAppear))
   }
 
   @Test
-  func 유효하지_않은_코드는_입력_상태를_유지한다() async {
-    let clock = TestClock()
-    var state = ClassTicketFeature.State()
-    state.code = "WRONG"
-    let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
-      $0.continuousClock = clock
-      $0.date = .constant(Date(timeIntervalSince1970: 0))
+  func 등록된_이용권이_없으면_코드_입력_화면에_남는다() async {
+    let store = TestStore(initialState: ClassTicketFeature.State()) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .failure(.notFound))
     }
 
-    await store.send(.view(.checkTapped)) {
+    await store.send(.view(.onAppear)) {
+      $0.shouldCheckExistingTicket = false
       $0.isChecking = true
     }
-    await clock.advance(by: .milliseconds(350))
-    await store.receive(\.checkResponse) {
-      $0.isChecking = false
-      $0.errorMessage = "유효하지 않은 이용권 코드예요. 다시 확인해 주세요."
+    await store.receive(\.myTicketResponse) { $0.isChecking = false }
+    #expect(store.state.phase == .entry)
+    #expect(store.state.errorMessage == nil)
+    await store.send(.view(.onAppear))
+  }
+
+  @Test
+  func 만료된_이용권은_사용_중으로_표시하지_않는다() async {
+    let ticket = ClassTicket(
+      id: 3,
+      capacity: 15,
+      status: .expired,
+      activatedAt: Date(timeIntervalSince1970: 1_780_000_000),
+      expiresAt: Date(timeIntervalSince1970: 1_795_000_000),
+      remainingDays: 0,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_797_592_000)
+    )
+    let store = TestStore(initialState: ClassTicketFeature.State()) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .success(ticket))
     }
+
+    await store.send(.view(.onAppear)) {
+      $0.shouldCheckExistingTicket = false
+      $0.isChecking = true
+    }
+    await store.receive(\.myTicketResponse) {
+      $0.isChecking = false
+      $0.ticket = ticket
+      $0.registrationStartDate = ticket.activatedAt
+      $0.expirationDate = ticket.expiresAt
+      $0.phase = .overview
+    }
+    #expect(store.state.overviewTitle == "만료된 이용권")
+  }
+
+  @Test
+  func 추가_등록_화면은_기존_이용권을_다시_조회하지_않는다() async {
+    var state = ClassTicketFeature.State()
+    state.shouldCheckExistingTicket = false
+    let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .failure(.network("호출되면 안 됨")))
+    }
+
+    await store.send(.view(.onAppear))
     #expect(store.state.phase == .entry)
   }
 
   @Test
-  func 확인_중_코드를_바꾸면_이전_응답을_취소한다() async {
-    let clock = TestClock()
+  func 확인은_미리보기만_표시하고_등록은_서버_기간을_그대로_사용한다() async {
+    let start = Date(timeIntervalSince1970: 1_780_000_000)
+    let end = Date(timeIntervalSince1970: 1_795_000_000)
+    let preview = ClassTicketPreview(
+      capacity: 15,
+      registerBy: Date(timeIntervalSince1970: 1_800_000_000),
+      usageMonths: 6,
+      registeredByMe: false
+    )
+    let ticket = ClassTicket(
+      id: 3,
+      capacity: 15,
+      status: .active,
+      activatedAt: start,
+      expiresAt: end,
+      remainingDays: 162,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_797_592_000)
+    )
     var state = ClassTicketFeature.State()
-    state.code = "PICKE30"
+    state.code = "PICKE-AB12-CD34"
     let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
-      $0.continuousClock = clock
-      $0.date = .constant(Date(timeIntervalSince1970: 0))
+      $0.classTicketUseCase = TicketStub(preview: .success(preview), register: .success(ticket))
     }
 
-    await store.send(.view(.checkTapped)) {
-      $0.isChecking = true
-    }
-    await store.send(.binding(.set(\.code, "PICKE3"))) {
-      $0.code = "PICKE3"
-      $0.isChecking = false
-    }
-    await clock.advance(by: .milliseconds(350))
-    await store.finish(timeout: .seconds(1))
-    #expect(store.state.phase == .entry)
-  }
-
-  @Test
-  func 월말_등록은_서울_달력의_월_보정_정책을_따른다() async throws {
-    for (start, end) in [
-      ("2026.08.31", "2027.02.27"),
-      ("2027.08.31", "2028.02.28"),
-    ] {
-      let clock = TestClock()
-      let registeredAt = try #require(start.date(as: .yearMonthDayDotted))
-      var state = ClassTicketFeature.State()
-      state.code = "PICKE30"
-      let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
-        $0.continuousClock = clock
-        $0.date = .constant(registeredAt)
-      }
-
-      await store.send(.view(.checkTapped)) {
-        $0.isChecking = true
-      }
-      await clock.advance(by: .milliseconds(350))
-      await store.receive(\.checkResponse) {
-        $0.isChecking = false
-        $0.phase = .registered
-        $0.registrationStartDate = registeredAt
-        $0.expirationDate = end.date(as: .yearMonthDayDotted)
-      }
-      await store.receive(\.delegate, .registered(
-        registeredAt,
-        try #require(end.date(as: .yearMonthDayDotted))
-      ))
-      #expect(store.state.periodText == "\(start) – \(end)")
-    }
-  }
-
-  @Test
-  func 밤_열한시_오십구분에_등록해도_서울_기준_당일부터_계산한다() async throws {
-    let clock = TestClock()
-    let registeredAt = try #require(AppDateFormat.calendar.date(from: DateComponents(
-      year: 2026,
-      month: 10,
-      day: 18,
-      hour: 23,
-      minute: 59
-    )))
-    var state = ClassTicketFeature.State()
-    state.code = "PICKE30"
-    let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
-      $0.continuousClock = clock
-      $0.date = .constant(registeredAt)
-    }
-
-    await store.send(.view(.checkTapped)) {
-      $0.isChecking = true
-    }
-    await clock.advance(by: .milliseconds(350))
+    await store.send(.view(.checkTapped)) { $0.isChecking = true }
     await store.receive(\.checkResponse) {
       $0.isChecking = false
-      $0.phase = .registered
-      $0.registrationStartDate = "2026.10.18".date(as: .yearMonthDayDotted)
-      $0.expirationDate = "2027.04.17".date(as: .yearMonthDayDotted)
+      $0.preview = preview
+      $0.phase = .preview
     }
-    await store.receive(\.delegate, .registered(
-      try #require("2026.10.18".date(as: .yearMonthDayDotted)),
-      try #require("2027.04.17".date(as: .yearMonthDayDotted))
-    ))
-    #expect(store.state.periodText == "2026.10.18 – 2027.04.17")
-  }
-
-  @Test
-  func 등록_완료_확인은_이용_기간을_개요_경로로_전달한다() async throws {
-    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
-    let end = try #require("2027.04.08".date(as: .yearMonthDayDotted))
-    var state = ClassTicketFeature.State()
-    state.phase = .registered
-    state.registrationStartDate = start
-    state.expirationDate = end
-    let store = TestStore(initialState: state) { ClassTicketFeature() }
-
+    #expect(store.state.ticket == nil)
+    #expect(store.state.capacity == 15)
+    await store.send(.view(.confirmTapped)) { $0.isChecking = true }
+    await store.receive(\.registrationResponse) {
+      $0.isChecking = false
+      $0.ticket = ticket
+      $0.phase = .registered
+      $0.registrationStartDate = start
+      $0.expirationDate = end
+    }
+    await store.receive(\.delegate, .registered(start, end))
+    #expect(store.state.periodText == "\(start.formatted(.yearMonthDayDotted)) – \(end.formatted(.yearMonthDayDotted))")
     await store.send(.view(.confirmTapped))
     await store.receive(\.delegate, .registrationConfirmed(startDate: start, endDate: end))
-    #expect(store.state.navigationTitle == "이용권 등록하기")
   }
 
   @Test
-  func 미등록_또는_기간이_없는_상태에서는_개요로_이동하지_않는다() async throws {
-    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
-    for phase in [ClassTicketPhase.entry, .registered, .overview] {
-      var state = ClassTicketFeature.State()
-      state.phase = phase
-      state.registrationStartDate = start
-      let store = TestStore(initialState: state) { ClassTicketFeature() }
+  func 이미_등록한_코드는_내_이용권_조회로_이동한다() async {
+    let start = Date(timeIntervalSince1970: 1_780_000_000)
+    let end = Date(timeIntervalSince1970: 1_795_000_000)
+    let preview = ClassTicketPreview(
+      capacity: 30,
+      registerBy: Date(timeIntervalSince1970: 1_800_000_000),
+      usageMonths: 6,
+      registeredByMe: true
+    )
+    let ticket = ClassTicket(
+      id: 3,
+      capacity: 30,
+      status: .active,
+      activatedAt: start,
+      expiresAt: end,
+      remainingDays: 162,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_797_592_000)
+    )
+    var state = ClassTicketFeature.State()
+    state.code = "PICKE-AB12-CD34"
+    let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(preview: .success(preview), myTicket: .success(ticket))
+    }
 
-      await store.send(.view(.confirmTapped))
-      await store.finish()
+    await store.send(.view(.checkTapped)) { $0.isChecking = true }
+    await store.receive(\.checkResponse) { $0.preview = preview }
+    await store.receive(\.myTicketResponse) {
+      $0.isChecking = false
+      $0.ticket = ticket
+      $0.phase = .overview
+      $0.registrationStartDate = start
+      $0.expirationDate = end
     }
   }
 
   @Test
-  func 개요에서만_추가등록을_요청하고_뒤로가기는_별도_종료를_요청한다() async throws {
-    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
-    let end = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+  func 서버_거절_사유를_보여주고_등록을_막는다() async {
     var state = ClassTicketFeature.State()
-    state.phase = .overview
-    state.registrationStartDate = start
-    state.expirationDate = end
-    let store = TestStore(initialState: state) { ClassTicketFeature() }
+    state.code = "EXPIRED"
+    let store = TestStore(initialState: state) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(preview: .failure(.registrationExpired))
+    }
 
-    #expect(store.state.navigationTitle == "클래스 이용권")
-    #expect(store.state.periodText == "2026.10.09 – 2027.04.08")
-    await store.send(.view(.addRegistrationTapped))
-    await store.receive(\.delegate, .addRegistrationRequested)
-    await store.send(.view(.backTapped))
-    await store.receive(\.delegate, .dismiss)
+    await store.send(.view(.checkTapped)) { $0.isChecking = true }
+    await store.receive(\.checkResponse) {
+      $0.isChecking = false
+      $0.errorMessage = ClassTicketError.registrationExpired.message
+    }
+    #expect(store.state.phase == .entry)
+  }
+}
+
+private struct TicketStub: ClassTicketInterface {
+  var preview: Result<ClassTicketPreview, ClassTicketError> = .failure(.invalidCode)
+  var register: Result<ClassTicket, ClassTicketError> = .failure(.invalidCode)
+  var myTicket: Result<ClassTicket, ClassTicketError> = .failure(.notFound)
+
+  func preview(code _: String) async throws -> ClassTicketPreview {
+    try preview.get()
+  }
+
+  func register(code _: String) async throws -> ClassTicket {
+    try register.get()
+  }
+
+  func fetchMyTicket() async throws -> ClassTicket {
+    try myTicket.get()
   }
 }

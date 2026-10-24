@@ -23,6 +23,8 @@ public struct ProfileCoordinatorView: View {
       switch screen.case {
       case let .profile(profileStore):
         ProfileView(store: profileStore)
+      case let .ticket(ticketStore):
+        ClassTicketView(store: ticketStore)
       case let .pointHistory(pointHistoryStore):
         PointHistoryView(store: pointHistoryStore)
       case let .settings(settingsStore):
