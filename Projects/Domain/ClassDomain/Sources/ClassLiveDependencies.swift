@@ -56,10 +56,30 @@ extension ClassAIChatUseCaseDependency: DependencyKey {
   }
 }
 
+extension ClassDebateUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassDebateInterface {
+    ClassDebateUseCaseImpl()
+  }
+}
+
+extension ClassAIRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassAIRepositoryInterface {
+    ClassAIRepositoryImpl()
+  }
+}
+
 extension ClassAIFeedbackUseCaseDependency: DependencyKey {
   public static var liveValue: any ClassAIFeedbackInterface {
     ClassAIFeedbackUseCaseImpl()
   }
+}
+
+extension ClassResultUseCaseDependency: DependencyKey {
+  public static var liveValue: any ClassResultInterface { ClassResultUseCaseImpl() }
+}
+
+extension ClassResultRepositoryDependency: DependencyKey {
+  public static var liveValue: any ClassResultInterface { ClassResultRepositoryImpl() }
 }
 
 extension ClassTopicDraftUseCaseDependency: DependencyKey {
@@ -72,19 +92,6 @@ extension ClassTopicDraftRepositoryDependency: DependencyKey {
 
 extension ClassRepositoryDependency: DependencyKey {
   public static var liveValue: any ClassInterface {
-    ClassLiveRepository(
-      mock: ClassMockRepositoryStorage.shared,
-      api: ClassRepositoryImpl()
-    )
+    ClassLiveRepository(api: ClassRepositoryImpl())
   }
-}
-
-extension ClassMockRepositoryDependency: DependencyKey {
-  public static var liveValue: MockClassRepository? {
-    ClassMockRepositoryStorage.shared
-  }
-}
-
-private enum ClassMockRepositoryStorage {
-  static let shared = MockClassRepository()
 }

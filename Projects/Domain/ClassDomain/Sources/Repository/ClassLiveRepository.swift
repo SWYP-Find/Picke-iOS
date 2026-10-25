@@ -1,9 +1,8 @@
 import ClassDomainInterface
 import Foundation
 
-/// 아직 서버에 연결되지 않은 리포트 기능만 공유 목 상태를 유지한다.
+/// 운영 경로에서는 서버에 연결되지 않은 기능을 성공으로 가장하지 않는다.
 struct ClassLiveRepository: ClassInterface {
-  let mock: any ClassInterface
   let api: any ClassInterface
 
   func fetchMyClasses() async throws -> [ClassRoom] {
@@ -47,10 +46,10 @@ struct ClassLiveRepository: ClassInterface {
   }
 
   func fetchReport(roomID: Int) async throws -> ClassReport? {
-    try await mock.fetchReport(roomID: roomID)
+    try await api.fetchReport(roomID: roomID)
   }
 
   func fetchOwnerDashboard(roomID: Int) async throws -> ClassOwnerDashboardData? {
-    try await mock.fetchOwnerDashboard(roomID: roomID)
+    try await api.fetchOwnerDashboard(roomID: roomID)
   }
 }

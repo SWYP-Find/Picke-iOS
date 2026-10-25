@@ -95,7 +95,6 @@ public struct ClassDetailFeature {
   }
 
   @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMockRepository) private var classMockRepository
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -183,13 +182,6 @@ extension ClassDetailFeature {
       guard state.canParticipateInBattle else { return .none }
       if state.room.status == .closed {
         return .send(.delegate(.openClosedBattle(state.room)))
-      }
-      if classMockRepository == nil {
-        state.customAlert = .alert(
-          title: "배틀을 준비하고 있어요",
-          message: "이 클래스의 배틀은 아직 참여할 수 없어요."
-        )
-        return .none
       }
       return .send(.delegate(.openBattle(state.room)))
     case .reportTapped:
