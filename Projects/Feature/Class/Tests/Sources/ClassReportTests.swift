@@ -64,6 +64,17 @@ struct ClassReportTests {
   }
 
   @Test
+  func 서버_결과_표시값은_State에서_계산한다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety)
+    state.classResult = result(room: .mockClosedSociety, reportState: "SUCCEEDED")
+    #expect(state.serverActiveMemberCount == "12")
+    #expect(state.serverCompletedCount == "10")
+    #expect(state.serverPostVoteCount == "11")
+    #expect(state.serverParticipationSummary == "참여율 83.3% · 의견 작성률 75.0%")
+    #expect(state.serverOptionCounts[state.classResult!.stats.options[0].id] == "사전 8 · 사후 6")
+  }
+
+  @Test
   func 뒤로가기와_닫기는_리포트를_닫는다() async {
     let state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
     let backStore = TestStore(initialState: state) { ClassReportFeature() }
@@ -95,6 +106,29 @@ struct ClassReportTests {
     #expect(store.state.sourceViewState == .ready)
     #expect(store.state.feedback == nil)
     #expect(store.state.report == nil)
+  }
+
+  @Test
+  func 레거시_리포트_응답도_개인_결과_권한이_없으면_AI를_조회하지_않는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let requestID = UUID()
+    var state = ClassReportFeature.State(room: room, instanceID: UUID())
+    state.requestID = requestID
+    state.classResult = result(room: room, reportState: nil)
+    let report = MockClassReport.figma
+    let store = TestStore(initialState: state) { ClassReportFeature() }
+
+    await store.send(.inner(.reportResponse(
+      instanceID: state.instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(report)
+    ))) {
+      $0.requestID = nil
+      $0.report = report
+      $0.sourceViewState = .ready
+    }
+    await store.finish()
   }
 
   @Test
@@ -142,6 +176,32 @@ struct ClassReportTests {
     #expect(store.state.myOpinionsButtonTitle == "내가 남긴 의견 보기")
     await store.send(.view(.myOpinionsTapped))
     await store.receive(\.delegate.openMyOpinions)
+  }
+
+  @Test
+  func 대기_중인_개인_피드백을_다시_확인하면_완료_결과를_받는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: "완료",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: ""
+    )
+    var state = ClassReportFeature.State(room: room, instanceID: UUID())
+    state.classResult = result(room: room, reportState: "PENDING")
+    state.sourceViewState = .ready
+    state.feedbackError = .modelNotReady
+    let store = TestStore(initialState: state) { ClassReportFeature() } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .success(state.classResult!), feedback: feedback)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.feedbackRetryTapped))
+    await store.receive(\.async.generateFeedback)
+    await store.receive(\.inner.feedbackResponse)
+    #expect(store.state.feedbackViewState == .ready(feedback))
   }
 
   @Test

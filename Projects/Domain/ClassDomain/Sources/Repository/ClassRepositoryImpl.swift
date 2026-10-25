@@ -128,15 +128,11 @@ public struct ClassRepositoryImpl: ClassInterface {
 
   private static func classError(_ error: Error) -> ClassError {
     guard let networkError = error as? PickeNetworkError else { return ClassError.from(error) }
-    if case let .response(response) = networkError {
-      switch response.code {
-      case "CLASS_404_CODE": return .invalidCode
-      case "CLASS_409_CLOSED", "CLASS_409_TICKET_ENDED": return .closed
-      case "CLASS_409_JOINED": return .alreadyJoined
-      case "CLASS_409_NAME": return .duplicateName
-      default: return .network(response.message ?? "클래스 요청을 처리하지 못했습니다.")
-      }
-    }
-    return ClassError.from(networkError)
+    guard case let .response(response) = networkError else { return ClassError.from(networkError) }
+    return ClassErrorMapper.map(
+      code: response.code,
+      message: response.message,
+      fallback: "클래스 요청을 처리하지 못했습니다."
+    )
   }
 }

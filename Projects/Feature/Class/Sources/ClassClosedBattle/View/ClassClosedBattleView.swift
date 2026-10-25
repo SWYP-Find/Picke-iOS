@@ -51,28 +51,20 @@ private extension ClassClosedBattleView {
 
   @ViewBuilder
   func artwork(width: CGFloat, height: CGFloat) -> some View {
-    Group {
-      if store.room.id == ClassRoom.mockClosedSociety.id {
-        Image(asset: .classClosedBattle)
-          .resizable()
-          .scaledToFill()
-      } else {
-        remoteArtwork
+    remoteArtwork
+      .frame(width: width, height: height)
+      .clipped()
+      .overlay {
+        LinearGradient(
+          stops: [
+            .init(color: .clear, location: 0.52),
+            .init(color: .white, location: 1),
+          ],
+          startPoint: .top,
+          endPoint: .bottom
+        )
       }
-    }
-    .frame(width: width, height: height)
-    .clipped()
-    .overlay {
-      LinearGradient(
-        stops: [
-          .init(color: .clear, location: 0.52),
-          .init(color: .white, location: 1),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-    }
-    .accessibilityHidden(true)
+      .accessibilityHidden(true)
   }
 
   var remoteArtwork: some View {

@@ -52,6 +52,7 @@ struct ClassDetailDataDTO: Decodable, Sendable {
   let memberCount: Int
   let capacity: Int
   let deadline: String?
+  let ticketExpiresAt: String
   let closeAt: String
   let closed: Bool
   let commentRequired: Bool
@@ -77,7 +78,8 @@ struct ClassDetailDataDTO: Decodable, Sendable {
       requiresComment: commentRequired,
       ownerParticipates: ownerParticipates,
       memberCapacity: capacity,
-      battleType: battleType
+      battleType: battleType,
+      ticketExpiresAt: try ticketExpiresAt.classDate()
     )
   }
 }

@@ -78,11 +78,11 @@ private extension ClassReportView {
           sectionHeading("클래스 참여 결과")
           reportCard {
             HStack(spacing: 0) {
-              activityCount("\(result.stats.activeMemberCount)", label: "참여 멤버")
+              activityCount(store.serverActiveMemberCount, label: "참여 멤버")
               Rectangle().fill(.beige600).frame(width: 1, height: 38)
-              activityCount("\(result.stats.completedCount)", label: "완료")
+              activityCount(store.serverCompletedCount, label: "완료")
               Rectangle().fill(.beige600).frame(width: 1, height: 38)
-              activityCount("\(result.stats.postVoteCount)", label: "사후투표")
+              activityCount(store.serverPostVoteCount, label: "사후투표")
             }
             Text(store.serverParticipationSummary)
             .pretendardFont(.regular13)
@@ -99,7 +99,7 @@ private extension ClassReportView {
                   .pretendardFont(.semiBold13)
                   .foregroundStyle(.gray800)
                 Spacer()
-                Text("사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)")
+                Text(store.serverOptionCounts[option.id] ?? "")
                   .pretendardFont(.regular13)
                   .foregroundStyle(.gray700)
               }
@@ -156,7 +156,13 @@ private extension ClassReportView {
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .pending:
-      unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
+      VStack(alignment: .leading, spacing: 12) {
+        unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
+        Button("다시 확인") { send(.feedbackRetryTapped) }
+          .pretendardFont(.semiBold13)
+          .foregroundStyle(.primary500)
+          .buttonStyle(.plain)
+      }
     case .failure:
       unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
     case .unavailable:
@@ -197,7 +203,9 @@ private extension ClassReportView {
           .foregroundStyle(.gray800)
           .lineLimit(2)
           .frame(minHeight: 31)
-        Text(store.deadlineText)
+        Text(store.room.deadline == .distantFuture
+          ? "마감일 없음"
+          : store.room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지")
           .pretendardFont(.regular13)
           .foregroundStyle(.gray300)
           .frame(minHeight: 18)

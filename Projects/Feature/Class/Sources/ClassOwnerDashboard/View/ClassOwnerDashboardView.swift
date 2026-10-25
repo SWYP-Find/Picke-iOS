@@ -92,7 +92,9 @@ private extension ClassOwnerDashboardView {
       }
       .accessibilityLabel("AI 인사이트를 불러오는 중")
     case .pending:
-      unavailableContent(store.insightStatusMessage)
+      pendingContent(store.insightStatusMessage) {
+        send(.insightRetryTapped)
+      }
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 인사이트를 불러오지 못했어요") { send(.insightRetryTapped) }
     case .failure:
@@ -114,7 +116,9 @@ private extension ClassOwnerDashboardView {
       }
       .accessibilityLabel("AI 피드백을 불러오는 중")
     case .pending:
-      unavailableContent(store.feedbackStatusMessage)
+      pendingContent(store.feedbackStatusMessage) {
+        send(.feedbackRetryTapped)
+      }
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .failure:
@@ -439,6 +443,11 @@ private extension ClassOwnerDashboardView {
             } else {
               feedbackStatus()
             }
+            if store.canOpenMyOpinions {
+              myOpinionsButton
+                .padding(16)
+                .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+            }
           }
         }
       } else {
@@ -573,7 +582,6 @@ private extension ClassOwnerDashboardView {
         Text(feedback.evidence[index].quote ?? feedback.evidence[index].content)
           .pretendardFont(.regular13)
       }
-      myOpinionsButton
     }
     .padding(16)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
@@ -684,6 +692,19 @@ private extension ClassOwnerDashboardView {
       .frame(minHeight: 88)
       .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
       .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+  }
+
+  func pendingContent(
+    _ message: String,
+    retry: @escaping () -> Void
+  ) -> some View {
+    VStack(spacing: 10) {
+      unavailableContent(message)
+      Button("다시 확인", action: retry)
+        .pretendardFont(.semiBold13)
+        .foregroundStyle(.primary500)
+        .buttonStyle(.plain)
+    }
   }
 
   func participationRow(

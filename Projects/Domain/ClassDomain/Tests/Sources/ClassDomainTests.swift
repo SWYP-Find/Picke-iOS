@@ -13,16 +13,6 @@ import Testing
 
 struct ClassDomainTests {
   @Test
-  func live_저장소는_mock_클래스를_반환하지_않는다() async throws {
-    do {
-      _ = try await ClassRepositoryImpl().fetchMyClasses()
-      Issue.record("live 저장소가 서버 연결 없이 클래스 목록을 반환함")
-    } catch {
-      #expect(ClassError.from(error) == .network("클래스 서버 API가 연결되지 않았습니다."))
-    }
-  }
-
-  @Test
   func useCase는_주입된_repository를_사용한다() async throws {
     let room = ClassRoom.mocks[0]
     let useCase = withDependencies {

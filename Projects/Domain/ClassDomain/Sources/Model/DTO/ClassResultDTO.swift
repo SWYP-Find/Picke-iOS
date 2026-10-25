@@ -11,8 +11,8 @@ struct ClassResultDTO: Decodable, Sendable {
       let postVoteCount: Int
       let postVoteRatio: Double
 
-      func toDomain() -> ClassResult.Option {
-        ClassResult.Option(
+      func toDomain() -> ClassResultOption {
+        ClassResultOption(
           id: optionId,
           title: title,
           preVoteCount: preVoteCount,
@@ -30,8 +30,8 @@ struct ClassResultDTO: Decodable, Sendable {
     let postVoteCount: Int
     let options: [Option]
 
-    func toDomain() -> ClassResult.Stats {
-      ClassResult.Stats(
+    func toDomain() -> ClassResultStats {
+      ClassResultStats(
         activeMemberCount: activeMemberCount,
         completedCount: completedCount,
         participationRate: participationRate,
@@ -51,7 +51,7 @@ struct ClassResultDTO: Decodable, Sendable {
   let insightState: String?
 
   func toDomain() throws -> ClassResult {
-    guard let closeAt = closeAt.date(as: .serverDateTime) else {
+    guard let closeAt = ServerDateParser.parse(closeAt) else {
       throw ClassError.network("클래스 마감일을 읽을 수 없습니다.")
     }
     return ClassResult(

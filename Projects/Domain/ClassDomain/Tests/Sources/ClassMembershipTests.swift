@@ -246,7 +246,7 @@ struct ClassMembershipTests {
   }
 
   @Test
-  func 유스케이스는_탈퇴_ID와_오류를_전달하고_라이브_저장소는_미연결_오류를_반환한다() async throws {
+  func 유스케이스는_탈퇴_ID와_오류를_전달한다() async throws {
     let room = ClassRoom.mockClosedSociety
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
     let useCase = withDependencies {
@@ -262,11 +262,5 @@ struct ClassMembershipTests {
     }
     try await useCase.leaveClass(id: room.id)
     #expect(try await repository.fetchMyClasses().isEmpty)
-    do {
-      try await ClassRepositoryImpl().leaveClass(id: room.id)
-      Issue.record("서버 API 없이 라이브 탈퇴가 성공했습니다")
-    } catch {
-      #expect(error as? ClassError == .network("클래스 서버 API가 연결되지 않았습니다."))
-    }
   }
 }

@@ -35,18 +35,6 @@ public struct ClassReportFeature {
       sourceError?.message ?? "리포트를 불러오지 못했어요"
     }
 
-    public var serverParticipationSummary: String {
-      guard let stats = classResult?.stats else { return "" }
-      return "참여율 \(stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
-        + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
-    }
-
-    public var deadlineText: String {
-      room.deadline == .distantFuture
-        ? "마감일 없음"
-        : room.deadline.formatted(.dottedDateTimeWithWeekday) + "까지"
-    }
-
     public var serverFeedbackAvailabilityMessage: String {
       guard let closeAt = classResult?.closeAt else { return "" }
       return "\(closeAt.formatted(.dottedDateTimeWithWeekday)) 이후 제공돼요."
@@ -71,6 +59,23 @@ public struct ClassReportFeature {
         if feedbackError == .accessDenied { return "클래스 참여 상태를 확인해 주세요." }
         return "서버에서 피드백을 준비하지 못했어요."
       default: return "참여 결과를 확인해 주세요."
+      }
+    }
+
+    public var serverActiveMemberCount: String { String(classResult?.stats.activeMemberCount ?? 0) }
+    public var serverCompletedCount: String { String(classResult?.stats.completedCount ?? 0) }
+    public var serverPostVoteCount: String { String(classResult?.stats.postVoteCount ?? 0) }
+
+    public var serverParticipationSummary: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "참여율 \(stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
+        + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
+    public var serverOptionCounts: [Int: String] {
+      guard let options = classResult?.stats.options else { return [:] }
+      return options.reduce(into: [:]) { values, option in
+        values[option.id] = "사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)"
       }
     }
 
@@ -316,10 +321,12 @@ extension ClassReportFeature {
       switch result {
       case let .success(report):
         state.report = report
+        state.sourceError = nil
         state.sourceViewState = .ready
-        return .send(.async(.generateFeedback))
-      case .failure:
+        return state.classResult?.myReportState == nil ? .none : .send(.async(.generateFeedback))
+      case let .failure(error):
         state.report = nil
+        state.sourceError = error
         state.sourceViewState = .failed
       }
       return .none
