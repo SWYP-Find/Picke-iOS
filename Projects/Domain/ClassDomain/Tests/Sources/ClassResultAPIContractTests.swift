@@ -22,11 +22,15 @@ struct ClassResultAPIContractTests {
   }
 
   @Test
-  func 결과_리포트_인사이트_경로를_분리한다() {
+  func 결과_리포트_인사이트_경로를_분리한다() throws {
     #expect(ClassResultService.result(5).path == "classes/5/result")
     #expect(ClassResultService.myReport(5).path == "classes/5/result/my-report")
     #expect(ClassResultService.insight(5).path == "classes/5/result/insight")
     #expect(ClassResultService.retryInsight(5).path == "classes/5/result/insight/retry")
+    #expect(try ClassResultService.result(5).url().path == "/api/v1/classes/5/result")
+    #expect(try ClassResultService.myReport(5).url().path == "/api/v1/classes/5/result/my-report")
+    #expect(try ClassResultService.insight(5).url().path == "/api/v1/classes/5/result/insight")
+    #expect(try ClassResultService.retryInsight(5).url().path == "/api/v1/classes/5/result/insight/retry")
   }
 
 
