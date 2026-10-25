@@ -74,6 +74,42 @@ struct ClassRecommendTests {
   }
 
   @Test
+  func 생성_중_조회_실패_후_재시도는_새_생성_대신_기존_초안을_조회한다() async {
+    let generating = ClassTopicDraft(
+      id: topicDraft.id,
+      topicSeed: topicDraft.topicSeed,
+      difficulty: topicDraft.difficulty,
+      categories: topicDraft.categories,
+      suggestStatus: "GENERATING",
+      clarificationMessage: nil,
+      batchNo: topicDraft.batchNo,
+      remainingSuggestions: topicDraft.remainingSuggestions,
+      remainingValidations: topicDraft.remainingValidations,
+      candidates: [],
+      latestVersion: nil
+    )
+    var state = ClassRecommendFeature.State(filter: .init(), mode: .aiQuestions)
+    state.draft = generating
+    state.viewState = .error
+    let completed = topicDraft
+    let store = TestStore(initialState: state) { ClassRecommendFeature() } withDependencies: {
+      $0.classTopicDraftUseCase = StubTopicDraftUseCase(draft: completed, version: topicVersion)
+    }
+
+    await store.send(.view(.retryTapped))
+    await store.receive(\.async, .poll(draftID: generating.id)) {
+      $0.isLoading = true
+      $0.viewState = .loading
+    }
+    await store.receive(\.inner, .draft(.success(completed))) {
+      $0.isLoading = false
+      $0.draft = completed
+      $0.questions = completed.candidates.compactMap(ClassAIQuestion.init(candidate:))
+      $0.viewState = .loaded
+    }
+  }
+
+  @Test
   func 화면이_뜨면_조건에_맞는_추천_배틀을_불러온다() async {
     let store = TestStore(initialState: ClassRecommendFeature.State(filter: .init(level: .middle))) {
       ClassRecommendFeature()
@@ -265,9 +301,22 @@ private struct StubTopicDraftUseCase: ClassTopicDraftInterface {
 
   func create(filter: ClassTopicFilter) async throws -> ClassTopicDraft { draft }
   func fetch(id: Int) async throws -> ClassTopicDraft { draft }
-  func suggest(id: Int, filter: ClassTopicFilter?) async throws -> ClassTopicDraft { draft }
-  func select(draftID: Int, batchNo: Int, candidateID: Int) async throws -> ClassTopicVersion { version }
-  func validate(draftID: Int, baseVersionID: Int, candidate: ClassTopicCandidate) async throws -> ClassTopicValidation {
+  func suggest(
+    id: Int,
+    filter: ClassTopicFilter?
+  ) async throws -> ClassTopicDraft { draft }
+
+  func select(
+    draftID: Int,
+    batchNo: Int,
+    candidateID: Int
+  ) async throws -> ClassTopicVersion { version }
+
+  func validate(
+    draftID: Int,
+    baseVersionID: Int,
+    candidate: ClassTopicCandidate
+  ) async throws -> ClassTopicValidation {
     ClassTopicValidation(valid: true, issues: [], validatedTopicVersionID: version.id, remainingValidations: 2, version: version)
   }
 }

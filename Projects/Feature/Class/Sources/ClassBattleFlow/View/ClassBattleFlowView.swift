@@ -15,13 +15,7 @@ public struct ClassBattleFlowView: View {
   public var body: some View {
     VStack(spacing: 0) {
       navigationBar
-      ScrollView {
-        VStack(alignment: .leading, spacing: 0) {
-          artwork
-          contentSection()
-        }
-      }
-      .scrollIndicators(.hidden)
+      scrollContent()
       footerSection()
     }
     .background { Color.white.ignoresSafeArea() }
@@ -32,16 +26,27 @@ public struct ClassBattleFlowView: View {
 }
 
 private extension ClassBattleFlowView {
+  @ViewBuilder
+  func scrollContent() -> some View {
+    ScrollView {
+      VStack(alignment: .leading, spacing: 0) {
+        artwork
+        contentSection()
+      }
+    }
+    .scrollIndicators(.hidden)
+  }
+
   var navigationBar: some View {
     PickeNavigationBar(
       onBack: { send(.backTapped) },
-      centerTitle: store.room.name
+      centerTitle: store.room?.name
     )
   }
 
   var artwork: some View {
     Group {
-      if let url = store.session?.battle.thumbnailURL ?? store.room.battle.thumbnailURL {
+      if let url = store.displayArtworkURL {
         AsyncImage(url: url) { image in
           image.resizable().scaledToFill()
         } placeholder: {
@@ -81,11 +86,11 @@ private extension ClassBattleFlowView {
   @ViewBuilder
   func titleSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
-      Text(store.session?.battle.title ?? store.room.battle.title)
+      Text(store.displayTitle)
         .pretendardFont(.bold24)
         .foregroundStyle(.gray800)
         .fixedSize(horizontal: false, vertical: true)
-      Text(store.session?.battle.summary ?? store.room.battle.summary)
+      Text(store.displaySummary)
         .pretendardFont(.bodyMedium)
         .foregroundStyle(.gray400)
         .fixedSize(horizontal: false, vertical: true)
@@ -317,6 +322,12 @@ private extension ClassBattleFlowView {
             .pretendardFont(.regular13)
             .foregroundStyle(.primary500)
             .frame(maxWidth: .infinity, alignment: .leading)
+          if store.isAudioStep, !store.isAudioReady {
+            Button("오디오 다시 시도") { send(.retryAudioTapped) }
+              .pretendardFont(.semiBold13)
+              .foregroundStyle(.primary500)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
         }
         Button(store.buttonTitle) { send(.submitTapped) }
           .ctaButtonStyle(.primary, size: .large, height: 52)

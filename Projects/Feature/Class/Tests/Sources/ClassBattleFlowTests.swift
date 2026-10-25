@@ -24,7 +24,7 @@ struct ClassBattleFlowTests {
     )
     let spy = ClassBattleFlowSpy()
     let player = ClassBattleFlowAudioPlayer(spy: spy)
-    let store = TestStore(initialState: .init(room: room)) {
+    let store = TestStore(initialState: battleState(room: room)) {
       ClassBattleFlowFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
@@ -51,17 +51,131 @@ struct ClassBattleFlowTests {
       $0.audioRequestID = nil
       $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
     }
+    await store.send(.view(.retryAudioTapped)) {
+      $0.audioRequestID = requestID
+      $0.errorMessage = nil
+    }
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL)))
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
     await store.finish()
     #expect(await spy.classIDs == [room.id])
     #expect(await spy.voteHistoryClassIDs == [room.id])
-    #expect(await spy.scenarioBattleIDs == [session.battle.id])
-    #expect(await spy.loadedURLs == [audioURL])
+    #expect(await spy.scenarioBattleIDs == [session.battle.id, session.battle.id])
+    #expect(await spy.loadedURLs == [audioURL, audioURL])
+  }
+
+  @Test
+  func 재진입하면_중단된_진행조회와_오디오_시간_관찰을_재개한다() async {
+    let spy = ClassBattleFlowSpy()
+    let player = ClassBattleFlowAudioPlayer(spy: spy)
+    let loadedSession = session(step: .none, commentRequired: true)
+    var state = battleState(room: .mocks[0])
+    state.session = loadedSession
+    state.viewState = .loading
+    let store = TestStore(initialState: state) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy, session: loadedSession)
+      $0.audioPlayer = player
+    }
+
+    await store.send(.view(.onAppear)) { $0.loadRequestID = requestID }
+    await store.receive(\.inner, .progressResponse(
+      requestID,
+      .success(.init(session: loadedSession, voteHistory: nil))
+    )) {
+      $0.loadRequestID = nil
+      $0.viewState = .loaded
+    }
+    await store.finish()
+    #expect(await spy.classIDs == [ClassRoom.mocks[0].id])
+
+    var audioState = battleState(room: .mocks[0])
+    audioState.session = session(step: .preVote, commentRequired: true)
+    audioState.viewState = .loaded
+    audioState.isAudioReady = true
+    audioState.isPlaying = true
+    audioState.isLoadingPerspectives = true
+    let audioStore = TestStore(initialState: audioState) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await audioStore.send(.view(.onDisappear)) {
+      $0.isPlaying = false
+      $0.isLoadingPerspectives = false
+    }
+    await audioStore.send(.view(.onAppear))
+    await audioStore.finish()
+    #expect(await spy.timeSubscriptions == 1)
+  }
+
+  @Test
+  func 다시듣기_중에도_진행률과_종료상태를_갱신한다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .preVote, commentRequired: true)
+    state.viewState = .loaded
+    state.isAudioReady = true
+    state.audioDuration = 30
+    state.hasListened = true
+    state.isPlaying = true
+    let store = TestStore(initialState: state) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.inner(.playerTimeUpdated(requestID, 15))) {
+      $0.currentTime = 15
+    }
+    await store.send(.inner(.playerTimeUpdated(requestID, 30))) {
+      $0.currentTime = 30
+      $0.isPlaying = false
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 의견_페이지_요청_취소_후_더보기를_다시_시도할_수_있다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.hasMorePerspectives = true
+    state.nextPerspectiveCursor = "next-page"
+    state.isLoadingPerspectives = true
+    state.perspectiveRequestID = requestID
+    let store = TestStore(initialState: state) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.view(.onDisappear)) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+    }
+    await store.send(.view(.loadMorePerspectivesTapped)) {
+      $0.perspectiveRequestID = requestID
+      $0.isLoadingPerspectives = true
+    }
+    await store.receive(\.inner, .perspectivePageResponse(requestID, .failure(.invalidResponse))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectiveErrorMessage = ClassBattleError.invalidResponse.message
+    }
+    await store.finish()
   }
 
   @Test
   func 클래스_API_실패는_오류_화면에_표시한다() async {
     let spy = ClassBattleFlowSpy()
-    let store = TestStore(initialState: .init(room: .mocks[0])) {
+    let store = TestStore(initialState: battleState(room: .mocks[0])) {
       ClassBattleFlowFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
@@ -81,7 +195,7 @@ struct ClassBattleFlowTests {
 
   @Test
   func 사전투표_후에는_오디오를_듣고_완료할_수_있다() {
-    var state = ClassBattleFlowFeature.State(room: .mocks[0], instanceID: UUID())
+    var state = battleState(room: .mocks[0])
     state.viewState = .loaded
     state.session = session(step: .preVote, commentRequired: true)
     state.voteHistory = ClassVoteHistory(
@@ -108,7 +222,7 @@ struct ClassBattleFlowTests {
 
   @Test
   func 의견_필수_여부는_클래스_요약이_아닌_서버_세션을_따른다() {
-    var state = ClassBattleFlowFeature.State(room: .mocks[0], instanceID: UUID())
+    var state = battleState(room: .mocks[0])
     state.viewState = .loaded
     state.session = session(step: .completed, commentRequired: false)
 
@@ -144,6 +258,13 @@ struct ClassBattleFlowTests {
       )
     )
   }
+
+  private func battleState(room: ClassRoom) -> ClassBattleFlowFeature.State {
+    var state = ClassBattleFlowFeature.State()
+    state.instanceID = requestID
+    state.room = room
+    return state
+  }
 }
 
 private actor ClassBattleFlowSpy {
@@ -151,11 +272,13 @@ private actor ClassBattleFlowSpy {
   private(set) var voteHistoryClassIDs: [Int] = []
   private(set) var scenarioBattleIDs: [Int] = []
   private(set) var loadedURLs: [URL] = []
+  private(set) var timeSubscriptions = 0
 
   func recordClass(_ id: Int) { classIDs.append(id) }
   func recordVoteHistory(_ id: Int) { voteHistoryClassIDs.append(id) }
   func recordScenario(_ id: Int) { scenarioBattleIDs.append(id) }
   func recordAudio(_ url: URL) { loadedURLs.append(url) }
+  func recordTimeSubscription() { timeSubscriptions += 1 }
 }
 
 private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
@@ -260,5 +383,12 @@ private struct ClassBattleFlowAudioPlayer: AudioPlayerInterface {
   func setPlaybackRate(_: Float) async {}
   func seek(to _: TimeInterval) async {}
   func duration() async -> TimeInterval { 0 }
-  func currentTimes() -> AsyncStream<TimeInterval> { AsyncStream { $0.finish() } }
+  func currentTimes() -> AsyncStream<TimeInterval> {
+    AsyncStream { continuation in
+      Task {
+        await spy.recordTimeSubscription()
+        continuation.finish()
+      }
+    }
+  }
 }

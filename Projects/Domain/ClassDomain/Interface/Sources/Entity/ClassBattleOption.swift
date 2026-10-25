@@ -8,7 +8,14 @@ public struct ClassBattleOption: Equatable, Identifiable, Sendable {
   public let representative: String
   public let imageURL: URL?
 
-  public init(id: Int, label: String?, title: String, stance: String, representative: String, imageURL: URL?) {
+  public init(
+    id: Int,
+    label: String?,
+    title: String,
+    stance: String,
+    representative: String,
+    imageURL: URL?
+  ) {
     self.id = id
     self.label = label
     self.title = title

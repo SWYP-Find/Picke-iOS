@@ -24,8 +24,8 @@ public struct ClassJoinView: View {
     VStack(spacing: 0) {
       PickeNavigationBar(
         onBack: { send(.backTapped) },
-        centerTitle: store.mode == .code ? nil : (store.mode == .ownerName ? "이름 입력" : "클래스 참여"),
-        leadingTitle: store.mode == .code ? "클래스 참여" : nil,
+        centerTitle: store.navigationCenterTitle,
+        leadingTitle: store.navigationLeadingTitle,
         leadingSpacing: 12
       )
       .foregroundStyle(.gray500)

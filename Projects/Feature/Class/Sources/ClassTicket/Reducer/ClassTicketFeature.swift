@@ -19,6 +19,7 @@ public struct ClassTicketFeature {
     public var shouldCheckExistingTicket = true
     public var code = ""
     public var isChecking = false
+    public var isLoadingExistingTicket = false
     public var errorMessage: String?
     public var expandedFAQ: Int?
     public var preview: ClassTicketPreview?
@@ -31,7 +32,7 @@ public struct ClassTicketFeature {
     }
 
     public var canCheckCode: Bool {
-      !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isChecking
+      !code.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isChecking && !isLoadingExistingTicket
     }
 
     public var navigationTitle: String {
@@ -63,6 +64,15 @@ public struct ClassTicketFeature {
 
     public var canRegister: Bool {
       phase == .preview && preview != nil && !isChecking
+    }
+
+    public var primaryButtonTitle: String {
+      if isChecking || isLoadingExistingTicket { return "처리 중..." }
+      switch phase {
+      case .entry: return "코드 확인하기"
+      case .preview: return "이용권 등록하기"
+      case .registered, .overview: return "이용권 확인하기"
+      }
     }
 
     public var periodText: String {
@@ -100,6 +110,7 @@ public struct ClassTicketFeature {
 
   public enum CancelID: Hashable, Sendable {
     case check(UUID)
+    case existingTicket(UUID)
   }
 
   @Dependency(\.classTicketUseCase) private var ticketUseCase
@@ -123,10 +134,10 @@ public struct ClassTicketFeature {
               state.shouldCheckExistingTicket,
               state.ticket == nil,
               state.preview == nil,
-              !state.isChecking
+              !state.isLoadingExistingTicket
         else { return .none }
         state.shouldCheckExistingTicket = false
-        state.isChecking = true
+        state.isLoadingExistingTicket = true
         return .run { [ticketUseCase] send in
           let result: Result<ClassTicket, ClassTicketError> = await Result {
             try await ticketUseCase.fetchMyTicket()
@@ -134,7 +145,7 @@ public struct ClassTicketFeature {
           .mapError(Self.mapError)
           await send(.myTicketResponse(result))
         }
-        .cancellable(id: CancelID.check(state.instanceID), cancelInFlight: true)
+        .cancellable(id: CancelID.existingTicket(state.instanceID), cancelInFlight: true)
 
       case .view(.backTapped):
         return .send(.delegate(.dismiss))
@@ -193,7 +204,7 @@ public struct ClassTicketFeature {
         case let .success(preview):
           state.preview = preview
           if preview.registeredByMe {
-            state.isChecking = true
+            state.isLoadingExistingTicket = true
             return .run { [ticketUseCase] send in
               let result: Result<ClassTicket, ClassTicketError> = await Result {
                 try await ticketUseCase.fetchMyTicket()
@@ -201,7 +212,7 @@ public struct ClassTicketFeature {
               .mapError(Self.mapError)
               await send(.myTicketResponse(result))
             }
-            .cancellable(id: CancelID.check(state.instanceID), cancelInFlight: true)
+            .cancellable(id: CancelID.existingTicket(state.instanceID), cancelInFlight: true)
           }
           state.phase = .preview
         case let .failure(error):
@@ -225,8 +236,8 @@ public struct ClassTicketFeature {
         return .none
 
       case let .myTicketResponse(result):
-        guard state.phase == .entry, state.isChecking else { return .none }
-        state.isChecking = false
+        guard state.phase == .entry, state.isLoadingExistingTicket else { return .none }
+        state.isLoadingExistingTicket = false
         switch result {
         case let .success(ticket):
           state.ticket = ticket

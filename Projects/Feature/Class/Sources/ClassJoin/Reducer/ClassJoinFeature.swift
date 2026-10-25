@@ -67,6 +67,18 @@ public struct ClassJoinFeature {
       }
     }
 
+    public var navigationCenterTitle: String? {
+      switch mode {
+      case .code: return nil
+      case .nickname: return "클래스 참여"
+      case .ownerName: return "이름 입력"
+      }
+    }
+
+    public var navigationLeadingTitle: String? {
+      mode == .code ? "클래스 참여" : nil
+    }
+
     public var nicknamePlaceholder: String {
       switch mode {
       case .nickname: return "내용을 입력하세요"
