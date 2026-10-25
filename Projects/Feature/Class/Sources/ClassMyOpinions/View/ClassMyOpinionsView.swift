@@ -9,6 +9,7 @@ import ClassDomainInterface
 import ComposableArchitecture
 import PickeCoreUtility
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassMyOpinionsFeature.self)
@@ -26,6 +27,7 @@ public struct ClassMyOpinionsView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .onAppear { send(.onAppear) }
   }
 }
 
@@ -66,7 +68,13 @@ private extension ClassMyOpinionsView {
   @ViewBuilder
   func contentSection() -> some View {
     ScrollView {
-      if store.isEmpty {
+      if store.isLoading {
+        ProgressView("내 의견을 불러오는 중")
+          .frame(maxWidth: .infinity)
+          .padding(24)
+      } else if let errorMessage = store.errorMessage {
+        PickeRetryErrorView(message: errorMessage) { send(.retryTapped) }
+      } else if store.isEmpty {
         emptyState
       } else {
         VStack(alignment: .leading, spacing: 20) {

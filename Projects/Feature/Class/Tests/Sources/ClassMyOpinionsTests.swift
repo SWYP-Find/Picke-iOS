@@ -8,6 +8,7 @@
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 import Testing
 
 @MainActor
@@ -60,5 +61,38 @@ struct ClassMyOpinionsTests {
     }
     await store.send(.view(.backTapped))
     await store.receive(\.delegate.dismiss)
+  }
+
+  @Test
+  func 서버_내_의견은_내용과_반응_수를_화면_행으로_옮긴다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.isLoading = true
+    let item = ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "나", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "내 생각",
+      likeCount: 4,
+      commentCount: 2,
+      isLiked: false,
+      isMyPerspective: true,
+      status: nil,
+      createdAt: .now
+    )
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    await store.send(.inner(.perspectivesResponse(.success([item])))) {
+      $0.isLoading = false
+      $0.opinions = [ClassReportOpinion(
+        id: "77",
+        kind: .unspecified,
+        body: "내 생각",
+        stance: "찬성",
+        likeCount: 4,
+        replyCount: 2,
+        authorName: "나"
+      )]
+    }
+    #expect(store.state.unspecified.count == 1)
   }
 }

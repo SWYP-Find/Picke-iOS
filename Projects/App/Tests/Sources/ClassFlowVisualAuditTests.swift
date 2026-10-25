@@ -69,7 +69,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.perspectiveUseCase, session)
           .dependency(\.commentUseCase, session)
           .dependency(\.classAIChatUseCase, MockClassAIChatUseCase())
-          .dependency(\.classAIFeedbackUseCase, Self.visualAIFeedbackUseCase())
+          .dependency(\.classResultUseCase, Self.visualResultUseCase())
           .dependency(\.analyticsUseCase, .testValue)
           .dependency(\.shareUseCase, .testValue)
       }
@@ -2338,7 +2338,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.classMockRepository, repository)
           .dependency(\.classMockChatSession, ClassMockChatSession())
           .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
-          .dependency(\.classAIFeedbackUseCase, Self.visualAIFeedbackUseCase())
+          .dependency(\.classResultUseCase, Self.visualResultUseCase())
       }
       let (image, _) = try await capture(
         AnyView(ClassCoordinatorView(store: store)),
@@ -3053,6 +3053,39 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
   }
 
+  private struct VisualResultUseCase: ClassResultInterface {
+    func fetch(roomID: Int) async throws -> ClassResult {
+      ClassResult(
+        classID: roomID,
+        closed: true,
+        closeAt: .now,
+        stats: .init(
+          activeMemberCount: 12,
+          completedCount: 10,
+          participationRate: 83.3,
+          commentWriterCount: 9,
+          commentRate: 75,
+          postVoteCount: 11,
+          options: []
+        ),
+        myReportState: "SUCCEEDED",
+        insightState: "SUCCEEDED"
+      )
+    }
+
+    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+      ClassFlowVisualAuditTests.visualPersonalFeedback
+    }
+
+    func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+      ClassAIInsight(text: "서로 다른 의견을 비교하며 근거를 살펴봤어요.")
+    }
+
+    func retryInsight(roomID _: Int) async throws {}
+  }
+
+  private static func visualResultUseCase() -> VisualResultUseCase { VisualResultUseCase() }
+
   @MainActor
   private func makeFrames() async throws -> [Frame] {
     let owner = ClassRoom.mocks[0]
@@ -3152,17 +3185,17 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.classMockRepository, previewRepository)
           .dependency(\.classMockChatSession, session)
           .dependency(\.classMockAudioPlayer, ClassMockAudioPlayer())
-          .dependency(\.classAIFeedbackUseCase, Self.visualAIFeedbackUseCase())
+          .dependency(\.classResultUseCase, Self.visualResultUseCase())
       }
       let ready: @MainActor () -> Bool = {
         switch store.classState.routes.last?.screen {
         case let .report(value)?:
           if case .ready = value.feedbackViewState {
-            return value.sourceViewState == .ready && value.report != nil
+            return value.sourceViewState == .ready && value.classResult != nil
           }
           return false
         case let .ownerDashboard(value)?:
-          guard value.sourceViewState == .ready, value.report != nil, value.metrics != nil else { return false }
+          guard value.sourceViewState == .ready, value.classResult != nil else { return false }
           if value.selectedTab == .report {
             if case .ready = value.feedbackViewState {
               return true
