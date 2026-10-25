@@ -1,6 +1,7 @@
 @testable import ClassDomain
 import ClassDomainInterface
 import Foundation
+import PickeNetwork
 import Testing
 
 struct ClassResultAPIContractTests {
@@ -14,11 +15,22 @@ struct ClassResultAPIContractTests {
   }
 
   @Test
-  func 결과_리포트_인사이트_경로를_분리한다() {
+  func 감싼_네트워크_디코딩_오류는_재시도_대상에서_제외한다() {
+    let error = ClassResultRepositoryImpl.feedbackError(PickeNetworkError.decoding(.dataMissing))
+    #expect(error == .invalidResponse)
+    #expect(!error.isRetryable)
+  }
+
+  @Test
+  func 결과_리포트_인사이트_경로를_분리한다() throws {
     #expect(ClassResultService.result(5).path == "classes/5/result")
     #expect(ClassResultService.myReport(5).path == "classes/5/result/my-report")
     #expect(ClassResultService.insight(5).path == "classes/5/result/insight")
     #expect(ClassResultService.retryInsight(5).path == "classes/5/result/insight/retry")
+    #expect(try ClassResultService.result(5).url().path == "/api/v1/classes/5/result")
+    #expect(try ClassResultService.myReport(5).url().path == "/api/v1/classes/5/result/my-report")
+    #expect(try ClassResultService.insight(5).url().path == "/api/v1/classes/5/result/insight")
+    #expect(try ClassResultService.retryInsight(5).url().path == "/api/v1/classes/5/result/insight/retry")
   }
 
 
@@ -26,7 +38,7 @@ struct ClassResultAPIContractTests {
   func 결과_통계는_멤버별_추정값_없이_서버_집계만_보존한다() throws {
     let json = """
     {
-      "classId": 5, "closeAt": "2026-12-31T23:59:59", "closed": true,
+      "classId": 5, "closeAt": "2026-12-31T23:59:59.123Z", "closed": true,
       "stats": {
         "activeMemberCount": 12, "completedCount": 10, "participationRate": 83.3,
         "commentWriterCount": 9, "commentRate": 75.0, "postVoteCount": 11,
@@ -41,6 +53,7 @@ struct ClassResultAPIContractTests {
 
     let result = try JSONDecoder().decode(ClassResultDTO.self, from: Data(json.utf8)).toDomain()
     #expect(result.stats.activeMemberCount == 12)
+    #expect(result.closeAt == ServerDateParser.parse("2026-12-31T23:59:59.123Z"))
     #expect(result.stats.completedCount == 10)
     #expect(result.stats.participationRate == 83.3)
     #expect(result.stats.options.first?.id == 31)

@@ -6,6 +6,7 @@
 //
 
 import ComposableArchitecture
+import ClassDomainInterface
 import DomainAssembly
 import FeatureAssembly
 import Foundation
@@ -50,8 +51,22 @@ struct ClassCreationDeadlineTests {
     }
     store.exhaustivity = .off
     if ai {
+      let version = ClassTopicVersion(
+        id: 1,
+        draftID: 1,
+        versionNo: 1,
+        source: "CANDIDATE",
+        question: "감정을 표현해야 하나요?",
+        description: "표현의 자유를 토론해요.",
+        category: "사회",
+        difficulty: "INTERMEDIATE",
+        options: [
+          .init(position: "A", label: "해야 한다", rationale: "공감", philosopher: nil, philosopherName: nil, philosopherImageKey: nil),
+          .init(position: "B", label: "선택이다", rationale: "자유", philosopher: nil, philosopherName: nil, philosopherImageKey: nil),
+        ]
+      )
       await store.send(.router(.routeAction(id: 1, action: .recommend(.delegate(
-        .selectAIQuestion(.examples[0], .init())
+        .selectAIQuestion(version, .init())
       )))))
     } else {
       await store.send(.router(.routeAction(id: 1, action: .recommend(.delegate(

@@ -118,8 +118,6 @@ public struct MainTabCoordinator {
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
   @Dependency(\.battleUseCase) private var previewBattleUseCase
   @Dependency(\.audioPlayer) private var previewAudioPlayer
-  @Dependency(\.classMockChatSession) private var classMockChatSession
-  @Dependency(\.classMockAudioPlayer) private var classMockAudioPlayer
 
   public var body: some ReducerOf<Self> {
     Scope(state: \.homeState, action: \.home) {
@@ -138,12 +136,6 @@ public struct MainTabCoordinator {
           audioPlayer: previewAudioPlayer,
           analyticsUseCase: analyticsUseCase
         ))
-        .dependency(\.battleUseCase, classMockChatSession)
-        .dependency(\.perspectiveUseCase, classMockChatSession)
-        .dependency(\.commentUseCase, classMockChatSession)
-        .dependency(\.audioPlayer, classMockAudioPlayer)
-        .dependency(\.analyticsUseCase, .testValue)
-        .dependency(\.shareUseCase, .testValue)
     }
     Scope(state: \.myPageState, action: \.myPage) {
       ProfileCoordinator()

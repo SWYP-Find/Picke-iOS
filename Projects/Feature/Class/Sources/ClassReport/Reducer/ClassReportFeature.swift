@@ -39,7 +39,7 @@ public struct ClassReportFeature {
         + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
     }
 
-    public func serverOptionCount(_ option: ClassResult.Option) -> String {
+    public func serverOptionCount(_ option: ClassResultOption) -> String {
       "사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)"
     }
 

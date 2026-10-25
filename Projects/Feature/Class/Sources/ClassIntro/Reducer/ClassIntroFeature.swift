@@ -5,7 +5,6 @@
 //  Created by Picke on 10/11/26.
 //
 
-import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 import PickeSharedUI
@@ -13,8 +12,6 @@ import PickeSharedUI
 @Reducer
 public struct ClassIntroFeature {
   public init() {}
-
-  @Dependency(\.classTicketMockEnabled) private var classTicketMockEnabled
 
   @ObservableState
   public struct State: Equatable {
@@ -100,14 +97,6 @@ extension ClassIntroFeature {
       return .send(.delegate(.create))
 
     case .ticketTapped:
-      guard classTicketMockEnabled else {
-        state.customAlert = .alert(
-          title: "이용권 등록 준비 중",
-          message: "이용권 등록 기능은 아직 사용할 수 없습니다.",
-          cancelTitle: ""
-        )
-        return .none
-      }
       return .send(.delegate(.ticket))
     }
   }

@@ -68,13 +68,15 @@ public struct ClassResultRepositoryImpl: ClassResultInterface {
     }
   }
 
-  private static func feedbackError(_ error: Error) -> ClassAIFeedbackError {
+  static func feedbackError(_ error: Error) -> ClassAIFeedbackError {
     if let mapped = error as? ClassAIFeedbackError { return mapped }
     if error is DecodingError { return .invalidResponse }
-    if let networkError = error as? PickeNetworkError,
-       case let .response(response) = networkError
-    {
-      return feedbackError(code: response.code)
+    if let networkError = error as? PickeNetworkError {
+      switch networkError {
+      case .decoding: return .invalidResponse
+      case let .response(response): return feedbackError(code: response.code)
+      default: break
+      }
     }
     return .temporarilyUnavailable
   }

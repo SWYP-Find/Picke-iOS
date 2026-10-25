@@ -4,6 +4,7 @@
 //
 
 import ComposableArchitecture
+import PickeCoreUtility
 import PickeDesignKit
 import SwiftUI
 
@@ -28,6 +29,8 @@ public struct ClassTicketView: View {
           switch store.phase {
           case .entry:
             entryContent()
+          case .preview:
+            previewContent()
           case .registered:
             registeredContent()
           case .overview:
@@ -42,6 +45,7 @@ public struct ClassTicketView: View {
     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
     .screenBackground(.surfaceBeigeDefault)
     .hidesSystemBars()
+    .onAppear { send(.onAppear) }
   }
 }
 
@@ -155,13 +159,47 @@ private extension ClassTicketView {
   }
 
   @ViewBuilder
+  func previewContent() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text("이용권 내용을 확인해 주세요")
+        .pretendardFont(.semiBold24)
+        .foregroundStyle(.gray800)
+        .padding(.bottom, 8)
+
+      Text("확인 후 등록하면 이용 기간이 바로 시작돼요")
+        .pretendardFont(.bodyMedium)
+        .foregroundStyle(.gray300)
+        .padding(.bottom, 36)
+
+      ticketCard()
+
+      if let errorMessage = store.errorMessage {
+        Text(errorMessage)
+          .pretendardFont(.bodySmall)
+          .foregroundStyle(.errorDefault)
+          .padding(.top, 12)
+          .accessibilityIdentifier("class-ticket-error")
+      }
+
+      bottomSection()
+        .padding(.top, 40)
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 20)
+  }
+
+  @ViewBuilder
   func registeredContent() -> some View {
     VStack(spacing: 0) {
       registeredHeading()
         .padding(.bottom, 38)
       ticketCard()
-      bottomSection()
+      Text("등록 후 마이페이지에서 이용권을 확인할 수 있어요")
+        .pretendardFont(.bodySmall)
+        .foregroundStyle(.gray300)
         .padding(.top, 40)
+      bottomSection()
+        .padding(.top, 10)
     }
     .padding(.horizontal, 16)
     .padding(.top, 10)
@@ -186,7 +224,7 @@ private extension ClassTicketView {
   @ViewBuilder
   func overviewContent() -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("사용 중인 이용권")
+      Text(store.overviewTitle)
         .pretendardFont(family: .SemiBold, size: 16)
         .foregroundStyle(.gray800)
         .padding(.bottom, 16)
@@ -203,11 +241,6 @@ private extension ClassTicketView {
   @ViewBuilder
   func overviewBottomSection() -> some View {
     VStack(spacing: 10) {
-      Text("체험용 이용권이며 마이페이지에 저장되지 않아요")
-        .pretendardFont(.bodySmall)
-        .foregroundStyle(.gray300)
-        .frame(maxWidth: .infinity)
-
       Button("이용권 추가등록하기") {
         send(.addRegistrationTapped)
       }
@@ -225,7 +258,7 @@ private extension ClassTicketView {
             .resizable()
             .scaledToFit()
             .frame(width: 24, height: 24)
-          Text("클래스 30인 이용권")
+          Text(store.ticketTitle)
             .pretendardFont(family: .SemiBold, size: 18)
             .foregroundStyle(.gray800)
         }
@@ -238,8 +271,11 @@ private extension ClassTicketView {
       .background(.beige400)
 
       VStack(spacing: 16) {
-        ticketDetail(label: "참여 인원", value: "클래스당 최대 30명")
-        ticketDetail(label: "이용 기간", value: store.periodText)
+        ticketDetail(label: "참여 인원", value: store.capacityDetail)
+        ticketDetail(label: "이용 기간", value: store.ticketPeriodText)
+        if store.phase == .preview, let registerBy = store.preview?.registerBy {
+          ticketDetail(label: "등록 기한", value: registerBy.formatted(.yearMonthDayDotted))
+        }
         ticketDetail(label: "클래스 생성", value: "이용 기간 내 무제한")
       }
       .padding(.horizontal, 16)
@@ -272,14 +308,10 @@ private extension ClassTicketView {
   @ViewBuilder
   func bottomSection() -> some View {
     VStack(spacing: 10) {
-      if store.phase == .registered {
-        Text("체험용 등록이며 마이페이지에 저장되지 않아요")
-          .pretendardFont(.bodySmall)
-          .foregroundStyle(.gray300)
-      }
-
-      if store.phase == .entry && !store.canCheckCode {
-        Button(store.isChecking ? "확인 중..." : "코드 확인하기") {}
+      if (store.phase == .entry && !store.canCheckCode)
+        || (store.phase == .preview && !store.canRegister)
+      {
+        Button(store.isChecking ? "처리 중..." : store.phase == .entry ? "코드 확인하기" : "이용권 등록하기") {}
           .pretendardFont(.headingMedium)
           .foregroundStyle(.gray300)
           .frame(maxWidth: .infinity)
@@ -292,7 +324,7 @@ private extension ClassTicketView {
         Button {
           send(store.phase == .entry ? .checkTapped : .confirmTapped)
         } label: {
-          Text(store.phase == .entry ? "코드 확인하기" : "이용권 확인하기")
+          Text(store.phase == .entry ? "코드 확인하기" : store.phase == .preview ? "이용권 등록하기" : "이용권 확인하기")
         }
         .ctaButtonStyle(.primary, size: .large, height: 52)
         .accessibilityIdentifier("class-ticket-primary")

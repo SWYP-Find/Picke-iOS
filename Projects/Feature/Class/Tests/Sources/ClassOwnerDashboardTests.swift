@@ -382,7 +382,7 @@ struct ClassOwnerDashboardTests {
     #expect(state.serverParticipationRate == "\(stats.participationRate.formatted(.number.precision(.fractionLength(1))))%")
     #expect(state.serverParticipationCount == "\(stats.completedCount) / \(stats.activeMemberCount)명")
     #expect(state.serverParticipationProgress == stats.participationRate / 100)
-    let option = ClassResult.Option(id: 1, title: "찬성", preVoteCount: 2, postVoteCount: 3, postVoteRatio: 60)
+    let option = ClassResultOption(id: 1, title: "찬성", preVoteCount: 2, postVoteCount: 3, postVoteRatio: 60)
     #expect(state.serverOptionSummary(option) == "3명 · 60.0%")
   }
 

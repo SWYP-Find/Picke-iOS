@@ -97,7 +97,7 @@ public struct ClassOwnerDashboardFeature {
       (classResult?.stats.commentRate ?? 0) / 100
     }
 
-    public func serverOptionSummary(_ option: ClassResult.Option) -> String {
+    public func serverOptionSummary(_ option: ClassResultOption) -> String {
       "\(option.postVoteCount)명 · \(option.postVoteRatio.formatted(.number.precision(.fractionLength(1))))%"
     }
 

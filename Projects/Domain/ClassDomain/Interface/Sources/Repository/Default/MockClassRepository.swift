@@ -292,6 +292,7 @@ public actor MockClassRepository: ClassInterface {
       joinCode: room.joinCode,
       battle: room.battle,
       deadline: room.deadline,
+      closeAt: room.closeAt,
       memberCount: members.count,
       role: .member,
       status: room.status,
@@ -299,7 +300,8 @@ public actor MockClassRepository: ClassInterface {
       requiresComment: room.requiresComment,
       ownerParticipates: room.ownerParticipates,
       memberCapacity: room.memberCapacity,
-      battleType: room.battleType
+      battleType: room.battleType,
+      ticketExpiresAt: room.ticketExpiresAt
     )
     rooms.append(joined)
     availableRooms.remove(at: index)
@@ -323,6 +325,7 @@ public actor MockClassRepository: ClassInterface {
       joinCode: room.joinCode,
       battle: room.battle,
       deadline: deadline,
+      closeAt: room.closeAt,
       memberCount: room.memberCount,
       role: room.role,
       status: room.status,
@@ -330,7 +333,8 @@ public actor MockClassRepository: ClassInterface {
       requiresComment: room.requiresComment,
       ownerParticipates: room.ownerParticipates,
       memberCapacity: room.memberCapacity,
-      battleType: room.battleType
+      battleType: room.battleType,
+      ticketExpiresAt: room.ticketExpiresAt
     )
     rooms[index] = updated
     return updated
@@ -385,6 +389,7 @@ private extension ClassRoom {
       joinCode: joinCode,
       battle: battle,
       deadline: deadline,
+      closeAt: closeAt,
       memberCount: memberCount,
       role: role,
       status: status,
@@ -392,7 +397,8 @@ private extension ClassRoom {
       requiresComment: requiresComment,
       ownerParticipates: ownerParticipates,
       memberCapacity: memberCapacity,
-      battleType: battleType
+      battleType: battleType,
+      ticketExpiresAt: ticketExpiresAt
     )
   }
 }
