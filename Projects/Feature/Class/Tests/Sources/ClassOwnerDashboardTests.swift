@@ -424,6 +424,31 @@ struct ClassOwnerDashboardTests {
   }
 
   @Test
+  func 참여_운영자는_피드백_대기나_실패_중에도_내_의견을_열_수_있다() async {
+    let room = ClassRoom.mocks[0]
+    let result = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: serverResult(room).stats,
+      myReportState: "PENDING",
+      insightState: nil
+    )
+
+    for error in [ClassAIFeedbackError.modelNotReady, .generationFailed] {
+      var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+      state.classResult = result
+      state.selectedTab = .report
+      state.sourceViewState = .ready
+      state.feedbackError = error
+      #expect(state.canOpenMyOpinions)
+      let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() }
+      await store.send(.view(.myOpinionsTapped))
+      await store.receive(\.delegate.openMyOpinions)
+    }
+  }
+
+  @Test
   func 서버_결과_실패는_재시도할_수_있는_상태가_된다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())) {

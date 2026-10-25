@@ -166,6 +166,13 @@ public struct ClassOwnerDashboardFeature {
       "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
+    public var canOpenMyOpinions: Bool {
+      selectedTab == .report
+        && sourceViewState == .ready
+        && (report != nil || classResult?.myReportState != nil)
+        && management == nil
+    }
+
     public var searchedMembers: [ClassOwnerMember] {
       let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
       return query.isEmpty ? members : members.filter { $0.name.localizedCaseInsensitiveContains(query) }
@@ -407,11 +414,7 @@ extension ClassOwnerDashboardFeature {
     case let .tabSelected(tab):
       state.selectedTab = tab
     case .myOpinionsTapped:
-      guard state.selectedTab == .report,
-            state.sourceViewState == .ready,
-            state.report != nil || state.classResult?.myReportState != nil,
-            state.management == nil
-      else { return .none }
+      guard state.canOpenMyOpinions else { return .none }
       return .send(.delegate(.openMyOpinions(state.instanceID)))
     case let .opinionFilterSelected(filter):
       guard state.canSortOpinions(filter) else { return .none }

@@ -443,6 +443,11 @@ private extension ClassOwnerDashboardView {
             } else {
               feedbackStatus()
             }
+            if store.canOpenMyOpinions {
+              myOpinionsButton
+                .padding(16)
+                .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
+            }
           }
         }
       } else {
@@ -577,7 +582,6 @@ private extension ClassOwnerDashboardView {
         Text(feedback.evidence[index].quote ?? feedback.evidence[index].content)
           .pretendardFont(.regular13)
       }
-      myOpinionsButton
     }
     .padding(16)
     .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
