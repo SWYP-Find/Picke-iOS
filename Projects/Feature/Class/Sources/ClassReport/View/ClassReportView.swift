@@ -31,7 +31,7 @@ public struct ClassReportView: View {
       reportTitle()
         .padding(.vertical, 12)
       if store.sourceViewState == .failed {
-        PickeRetryErrorView(message: "리포트를 불러오지 못했어요") { send(.retryTapped) }
+        PickeRetryErrorView(message: store.sourceErrorMessage) { send(.retryTapped) }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if store.sourceViewState == .loading {
         sourceSkeleton()
@@ -99,7 +99,7 @@ private extension ClassReportView {
                   .pretendardFont(.semiBold13)
                   .foregroundStyle(.gray800)
                 Spacer()
-                Text(store.serverOptionCount(option))
+                Text(store.serverOptionCounts[option.id] ?? "")
                   .pretendardFont(.regular13)
                   .foregroundStyle(.gray700)
               }
@@ -127,7 +127,7 @@ private extension ClassReportView {
             } else if result.myReportState == "BEFORE_CLOSE" {
               unavailableReport(
                 title: "마감 후 AI 피드백을 볼 수 있어요",
-                message: "\(result.closeAt.formatted(.dottedDateTimeWithWeekday)) 이후 제공돼요."
+                message: store.serverFeedbackAvailabilityMessage
               )
             } else {
               feedbackStatus()
@@ -157,16 +157,16 @@ private extension ClassReportView {
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .pending:
       VStack(alignment: .leading, spacing: 12) {
-        unavailableReport(title: "생각을 정리하고 있어요", message: "잠시 뒤 다시 확인해 주세요.")
+        unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
         Button("다시 확인") { send(.feedbackRetryTapped) }
           .pretendardFont(.semiBold13)
           .foregroundStyle(.primary500)
           .buttonStyle(.plain)
       }
     case .failure:
-      unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "서버에서 피드백을 준비하지 못했어요.")
+      unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
     case .unavailable:
-      unavailableReport(title: "AI 피드백을 사용할 수 없어요", message: "참여 결과를 확인해 주세요.")
+      unavailableReport(title: store.feedbackStatusTitle, message: store.feedbackStatusMessage)
     case .ready:
       EmptyView()
     }

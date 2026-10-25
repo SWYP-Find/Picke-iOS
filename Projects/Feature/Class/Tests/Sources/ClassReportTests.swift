@@ -64,14 +64,15 @@ struct ClassReportTests {
   }
 
   @Test
-  func 서버_결과_표시값은_State에서_계산한다() {
+  func 서버_결과_표시값은_State에서_계산한다() throws {
     var state = ClassReportFeature.State(room: .mockClosedSociety)
     state.classResult = result(room: .mockClosedSociety, reportState: "SUCCEEDED")
     #expect(state.serverActiveMemberCount == "12")
     #expect(state.serverCompletedCount == "10")
     #expect(state.serverPostVoteCount == "11")
     #expect(state.serverParticipationSummary == "참여율 83.3% · 의견 작성률 75.0%")
-    #expect(state.serverOptionCount(state.classResult!.stats.options[0]) == "사전 8 · 사후 6")
+    let option = try #require(state.classResult?.stats.options.first)
+    #expect(state.serverOptionCounts[option.id] == "사전 8 · 사후 6")
   }
 
   @Test
@@ -220,5 +221,22 @@ struct ClassReportTests {
 
     #expect(store.state.sourceViewState == .failed)
     #expect(store.state.classResult == nil)
+    #expect(store.state.sourceError == .network("연결 실패"))
+  }
+
+  @Test
+  func 결과_열람_기간_만료는_일반_피드백_부족과_구분한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .failure(.resultExpired))
+    }
+    store.exhaustivity = .off
+    await store.send(.view(.onAppear))
+    await store.receive(\.async.fetch)
+    await store.receive(\.inner.resultResponse)
+    #expect(store.state.sourceError == .resultExpired)
   }
 }

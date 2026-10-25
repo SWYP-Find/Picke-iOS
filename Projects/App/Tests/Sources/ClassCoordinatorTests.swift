@@ -747,6 +747,38 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 서버_개인_리포트에서_내_의견_화면을_열면_클래스_ID를_전달한다() async {
+    let room = ClassRoom.mockClosedSociety
+    var report = ClassReportFeature.State(room: room, instanceID: UUID())
+    report.classResult = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 1,
+        completedCount: 1,
+        participationRate: 100,
+        commentWriterCount: 1,
+        commentRate: 100,
+        postVoteCount: 1,
+        options: []
+      ),
+      myReportState: "SUCCEEDED",
+      insightState: nil
+    )
+    report.sourceViewState = .ready
+    var state = ClassCoordinator.State()
+    state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(report.instanceID)))))) {
+      var opinions = ClassMyOpinionsFeature.State()
+      opinions.classID = room.id
+      $0.routes.push(.myOpinions(opinions))
+    }
+  }
+
+  @Test
   func 내_의견은_다른_리포트_인스턴스나_로딩_중에는_열리지_않는다() async {
     var report = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
     report.report = MockClassReport.figma

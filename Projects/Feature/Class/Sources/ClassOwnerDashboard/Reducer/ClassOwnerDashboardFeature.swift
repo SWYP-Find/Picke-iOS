@@ -66,8 +66,35 @@ public struct ClassOwnerDashboardFeature {
     public var report: ClassReport?
     public var metrics: ClassParticipationMetrics?
     public var sourceViewState: ClassOwnerDashboardSourceViewState = .loading
+    public var sourceError: ClassError?
     public var requestID: UUID?
     @Presents public var management: ClassModalFeature.State?
+
+    public var sourceErrorMessage: String {
+      sourceError?.message ?? "클래스 현황을 불러오지 못했어요"
+    }
+
+    public var insightStatusMessage: String {
+      switch insightViewState {
+      case .pending: return "AI 인사이트를 정리하고 있어요. 잠시 뒤 다시 확인해 주세요."
+      case .failure:
+        if insightError == .resultExpired { return "결과 열람 기간이 끝났어요" }
+        if insightError == .accessDenied { return "인사이트를 볼 권한이 없어요" }
+        return "AI 인사이트를 표시할 수 없어요"
+      default: return "AI 인사이트를 사용할 수 없어요"
+      }
+    }
+
+    public var feedbackStatusMessage: String {
+      switch feedbackViewState {
+      case .pending: return "AI 피드백을 정리하고 있어요. 잠시 뒤 다시 확인해 주세요."
+      case .failure:
+        if feedbackError == .resultExpired { return "결과 열람 기간이 끝났어요" }
+        if feedbackError == .accessDenied { return "피드백을 볼 권한이 없어요" }
+        return "AI 피드백을 표시할 수 없어요"
+      default: return "AI 피드백을 사용할 수 없어요"
+      }
+    }
 
     public var serverParticipationRate: String {
       guard let stats = classResult?.stats else { return "" }
@@ -97,8 +124,11 @@ public struct ClassOwnerDashboardFeature {
       (classResult?.stats.commentRate ?? 0) / 100
     }
 
-    public func serverOptionSummary(_ option: ClassResultOption) -> String {
-      "\(option.postVoteCount)명 · \(option.postVoteRatio.formatted(.number.precision(.fractionLength(1))))%"
+    public var serverOptionSummaries: [Int: String] {
+      guard let options = classResult?.stats.options else { return [:] }
+      return options.reduce(into: [:]) { values, option in
+        values[option.id] = "\(option.postVoteCount)명 · \(option.postVoteRatio.formatted(.number.precision(.fractionLength(1))))%"
+      }
     }
 
     public init(
@@ -335,6 +365,7 @@ public struct ClassOwnerDashboardFeature {
     case generatePersonal(UUID)
   }
 
+  @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
     case openMyOpinions(UUID)
@@ -446,6 +477,7 @@ extension ClassOwnerDashboardFeature {
     switch action {
     case .fetchDashboard:
       state.classResult = nil
+      state.sourceError = nil
       state.insightRequestID = nil
       state.feedbackRequestID = nil
       state.generatedInsight = nil
@@ -556,6 +588,7 @@ extension ClassOwnerDashboardFeature {
       switch result {
       case let .success(classResult):
         state.classResult = classResult
+        state.sourceError = nil
         state.sourceViewState = .ready
         switch (classResult.insightState != nil, classResult.myReportState != nil) {
         case (true, true):
@@ -570,8 +603,9 @@ extension ClassOwnerDashboardFeature {
         case (false, false):
           return .none
         }
-      case .failure:
+      case let .failure(error):
         state.classResult = nil
+        state.sourceError = error
         state.sourceViewState = .failed
       }
       return .none
@@ -583,6 +617,7 @@ extension ClassOwnerDashboardFeature {
       switch result {
       case let .success(dashboard):
         state.dashboard = dashboard
+        state.sourceError = nil
         state.members = dashboard?.members ?? []
         state.opinions = dashboard?.opinions ?? []
         state.report = dashboard?.report
@@ -590,8 +625,9 @@ extension ClassOwnerDashboardFeature {
         state.sourceViewState = .ready
         guard dashboard != nil else { return .none }
         return .merge(.send(.async(.generateInsight)), .send(.async(.generatePersonal)))
-      case .failure:
+      case let .failure(error):
         state.dashboard = nil
+        state.sourceError = error
         state.members = []
         state.opinions = []
         state.report = nil
