@@ -900,10 +900,14 @@ private extension ClassCoordinator {
             case let .report(report)? = state.routes.last?.screen,
             report.instanceID == instanceID,
             report.sourceViewState == .ready,
-            let source = report.report
+            (report.report != nil || report.classResult?.myReportState != nil)
       else { return .none }
       var opinions = ClassMyOpinionsFeature.State()
-      opinions.opinions = source.resolvedOpinions
+      if let result = report.classResult {
+        opinions.classID = result.classID
+      } else {
+        opinions.opinions = report.report?.resolvedOpinions ?? []
+      }
       state.routes.push(.myOpinions(opinions))
       return .none
 
@@ -914,10 +918,14 @@ private extension ClassCoordinator {
             dashboard.selectedTab == .report,
             dashboard.sourceViewState == .ready,
             dashboard.management == nil,
-            let report = dashboard.report
+            (dashboard.report != nil || dashboard.classResult?.myReportState != nil)
       else { return .none }
       var opinions = ClassMyOpinionsFeature.State()
-      opinions.opinions = report.resolvedOpinions
+      if let result = dashboard.classResult {
+        opinions.classID = result.classID
+      } else {
+        opinions.opinions = dashboard.report?.resolvedOpinions ?? []
+      }
       state.routes.push(.myOpinions(opinions))
       return .none
 

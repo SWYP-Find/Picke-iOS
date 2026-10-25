@@ -338,18 +338,18 @@ private extension ClassOwnerDashboardView {
       VStack(spacing: 12) {
         participationRow(
           "배틀 참여율",
-          value: "\(result.stats.participationRate.formatted(.number.precision(.fractionLength(1))))%",
+          value: store.serverParticipationRate,
           detail: "참여를 완료한 멤버",
-          count: "\(result.stats.completedCount) / \(result.stats.activeMemberCount)명",
-          progress: CGFloat(result.stats.participationRate / 100),
+          count: store.serverParticipationCount,
+          progress: CGFloat(store.serverParticipationProgress),
           tint: .primary500
         )
         participationRow(
           "댓글 작성율",
-          value: "\(result.stats.commentRate.formatted(.number.precision(.fractionLength(1))))%",
+          value: store.serverCommentRate,
           detail: "댓글을 남긴 멤버",
-          count: "\(result.stats.commentWriterCount) / \(result.stats.activeMemberCount)명",
-          progress: CGFloat(result.stats.commentRate / 100),
+          count: store.serverCommentCount,
+          progress: CGFloat(store.serverCommentProgress),
           tint: .secondary500
         )
       }
@@ -363,7 +363,7 @@ private extension ClassOwnerDashboardView {
           HStack {
             Text(option.title)
             Spacer()
-            Text("\(option.postVoteCount)명 · \(option.postVoteRatio.formatted(.number.precision(.fractionLength(1))))%")
+            Text(store.serverOptionSummary(option))
           }
           .pretendardFont(.semiBold12)
           .foregroundStyle(.gray800)

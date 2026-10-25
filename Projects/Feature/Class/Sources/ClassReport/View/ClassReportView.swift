@@ -78,16 +78,13 @@ private extension ClassReportView {
           sectionHeading("클래스 참여 결과")
           reportCard {
             HStack(spacing: 0) {
-              activityCount("\(result.stats.activeMemberCount)", label: "참여 멤버")
+              activityCount(store.serverActiveMemberCount, label: "참여 멤버")
               Rectangle().fill(.beige600).frame(width: 1, height: 38)
-              activityCount("\(result.stats.completedCount)", label: "완료")
+              activityCount(store.serverCompletedCount, label: "완료")
               Rectangle().fill(.beige600).frame(width: 1, height: 38)
-              activityCount("\(result.stats.postVoteCount)", label: "사후투표")
+              activityCount(store.serverPostVoteCount, label: "사후투표")
             }
-            Text(
-              "참여율 \(result.stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
-                + "의견 작성률 \(result.stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
-            )
+            Text(store.serverParticipationSummary)
             .pretendardFont(.regular13)
             .foregroundStyle(.gray700)
           }
@@ -102,7 +99,7 @@ private extension ClassReportView {
                   .pretendardFont(.semiBold13)
                   .foregroundStyle(.gray800)
                 Spacer()
-                Text("사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)")
+                Text(store.serverOptionCount(option))
                   .pretendardFont(.regular13)
                   .foregroundStyle(.gray700)
               }

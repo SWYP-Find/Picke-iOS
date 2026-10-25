@@ -69,6 +69,38 @@ public struct ClassOwnerDashboardFeature {
     public var requestID: UUID?
     @Presents public var management: ClassModalFeature.State?
 
+    public var serverParticipationRate: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.participationRate.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
+    public var serverCommentRate: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
+    public var serverParticipationCount: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.completedCount) / \(stats.activeMemberCount)명"
+    }
+
+    public var serverCommentCount: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.commentWriterCount) / \(stats.activeMemberCount)명"
+    }
+
+    public var serverParticipationProgress: Double {
+      (classResult?.stats.participationRate ?? 0) / 100
+    }
+
+    public var serverCommentProgress: Double {
+      (classResult?.stats.commentRate ?? 0) / 100
+    }
+
+    public func serverOptionSummary(_ option: ClassResult.Option) -> String {
+      "\(option.postVoteCount)명 · \(option.postVoteRatio.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
     public init(
       room: ClassRoom,
       instanceID: UUID? = nil

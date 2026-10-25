@@ -29,6 +29,20 @@ public struct ClassReportFeature {
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
 
+    public var serverActiveMemberCount: String { String(classResult?.stats.activeMemberCount ?? 0) }
+    public var serverCompletedCount: String { String(classResult?.stats.completedCount ?? 0) }
+    public var serverPostVoteCount: String { String(classResult?.stats.postVoteCount ?? 0) }
+
+    public var serverParticipationSummary: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "참여율 \(stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
+        + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
+    public func serverOptionCount(_ option: ClassResult.Option) -> String {
+      "사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)"
+    }
+
     public var feedbackViewState: ClassReportFeedbackViewState {
       if let feedback {
         return .ready(feedback)

@@ -374,6 +374,19 @@ struct ClassOwnerDashboardTests {
   }
 
   @Test
+  func 서버_현황_표시값은_State에서_계산한다() {
+    let room = ClassRoom.mocks[0]
+    var state = ClassOwnerDashboardFeature.State(room: room)
+    state.classResult = serverResult(room)
+    let stats = state.classResult!.stats
+    #expect(state.serverParticipationRate == "\(stats.participationRate.formatted(.number.precision(.fractionLength(1))))%")
+    #expect(state.serverParticipationCount == "\(stats.completedCount) / \(stats.activeMemberCount)명")
+    #expect(state.serverParticipationProgress == stats.participationRate / 100)
+    let option = ClassResult.Option(id: 1, title: "찬성", preVoteCount: 2, postVoteCount: 3, postVoteRatio: 60)
+    #expect(state.serverOptionSummary(option) == "3명 · 60.0%")
+  }
+
+  @Test
   func 서버_결과_실패는_재시도할_수_있는_상태가_된다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())) {
