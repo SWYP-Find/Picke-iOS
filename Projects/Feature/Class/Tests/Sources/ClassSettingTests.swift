@@ -298,6 +298,10 @@ private struct FailingClassUseCase: ClassInterface {
     fatalError("live use case called")
   }
 
+  func fetchClass(id _: Int) async throws -> ClassRoom {
+    fatalError("live use case called")
+  }
+
   func fetchClass(joinCode _: String) async throws -> ClassRoom {
     fatalError("live use case called")
   }
