@@ -12,6 +12,8 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
   case closed
   case alreadyJoined
   case duplicateName
+  case accessDenied
+  case resultExpired
   case notFound
   case full
   case deleted
@@ -41,6 +43,8 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
     case .closed: return "종료된 클래스입니다."
     case .alreadyJoined: return "이미 참여한 클래스입니다."
     case .duplicateName: return "이미 사용 중인 이름이에요."
+    case .accessDenied: return "클래스 결과를 볼 권한이 없어요."
+    case .resultExpired: return "결과 열람 기간이 끝났습니다."
     case .notFound: return "존재하지 않는 클래스입니다."
     case .full: return "정원이 가득 찬 클래스입니다."
     case .deleted: return "삭제되어 더 이상 이용할 수 없는 클래스입니다."

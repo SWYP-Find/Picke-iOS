@@ -8,4 +8,5 @@
 public enum ClassAIFeedbackResult: Equatable, Sendable {
   case personal(ClassAIPersonalFeedback)
   case classInsight(String)
+  case serverInsight(ClassAIInsight)
 }
