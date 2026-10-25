@@ -278,7 +278,10 @@ struct ClassOwnerDashboardTests {
     }
   }
 
-  private func serverResult(_ room: ClassRoom) -> ClassResult {
+  private func serverResult(
+    _ room: ClassRoom,
+    options: [ClassResultOption] = []
+  ) -> ClassResult {
     ClassResult(
       classID: room.id,
       closed: true,
@@ -290,7 +293,7 @@ struct ClassOwnerDashboardTests {
         commentWriterCount: 9,
         commentRate: 75,
         postVoteCount: 11,
-        options: []
+        options: options
       ),
       myReportState: nil,
       insightState: nil
@@ -376,13 +379,14 @@ struct ClassOwnerDashboardTests {
   @Test
   func 서버_현황_표시값은_State에서_계산한다() {
     let room = ClassRoom.mocks[0]
+    let option = ClassResultOption(id: 1, title: "찬성", preVoteCount: 2, postVoteCount: 3, postVoteRatio: 60)
+    let result = serverResult(room, options: [option])
     var state = ClassOwnerDashboardFeature.State(room: room)
-    state.classResult = serverResult(room)
-    let stats = state.classResult!.stats
+    state.classResult = result
+    let stats = result.stats
     #expect(state.serverParticipationRate == "\(stats.participationRate.formatted(.number.precision(.fractionLength(1))))%")
     #expect(state.serverParticipationCount == "\(stats.completedCount) / \(stats.activeMemberCount)명")
     #expect(state.serverParticipationProgress == stats.participationRate / 100)
-    let option = ClassResultOption(id: 1, title: "찬성", preVoteCount: 2, postVoteCount: 3, postVoteRatio: 60)
     #expect(state.serverOptionSummaries[option.id] == "3명 · 60.0%")
   }
 

@@ -64,14 +64,15 @@ struct ClassReportTests {
   }
 
   @Test
-  func 서버_결과_표시값은_State에서_계산한다() {
+  func 서버_결과_표시값은_State에서_계산한다() throws {
     var state = ClassReportFeature.State(room: .mockClosedSociety)
     state.classResult = result(room: .mockClosedSociety, reportState: "SUCCEEDED")
     #expect(state.serverActiveMemberCount == "12")
     #expect(state.serverCompletedCount == "10")
     #expect(state.serverPostVoteCount == "11")
     #expect(state.serverParticipationSummary == "참여율 83.3% · 의견 작성률 75.0%")
-    #expect(state.serverOptionCounts[state.classResult!.stats.options[0].id] == "사전 8 · 사후 6")
+    let option = try #require(state.classResult?.stats.options.first)
+    #expect(state.serverOptionCounts[option.id] == "사전 8 · 사후 6")
   }
 
   @Test
