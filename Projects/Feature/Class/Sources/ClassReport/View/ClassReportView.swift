@@ -156,7 +156,13 @@ private extension ClassReportView {
     case .retryableFailure:
       PickeRetryErrorView(message: "AI 피드백을 불러오지 못했어요") { send(.feedbackRetryTapped) }
     case .pending:
-      unavailableReport(title: "생각을 정리하고 있어요", message: "잠시 뒤 다시 확인해 주세요.")
+      VStack(alignment: .leading, spacing: 12) {
+        unavailableReport(title: "생각을 정리하고 있어요", message: "잠시 뒤 다시 확인해 주세요.")
+        Button("다시 확인") { send(.feedbackRetryTapped) }
+          .pretendardFont(.semiBold13)
+          .foregroundStyle(.primary500)
+          .buttonStyle(.plain)
+      }
     case .failure:
       unavailableReport(title: "AI 피드백을 표시할 수 없어요", message: "서버에서 피드백을 준비하지 못했어요.")
     case .unavailable:

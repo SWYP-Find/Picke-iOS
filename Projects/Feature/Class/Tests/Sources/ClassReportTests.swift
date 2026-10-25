@@ -156,6 +156,32 @@ struct ClassReportTests {
   }
 
   @Test
+  func 대기_중인_개인_피드백을_다시_확인하면_완료_결과를_받는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: "완료",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: ""
+    )
+    var state = ClassReportFeature.State(room: room, instanceID: UUID())
+    state.classResult = result(room: room, reportState: "PENDING")
+    state.sourceViewState = .ready
+    state.feedbackError = .modelNotReady
+    let store = TestStore(initialState: state) { ClassReportFeature() } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(result: .success(state.classResult!), feedback: feedback)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.feedbackRetryTapped))
+    await store.receive(\.async.generateFeedback)
+    await store.receive(\.inner.feedbackResponse)
+    #expect(store.state.feedbackViewState == .ready(feedback))
+  }
+
+  @Test
   func 결과_조회_오류는_실패_상태로_남는다() async {
     let store = TestStore(initialState: ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())) {
       ClassReportFeature()

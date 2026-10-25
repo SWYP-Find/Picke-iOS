@@ -387,6 +387,43 @@ struct ClassOwnerDashboardTests {
   }
 
   @Test
+  func 대기_중인_운영자_인사이트와_개인_피드백을_다시_확인한다() async {
+    let room = ClassRoom.mocks[0]
+    let result = serverResult(room)
+    let feedback = ClassAIPersonalFeedback(
+      summaryTitle: "완료",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: ""
+    )
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.classResult = result
+    state.sourceViewState = .ready
+    state.insightError = .modelNotReady
+    state.feedbackError = .modelNotReady
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .constant(UUID())
+      $0.classResultUseCase = ResultStub(
+        result: .success(result),
+        feedback: feedback,
+        insight: ClassAIInsight(text: "운영 인사이트")
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.insightRetryTapped))
+    await store.receive(\.async.generateInsight)
+    await store.receive(\.inner.insightResponse)
+    #expect(store.state.insightViewState == .ready("운영 인사이트"))
+
+    await store.send(.view(.feedbackRetryTapped))
+    await store.receive(\.async.generatePersonal)
+    await store.receive(\.inner.feedbackResponse)
+    #expect(store.state.feedbackViewState == .ready(feedback))
+  }
+
+  @Test
   func 서버_결과_실패는_재시도할_수_있는_상태가_된다() async {
     let room = ClassRoom.mocks[0]
     let store = TestStore(initialState: ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())) {
