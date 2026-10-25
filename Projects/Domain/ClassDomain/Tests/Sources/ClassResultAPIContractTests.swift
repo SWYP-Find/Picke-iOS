@@ -34,7 +34,7 @@ struct ClassResultAPIContractTests {
   func 결과_통계는_멤버별_추정값_없이_서버_집계만_보존한다() throws {
     let json = """
     {
-      "classId": 5, "closeAt": "2026-12-31T23:59:59", "closed": true,
+      "classId": 5, "closeAt": "2026-12-31T23:59:59.123Z", "closed": true,
       "stats": {
         "activeMemberCount": 12, "completedCount": 10, "participationRate": 83.3,
         "commentWriterCount": 9, "commentRate": 75.0, "postVoteCount": 11,
@@ -49,6 +49,7 @@ struct ClassResultAPIContractTests {
 
     let result = try JSONDecoder().decode(ClassResultDTO.self, from: Data(json.utf8)).toDomain()
     #expect(result.stats.activeMemberCount == 12)
+    #expect(result.closeAt == ServerDateParser.parse("2026-12-31T23:59:59.123Z"))
     #expect(result.stats.completedCount == 10)
     #expect(result.stats.participationRate == 83.3)
     #expect(result.stats.options.first?.id == 31)

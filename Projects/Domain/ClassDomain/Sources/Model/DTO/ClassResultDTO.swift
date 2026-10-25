@@ -51,7 +51,7 @@ struct ClassResultDTO: Decodable, Sendable {
   let insightState: String?
 
   func toDomain() throws -> ClassResult {
-    guard let closeAt = closeAt.date(as: .serverDateTime) else {
+    guard let closeAt = ServerDateParser.parse(closeAt) else {
       throw ClassError.network("클래스 마감일을 읽을 수 없습니다.")
     }
     return ClassResult(
