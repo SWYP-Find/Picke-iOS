@@ -109,6 +109,29 @@ struct ClassReportTests {
   }
 
   @Test
+  func 레거시_리포트_응답도_개인_결과_권한이_없으면_AI를_조회하지_않는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let requestID = UUID()
+    var state = ClassReportFeature.State(room: room, instanceID: UUID())
+    state.requestID = requestID
+    state.classResult = result(room: room, reportState: nil)
+    let report = MockClassReport.figma
+    let store = TestStore(initialState: state) { ClassReportFeature() }
+
+    await store.send(.inner(.reportResponse(
+      instanceID: state.instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(report)
+    ))) {
+      $0.requestID = nil
+      $0.report = report
+      $0.sourceViewState = .ready
+    }
+    await store.finish()
+  }
+
+  @Test
   func 참여자의_개인_리포트는_서버_응답으로_표시한다() async {
     let room = ClassRoom.mockClosedSociety
     let response = result(room: room, reportState: "SUCCEEDED")

@@ -283,7 +283,7 @@ extension ClassReportFeature {
       case let .success(report):
         state.report = report
         state.sourceViewState = .ready
-        return .send(.async(.generateFeedback))
+        return state.classResult?.myReportState == nil ? .none : .send(.async(.generateFeedback))
       case .failure:
         state.report = nil
         state.sourceViewState = .failed
