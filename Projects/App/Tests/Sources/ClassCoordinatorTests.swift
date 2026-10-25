@@ -766,6 +766,38 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 서버_리포트의_내_의견은_클래스_ID로_열린다() async {
+    let room = ClassRoom.mockClosedSociety
+    var report = ClassReportFeature.State(room: room, instanceID: UUID())
+    report.classResult = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 1,
+        completedCount: 1,
+        participationRate: 100,
+        commentWriterCount: 1,
+        commentRate: 100,
+        postVoteCount: 1,
+        options: []
+      ),
+      myReportState: "SUCCEEDED",
+      insightState: nil
+    )
+    report.sourceViewState = .ready
+    var state = ClassCoordinator.State()
+    state.routes.push(.report(report))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.classID = room.id
+
+    await store.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(report.instanceID)))))) {
+      $0.routes.push(.myOpinions(opinions))
+    }
+  }
+
+  @Test
   func 내_의견의_비활성_닫기는_무시하고_마감일_패널은_탭바를_숨긴다() async {
     var state = ClassCoordinator.State()
     state.routes.push(.myOpinions(.init()))

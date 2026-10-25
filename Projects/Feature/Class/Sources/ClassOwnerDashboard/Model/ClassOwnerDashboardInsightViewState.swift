@@ -6,5 +6,5 @@
 //
 
 public enum ClassOwnerDashboardInsightViewState: Equatable {
-  case unavailable, loading, ready(String), retryableFailure, failure
+  case unavailable, loading, pending, ready(String), retryableFailure, failure
 }

@@ -18,6 +18,7 @@ public struct ClassReportFeature {
     public let instanceID: UUID
     public var room: ClassRoom
     public var report: ClassReport?
+    public var classResult: ClassResult?
     public var selectedTab: ClassReportTab = .summary
     public var sourceViewState: ClassReportSourceViewState = .loading
     public var requestID: UUID?
@@ -28,12 +29,29 @@ public struct ClassReportFeature {
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
 
+    public var serverActiveMemberCount: String { String(classResult?.stats.activeMemberCount ?? 0) }
+    public var serverCompletedCount: String { String(classResult?.stats.completedCount ?? 0) }
+    public var serverPostVoteCount: String { String(classResult?.stats.postVoteCount ?? 0) }
+
+    public var serverParticipationSummary: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "참여율 \(stats.participationRate.formatted(.number.precision(.fractionLength(1))))% · "
+        + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
+    }
+
+    public func serverOptionCount(_ option: ClassResultOption) -> String {
+      "사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)"
+    }
+
     public var feedbackViewState: ClassReportFeedbackViewState {
       if let feedback {
         return .ready(feedback)
       }
       if isGeneratingFeedback {
         return .loading
+      }
+      if feedbackError == .modelNotReady {
+        return .pending
       }
       if let feedbackError, feedbackError.isRetryable {
         return .retryableFailure
@@ -45,11 +63,13 @@ public struct ClassReportFeature {
     }
 
     public var myOpinionCount: Int {
-      report?.resolvedOpinions.count ?? 0
+      if classResult != nil { return feedback?.perspectiveCount ?? 0 }
+      return report?.resolvedOpinions.count ?? 0
     }
 
     public var myOpinionsButtonTitle: String {
-      "내가 남긴 의견 \(myOpinionCount)개 보기"
+      if classResult != nil, feedback == nil { return "내가 남긴 의견 보기" }
+      return "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
     public var showsSummaryLayout: Bool {
@@ -79,6 +99,7 @@ public struct ClassReportFeature {
     case retryTapped
     case feedbackRetryTapped
     case backTapped
+    case closeTapped
     case tabSelected(ClassReportTab)
     case myOpinionsTapped
   }
@@ -91,6 +112,7 @@ public struct ClassReportFeature {
 
   @CasePathable
   public enum InnerAction: Equatable {
+    case resultResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassResult, ClassError>)
     case reportResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassReport?, ClassError>)
     case feedbackResponse(
       instanceID: UUID,
@@ -112,8 +134,7 @@ public struct ClassReportFeature {
     case generate(UUID)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classAIFeedbackUseCase) private var classAIFeedbackUseCase
+  @Dependency(\.classResultUseCase) private var classResultUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -147,10 +168,9 @@ extension ClassReportFeature {
       return .send(.async(.fetch))
     case .feedbackRetryTapped:
       guard state.feedbackError?.isRetryable == true,
-            !state.isGeneratingFeedback,
-            state.feedbackContext != nil else { return .none }
+            !state.isGeneratingFeedback else { return .none }
       return .send(.async(.generateFeedback))
-    case .backTapped:
+    case .backTapped, .closeTapped:
       state.requestID = nil
       state.feedbackRequestID = nil
       state.isGeneratingFeedback = false
@@ -164,7 +184,8 @@ extension ClassReportFeature {
       state.selectedTab = tab
       return .none
     case .myOpinionsTapped:
-      guard state.sourceViewState == .ready, state.report != nil else { return .none }
+      guard state.sourceViewState == .ready,
+            state.report != nil || state.classResult?.myReportState != nil else { return .none }
       return .send(.delegate(.openMyOpinions(state.instanceID)))
     }
   }
@@ -175,6 +196,7 @@ extension ClassReportFeature {
   ) -> Effect<Action> {
     switch action {
     case .fetch:
+      state.classResult = nil
       state.feedbackRequestID = nil
       state.feedback = nil
       state.feedbackContext = nil
@@ -184,12 +206,16 @@ extension ClassReportFeature {
       let requestID = uuid()
       state.requestID = requestID
       state.sourceViewState = .loading
-      let fetch = Effect<Action>.run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      let fetch = Effect<Action>.run { [
+        classResultUseCase,
+        instanceID = state.instanceID,
+        roomID = state.room.id
+      ] send in
         let result = await Result {
-          try await classUseCase.fetchReport(roomID: roomID)
+          try await classResultUseCase.fetch(roomID: roomID)
         }
         .mapError(ClassError.from)
-        await send(.inner(.reportResponse(
+        await send(.inner(.resultResponse(
           instanceID: instanceID,
           requestID: requestID,
           roomID: roomID,
@@ -199,28 +225,15 @@ extension ClassReportFeature {
       .cancellable(id: CancelID.load(state.instanceID), cancelInFlight: true)
       return .concatenate(.cancel(id: CancelID.generate(state.instanceID)), fetch)
     case .generateFeedback:
-      let context: ClassAIFeedbackContext
-      if let retained = state.feedbackContext {
-        context = retained
-      } else {
-        guard let report = state.report else { return .none }
-        do {
-          context = try .personal(room: state.room, report: report, isOwner: false)
-          state.feedbackContext = context
-        } catch {
-          state.feedbackError = .insufficientInput
-          return .none
-        }
-      }
       let requestID = uuid()
       state.feedbackRequestID = requestID
       state.feedbackError = nil
       state.isGeneratingFeedback = true
-      return .run { [classAIFeedbackUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      return .run { [classResultUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
         var wasUnknown = false
         var wasCancelled = false
         let result = await Result {
-          try await classAIFeedbackUseCase.generate(context: context)
+          try await ClassAIFeedbackResult.personal(classResultUseCase.fetchPersonal(roomID: roomID))
         }
         .mapError { error in
           wasCancelled = error is CancellationError
@@ -245,6 +258,22 @@ extension ClassReportFeature {
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
+    case let .resultResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.requestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.requestID = nil
+      switch result {
+      case let .success(classResult):
+        state.classResult = classResult
+        state.sourceViewState = .ready
+        return classResult.myReportState == nil ? .none : .send(.async(.generateFeedback))
+      case .failure:
+        state.classResult = nil
+        state.sourceViewState = .failed
+        return .none
+      }
+
     case let .reportResponse(instanceID, requestID, roomID, result):
       guard state.instanceID == instanceID,
             state.requestID == requestID,
@@ -254,12 +283,13 @@ extension ClassReportFeature {
       case let .success(report):
         state.report = report
         state.sourceViewState = .ready
-        return report == nil ? .none : .send(.async(.generateFeedback))
+        return state.classResult?.myReportState == nil ? .none : .send(.async(.generateFeedback))
       case .failure:
         state.report = nil
         state.sourceViewState = .failed
       }
       return .none
+
     case let .feedbackResponse(instanceID, requestID, roomID, result, wasUnknown):
       guard state.instanceID == instanceID,
             state.feedbackRequestID == requestID,
@@ -268,7 +298,7 @@ extension ClassReportFeature {
       state.isGeneratingFeedback = false
       switch result {
       case let .success(result):
-        guard case let .personal(feedback) = result, feedback.points.count == 3 else {
+        guard case let .personal(feedback) = result else {
           state.feedbackError = .generationFailed
           return .none
         }

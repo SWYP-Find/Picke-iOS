@@ -8,5 +8,5 @@
 import ClassDomainInterface
 
 public enum ClassReportFeedbackViewState: Equatable {
-  case unavailable, loading, ready(ClassAIPersonalFeedback), retryableFailure, failure
+  case unavailable, loading, pending, ready(ClassAIPersonalFeedback), retryableFailure, failure
 }

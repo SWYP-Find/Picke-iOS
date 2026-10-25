@@ -8,5 +8,5 @@
 import ClassDomainInterface
 
 public enum ClassOwnerDashboardFeedbackViewState: Equatable {
-  case unavailable, loading, ready(ClassAIPersonalFeedback), retryableFailure, failure
+  case unavailable, loading, pending, ready(ClassAIPersonalFeedback), retryableFailure, failure
 }
