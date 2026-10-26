@@ -60,6 +60,11 @@ public struct ClassJoinFeature {
       mode == .code && joinCode.count == 6 && !isLoading
     }
 
+    public var codeCharacters: [String] {
+      let characters = Array(joinCode.prefix(6)).map(String.init)
+      return characters + Array(repeating: "-", count: max(0, 6 - characters.count))
+    }
+
     public var primaryButtonTitle: String {
       switch mode {
       case .code, .nickname: return "클래스 참여하기"

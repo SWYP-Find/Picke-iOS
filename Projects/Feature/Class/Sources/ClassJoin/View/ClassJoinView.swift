@@ -81,7 +81,7 @@ private extension ClassJoinView {
       ZStack {
         HStack(spacing: 14) {
           ForEach(0..<6, id: \.self) { index in
-            Text(codeCharacter(at: index))
+            Text(store.codeCharacters[index])
               .pretendardFont(.headingMedium)
               .foregroundStyle(.gray800)
               .frame(maxWidth: .infinity)
@@ -111,11 +111,6 @@ private extension ClassJoinView {
         errorLabel(message)
       }
     }
-  }
-
-  func codeCharacter(at index: Int) -> String {
-    let characters = Array(store.joinCode)
-    return characters.indices.contains(index) ? String(characters[index]) : "-"
   }
 
   func codeBorderColor(at index: Int) -> Color {
