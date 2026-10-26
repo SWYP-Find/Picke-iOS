@@ -168,7 +168,7 @@ public struct ClassAIChatFeature {
     case response
   }
 
-  @Dependency(\.classDebateUseCase) private var debateUseCase
+  @Dependency(\.classUseCase) private var debateUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -214,18 +214,18 @@ extension ClassAIChatFeature {
         do {
           let initial: ClassDebate
           if retryServerGeneration {
-            initial = try await debateUseCase.retry(classID: roomID)
+            initial = try await debateUseCase.retryDebate(classID: roomID)
           } else {
             do {
-              initial = try await debateUseCase.fetch(classID: roomID)
+              initial = try await debateUseCase.fetchDebate(classID: roomID)
             } catch ClassAIChatError.noSession {
-              initial = try await debateUseCase.start(classID: roomID)
+              initial = try await debateUseCase.startDebate(classID: roomID)
             }
           }
           var debate = initial
           while debate.status == .generating, !debate.canRetry, !Task.isCancelled {
             try await Task.sleep(for: .seconds(2))
-            debate = try await debateUseCase.fetch(classID: roomID)
+            debate = try await debateUseCase.fetchDebate(classID: roomID)
           }
           guard !Task.isCancelled else { return }
           await send(.inner(.debateLoaded(requestID, .success(debate))))
@@ -298,7 +298,7 @@ extension ClassAIChatFeature {
       let round = debate.round
       return .run { send in
         do {
-          var result = try await debateUseCase.submitReply(
+          var result = try await debateUseCase.submitDebateReply(
             classID: roomID,
             round: round,
             content: text,
@@ -306,7 +306,7 @@ extension ClassAIChatFeature {
           )
           while result.status == .generating, !result.canRetry, !Task.isCancelled {
             try await Task.sleep(for: .seconds(2))
-            result = try await debateUseCase.fetch(classID: roomID)
+            result = try await debateUseCase.fetchDebate(classID: roomID)
           }
           guard !Task.isCancelled else { return }
           await send(.inner(.replyLoaded(requestID, .success(result))))

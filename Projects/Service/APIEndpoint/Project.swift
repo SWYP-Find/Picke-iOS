@@ -24,6 +24,8 @@ let project = Project.makeModule(
     .service(.api),
     // Auth 엔드포인트가 SocialType 을 경로에 쓴다.
     .domain(.auth, .interface),
+    .domain(.classroom, .interface),
+    .core(.coreUtility),
     .core(.network, .interface),
   ],
   hasTests: true

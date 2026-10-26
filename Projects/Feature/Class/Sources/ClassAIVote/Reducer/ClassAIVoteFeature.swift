@@ -176,7 +176,7 @@ public struct ClassAIVoteFeature {
 
   @Dependency(\.uuid) private var uuid
   @Dependency(\.battleUseCase) private var battleUseCase
-  @Dependency(\.classBattleUseCase) private var classBattleUseCase
+  @Dependency(\.classUseCase) private var classUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -253,7 +253,7 @@ extension ClassAIVoteFeature {
       let classOptionID: Int? = state.isLiveClassBattle ? state.classOptionIDs[optionID - 1] : nil
       return .run { [
         battleUseCase,
-        classBattleUseCase,
+        classUseCase,
         instanceID = state.instanceID,
         battleID = state.battleID,
         classID = state.room.id,
@@ -262,9 +262,9 @@ extension ClassAIVoteFeature {
         let result = await Result {
           if let classOptionID {
             let receipt = if isPostVote {
-              try await classBattleUseCase.submitPostVote(classID: classID, optionID: classOptionID)
+              try await classUseCase.submitPostVote(classID: classID, optionID: classOptionID)
             } else {
-              try await classBattleUseCase.submitPreVote(classID: classID, optionID: classOptionID)
+              try await classUseCase.submitPreVote(classID: classID, optionID: classOptionID)
             }
             return PreVoteResult(voteId: receipt.voteID, status: .created)
           }
@@ -289,7 +289,7 @@ extension ClassAIVoteFeature {
     state.errorMessage = nil
     return .run { [
       battleUseCase,
-      classBattleUseCase,
+      classUseCase,
       instanceID = state.instanceID,
       battleID = state.battleID,
       classID = state.room.id,
@@ -297,10 +297,10 @@ extension ClassAIVoteFeature {
     ] send in
       let result = await Result {
         if isLiveClassBattle {
-          let session = try await classBattleUseCase.fetchBattle(classID: classID)
+          let session = try await classUseCase.fetchBattle(classID: classID)
           let history: ClassVoteHistory?
           do {
-            history = try await classBattleUseCase.fetchMyVotes(classID: classID)
+            history = try await classUseCase.fetchMyVotes(classID: classID)
           } catch ClassBattleError.voteNotFound {
             history = nil
           }

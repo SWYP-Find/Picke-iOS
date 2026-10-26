@@ -113,7 +113,7 @@ public struct ClassTicketFeature {
     case existingTicket(UUID)
   }
 
-  @Dependency(\.classTicketUseCase) private var ticketUseCase
+  @Dependency(\.classUseCase) private var ticketUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -158,7 +158,7 @@ public struct ClassTicketFeature {
           let submittedCode = state.code.trimmingCharacters(in: .whitespacesAndNewlines)
           return .run { [ticketUseCase] send in
             let result: Result<ClassTicket, ClassTicketError> = await Result {
-              try await ticketUseCase.register(code: submittedCode)
+              try await ticketUseCase.registerTicket(code: submittedCode)
             }
             .mapError(Self.mapError)
             await send(.registrationResponse(result))
@@ -190,7 +190,7 @@ public struct ClassTicketFeature {
         let submittedCode = state.code.trimmingCharacters(in: .whitespacesAndNewlines)
         return .run { [ticketUseCase] send in
           let result: Result<ClassTicketPreview, ClassTicketError> = await Result {
-            try await ticketUseCase.preview(code: submittedCode)
+            try await ticketUseCase.previewTicket(code: submittedCode)
           }
           .mapError(Self.mapError)
           await send(.checkResponse(result))

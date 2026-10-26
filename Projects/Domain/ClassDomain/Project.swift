@@ -18,6 +18,10 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .serviceAssembly,
+    .service(.apiEndpoint),
+  ],
+  testDependencies: [
+    .service(.apiEndpoint),
   ],
   hasTests: true,
   hasInterface: true,

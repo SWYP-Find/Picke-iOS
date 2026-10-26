@@ -15,7 +15,6 @@ import TCAFlow
 
 public struct MainTabView: View {
   @Bindable private var store: StoreOf<MainTabCoordinator>
-  @State private var hasMeasuredKeyboard = false
 
   public init(store: StoreOf<MainTabCoordinator>) {
     PickeTabBarAppearance.configure()
@@ -24,29 +23,18 @@ public struct MainTabView: View {
 
   public var body: some View {
     ZStack {
-      tabLayout()
+      tabRouter
 
       MainTabKeyboardObserver { isVisible in
         if store.isKeyboardVisible != isVisible {
           store.send(.keyboardVisibilityChanged(isVisible))
         }
-        hasMeasuredKeyboard = true
       }
     }
   }
 }
 
 private extension MainTabView {
-  @ViewBuilder
-  func tabLayout() -> some View {
-    VStack(spacing: 0) {
-      tabRouter
-      if hasMeasuredKeyboard, !store.shouldHideTabBar {
-        MainTabBar(store: store)
-      }
-    }
-  }
-
   var tabRouter: some View {
     TCAFlowTabRouter(
       selectedTab: $store.selectedTab.sending(\.selectTab),
@@ -65,10 +53,9 @@ private extension MainTabView {
       }
     ) {
       tabContent(for: $0)
-        .toolbar(.hidden, for: .tabBar)
+        .toolbar(store.shouldHideTabBar ? .hidden : .visible, for: .tabBar)
     }
     .tint(.neutral900)
-    .toolbar(.hidden, for: .tabBar)
   }
 
   @ViewBuilder

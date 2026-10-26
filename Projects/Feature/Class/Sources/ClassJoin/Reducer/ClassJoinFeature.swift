@@ -60,6 +60,11 @@ public struct ClassJoinFeature {
       mode == .code && joinCode.count == 6 && !isLoading
     }
 
+    public var codeCharacters: [String] {
+      let characters = Array(joinCode.prefix(6)).map(String.init)
+      return characters + Array(repeating: "-", count: max(0, 6 - characters.count))
+    }
+
     public var primaryButtonTitle: String {
       switch mode {
       case .code, .nickname: return "클래스 참여하기"
@@ -69,14 +74,13 @@ public struct ClassJoinFeature {
 
     public var navigationCenterTitle: String? {
       switch mode {
-      case .code: return nil
-      case .nickname: return "클래스 참여"
+      case .code, .nickname: return "클래스 참여"
       case .ownerName: return "이름 입력"
       }
     }
 
     public var navigationLeadingTitle: String? {
-      mode == .code ? "클래스 참여" : nil
+      nil
     }
 
     public var nicknamePlaceholder: String {
@@ -151,7 +155,6 @@ public struct ClassJoinFeature {
   }
 
   @Dependency(\.classUseCase) private var classUseCase
-  @Dependency(\.classMemberUseCase) private var classMemberUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -284,9 +287,9 @@ extension ClassJoinFeature {
       state.activeOwnerRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classMemberUseCase, room = state.preview] send in
+      return .run { [classUseCase, room = state.preview] send in
         let result = await Result { () async throws -> ClassRoom in
-          _ = try await classMemberUseCase.updateMyDisplayName(classID: roomID, name: nickname)
+          _ = try await classUseCase.updateMyDisplayName(classID: roomID, name: nickname)
           guard let room else { throw ClassError.invalidCode }
           return room
         }

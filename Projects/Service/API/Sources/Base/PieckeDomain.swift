@@ -22,6 +22,7 @@ public enum PieckeDomain {
   case notification
   case device
   case ads
+  case classroom
 }
 
 extension PieckeDomain: PickeDomainType {
@@ -55,6 +56,8 @@ extension PieckeDomain: PickeDomainType {
       return "api/v1/devices"
     case .ads:
       return "api/v1/ads"
+    case .classroom:
+      return "api/v1/"
     }
   }
 }

@@ -6,9 +6,6 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
     let title: String
     let stance: String?
 
-    func toDomain() -> ClassAIFeedbackVoteChoice {
-      ClassAIFeedbackVoteChoice(id: optionId, title: title, stance: stance)
-    }
   }
 
   struct Point: Decodable, Sendable {
@@ -24,15 +21,6 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
       let quote: String?
       let content: String
 
-      func toDomain() -> ClassAIFeedbackEvidence {
-        ClassAIFeedbackEvidence(
-          sourceType: sourceType,
-          sourceID: sourceId,
-          content: content,
-          quote: quote,
-          field: field
-        )
-      }
     }
 
     let headline: String
@@ -44,30 +32,6 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
     let coverage: String?
     let excludedCount: Int?
 
-    func toDomain(
-      preOption: VoteOption?,
-      postOption: VoteOption?,
-      perspectiveCount: Int,
-      commentCount: Int
-    ) -> ClassAIPersonalFeedback {
-      let points = [strength, nextFocus].compactMap(\.self).map {
-        ClassAIFeedbackPoint(title: $0.title, detail: $0.body)
-      }
-      return ClassAIPersonalFeedback(
-        summaryTitle: headline,
-        summaryDetail: judgmentBasis,
-        points: points,
-        nextQuestion: nextQuestion,
-        nextHint: "",
-        evidence: evidence?.map { $0.toDomain() } ?? [],
-        coverage: coverage,
-        excludedCount: excludedCount ?? 0,
-        preOption: preOption?.toDomain(),
-        postOption: postOption?.toDomain(),
-        perspectiveCount: perspectiveCount,
-        commentCount: commentCount
-      )
-    }
   }
 
   let state: String
@@ -76,27 +40,6 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
   let postOption: VoteOption?
   let perspectiveCount: Int?
   let commentCount: Int?
-
-  func toDomain() throws -> ClassAIPersonalFeedback {
-    switch state {
-    case "SUCCEEDED", "LIMITED":
-      guard let feedback else { throw ClassAIFeedbackError.generationFailed }
-      return feedback.toDomain(
-        preOption: preOption,
-        postOption: postOption,
-        perspectiveCount: perspectiveCount ?? 0,
-        commentCount: commentCount ?? 0
-      )
-    case "BEFORE_CLOSE", "PENDING", "GENERATING":
-      throw ClassAIFeedbackError.modelNotReady
-    case "NOT_ELIGIBLE":
-      throw ClassAIFeedbackError.insufficientInput
-    case "FAILED":
-      throw ClassAIFeedbackError.generationFailed
-    default:
-      throw ClassAIFeedbackError.generationFailed
-    }
-  }
 }
 
 struct ClassInsightDTO: Decodable, Sendable {
@@ -107,14 +50,6 @@ struct ClassInsightDTO: Decodable, Sendable {
     let content: String
     let quote: String?
 
-    func toDomain() -> ClassAIFeedbackEvidence {
-      ClassAIFeedbackEvidence(
-        sourceType: sourceType,
-        sourceID: id ?? sourceId,
-        content: content,
-        quote: quote
-      )
-    }
   }
 
   let state: String
@@ -124,26 +59,6 @@ struct ClassInsightDTO: Decodable, Sendable {
   let highlights: [Evidence]?
   let coverage: String?
   let excludedCount: Int?
-
-  func toDomain() throws -> ClassAIInsight {
-    switch state {
-    case "SUCCEEDED", "LIMITED":
-      guard let insightText, !insightText.isEmpty else { throw ClassAIFeedbackError.generationFailed }
-      return ClassAIInsight(
-        text: insightText,
-        evidence: evidence?.map { $0.toDomain() } ?? [],
-        highlights: highlights?.map { $0.toDomain() } ?? [],
-        coverage: coverage,
-        excludedCount: excludedCount ?? 0
-      )
-    case "BEFORE_CLOSE", "PENDING", "GENERATING":
-      throw ClassAIFeedbackError.modelNotReady
-    case "FAILED":
-      throw retryable ? ClassAIFeedbackError.serverRetryAvailable : .generationFailed
-    default:
-      throw ClassAIFeedbackError.generationFailed
-    }
-  }
 }
 
 struct ClassInsightRetryDTO: Decodable, Sendable {

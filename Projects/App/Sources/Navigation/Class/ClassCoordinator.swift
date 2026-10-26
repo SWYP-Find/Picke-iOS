@@ -14,7 +14,6 @@ import TCAFlow
 
 @FlowCoordinator(screen: "ClassScreen", navigation: true)
 public struct ClassCoordinator {
-  @Dependency(\.classMemberUseCase) private var classMemberUseCase
   @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
   @Dependency(\.date) private var date
@@ -365,9 +364,9 @@ private extension ClassCoordinator {
       id: routeID,
       action: .members(.loadingStarted(requestID))
     )))
-    let fetch: Effect<Action> = .run { [classMemberUseCase] send in
+    let fetch: Effect<Action> = .run { [classUseCase] send in
       do {
-        let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
+        let memberList = try await classUseCase.fetchMembers(classID: roomID)
         await send(.inner(.membersLoaded(
           routeID: routeID,
           roomID: roomID,
@@ -835,10 +834,10 @@ private extension ClassCoordinator {
       guard memberID != currentMemberID else {
         return .send(.inner(.memberMutationFailed(roomID, "본인은 내보낼 수 없어요.")))
       }
-      return .run { [classMemberUseCase, classUseCase] send in
+      return .run { [classUseCase] send in
         do {
-          try await classMemberUseCase.removeMember(classID: roomID, memberID: memberID)
-          let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
+          try await classUseCase.removeMember(classID: roomID, memberID: memberID)
+          let memberList = try await classUseCase.fetchMembers(classID: roomID)
           let room = try await classUseCase.fetchClass(id: roomID)
           await send(.inner(.memberMutationCompleted(room, memberList.members)))
         } catch {
@@ -858,10 +857,10 @@ private extension ClassCoordinator {
       guard memberID == currentMemberID else {
         return .send(.inner(.memberMutationFailed(roomID, "본인 이름만 바꿀 수 있어요.")))
       }
-      return .run { [classMemberUseCase, classUseCase] send in
+      return .run { [classUseCase] send in
         do {
-          _ = try await classMemberUseCase.updateMyDisplayName(classID: roomID, name: name)
-          let memberList = try await classMemberUseCase.fetchMembers(classID: roomID)
+          _ = try await classUseCase.updateMyDisplayName(classID: roomID, name: name)
+          let memberList = try await classUseCase.fetchMembers(classID: roomID)
           let room = try await classUseCase.fetchClass(id: roomID)
           await send(.inner(.memberMutationCompleted(room, memberList.members)))
         } catch {

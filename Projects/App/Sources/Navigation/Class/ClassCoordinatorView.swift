@@ -114,7 +114,6 @@ public struct ClassCoordinatorView: View {
         }
       }
     }
-    .toolbar(.hidden, for: .tabBar)
   }
 }
 
