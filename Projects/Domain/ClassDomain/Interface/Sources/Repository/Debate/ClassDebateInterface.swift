@@ -1,3 +1,10 @@
+//
+//  ClassDebateInterface.swift
+//  ClassDomainInterface
+//
+//  Created by Picke on 10/26/26.
+//
+
 import ComposableArchitecture
 import Foundation
 
