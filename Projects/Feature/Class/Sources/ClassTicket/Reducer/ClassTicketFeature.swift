@@ -113,7 +113,7 @@ public struct ClassTicketFeature {
     case existingTicket(UUID)
   }
 
-  @Dependency(\.classUseCase) private var ticketUseCase
+  @Dependency(\.classTicketUseCase) private var ticketUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()

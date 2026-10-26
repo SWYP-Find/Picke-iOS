@@ -154,7 +154,8 @@ public struct ClassJoinFeature {
     case nameOwner(UUID)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classRoomUseCase) private var classRoomUseCase
+  @Dependency(\.classMemberUseCase) private var classMemberUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -250,9 +251,9 @@ extension ClassJoinFeature {
       state.activeFindRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classUseCase, instanceID = state.instanceID] send in
+      return .run { [classRoomUseCase, instanceID = state.instanceID] send in
         let result = await Result {
-          try await classUseCase.fetchClassPreview(joinCode: code)
+          try await classRoomUseCase.fetchClassPreview(joinCode: code)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -266,9 +267,9 @@ extension ClassJoinFeature {
       state.activeJoinRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classUseCase, instanceID = state.instanceID] send in
+      return .run { [classRoomUseCase, instanceID = state.instanceID] send in
         let result = await Result {
-          try await classUseCase.joinClass(joinCode: code, nickname: nickname)
+          try await classRoomUseCase.joinClass(joinCode: code, nickname: nickname)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -287,9 +288,9 @@ extension ClassJoinFeature {
       state.activeOwnerRequestID = requestID
       state.errorMessage = nil
       state.nicknameErrorMessage = nil
-      return .run { [classUseCase, room = state.preview] send in
+      return .run { [classMemberUseCase, room = state.preview] send in
         let result = await Result { () async throws -> ClassRoom in
-          _ = try await classUseCase.updateMyDisplayName(classID: roomID, name: nickname)
+          _ = try await classMemberUseCase.updateMyDisplayName(classID: roomID, name: nickname)
           guard let room else { throw ClassError.invalidCode }
           return room
         }

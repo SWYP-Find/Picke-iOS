@@ -132,7 +132,8 @@ public struct ClassRecommendFeature {
     case select
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classRecommendationUseCase) private var classRecommendationUseCase
+  @Dependency(\.classTopicDraftUseCase) private var classTopicDraftUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -242,9 +243,9 @@ extension ClassRecommendFeature {
       if state.viewState == .loading || state.viewState == .error {
         state.viewState = .loading
       }
-      return .run { [classUseCase] send in
+      return .run { [classRecommendationUseCase] send in
         let result = await Result {
-          try await classUseCase.fetchRecommendedBattles(filter: filter)
+          try await classRecommendationUseCase.fetchRecommendedBattles(filter: filter)
         }
         .mapError(ClassError.from)
         await send(.inner(.battles(result)))
@@ -254,9 +255,9 @@ extension ClassRecommendFeature {
     case let .createDraft(filter):
       state.isLoading = true
       state.viewState = .loading
-      return .run { [classUseCase] send in
+      return .run { [classTopicDraftUseCase] send in
         let result = await Result {
-          try await classUseCase.createTopicDraft(filter: filter)
+          try await classTopicDraftUseCase.createTopicDraft(filter: filter)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -267,12 +268,12 @@ extension ClassRecommendFeature {
     case let .suggest(draftID):
       state.isLoading = true
       state.viewState = .loading
-      return .run { [classUseCase] send in
+      return .run { [classTopicDraftUseCase] send in
         let result = await Result {
-          let draft = try await classUseCase.suggestTopicDraft(id: draftID, filter: nil)
+          let draft = try await classTopicDraftUseCase.suggestTopicDraft(id: draftID, filter: nil)
           guard !Task.isCancelled else { throw CancellationError() }
           await send(.inner(.suggestionStarted(draft)))
-          return try await Self.pollSuggestion(draft: draft, useCase: classUseCase)
+          return try await Self.pollSuggestion(draft: draft, useCase: classTopicDraftUseCase)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -283,10 +284,10 @@ extension ClassRecommendFeature {
     case let .poll(draftID):
       state.isLoading = true
       state.viewState = .loading
-      return .run { [classUseCase] send in
+      return .run { [classTopicDraftUseCase] send in
         let result = await Result {
-          let draft = try await classUseCase.fetchTopicDraft(id: draftID)
-          return try await Self.pollSuggestion(draft: draft, useCase: classUseCase)
+          let draft = try await classTopicDraftUseCase.fetchTopicDraft(id: draftID)
+          return try await Self.pollSuggestion(draft: draft, useCase: classTopicDraftUseCase)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -296,9 +297,9 @@ extension ClassRecommendFeature {
 
     case let .select(draftID, batchNo, candidateID):
       state.isLoading = true
-      return .run { [classUseCase] send in
+      return .run { [classTopicDraftUseCase] send in
         let result = await Result {
-          try await classUseCase.selectTopicDraft(draftID: draftID, batchNo: batchNo, candidateID: candidateID)
+          try await classTopicDraftUseCase.selectTopicDraft(draftID: draftID, batchNo: batchNo, candidateID: candidateID)
         }
         .mapError(ClassError.from)
         guard !Task.isCancelled else { return }
@@ -368,7 +369,7 @@ extension ClassRecommendFeature {
 
   private static func pollSuggestion(
     draft: ClassTopicDraft,
-    useCase: any ClassInterface
+    useCase: any ClassTopicDraftInterface
   ) async throws -> ClassTopicDraft {
     var current = draft
     for _ in 0 ..< 90 where current.suggestStatus == "GENERATING" {

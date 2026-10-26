@@ -104,7 +104,7 @@ public struct ClassDeadlineEditFeature {
     case save(UUID)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classRoomUseCase) private var classUseCase
   @Dependency(\.date) private var date
   @Dependency(\.uuid) private var uuid
 

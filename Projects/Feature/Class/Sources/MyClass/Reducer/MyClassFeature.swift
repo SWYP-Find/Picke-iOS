@@ -104,7 +104,7 @@ public struct MyClassFeature {
     case left(Int)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classRoomUseCase) private var classUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in

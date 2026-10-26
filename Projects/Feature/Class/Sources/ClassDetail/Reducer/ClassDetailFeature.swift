@@ -94,7 +94,7 @@ public struct ClassDetailFeature {
     case deleted(Int, ClassError?)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classRoomUseCase) private var classRoomUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -234,9 +234,9 @@ extension ClassDetailFeature {
     state.errorMessage = nil
     switch action {
     case let .delete(id):
-      return .run { [classUseCase] send in
+      return .run { [classRoomUseCase] send in
         do {
-          try await classUseCase.deleteClass(id: id)
+          try await classRoomUseCase.deleteClass(id: id)
           await send(.inner(.deleted(id, nil)))
         } catch {
           await send(.inner(.deleted(id, ClassError.from(error))))

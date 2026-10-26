@@ -827,7 +827,7 @@ private extension ClassReportView {
     )
     return Store(initialState: state) {
       ClassReportFeature()
-        .dependency(\.classUseCase, repository)
+        .dependency(\.classResultUseCase, repository)
     }
   }
 

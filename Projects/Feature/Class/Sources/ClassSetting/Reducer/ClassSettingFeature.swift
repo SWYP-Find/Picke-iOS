@@ -185,7 +185,7 @@ public struct ClassSettingFeature {
   }
 
   @Dependency(\.date) private var date
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classRoomUseCase) private var classUseCase
 
   public var body: some Reducer<State, Action> {
     BindingReducer()

@@ -74,7 +74,7 @@ public struct ClassMyOpinionsFeature {
     case fetch
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classBattleUseCase) private var classUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in

@@ -177,7 +177,7 @@ public struct ClassBattleFlowFeature {
   }
 
   @Dependency(\.uuid) private var uuid
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classBattleUseCase) private var classUseCase
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.audioPlayer) private var audioPlayer
 
