@@ -15,6 +15,7 @@ import SwiftUI
 public struct ClassJoinView: View {
   @Bindable public var store: StoreOf<ClassJoinFeature>
   @FocusState private var isCodeFocused: Bool
+  @FocusState private var isNicknameFocused: Bool
 
   public init(store: StoreOf<ClassJoinFeature>) {
     self.store = store
@@ -52,8 +53,12 @@ public struct ClassJoinView: View {
     }
     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
     .ignoresSafeArea(.container, edges: store.mode == .code ? .bottom : [])
-    .screenBackground(.surfaceBeigeDefault)
+    .screenBackground(.white)
     .hidesSystemBars()
+    .onAppear {
+      isCodeFocused = store.mode == .code
+      isNicknameFocused = store.mode != .code
+    }
   }
 }
 
@@ -86,7 +91,7 @@ private extension ClassJoinView {
               .foregroundStyle(.gray800)
               .frame(maxWidth: .infinity)
               .frame(height: 50)
-              .background(.bgSubtle)
+              .background(index < store.joinCode.count ? .bgSubtle : .white)
               .overlay {
                 RoundedRectangle(cornerRadius: 2)
                   .strokeBorder(codeBorderColor(at: index), lineWidth: 1)
@@ -145,6 +150,7 @@ private extension ClassJoinView {
     TextField("", text: $store.nickname, prompt: Text(store.nicknamePlaceholder).foregroundStyle(.gray300))
       .textInputAutocapitalization(.never)
       .autocorrectionDisabled()
+      .focused($isNicknameFocused)
       .accessibilityLabel("클래스에서 사용할 이름")
       .pickeTextField(height: 52)
       .overlay {

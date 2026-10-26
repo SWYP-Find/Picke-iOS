@@ -20,8 +20,8 @@ extension ClassPersonalReportDTO.Feedback.Evidence {
 
 extension ClassPersonalReportDTO.Feedback {
   func toDomain(
-    preOption: VoteOption?,
-    postOption: VoteOption?,
+    preOption: ClassPersonalReportDTO.VoteOption?,
+    postOption: ClassPersonalReportDTO.VoteOption?,
     perspectiveCount: Int,
     commentCount: Int
   ) -> ClassAIPersonalFeedback {
