@@ -1,3 +1,10 @@
+//
+//  ClassUseCaseImpl+Debate.swift
+//  ClassDomain
+//
+//  Created by Picke on 10/26/26.
+//
+
 import ClassDomainInterface
 import Foundation
 

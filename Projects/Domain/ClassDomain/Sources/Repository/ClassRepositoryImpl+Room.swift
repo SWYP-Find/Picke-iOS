@@ -1,3 +1,10 @@
+//
+//  ClassRepositoryImpl+Room.swift
+//  ClassDomain
+//
+//  Created by Picke on 10/26/26.
+//
+
 import APIEndpoint
 import ClassDomainInterface
 import Foundation
