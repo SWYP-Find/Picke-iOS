@@ -20,22 +20,22 @@ final class ClassAIFoundationModelsTests: XCTestCase {
       throw XCTSkip("실기 Foundation Models 감사는 PICKE_CLASS_FOUNDATION_AUDIT=1에서만 실행합니다.")
     }
 
-    let client = ClassAIChatUseCaseDependency.liveValue
+    let client = ClassLocalAIUseCaseDependency.liveValue
     let conversationID = UUID()
 
     do {
-      try await client.start(conversationID, ClassAIChatContext(
+      try await client.startAIChat(conversationID, ClassAIChatContext(
         question: "뒤샹의 변기는 예술일까?",
         selectedStance: "예술이 될 수 있다",
         opponentStance: "예술이 아니다",
         opponentPhilosopherName: "플라톤"
       ))
-      let reply = try await client.respond(
+      let reply = try await client.respondAIChat(
         conversationID,
         "평범한 물건도 새로운 의미를 부여하면 예술이 될 수 있어요.",
         isFinalRound: false
       )
-      await client.end(conversationID)
+      await client.endAIChat(conversationID)
 
       let attachment = XCTAttachment(string: reply)
       attachment.name = "Class AI 실제 모델 응답"
@@ -48,7 +48,7 @@ final class ClassAIFoundationModelsTests: XCTestCase {
         "모델 응답에 한글 음절이 포함되어야 합니다."
       )
     } catch {
-      await client.end(conversationID)
+      await client.endAIChat(conversationID)
       if let modelError = error as? ClassAIChatError,
          modelError == .unavailable || modelError == .unsupportedLanguage
          || modelError == .deviceNotEligible || modelError == .appleIntelligenceNotEnabled
@@ -83,14 +83,14 @@ final class ClassAIFoundationModelsTests: XCTestCase {
         "진짜? 왜 그렇게 생각해요?",
         "형식뿐 아니라 보는 사람의 해석도 중요하다는 점을 정리하고 싶어요.",
       ]
-      let client = ClassAIChatUseCaseDependency.liveValue
+      let client = ClassLocalAIUseCaseDependency.liveValue
       var replies: [String] = []
       do {
-        try await client.start(id, context)
-        let first = try await client.respond(id, prompts[0], isFinalRound: false)
-        let second = try await client.respond(id, prompts[1], isFinalRound: false)
+        try await client.startAIChat(id, context)
+        let first = try await client.respondAIChat(id, prompts[0], isFinalRound: false)
+        let second = try await client.respondAIChat(id, prompts[1], isFinalRound: false)
         replies = [first, second]
-        await client.end(id)
+        await client.endAIChat(id)
 
         let prior: [ClassAIChatMessage] = [
           .init(speaker: .user, text: prompts[0]),
@@ -105,10 +105,10 @@ final class ClassAIFoundationModelsTests: XCTestCase {
           opponentPhilosopherName: nil,
           priorMessages: prior
         )
-        try await client.start(id, resumed)
-        let third = try await client.respond(id, prompts[2], isFinalRound: true)
+        try await client.startAIChat(id, resumed)
+        let third = try await client.respondAIChat(id, prompts[2], isFinalRound: true)
         replies.append(third)
-        await client.end(id)
+        await client.endAIChat(id)
 
         let limit = if #available(iOS 26.4, *) {
           1440
@@ -142,7 +142,7 @@ final class ClassAIFoundationModelsTests: XCTestCase {
         XCTAssertTrue(third.contains("해석"), "마지막 사용자 근거를 반영해야 합니다.")
         XCTAssertTrue(third.contains("형식") || third.contains("기술"), "반대 입장의 근거를 반영해야 합니다.")
       } catch {
-        await client.end(id)
+        await client.endAIChat(id)
         throw error
       }
     }

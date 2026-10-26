@@ -1,4 +1,5 @@
 @testable import ClassDomain
+import APIEndpoint
 import ClassDomainInterface
 import Foundation
 import PickeNetwork

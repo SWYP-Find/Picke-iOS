@@ -66,7 +66,7 @@ final class ClassAIFeedbackFoundationModelsTests: XCTestCase {
       layout: .summary
     )
     let context = try ClassAIFeedbackContext.personal(room: room, report: report, isOwner: false)
-    let client = ClassAIFeedbackUseCaseDependency.liveValue
+    let client = ClassLocalAIUseCaseDependency.liveValue
     let diagnostics = FeedbackAuditDiagnostics()
     defer {
       let attachment = XCTAttachment(string: diagnostics.messages.joined(separator: "\n"))
@@ -80,15 +80,15 @@ final class ClassAIFeedbackFoundationModelsTests: XCTestCase {
         if #available(iOS 26.0, *) {
           diagnostics.append("diagnosticSink=installed")
           result = try await ClassAIFeedbackFoundationEngine.$auditDiagnostic.withValue({ diagnostics.append($0) }) {
-            try await client.generate(context: context)
+            try await client.generateAIFeedback(context: context)
           }
         } else {
           diagnostics.append("diagnosticSink=unavailable")
-          result = try await client.generate(context: context)
+          result = try await client.generateAIFeedback(context: context)
         }
       #else
         diagnostics.append("diagnosticSink=unavailable")
-        result = try await client.generate(context: context)
+        result = try await client.generateAIFeedback(context: context)
       #endif
       let attachment =
         XCTAttachment(
