@@ -1,4 +1,5 @@
 @testable import ClassDomain
+import APIEndpoint
 import ClassDomainInterface
 import Dependencies
 import Foundation
@@ -67,13 +68,11 @@ struct ClassRecommendationTests {
   @Test
   func 라이브_클래스_목록은_목_저장소가_아닌_서버를_쓴다() async throws {
     let json = #"{"statusCode":200,"data":[]}"#
-    let live = ClassLiveRepository(
-      api: withDependencies {
-        $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
-      } operation: {
-        ClassRepositoryImpl()
-      }
-    )
+    let live = withDependencies {
+      $0.networkClient = ClassRecommendationStubClient(data: Data(json.utf8))
+    } operation: {
+      ClassRepositoryImpl()
+    }
 
     #expect(try await live.fetchMyClasses().isEmpty)
   }

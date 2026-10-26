@@ -1,22 +1,24 @@
 @testable import ClassDomain
+import APIEndpoint
 import ClassDomainInterface
 import Foundation
+import PickeCoreUtility
 import PickeNetwork
 import Testing
 
 struct ClassResultAPIContractTests {
   @Test
   func 결과_열람_만료와_권한_오류를_구분한다() {
-    #expect(ClassResultRepositoryImpl.resultError(code: "CLASS_409_RESULT_EXPIRED", message: nil) == .resultExpired)
-    #expect(ClassResultRepositoryImpl.resultError(code: "CLASS_403_MEMBER", message: nil) == .accessDenied)
-    #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_409_RESULT_EXPIRED") == .resultExpired)
-    #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_403_OWNER") == .accessDenied)
-    #expect(ClassResultRepositoryImpl.feedbackError(code: "CLASS_409_REPORT_RETRY") == .generationFailed)
+    #expect(ClassRepositoryImpl.resultError(code: "CLASS_409_RESULT_EXPIRED", message: nil) == .resultExpired)
+    #expect(ClassRepositoryImpl.resultError(code: "CLASS_403_MEMBER", message: nil) == .accessDenied)
+    #expect(ClassRepositoryImpl.feedbackError(code: "CLASS_409_RESULT_EXPIRED") == .resultExpired)
+    #expect(ClassRepositoryImpl.feedbackError(code: "CLASS_403_OWNER") == .accessDenied)
+    #expect(ClassRepositoryImpl.feedbackError(code: "CLASS_409_REPORT_RETRY") == .generationFailed)
   }
 
   @Test
   func 감싼_네트워크_디코딩_오류는_재시도_대상에서_제외한다() {
-    let error = ClassResultRepositoryImpl.feedbackError(PickeNetworkError.decoding(.dataMissing))
+    let error = ClassRepositoryImpl.feedbackError(PickeNetworkError.decoding(.dataMissing))
     #expect(error == .invalidResponse)
     #expect(!error.isRetryable)
   }

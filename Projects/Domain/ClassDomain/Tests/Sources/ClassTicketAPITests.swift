@@ -1,4 +1,5 @@
 @testable import ClassDomain
+import APIEndpoint
 import ClassDomainInterface
 import Foundation
 import PickeCoreUtility
@@ -22,7 +23,7 @@ struct ClassTicketAPITests {
       let error = PickeNetworkError.response(
         ResponseError(httpStatus: status, code: code)
       )
-      #expect(ClassTicketRepositoryImpl.map(error) == expected)
+      #expect(ClassRepositoryImpl.ticketError(error) == expected)
     }
   }
 

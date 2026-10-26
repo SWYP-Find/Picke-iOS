@@ -16,8 +16,8 @@ struct ClassAIChatDependencyTests {
     let isLive = withDependencies {
       $0.context = .live
     } operation: {
-      @Dependency(\.classAIChatUseCase) var useCase
-      return useCase is ClassAIChatUseCaseImpl
+      @Dependency(\.classLocalAIUseCase) var useCase
+      return useCase is ClassUseCaseImpl
     }
 
     #expect(isLive)

@@ -23,17 +23,17 @@ struct ClassAIFeedbackDependencyTests {
       report: MockClassReport.figma,
       isOwner: false
     )
-    let mock = MockClassAIFeedbackUseCase { received in
+    let mock = FeedbackUseCaseStub { received in
       #expect(received.roomID == context.roomID)
       return .classInsight("generated")
     }
     let useCase = withDependencies {
-      $0.classAIFeedbackUseCase = mock
+      $0.classLocalAIUseCase = mock
     } operation: {
-      @Dependency(\.classAIFeedbackUseCase) var useCase
+      @Dependency(\.classLocalAIUseCase) var useCase
       return useCase
     }
-    let result = try await useCase.generate(context: context)
+    let result = try await useCase.generateAIFeedback(context: context)
     #expect(result == .classInsight("generated"))
     #expect(ClassAIFeedbackError.deviceNotEligible.isUnavailable)
     #expect(ClassAIFeedbackError.appleIntelligenceNotEnabled.isUnavailable)
@@ -129,4 +129,22 @@ struct ClassAIFeedbackDependencyTests {
       #expect(!(mapped is ClassAIFeedbackError))
     }
   #endif
+}
+
+private struct FeedbackUseCaseStub: ClassLocalAIInterface {
+  let generate: @Sendable (ClassAIFeedbackContext) async throws -> ClassAIFeedbackResult
+
+  func startAIChat(_: UUID, _: ClassAIChatContext) async throws {
+    throw ClassAIFeedbackError.modelNotReady
+  }
+
+  func respondAIChat(_: UUID, _: String, isFinalRound _: Bool) async throws -> String {
+    throw ClassAIFeedbackError.modelNotReady
+  }
+
+  func endAIChat(_: UUID) async {}
+
+  func generateAIFeedback(context: ClassAIFeedbackContext) async throws -> ClassAIFeedbackResult {
+    try await generate(context)
+  }
 }
