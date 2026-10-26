@@ -24,7 +24,7 @@ struct ProfileTicketCoordinatorTests {
 
     #expect(store.state.selectedTab == myPageTab)
     #expect(store.state.myPageState.routes.count == 2)
-    #expect(store.state.shouldHideTabBar)
+    #expect(!store.state.shouldHideTabBar)
     guard case let .ticket(ticket)? = store.state.myPageState.routes.last?.screen else {
       Issue.record("이용권 등록 화면이 열리지 않았습니다")
       return
