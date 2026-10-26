@@ -31,7 +31,7 @@ public struct ClassJoinView: View {
       .foregroundStyle(.gray500)
 
       ScrollView {
-        VStack(alignment: .leading, spacing: store.mode == .code ? 26 : 24) {
+        VStack(alignment: .leading, spacing: store.mode == .code ? 20 : 24) {
           titleSection()
           switch store.mode {
           case .code:
@@ -41,13 +41,12 @@ public struct ClassJoinView: View {
           }
         }
         .padding(16)
-        .padding(.top, store.mode == .code ? 6 : 0)
         .frame(maxWidth: .infinity, alignment: .leading)
       }
       .scrollIndicators(.hidden)
       .scrollBounceBehavior(.basedOnSize)
 
-      bottomActions()
+      bottomAction
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
     }
@@ -61,14 +60,14 @@ public struct ClassJoinView: View {
 private extension ClassJoinView {
   @ViewBuilder
   func titleSection() -> some View {
-    VStack(alignment: .leading, spacing: store.mode == .code ? 14 : 8) {
+    VStack(alignment: .leading, spacing: store.mode == .code ? 6 : 8) {
       Text(store.mode == .code ? "공유받은 코드로\n클래스에 참여하세요" : "이름을 입력해주세요")
         .pretendardFont(.semiBold24)
         .lineSpacing(store.mode == .code ? 7 : 2.4)
         .foregroundStyle(.gray800)
 
       Text(store.mode == .code
-        ? "선생님이나 모임장이 전달한\n6자리 코드를 입력해 주세요."
+        ? "전달받은 6자리 코드를 입력해 주세요."
         : "이 클래스에서만 보이는 이름이에요.\n입장 후에도 수정할 수 있어요.")
         .pretendardFont(.bodyMedium)
         .lineSpacing(4)
@@ -78,56 +77,51 @@ private extension ClassJoinView {
 
   @ViewBuilder
   func codeSection() -> some View {
-    VStack(alignment: .leading, spacing: 29) {
-      VStack(alignment: .leading, spacing: 12) {
-        Text("참여 코드")
-          .pretendardFont(.headingMedium)
-          .foregroundStyle(.gray800)
+    VStack(alignment: .leading, spacing: 8) {
+      ZStack {
+        HStack(spacing: 14) {
+          ForEach(0..<6, id: \.self) { index in
+            Text(codeCharacter(at: index))
+              .pretendardFont(.headingMedium)
+              .foregroundStyle(.gray800)
+              .frame(maxWidth: .infinity)
+              .frame(height: 50)
+              .background(.bgSubtle)
+              .overlay {
+                RoundedRectangle(cornerRadius: 2)
+                  .strokeBorder(codeBorderColor(at: index), lineWidth: 1)
+              }
+          }
+        }
 
-        TextField(
-          "",
-          text: $store.joinCode,
-          prompt: Text("6자리 코드를 입력해 주세요")
-            .font(.pretendardFontFamily(family: .Regular, size: 14))
-            .tracking(0)
-            .foregroundStyle(.gray300)
-        )
+        TextField("", text: $store.joinCode)
           .textInputAutocapitalization(.characters)
           .autocorrectionDisabled()
           .keyboardType(.asciiCapable)
           .textContentType(.oneTimeCode)
           .focused($isCodeFocused)
           .accessibilityLabel("참여 코드, 6자리")
-          .tracking(4)
-          .pickeTextField(
-            height: 52,
-            font: .headingLarge
-          )
-          .overlay {
-            if store.errorMessage != nil {
-              RoundedRectangle(cornerRadius: 2)
-                .strokeBorder(.borderErrorDefault, lineWidth: 1)
-            }
-          }
-
-        if let message = store.errorMessage {
-          errorLabel(message)
-        }
+          .foregroundStyle(.clear)
+          .tint(.clear)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
+      .frame(height: 50)
 
-      VStack(alignment: .leading, spacing: 8) {
-        Text("코드를 찾을 수 없나요?")
-          .pretendardFont(.headingSmall)
-          .foregroundStyle(.gray800)
-
-        Text("클래스를 만든 선생님이나 모임장에게\n참여 코드를 확인해 주세요.")
-          .pretendardFont(.bodySmall)
-          .foregroundStyle(.gray400)
+      if let message = store.errorMessage {
+        errorLabel(message)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(16)
-      .background(.beige200)
     }
+  }
+
+  func codeCharacter(at index: Int) -> String {
+    let characters = Array(store.joinCode)
+    return characters.indices.contains(index) ? String(characters[index]) : "-"
+  }
+
+  func codeBorderColor(at index: Int) -> Color {
+    if store.errorMessage != nil { return .borderErrorDefault }
+    if isCodeFocused && index == min(store.joinCode.count, 5) { return .secondary500 }
+    return .gray50
   }
 
   @ViewBuilder
@@ -173,22 +167,11 @@ private extension ClassJoinView {
       .fixedSize(horizontal: false, vertical: true)
   }
 
-  @ViewBuilder
-  func bottomActions() -> some View {
-    VStack(spacing: 8) {
-      Button { send(store.mode == .code ? .findTapped : .joinTapped) } label: {
-        Text(store.primaryButtonTitle)
-      }
-      .ctaButtonStyle(.primary, size: .large, height: 52)
-      .disabled(store.mode == .code ? !store.canFindClass : !store.canJoin)
-
-      if store.mode == .code {
-        Button { send(.createClassTapped) } label: {
-          Text("클래스 새로 만들기")
-        }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
-        .disabled(store.isLoading)
-      }
+  var bottomAction: some View {
+    Button { send(store.mode == .code ? .findTapped : .joinTapped) } label: {
+      Text(store.primaryButtonTitle)
     }
+    .ctaButtonStyle(.primary, size: .large, height: 52)
+    .disabled(store.mode == .code ? !store.canFindClass : !store.canJoin)
   }
 }
