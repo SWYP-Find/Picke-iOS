@@ -42,13 +42,15 @@ public actor MockClassRepository: ClassInterface {
   private var reports: [Int: ClassReport]
   private var dashboards: [Int: ClassOwnerDashboardData]
   private var nextID: Int
+  let feedbackHandler: (@Sendable (ClassAIFeedbackContext) async throws -> ClassAIFeedbackResult)?
 
   public init(
     rooms: [ClassRoom] = ClassRoom.mocks + [.mockClosedSociety],
     availableRooms: [ClassRoom] = [ClassRoom.mockJoinable],
     reports: [Int: ClassReport]? = nil,
     dashboards: [Int: ClassOwnerDashboardData]? = nil,
-    members: [Int: [ClassMember]]? = nil
+    members: [Int: [ClassMember]]? = nil,
+    generateAIFeedback: (@Sendable (ClassAIFeedbackContext) async throws -> ClassAIFeedbackResult)? = nil
   ) {
     let initialRooms = rooms + availableRooms
     let initialIDs = Set(initialRooms.map(\.id))
@@ -93,6 +95,7 @@ public actor MockClassRepository: ClassInterface {
       (room.id, (memberLists[room.id]?.map(\.id).max() ?? 0) + 1)
     })
     nextID = (rooms + availableRooms).map(\.id).max().map { $0 + 1 } ?? 1
+    feedbackHandler = generateAIFeedback
   }
 
   public func fetchMembers(roomID: Int) async throws -> [ClassMember] {

@@ -1,97 +1,10 @@
-//
-//  ClassLiveDependencies.swift
-//  ClassDomain
-//
-//  Created by Picke on 10/11/26.
-//
-
 import ClassDomainInterface
 import ComposableArchitecture
 
 extension ClassUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassInterface {
-    ClassUseCaseImpl()
-  }
-}
-
-extension ClassTicketUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassTicketInterface {
-    ClassTicketUseCaseImpl()
-  }
-}
-
-extension ClassTicketRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassTicketInterface {
-    ClassTicketRepositoryImpl()
-  }
-}
-
-extension ClassBattleUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassBattleInterface {
-    ClassBattleUseCaseImpl()
-  }
-}
-
-extension ClassBattleRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassBattleInterface {
-    ClassBattleRepositoryImpl()
-  }
-}
-
-extension ClassMemberUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassMemberInterface {
-    ClassMemberUseCaseImpl()
-  }
-}
-
-extension ClassMemberRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassMemberInterface {
-    ClassMemberRepositoryImpl()
-  }
-}
-
-extension ClassAIChatUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassAIChatInterface {
-    ClassAIChatUseCaseImpl()
-  }
-}
-
-extension ClassDebateUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassDebateInterface {
-    ClassDebateUseCaseImpl()
-  }
-}
-
-extension ClassAIRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassAIRepositoryInterface {
-    ClassAIRepositoryImpl()
-  }
-}
-
-extension ClassAIFeedbackUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassAIFeedbackInterface {
-    ClassAIFeedbackUseCaseImpl()
-  }
-}
-
-extension ClassResultUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassResultInterface { ClassResultUseCaseImpl() }
-}
-
-extension ClassResultRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassResultInterface { ClassResultRepositoryImpl() }
-}
-
-extension ClassTopicDraftUseCaseDependency: DependencyKey {
-  public static var liveValue: any ClassTopicDraftInterface { ClassTopicDraftUseCaseImpl() }
-}
-
-extension ClassTopicDraftRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassTopicDraftInterface { ClassTopicDraftRepositoryImpl() }
+  public static var liveValue: any ClassInterface { ClassUseCaseImpl() }
 }
 
 extension ClassRepositoryDependency: DependencyKey {
-  public static var liveValue: any ClassInterface {
-    ClassLiveRepository(api: ClassRepositoryImpl())
-  }
+  public static var liveValue: any ClassInterface { ClassRepositoryImpl() }
 }

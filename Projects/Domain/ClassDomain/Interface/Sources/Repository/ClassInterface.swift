@@ -21,6 +21,53 @@ public protocol ClassInterface: Sendable {
   func leaveClass(id: Int) async throws
   func fetchReport(roomID: Int) async throws -> ClassReport?
   func fetchOwnerDashboard(roomID: Int) async throws -> ClassOwnerDashboardData?
+  func fetchBattle(classID: Int) async throws -> ClassBattleSession
+  func submitPreVote(classID: Int, optionID: Int) async throws -> ClassVoteReceipt
+  func completeTTS(classID: Int) async throws
+  func submitPostVote(classID: Int, optionID: Int) async throws -> ClassVoteReceipt
+  func fetchMyVotes(classID: Int) async throws -> ClassVoteHistory
+  func fetchVoteStats(classID: Int) async throws -> ClassVoteStats
+  func publishPerspective(classID: Int, content: String) async throws -> ClassPerspectiveReceipt
+  func fetchPerspectives(
+    classID: Int,
+    cursor: String?,
+    size: Int?,
+    optionID: Int?,
+    sort: String?
+  ) async throws -> ClassPerspectivePage
+  func fetchMyPerspectives(classID: Int) async throws -> [ClassPerspectiveItem]
+  func fetchMembers(classID: Int) async throws -> ClassMemberList
+  func updateMyDisplayName(classID: Int, name: String) async throws -> ClassMember
+  func removeMember(classID: Int, memberID: Int) async throws
+  func fetchDebate(classID: Int) async throws -> ClassDebate
+  func startDebate(classID: Int) async throws -> ClassDebate
+  func submitDebateReply(
+    classID: Int,
+    round: Int,
+    content: String,
+    requestKey: UUID
+  ) async throws -> ClassDebate
+  func retryDebate(classID: Int) async throws -> ClassDebate
+  func previewTicket(code: String) async throws -> ClassTicketPreview
+  func registerTicket(code: String) async throws -> ClassTicket
+  func fetchMyTicket() async throws -> ClassTicket
+  func fetchResult(roomID: Int) async throws -> ClassResult
+  func fetchPersonalResult(roomID: Int) async throws -> ClassAIPersonalFeedback
+  func fetchInsight(roomID: Int) async throws -> ClassAIInsight
+  func retryInsight(roomID: Int) async throws
+  func createTopicDraft(filter: ClassTopicFilter) async throws -> ClassTopicDraft
+  func fetchTopicDraft(id: Int) async throws -> ClassTopicDraft
+  func suggestTopicDraft(id: Int, filter: ClassTopicFilter?) async throws -> ClassTopicDraft
+  func selectTopicDraft(draftID: Int, batchNo: Int, candidateID: Int) async throws -> ClassTopicVersion
+  func validateTopicDraft(
+    draftID: Int,
+    baseVersionID: Int,
+    candidate: ClassTopicCandidate
+  ) async throws -> ClassTopicValidation
+  func startAIChat(_ id: UUID, _ context: ClassAIChatContext) async throws
+  func respondAIChat(_ id: UUID, _ text: String, isFinalRound: Bool) async throws -> String
+  func endAIChat(_ id: UUID) async
+  func generateAIFeedback(context: ClassAIFeedbackContext) async throws -> ClassAIFeedbackResult
 }
 
 public extension ClassInterface {

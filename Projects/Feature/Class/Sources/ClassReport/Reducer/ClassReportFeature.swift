@@ -170,7 +170,7 @@ public struct ClassReportFeature {
     case generate(UUID)
   }
 
-  @Dependency(\.classResultUseCase) private var classResultUseCase
+  @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -244,12 +244,12 @@ extension ClassReportFeature {
       state.requestID = requestID
       state.sourceViewState = .loading
       let fetch = Effect<Action>.run { [
-        classResultUseCase,
+        classUseCase,
         instanceID = state.instanceID,
         roomID = state.room.id
       ] send in
         let result = await Result {
-          try await classResultUseCase.fetch(roomID: roomID)
+          try await classUseCase.fetchResult(roomID: roomID)
         }
         .mapError(ClassError.from)
         await send(.inner(.resultResponse(
@@ -266,11 +266,11 @@ extension ClassReportFeature {
       state.feedbackRequestID = requestID
       state.feedbackError = nil
       state.isGeneratingFeedback = true
-      return .run { [classResultUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
         var wasUnknown = false
         var wasCancelled = false
         let result = await Result {
-          try await ClassAIFeedbackResult.personal(classResultUseCase.fetchPersonal(roomID: roomID))
+          try await ClassAIFeedbackResult.personal(classUseCase.fetchPersonalResult(roomID: roomID))
         }
         .mapError { error in
           wasCancelled = error is CancellationError

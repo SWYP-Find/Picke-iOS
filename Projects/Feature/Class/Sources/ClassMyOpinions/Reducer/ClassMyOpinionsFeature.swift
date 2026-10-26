@@ -74,7 +74,7 @@ public struct ClassMyOpinionsFeature {
     case fetch
   }
 
-  @Dependency(\.classBattleUseCase) private var classBattleUseCase
+  @Dependency(\.classUseCase) private var classUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -91,7 +91,7 @@ public struct ClassMyOpinionsFeature {
         guard let classID = state.classID else { return .none }
         state.isLoading = true
         state.errorMessage = nil
-        return .run { [useCase = classBattleUseCase] send in
+        return .run { [useCase = classUseCase] send in
           let result = await Result { try await useCase.fetchMyPerspectives(classID: classID) }
             .mapError { ($0 as? ClassBattleError) ?? .network($0.localizedDescription) }
           await send(.inner(.perspectivesResponse(result)))

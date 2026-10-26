@@ -177,7 +177,7 @@ public struct ClassBattleFlowFeature {
   }
 
   @Dependency(\.uuid) private var uuid
-  @Dependency(\.classBattleUseCase) private var classBattleUseCase
+  @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.audioPlayer) private var audioPlayer
 
@@ -271,7 +271,7 @@ extension ClassBattleFlowFeature {
       let optionID = state.selectedOptionID
       let preVoteOptionID = state.voteHistory?.preVote.optionID
       let draft = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
-      return .run { [useCase = classBattleUseCase] send in
+      return .run { [useCase = classUseCase] send in
         let result = await Result {
           switch step {
           case .none:
@@ -330,7 +330,7 @@ extension ClassBattleFlowFeature {
     state.loadRequestID = requestID
     state.viewState = .loading
     state.errorMessage = nil
-    return .run { [useCase = classBattleUseCase] send in
+    return .run { [useCase = classUseCase] send in
       let result = await Result {
         let session = try await useCase.fetchBattle(classID: classID)
         let history = session.battle.currentStep == .none
@@ -461,7 +461,7 @@ extension ClassBattleFlowFeature {
       state.nextPerspectiveCursor = nil
       state.perspectives = []
     }
-    return .run { [useCase = classBattleUseCase] send in
+    return .run { [useCase = classUseCase] send in
       let result = await Result {
         try await useCase.fetchPerspectives(
           classID: classID,

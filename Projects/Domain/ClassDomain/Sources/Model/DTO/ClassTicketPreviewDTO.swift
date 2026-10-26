@@ -7,17 +7,4 @@ struct ClassTicketPreviewDTO: Decodable, Sendable {
   let registerBy: String
   let usageMonths: Int
   let registeredByMe: Bool
-
-  func toDomain() throws -> ClassTicketPreview {
-    guard let date = ServerDateParser.parse(registerBy) else {
-      throw ClassTicketError.invalidResponse
-    }
-
-    return ClassTicketPreview(
-      capacity: capacity,
-      registerBy: date,
-      usageMonths: usageMonths,
-      registeredByMe: registeredByMe
-    )
-  }
 }
