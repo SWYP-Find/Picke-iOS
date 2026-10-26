@@ -56,8 +56,13 @@ public struct ClassAIVoteFeature {
     }
 
     public var submitTitle: String {
-      if shouldResubmitPreVote { return "투표 수정하기" }
-      return hasSubmitted ? "의견 보기" : (isPostVote ? "최종 투표하기" : "투표하기")
+      if shouldResubmitPreVote {
+        return "투표 수정하기"
+      }
+      if hasSubmitted {
+        return "의견 보기"
+      }
+      return isPostVote ? "최종 투표하기" : "투표하기"
     }
 
     public var shouldResubmitPreVote: Bool {
@@ -78,7 +83,12 @@ public struct ClassAIVoteFeature {
     }
 
     public var optionASubtitle: String {
-      classOptions.first.map { $0.stance.isEmpty ? $0.representative : $0.stance }
+      classOptions.first.map { option in
+        if option.stance.isEmpty {
+          return option.representative
+        }
+        return option.stance
+      }
         ?? room.battle.optionADescription ?? room.battle.philosopherA
     }
 
@@ -87,7 +97,12 @@ public struct ClassAIVoteFeature {
     }
 
     public var optionBSubtitle: String {
-      classOptions.dropFirst().first.map { $0.stance.isEmpty ? $0.representative : $0.stance }
+      classOptions.dropFirst().first.map { option in
+        if option.stance.isEmpty {
+          return option.representative
+        }
+        return option.stance
+      }
         ?? room.battle.optionBDescription ?? room.battle.philosopherB
     }
 

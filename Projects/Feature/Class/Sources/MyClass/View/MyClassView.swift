@@ -42,7 +42,7 @@ public struct MyClassView: View {
       dimOpacity: 0.28
     ) { _ in
       if let roomID = store.selectedRoomID,
-         let room = store.rooms.first(where: { $0.id == roomID })
+         let room = store.rooms[id: roomID]
       {
         ZStack(alignment: .bottom) {
           Color.clear

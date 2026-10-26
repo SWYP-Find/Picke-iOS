@@ -188,7 +188,12 @@ extension ClassRecommendFeature {
 
     case .retryTapped:
       if state.mode == .aiQuestions {
-        if let draft = state.draft { return .send(.async(.suggest(draftID: draft.id))) }
+        if let draft = state.draft {
+          if draft.suggestStatus == "GENERATING" {
+            return .send(.async(.poll(draftID: draft.id)))
+          }
+          return .send(.async(.suggest(draftID: draft.id)))
+        }
         return .send(.async(.createDraft(state.filter)))
       }
       return .send(.async(.fetch(state.filter)))

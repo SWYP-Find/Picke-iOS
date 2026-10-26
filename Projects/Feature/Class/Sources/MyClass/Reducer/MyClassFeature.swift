@@ -33,7 +33,7 @@ public struct MyClassFeature {
       case closed
     }
 
-    public var rooms: [ClassRoom] = []
+    public var rooms: IdentifiedArrayOf<ClassRoom> = []
     public var progress: Progress = .all
     public var viewState: ViewState = .loading
     public var isLoading = false
@@ -187,7 +187,7 @@ extension MyClassFeature {
       return .none
     case let .roomTapped(id):
       guard !state.isLeaving else { return .none }
-      guard let room = state.rooms.first(where: { $0.id == id }) else { return .none }
+      guard let room = state.rooms[id: id] else { return .none }
       return .send(.delegate(.openRoom(room)))
     case let .managementTapped(id):
       guard !state.isLeaving, state.rooms.contains(where: { $0.id == id }) else { return .none }
@@ -320,7 +320,9 @@ extension MyClassFeature {
     case let .roomsResponse(generation, .success(rooms)):
       guard generation == state.fetchGeneration, !state.isLeaving, !state.isDeleting else { return .none }
       state.isLoading = false
-      state.rooms = rooms
+      state.rooms = rooms.reduce(into: IdentifiedArrayOf<ClassRoom>()) { result, room in
+        result.updateOrAppend(room)
+      }
       state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
     case let .roomsResponse(generation, .failure(error)):
       guard generation == state.fetchGeneration, !state.isLeaving, !state.isDeleting else { return .none }
@@ -332,7 +334,7 @@ extension MyClassFeature {
     case let .deleted(.success(id)):
       state.isDeleting = false
       state.selectedRoomID = nil
-      state.rooms.removeAll { $0.id == id }
+      state.rooms.remove(id: id)
       state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
       return .send(.async(.fetchRooms))
     case let .deleted(.failure(error)):
@@ -348,7 +350,7 @@ extension MyClassFeature {
       state.customAlert = .alert(title: "클래스에서 나가지 못했어요", message: error.message)
     case let .leaveCleanupCompleted(id):
       guard state.isLeaving, state.leavingRoomID == id else { return .none }
-      state.rooms.removeAll { $0.id == id }
+      state.rooms.remove(id: id)
       state.viewState = state.visibleRooms.isEmpty ? .empty : .loaded
       state.selectedRoomID = nil
       state.isLeaving = false

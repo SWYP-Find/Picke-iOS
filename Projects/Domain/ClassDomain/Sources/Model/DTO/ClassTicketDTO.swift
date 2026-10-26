@@ -18,6 +18,7 @@ struct ClassTicketDTO: Decodable, Sendable {
       let expiresAt = ServerDateParser.parse(expiresAt),
       let readGraceEndsAt = ServerDateParser.parse(readGraceEndsAt)
     else { throw ClassTicketError.invalidResponse }
+
     return ClassTicket(
       id: ticketId,
       capacity: capacity,

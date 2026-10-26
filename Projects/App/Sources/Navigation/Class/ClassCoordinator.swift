@@ -692,7 +692,12 @@ private extension ClassCoordinator {
       return .send(.view(.backAction))
 
     case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(version, filter)))):
-      state.routes.push(.setting(.init(topicVersion: version, filter: filter, instanceID: uuid())))
+      var setting = ClassSettingFeature.State()
+      setting.aiQuestion = ClassAIQuestion(version: version)
+      setting.topicVersionID = version.id
+      setting.filter = filter
+      setting.instanceID = uuid()
+      state.routes.push(.setting(setting))
       return .none
 
     case let .routeAction(routeID, action: .setting(.delegate(.editDeadline(instanceID)))):
@@ -872,7 +877,9 @@ private extension ClassCoordinator {
           isLiveClassBattle: true
         )))
       } else {
-        state.routes.push(.battleFlow(.init(room: room)))
+        var battleFlowState = ClassBattleFlowFeature.State()
+        battleFlowState.room = room
+        state.routes.push(.battleFlow(battleFlowState))
       }
       return .none
 
@@ -1015,7 +1022,7 @@ private extension ClassCoordinator {
     case let .routeAction(routeID, action: .battleFlow(.delegate(.completed(classID: classID)))):
       guard routeID == state.routes.count - 1,
             case let .battleFlow(flow)? = state.routes.last?.screen,
-            flow.room.id == classID else { return .none }
+            flow.room?.id == classID else { return .none }
       guard let detailIndex = state.routes.lastIndex(where: {
         guard case let .detail(detail) = $0.screen else { return false }
         return detail.room.id == classID
@@ -1033,7 +1040,9 @@ private extension ClassCoordinator {
       guard case let .aiVote(vote)? = state.routes.last?.screen else { return .none }
       if hasCompletedPostVote {
         if vote.room.requiresComment {
-          state.routes.push(.battleFlow(.init(room: vote.room)))
+          var battleFlowState = ClassBattleFlowFeature.State()
+          battleFlowState.room = vote.room
+          state.routes.push(.battleFlow(battleFlowState))
           return .none
         }
         guard let detailIndex = state.routes.lastIndex(where: {

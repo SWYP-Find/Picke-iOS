@@ -22,7 +22,7 @@ public struct ClassSettingFeature {
     public var topicVersionID: Int?
     public var filter: ClassTopicFilter?
     public var name = ""
-    public var deadline: Date
+    public var deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60)
     public var isDeadlineEnabled = true
     public var instanceID = UUID()
     public var deadlineValidationMessage: String?
@@ -57,18 +57,7 @@ public struct ClassSettingFeature {
       self.instanceID = instanceID
     }
 
-    public init(
-      topicVersion: ClassTopicVersion,
-      filter: ClassTopicFilter,
-      deadline: Date = Date().addingTimeInterval(7 * 24 * 60 * 60),
-      instanceID: UUID = UUID()
-    ) {
-      self.aiQuestion = ClassAIQuestion(version: topicVersion)
-      self.topicVersionID = topicVersion.id
-      self.filter = filter
-      self.deadline = deadline
-      self.instanceID = instanceID
-    }
+    public init() {}
 
     public var deadlineText: String {
       deadline.formatted(.fullKoreanDateTime)

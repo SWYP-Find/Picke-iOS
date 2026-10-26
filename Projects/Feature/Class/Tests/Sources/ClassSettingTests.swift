@@ -45,7 +45,11 @@ struct ClassSettingTests {
     regular.ownerParticipates = true
     #expect(regular.creation?.ownerParticipates == true)
 
-    var ai = ClassSettingFeature.State(topicVersion: topicVersion, filter: .init(), deadline: deadline)
+    var ai = ClassSettingFeature.State()
+    ai.aiQuestion = ClassAIQuestion(version: topicVersion)
+    ai.topicVersionID = topicVersion.id
+    ai.filter = .init()
+    ai.deadline = deadline
     ai.name = "AI 토론"
     #expect(ai.aiCreation?.ownerParticipates == false)
     ai.ownerParticipates = true
@@ -247,7 +251,11 @@ struct ClassSettingTests {
 
   @Test
   func 서버_주제_버전으로_AI_클래스_생성_요청을_만든다() {
-    var state = ClassSettingFeature.State(topicVersion: topicVersion, filter: .init(), deadline: deadline)
+    var state = ClassSettingFeature.State()
+    state.aiQuestion = ClassAIQuestion(version: topicVersion)
+    state.topicVersionID = topicVersion.id
+    state.filter = .init()
+    state.deadline = deadline
     state.name = "AI 토론"
     state.requiresComment = true
 

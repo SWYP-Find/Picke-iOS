@@ -311,7 +311,7 @@ private extension ClassTicketView {
       if (store.phase == .entry && !store.canCheckCode)
         || (store.phase == .preview && !store.canRegister)
       {
-        Button(store.isChecking ? "처리 중..." : store.phase == .entry ? "코드 확인하기" : "이용권 등록하기") {}
+        Button(store.primaryButtonTitle) {}
           .pretendardFont(.headingMedium)
           .foregroundStyle(.gray300)
           .frame(maxWidth: .infinity)
@@ -324,7 +324,7 @@ private extension ClassTicketView {
         Button {
           send(store.phase == .entry ? .checkTapped : .confirmTapped)
         } label: {
-          Text(store.phase == .entry ? "코드 확인하기" : store.phase == .preview ? "이용권 등록하기" : "이용권 확인하기")
+          Text(store.primaryButtonTitle)
         }
         .ctaButtonStyle(.primary, size: .large, height: 52)
         .accessibilityIdentifier("class-ticket-primary")

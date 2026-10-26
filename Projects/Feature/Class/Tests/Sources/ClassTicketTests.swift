@@ -26,16 +26,50 @@ struct ClassTicketTests {
 
     await store.send(.view(.onAppear)) {
       $0.shouldCheckExistingTicket = false
-      $0.isChecking = true
+      $0.isLoadingExistingTicket = true
     }
     await store.receive(\.myTicketResponse) {
-      $0.isChecking = false
+      $0.isLoadingExistingTicket = false
       $0.ticket = ticket
       $0.registrationStartDate = start
       $0.expirationDate = end
       $0.phase = .overview
     }
     await store.send(.view(.onAppear))
+  }
+
+  @Test
+  func 최초_이용권_조회_중_코드를_입력해도_기존_이용권으로_이동한다() async {
+    let ticket = ClassTicket(
+      id: 4,
+      capacity: 15,
+      status: .active,
+      activatedAt: Date(timeIntervalSince1970: 1_780_000_000),
+      expiresAt: Date(timeIntervalSince1970: 1_795_000_000),
+      remainingDays: 162,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_797_592_000)
+    )
+    let gate = TicketLookupGate()
+    let store = TestStore(initialState: ClassTicketFeature.State()) { ClassTicketFeature() } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicketFetch: { try await gate.wait() })
+    }
+
+    await store.send(.view(.onAppear)) {
+      $0.shouldCheckExistingTicket = false
+      $0.isLoadingExistingTicket = true
+    }
+    await store.send(.binding(.set(\.code, "PICKE-AB12-CD34"))) {
+      $0.code = "PICKE-AB12-CD34"
+    }
+    #expect(!store.state.canCheckCode)
+    await gate.complete(ticket)
+    await store.receive(\.myTicketResponse) {
+      $0.isLoadingExistingTicket = false
+      $0.ticket = ticket
+      $0.registrationStartDate = ticket.activatedAt
+      $0.expirationDate = ticket.expiresAt
+      $0.phase = .overview
+    }
   }
 
   @Test
@@ -46,9 +80,9 @@ struct ClassTicketTests {
 
     await store.send(.view(.onAppear)) {
       $0.shouldCheckExistingTicket = false
-      $0.isChecking = true
+      $0.isLoadingExistingTicket = true
     }
-    await store.receive(\.myTicketResponse) { $0.isChecking = false }
+    await store.receive(\.myTicketResponse) { $0.isLoadingExistingTicket = false }
     #expect(store.state.phase == .entry)
     #expect(store.state.errorMessage == nil)
     await store.send(.view(.onAppear))
@@ -71,10 +105,10 @@ struct ClassTicketTests {
 
     await store.send(.view(.onAppear)) {
       $0.shouldCheckExistingTicket = false
-      $0.isChecking = true
+      $0.isLoadingExistingTicket = true
     }
     await store.receive(\.myTicketResponse) {
-      $0.isChecking = false
+      $0.isLoadingExistingTicket = false
       $0.ticket = ticket
       $0.registrationStartDate = ticket.activatedAt
       $0.expirationDate = ticket.expiresAt
@@ -168,9 +202,13 @@ struct ClassTicketTests {
     }
 
     await store.send(.view(.checkTapped)) { $0.isChecking = true }
-    await store.receive(\.checkResponse) { $0.preview = preview }
-    await store.receive(\.myTicketResponse) {
+    await store.receive(\.checkResponse) {
       $0.isChecking = false
+      $0.isLoadingExistingTicket = true
+      $0.preview = preview
+    }
+    await store.receive(\.myTicketResponse) {
+      $0.isLoadingExistingTicket = false
       $0.ticket = ticket
       $0.phase = .overview
       $0.registrationStartDate = start
@@ -199,6 +237,7 @@ private struct TicketStub: ClassTicketInterface {
   var preview: Result<ClassTicketPreview, ClassTicketError> = .failure(.invalidCode)
   var register: Result<ClassTicket, ClassTicketError> = .failure(.invalidCode)
   var myTicket: Result<ClassTicket, ClassTicketError> = .failure(.notFound)
+  var myTicketFetch: (@Sendable () async throws -> ClassTicket)?
 
   func preview(code _: String) async throws -> ClassTicketPreview {
     try preview.get()
@@ -209,6 +248,26 @@ private struct TicketStub: ClassTicketInterface {
   }
 
   func fetchMyTicket() async throws -> ClassTicket {
-    try myTicket.get()
+    if let myTicketFetch { return try await myTicketFetch() }
+    return try myTicket.get()
+  }
+}
+
+private actor TicketLookupGate {
+  private var continuation: CheckedContinuation<ClassTicket, Error>?
+  private var bufferedTicket: ClassTicket?
+
+  func wait() async throws -> ClassTicket {
+    if let bufferedTicket { return bufferedTicket }
+    return try await withCheckedThrowingContinuation { continuation = $0 }
+  }
+
+  func complete(_ ticket: ClassTicket) {
+    if let continuation {
+      continuation.resume(returning: ticket)
+      self.continuation = nil
+    } else {
+      bufferedTicket = ticket
+    }
   }
 }

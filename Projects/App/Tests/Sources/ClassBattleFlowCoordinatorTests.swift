@@ -57,7 +57,7 @@ struct ClassBattleFlowCoordinatorTests {
       Issue.record("TTS 배틀 Flow가 열리지 않았습니다")
       return
     }
-    #expect(flow.room.id == room.id)
+    #expect(flow.room?.id == room.id)
 
     await store.send(.router(.routeAction(
       id: 2,

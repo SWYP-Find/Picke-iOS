@@ -84,7 +84,10 @@ private struct TopicValidationBody: Encodable, Sendable {
   let description: String
   let options: [Option]
 
-  init(baseVersionId: Int, candidate: ClassTopicCandidate) {
+  init(
+    baseVersionId: Int,
+    candidate: ClassTopicCandidate
+  ) {
     self.baseVersionId = baseVersionId
     question = candidate.question
     description = candidate.description

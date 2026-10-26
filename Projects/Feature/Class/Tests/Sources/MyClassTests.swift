@@ -16,7 +16,7 @@ struct MyClassTests {
   @Test
   func 진행_상태로_필터링한다() async {
     var state = MyClassFeature.State()
-    state.rooms = ClassRoom.mocks
+    state.rooms = .init(uniqueElements: ClassRoom.mocks)
     state.viewState = .loaded
     let store = TestStore(initialState: state) {
       MyClassFeature()
@@ -38,7 +38,7 @@ struct MyClassTests {
   @Test
   func 클래스를_누르면_해당_방을_델리게이트로_전달한다() async {
     var state = MyClassFeature.State()
-    state.rooms = ClassRoom.mocks
+    state.rooms = .init(uniqueElements: ClassRoom.mocks)
     state.viewState = .loaded
     let store = TestStore(initialState: state) {
       MyClassFeature()
@@ -51,7 +51,7 @@ struct MyClassTests {
   @Test
   func 카드_더보기는_목록_위에_기존_관리_모달을_연다() async {
     var state = MyClassFeature.State()
-    state.rooms = ClassRoom.mocks
+    state.rooms = .init(uniqueElements: ClassRoom.mocks)
     state.viewState = .loaded
     let store = TestStore(initialState: state) {
       MyClassFeature()
@@ -113,7 +113,7 @@ struct MyClassTests {
   @Test
   func 운영자_삭제_확인은_선택한_원래_방에만_적용된다() async {
     var state = MyClassFeature.State()
-    state.rooms = ClassRoom.mocks
+    state.rooms = .init(uniqueElements: ClassRoom.mocks)
     state.viewState = .loaded
     state.selectedRoomID = 1
     let store = TestStore(initialState: state) { MyClassFeature() }
@@ -140,7 +140,7 @@ struct MyClassTests {
   func 운영자_삭제는_확인한_방만_삭제한다() async {
     let repository = MockClassRepository(rooms: ClassRoom.mocks, availableRooms: [])
     var state = MyClassFeature.State()
-    state.rooms = ClassRoom.mocks
+    state.rooms = .init(uniqueElements: ClassRoom.mocks)
     state.viewState = .loaded
     state.selectedRoomID = 1
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
@@ -173,7 +173,7 @@ struct MyClassTests {
     await store.receive(\.inner, .deleted(.success(1))) {
       $0.isDeleting = false
       $0.selectedRoomID = nil
-      $0.rooms.removeAll { $0.id == 1 }
+      $0.rooms.remove(id: 1)
     }
     await store.receive(\.async, .fetchRooms) {
       $0.fetchGeneration = 2
@@ -308,7 +308,7 @@ struct MyClassTests {
     state.viewState = .error
     #expect(state.viewState == .error)
 
-    state.rooms = ClassRoom.mocks
+    state.rooms = .init(uniqueElements: ClassRoom.mocks)
     state.viewState = .loaded
     #expect(state.viewState == .loaded)
   }

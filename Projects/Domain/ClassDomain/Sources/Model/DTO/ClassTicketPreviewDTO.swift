@@ -12,6 +12,7 @@ struct ClassTicketPreviewDTO: Decodable, Sendable {
     guard let date = ServerDateParser.parse(registerBy) else {
       throw ClassTicketError.invalidResponse
     }
+
     return ClassTicketPreview(
       capacity: capacity,
       registerBy: date,

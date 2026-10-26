@@ -4,6 +4,7 @@ import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
+import PickeCoreUtility
 
 @Reducer
 public struct ClassBattleFlowFeature {
@@ -11,9 +12,9 @@ public struct ClassBattleFlowFeature {
 
   @ObservableState
   public struct State: Equatable {
-    public let instanceID: UUID
-    public let room: ClassRoom
-    public var viewState: ViewState = .loading
+    public var instanceID = UUID()
+    public var room: ClassRoom?
+    public var viewState: ClassBattleFlowViewState = .loading
     public var session: ClassBattleSession?
     public var voteHistory: ClassVoteHistory?
     public var selectedOptionID: Int?
@@ -35,18 +36,7 @@ public struct ClassBattleFlowFeature {
     public var audioDuration: TimeInterval = 0
     public var playbackRate: Float = 1
 
-    public init(
-      room: ClassRoom,
-      instanceID: UUID? = nil
-    ) {
-      @Dependency(\.uuid) var uuid
-      self.instanceID = instanceID ?? uuid()
-      self.room = room
-    }
-
-    public enum ViewState: Equatable {
-      case loading, loaded, error
-    }
+    public init() {}
 
     public var step: ClassBattleStep? { session?.battle.currentStep }
     public var options: [ClassBattleOption] { session?.battle.options ?? [] }
@@ -106,8 +96,25 @@ public struct ClassBattleFlowFeature {
       return min(1, max(0, currentTime / audioDuration))
     }
 
-    public var currentTimeText: String { Self.timeText(currentTime) }
-    public var audioDurationText: String { Self.timeText(audioDuration) }
+    public var currentTimeText: String {
+      Int(max(0, currentTime)).clockTimeText
+    }
+
+    public var audioDurationText: String {
+      Int(max(0, audioDuration)).clockTimeText
+    }
+
+    public var displayTitle: String {
+      session?.battle.title ?? room?.battle.title ?? ""
+    }
+
+    public var displaySummary: String {
+      session?.battle.summary ?? room?.battle.summary ?? ""
+    }
+
+    public var displayArtworkURL: URL? {
+      session?.battle.thumbnailURL ?? room?.battle.thumbnailURL
+    }
 
     public var stageDescription: String {
       guard canParticipate else { return "클래스 참여 기간이 지나 진행 내용을 볼 수 있어요." }
@@ -120,11 +127,6 @@ public struct ClassBattleFlowFeature {
         return shouldShowComposer ? "투표를 마쳤어요. 의견을 남겨 주세요." : "클래스 배틀 참여를 마쳤어요."
       case nil: return "클래스 배틀을 불러오는 중이에요."
       }
-    }
-
-    private static func timeText(_ time: TimeInterval) -> String {
-      let seconds = max(0, Int(time))
-      return "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
     }
   }
 
@@ -139,6 +141,7 @@ public struct ClassBattleFlowFeature {
     case onAppear
     case onDisappear
     case retryTapped
+    case retryAudioTapped
     case loadMorePerspectivesTapped
     case backTapped
     case optionTapped(Int)
@@ -197,8 +200,13 @@ extension ClassBattleFlowFeature {
     switch action {
     case .onAppear:
       guard state.loadRequestID == nil else { return .none }
-      if state.session == nil { return loadProgress(state: &state) }
+      if state.session == nil || state.viewState == .loading {
+        return loadProgress(state: &state)
+      }
       if state.isAudioStep, let battleID = state.session?.battle.id {
+        if state.isAudioReady {
+          return observePlayerTime(instanceID: state.instanceID)
+        }
         return loadAudio(state: &state, battleID: battleID)
       }
       if state.step == .some(.completed), state.perspectives.isEmpty,
@@ -212,11 +220,16 @@ extension ClassBattleFlowFeature {
       state.submitRequestID = nil
       state.audioRequestID = nil
       state.perspectiveRequestID = nil
+      state.isLoadingPerspectives = false
       state.isPlaying = false
       return stopAudio(instanceID: state.instanceID)
     case .retryTapped:
       guard state.loadRequestID == nil else { return .none }
       return loadProgress(state: &state)
+    case .retryAudioTapped:
+      guard state.isAudioStep, !state.isAudioReady,
+            let battleID = state.session?.battle.id else { return .none }
+      return loadAudio(state: &state, battleID: battleID)
     case .loadMorePerspectivesTapped:
       guard state.step == .some(.completed), state.hasMorePerspectives,
             state.perspectiveRequestID == nil else { return .none }
@@ -248,12 +261,13 @@ extension ClassBattleFlowFeature {
       if step == .completed,
          state.session?.participationCompleted == true || state.session?.commentRequired == false
       {
-        return .send(.delegate(.completed(classID: state.room.id)))
+        guard let room = state.room else { return .none }
+        return .send(.delegate(.completed(classID: room.id)))
       }
       let requestID = uuid()
       state.submitRequestID = requestID
       state.errorMessage = nil
-      let classID = state.room.id
+      guard let classID = state.room?.id else { return .none }
       let optionID = state.selectedOptionID
       let preVoteOptionID = state.voteHistory?.preVote.optionID
       let draft = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -311,11 +325,12 @@ extension ClassBattleFlowFeature {
   }
 
   private func loadProgress(state: inout State) -> Effect<Action> {
+    guard let classID = state.room?.id else { return .none }
     let requestID = uuid()
     state.loadRequestID = requestID
     state.viewState = .loading
     state.errorMessage = nil
-    return .run { [useCase = classBattleUseCase, classID = state.room.id] send in
+    return .run { [useCase = classBattleUseCase] send in
       let result = await Result {
         let session = try await useCase.fetchBattle(classID: classID)
         let history = session.battle.currentStep == .none
@@ -401,20 +416,15 @@ extension ClassBattleFlowFeature {
       state.isPlaying = true
       return .merge(
         .run { [player = audioPlayer] _ in await player.play() },
-        .run { [player = audioPlayer, instanceID = state.instanceID] send in
-          for await time in player.currentTimes() {
-            guard !Task.isCancelled else { return }
-            await send(.inner(.playerTimeUpdated(instanceID, time)))
-          }
-        }
-        .cancellable(id: CancelID.time(state.instanceID), cancelInFlight: true)
+        observePlayerTime(instanceID: state.instanceID)
       )
     case let .playerTimeUpdated(instanceID, time):
       guard state.instanceID == instanceID, state.isAudioStep,
-            state.isAudioReady, !state.hasListened else { return .none }
+            state.isAudioReady else { return .none }
       state.currentTime = min(state.audioDuration, max(0, time))
       guard time >= max(0, state.audioDuration - 0.3) else { return .none }
       state.hasListened = true
+      guard state.isPlaying else { return .none }
       state.isPlaying = false
       return .run { [player = audioPlayer] _ in await player.pause() }
     case let .perspectivePageResponse(requestID, result):
@@ -442,6 +452,7 @@ extension ClassBattleFlowFeature {
     state: inout State,
     cursor: String?
   ) -> Effect<Action> {
+    guard let classID = state.room?.id else { return .none }
     let requestID = uuid()
     state.perspectiveRequestID = requestID
     state.isLoadingPerspectives = true
@@ -450,7 +461,7 @@ extension ClassBattleFlowFeature {
       state.nextPerspectiveCursor = nil
       state.perspectives = []
     }
-    return .run { [useCase = classBattleUseCase, classID = state.room.id] send in
+    return .run { [useCase = classBattleUseCase] send in
       let result = await Result {
         try await useCase.fetchPerspectives(
           classID: classID,
@@ -473,6 +484,7 @@ extension ClassBattleFlowFeature {
     guard !state.isAudioReady, state.audioRequestID == nil else { return .none }
     let requestID = uuid()
     state.audioRequestID = requestID
+    state.errorMessage = nil
     return .run { [useCase = battleUseCase] send in
       let result = await Result {
         let scenario = try await useCase.fetchScenario(battleId: battleID)
@@ -487,6 +499,16 @@ extension ClassBattleFlowFeature {
       await send(.inner(.audioURLResponse(requestID, result)))
     }
     .cancellable(id: CancelID.audio(state.instanceID), cancelInFlight: true)
+  }
+
+  private func observePlayerTime(instanceID: UUID) -> Effect<Action> {
+    .run { [player = audioPlayer] send in
+      for await time in player.currentTimes() {
+        guard !Task.isCancelled else { return }
+        await send(.inner(.playerTimeUpdated(instanceID, time)))
+      }
+    }
+    .cancellable(id: CancelID.time(instanceID), cancelInFlight: true)
   }
 
   private func stopAudio(instanceID: UUID) -> Effect<Action> {

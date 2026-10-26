@@ -8,6 +8,12 @@
 import Foundation
 
 public extension Int {
+  /// 재생시간 초 → "M:SS".
+  var clockTimeText: String {
+    let seconds = Swift.max(0, self)
+    return "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
+  }
+
   /// 천 단위 구분 콤마가 적용된 문자열. (예: 1340 → "1,340")
   var decimalFormatted: String {
     let formatter = NumberFormatter()
