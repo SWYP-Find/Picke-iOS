@@ -249,7 +249,11 @@ public actor MockClassRepository: ClassInterface {
     rooms.append(room)
     reports[id] = nil
     dashboards[id] = nil
-    membersByRoom[id] = [ClassMember(id: 1, name: "운영자", isOwner: true)]
+    membersByRoom[id] = [ClassMember(
+      id: 1,
+      name: creation.ownerParticipates ? (creation.ownerDisplayName ?? "운영자") : "운영자",
+      isOwner: true
+    )]
     currentMemberIDs[id] = 1
     nextMemberIDs[id] = 2
     return room
@@ -328,6 +332,40 @@ public actor MockClassRepository: ClassInterface {
       joinCode: room.joinCode,
       battle: room.battle,
       deadline: deadline,
+      closeAt: room.closeAt,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity,
+      battleType: room.battleType,
+      ticketExpiresAt: room.ticketExpiresAt
+    )
+    rooms[index] = updated
+    return updated
+  }
+
+  public func updateName(id: Int, name: String) async throws -> ClassRoom {
+    guard let index = rooms.firstIndex(where: { $0.id == id }) else {
+      throw ClassError.invalidCode
+    }
+    let room = rooms[index]
+    guard room.role == .owner else {
+      throw ClassError.unknown("클래스 관리자만 이름을 변경할 수 있습니다.")
+    }
+    guard room.status == .open else { throw ClassError.closed }
+    let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty, trimmed.count <= 20 else {
+      throw ClassError.unknown("클래스 이름은 1~20자여야 합니다.")
+    }
+    let updated = ClassRoom(
+      id: room.id,
+      name: trimmed,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline,
       closeAt: room.closeAt,
       memberCount: room.memberCount,
       role: room.role,

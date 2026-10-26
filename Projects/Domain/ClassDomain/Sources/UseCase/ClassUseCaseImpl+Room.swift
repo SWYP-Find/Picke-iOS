@@ -37,6 +37,10 @@ extension ClassUseCaseImpl {
     try await repository.updateDeadline(id: id, deadline: deadline)
   }
 
+  public func updateName(id: Int, name: String) async throws -> ClassRoom {
+    try await repository.updateName(id: id, name: name)
+  }
+
   public func deleteClass(id: Int) async throws {
     try await repository.deleteClass(id: id)
   }

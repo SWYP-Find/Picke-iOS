@@ -79,6 +79,19 @@ extension ClassRepositoryImpl {
     }
   }
 
+  public func updateName(id: Int, name: String) async throws -> ClassRoom {
+    do {
+      _ = try await client.send(
+        ClassroomService.updateName(id: id, name: name),
+        as: PickeEmptyResponse.self
+      )
+      let data = try await client.send(ClassroomService.detail(id), as: ClassDetailDataDTO.self)
+      return try data.toDomain()
+    } catch {
+      throw Self.classError(error)
+    }
+  }
+
   public func deleteClass(id: Int) async throws {
     do {
       _ = try await client.send(ClassroomService.delete(id), as: PickeEmptyResponse.self)

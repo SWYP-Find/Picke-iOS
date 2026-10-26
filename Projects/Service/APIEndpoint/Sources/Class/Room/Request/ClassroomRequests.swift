@@ -9,6 +9,7 @@ struct CreateClassBody: Encodable, Sendable {
   let deadline: String?
   let commentRequired: Bool
   let ownerParticipates: Bool
+  let ownerDisplayName: String?
 
   init(creation: ClassCreation) {
     name = creation.name
@@ -19,11 +20,13 @@ struct CreateClassBody: Encodable, Sendable {
       : creation.deadline.formatted(.serverDateTime)
     commentRequired = creation.requiresComment
     ownerParticipates = creation.ownerParticipates
+    ownerDisplayName = creation.ownerDisplayName
   }
 }
 
 struct UpdateClassBody: Encodable, Sendable {
-  let deadline: String
+  let name: String?
+  let deadline: String?
 }
 
 struct ClassJoinPreviewQuery: Encodable, Sendable {

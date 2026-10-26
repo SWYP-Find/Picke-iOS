@@ -15,6 +15,7 @@ public struct ClassCreation: Equatable, Sendable {
   public var allowsAnonymousOpinion: Bool
   public var requiresComment: Bool
   public var ownerParticipates: Bool
+  public var ownerDisplayName: String?
 
   public init(
     name: String,
@@ -22,7 +23,8 @@ public struct ClassCreation: Equatable, Sendable {
     battleId: Int,
     allowsAnonymousOpinion: Bool,
     requiresComment: Bool,
-    ownerParticipates: Bool = false
+    ownerParticipates: Bool = false,
+    ownerDisplayName: String? = nil
   ) {
     self.name = name
     self.deadline = deadline
@@ -31,6 +33,7 @@ public struct ClassCreation: Equatable, Sendable {
     self.allowsAnonymousOpinion = allowsAnonymousOpinion
     self.requiresComment = requiresComment
     self.ownerParticipates = ownerParticipates
+    self.ownerDisplayName = ownerDisplayName
   }
 
   public init(
@@ -39,7 +42,8 @@ public struct ClassCreation: Equatable, Sendable {
     topicVersionId: Int,
     allowsAnonymousOpinion: Bool,
     requiresComment: Bool,
-    ownerParticipates: Bool = false
+    ownerParticipates: Bool = false,
+    ownerDisplayName: String? = nil
   ) {
     self.name = name
     self.deadline = deadline
@@ -48,5 +52,6 @@ public struct ClassCreation: Equatable, Sendable {
     self.allowsAnonymousOpinion = allowsAnonymousOpinion
     self.requiresComment = requiresComment
     self.ownerParticipates = ownerParticipates
+    self.ownerDisplayName = ownerDisplayName
   }
 }
