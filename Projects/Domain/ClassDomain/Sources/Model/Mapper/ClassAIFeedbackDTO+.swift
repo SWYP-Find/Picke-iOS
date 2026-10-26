@@ -48,7 +48,7 @@ extension ClassPersonalReportDTO.Feedback {
 extension ClassPersonalReportDTO {
   func toDomain() throws -> ClassAIPersonalFeedback {
     switch state {
-    case "SUCCEEDED", "LIMITED":
+    case .succeeded, .limited:
       guard let feedback else { throw ClassAIFeedbackError.generationFailed }
       return feedback.toDomain(
         preOption: preOption,
@@ -56,13 +56,13 @@ extension ClassPersonalReportDTO {
         perspectiveCount: perspectiveCount ?? 0,
         commentCount: commentCount ?? 0
       )
-    case "BEFORE_CLOSE", "PENDING", "GENERATING":
+    case .beforeClose, .pending, .generating:
       throw ClassAIFeedbackError.modelNotReady
-    case "NOT_ELIGIBLE":
+    case .notEligible:
       throw ClassAIFeedbackError.insufficientInput
-    case "FAILED":
+    case .failed:
       throw ClassAIFeedbackError.generationFailed
-    default:
+    case .unknown:
       throw ClassAIFeedbackError.generationFailed
     }
   }
@@ -82,7 +82,7 @@ extension ClassInsightDTO.Evidence {
 extension ClassInsightDTO {
   func toDomain() throws -> ClassAIInsight {
     switch state {
-    case "SUCCEEDED", "LIMITED":
+    case .succeeded, .limited:
       guard let insightText, !insightText.isEmpty else { throw ClassAIFeedbackError.generationFailed }
       return ClassAIInsight(
         text: insightText,
@@ -91,11 +91,11 @@ extension ClassInsightDTO {
         coverage: coverage,
         excludedCount: excludedCount ?? 0
       )
-    case "BEFORE_CLOSE", "PENDING", "GENERATING":
+    case .beforeClose, .pending, .generating:
       throw ClassAIFeedbackError.modelNotReady
-    case "FAILED":
+    case .failed:
       throw retryable ? ClassAIFeedbackError.serverRetryAvailable : .generationFailed
-    default:
+    case .notEligible, .unknown:
       throw ClassAIFeedbackError.generationFailed
     }
   }

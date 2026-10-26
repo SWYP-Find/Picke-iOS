@@ -73,6 +73,7 @@ public struct MainTabCoordinator {
       case .classroom:
         return !classState.showsTabBar
       case .myPage:
+        if case .ticket? = myPageState.routes.last?.screen { return false }
         return myPageState.routes.count > 1
       case .none:
         return false
@@ -172,6 +173,17 @@ public struct MainTabCoordinator {
 
       case .classroom(.router(.routeAction(_, action: .intro(.delegate(.backToHome))))):
         state.selectedTab = state.backDestinationTab
+        return .none
+
+      case .classroom(.router(.routeAction(0, action: .intro(.delegate(.ticket))))):
+        state.classState.routes.goBackToRoot()
+        state.myPageState.routes.goBackToRoot()
+        state.myPageState.routes.push(.ticket(.init()))
+        if state.selectedTab != Tab.myPage.rawValue {
+          state.previousTab = state.selectedTab
+          trackTabSelection(Tab.myPage.rawValue)
+        }
+        state.selectedTab = Tab.myPage.rawValue
         return .none
 
       case .myPage(.router(.routeAction(_, action: .settings(.delegate(.sessionEnded))))):

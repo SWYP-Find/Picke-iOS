@@ -24,7 +24,10 @@ public struct ClassJoinView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(
-        onBack: { send(.backTapped) },
+        onBack: {
+          resignInputFocus()
+          send(.backTapped)
+        },
         centerTitle: store.navigationCenterTitle,
         leadingTitle: store.navigationLeadingTitle,
         leadingSpacing: 12
@@ -59,6 +62,7 @@ public struct ClassJoinView: View {
       isCodeFocused = store.mode == .code
       isNicknameFocused = store.mode != .code
     }
+    .onDisappear(perform: resignInputFocus)
   }
 }
 
@@ -169,10 +173,18 @@ private extension ClassJoinView {
   }
 
   var bottomAction: some View {
-    Button { send(store.mode == .code ? .findTapped : .joinTapped) } label: {
+    Button {
+      resignInputFocus()
+      send(store.mode == .code ? .findTapped : .joinTapped)
+    } label: {
       Text(store.primaryButtonTitle)
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
     .disabled(store.mode == .code ? !store.canFindClass : !store.canJoin)
+  }
+
+  func resignInputFocus() {
+    isCodeFocused = false
+    isNicknameFocused = false
   }
 }

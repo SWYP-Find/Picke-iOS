@@ -46,7 +46,7 @@ extension ClassRepositoryImpl {
   public func retryInsight(roomID: Int) async throws {
     do {
       let payload = try await client.send(ClassResultService.retryInsight(roomID), as: ClassInsightRetryDTO.self)
-      guard payload.state == "PENDING" else { throw ClassAIFeedbackError.generationFailed }
+      guard payload.state == .pending else { throw ClassAIFeedbackError.generationFailed }
     } catch {
       throw Self.feedbackError(error)
     }

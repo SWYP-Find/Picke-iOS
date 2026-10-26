@@ -34,7 +34,7 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
 
   }
 
-  let state: String
+  let state: ClassAIGenerationState
   let feedback: Feedback?
   let preOption: VoteOption?
   let postOption: VoteOption?
@@ -52,7 +52,7 @@ struct ClassInsightDTO: Decodable, Sendable {
 
   }
 
-  let state: String
+  let state: ClassAIGenerationState
   let retryable: Bool
   let insightText: String?
   let evidence: [Evidence]?
@@ -62,5 +62,5 @@ struct ClassInsightDTO: Decodable, Sendable {
 }
 
 struct ClassInsightRetryDTO: Decodable, Sendable {
-  let state: String
+  let state: ClassAIGenerationState
 }

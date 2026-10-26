@@ -44,7 +44,7 @@ public struct ClassTicketView: View {
     }
     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
     .screenBackground(.surfaceBeigeDefault)
-    .hidesSystemBars()
+    .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
   }
 }
