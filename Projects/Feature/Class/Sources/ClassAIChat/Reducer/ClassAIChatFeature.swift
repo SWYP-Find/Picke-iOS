@@ -168,7 +168,7 @@ public struct ClassAIChatFeature {
     case response
   }
 
-  @Dependency(\.classUseCase) private var debateUseCase
+  @Dependency(\.classDebateUseCase) private var debateUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in

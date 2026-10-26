@@ -376,7 +376,7 @@ public struct ClassOwnerDashboardFeature {
     case openFeedback(ClassOwnerMember)
   }
 
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classResultUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {

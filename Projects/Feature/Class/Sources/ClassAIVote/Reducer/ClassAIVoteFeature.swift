@@ -176,7 +176,7 @@ public struct ClassAIVoteFeature {
 
   @Dependency(\.uuid) private var uuid
   @Dependency(\.battleUseCase) private var battleUseCase
-  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.classBattleUseCase) private var classUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
