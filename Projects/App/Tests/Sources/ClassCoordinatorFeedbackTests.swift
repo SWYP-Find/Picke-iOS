@@ -227,11 +227,11 @@ private actor SuspendedFeedbackGenerator: ClassResultInterface {
     requests.removeValue(forKey: requestID)?.resume(with: result)
   }
 
-  func fetch(roomID _: Int) async throws -> ClassResult {
+  func fetchResult(roomID _: Int) async throws -> ClassResult {
     throw ClassError.network("이 테스트는 결과 조회를 사용하지 않습니다.")
   }
 
-  func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+  func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
     try await suspend { .personal($0) }
   }
 

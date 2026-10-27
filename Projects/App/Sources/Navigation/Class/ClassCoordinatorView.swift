@@ -63,15 +63,18 @@ public struct ClassCoordinatorView: View {
 
       case let .report(reportStore):
         ClassReportView(store: reportStore)
+          .toolbar(.hidden, for: .tabBar)
 
       case let .myOpinions(opinionsStore):
         ClassMyOpinionsView(store: opinionsStore)
 
       case let .closedBattle(closedBattleStore):
         ClassClosedBattleView(store: closedBattleStore)
+          .toolbar(.hidden, for: .tabBar)
 
       case let .ownerDashboard(dashboardStore):
         ClassOwnerDashboardView(store: dashboardStore)
+          .toolbar(.hidden, for: .tabBar)
 
       case let .ownerMemberDetail(memberStore):
         ClassMemberDetailView(store: memberStore)
@@ -89,12 +92,18 @@ public struct ClassCoordinatorView: View {
 
       case let .aiVote(voteStore):
         aiVoteScreen(voteStore)
+          .toolbar(.hidden, for: .tabBar)
 
       case let .aiChat(chatStore):
         ClassAIChatView(store: chatStore)
 
       case let .battleFlow(battleFlowStore):
         ClassBattleFlowView(store: battleFlowStore)
+          .toolbar(.hidden, for: .tabBar)
+
+      case let .perspectiveDetail(detailStore):
+        CommentReplyView(store: detailStore)
+          .toolbar(.hidden, for: .tabBar)
       }
     }
     .allowsHitTesting(!store.isDeadlinePanelPresented)

@@ -245,7 +245,9 @@ private extension ClassAIVoteView {
       .frame(maxWidth: .infinity)
       .frame(minHeight: Self.optionMinHeight)
     case .loaded:
-      voteOptions()
+      if !store.isShowingParticipationResult {
+        voteOptions()
+      }
     }
   }
 

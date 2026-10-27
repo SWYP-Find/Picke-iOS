@@ -47,7 +47,7 @@ public struct ClassCoordinator {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
 
-    /// 클래스 목록·상세·리포트·의견·운영자 화면에서 모달이 닫힌 동안 탭바를 보여준다.
+    /// 클래스 목록·상세·멤버·이용권 화면에서 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
       guard !isDeadlinePanelPresented else { return false }
       switch routes.last?.screen {
@@ -58,9 +58,7 @@ public struct ClassCoordinator {
       case let .members(members)?:
         return members.filter == nil && members.editName == nil
           && members.customAlert == nil && !members.isSaving
-      case let .ownerDashboard(dashboard)?:
-        return dashboard.management == nil
-      case .report?, .myOpinions?, .ticket?:
+      case .ticket?:
         return true
       default:
         return false
@@ -1013,23 +1011,38 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .aiVote(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .aiVote(.delegate(.showResults(room)))):
+      var flow = ClassBattleFlowFeature.State()
+      flow.room = room
+      flow.opensResultsDirectly = true
+      state.routes.push(.battleFlow(flow))
+      return .none
+
     case let .routeAction(routeID, action: .battleFlow(.delegate(.dismiss))):
       guard routeID == state.routes.count - 1,
             case .battleFlow? = state.routes.last?.screen else { return .none }
       return .send(.view(.backAction))
 
-    case let .routeAction(routeID, action: .battleFlow(.delegate(.completed(classID: classID)))):
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.openReport(classID: classID)))):
       guard routeID == state.routes.count - 1,
             case let .battleFlow(flow)? = state.routes.last?.screen,
-            flow.room?.id == classID else { return .none }
-      guard let detailIndex = state.routes.lastIndex(where: {
-        guard case let .detail(detail) = $0.screen else { return false }
-        return detail.room.id == classID
-      }) else { return .none }
-      for _ in (detailIndex + 1) ..< state.routes.count {
-        state.routes.goBack()
+            let room = flow.room,
+            room.id == classID else { return .none }
+      if room.role == .owner {
+        state.routes.push(.ownerDashboard(.init(room: room)))
+      } else {
+        state.routes.push(.report(.init(room: room)))
       }
       return .none
+
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.openPerspective(id)))):
+      guard routeID == state.routes.count - 1,
+            case .battleFlow? = state.routes.last?.screen else { return .none }
+      state.routes.push(.perspectiveDetail(.init(perspectiveId: id)))
+      return .none
+
+    case .routeAction(_, action: .perspectiveDetail(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(
       battleID: battleID,
@@ -1038,19 +1051,32 @@ private extension ClassCoordinator {
     )))):
       guard case let .aiVote(vote)? = state.routes.last?.screen else { return .none }
       if hasCompletedPostVote {
-        if vote.room.requiresComment {
-          var battleFlowState = ClassBattleFlowFeature.State()
-          battleFlowState.room = vote.room
-          state.routes.push(.battleFlow(battleFlowState))
-          return .none
-        }
-        guard let detailIndex = state.routes.lastIndex(where: {
+        if let detailIndex = state.routes.lastIndex(where: {
           guard case let .detail(detail) = $0.screen else { return false }
           return detail.room.id == vote.room.id
-        }) else { return .none }
-        for _ in (detailIndex + 1) ..< state.routes.count {
-          state.routes.goBack()
+        }) {
+          for _ in (detailIndex + 1) ..< state.routes.count {
+            state.routes.goBack()
+          }
+        } else {
+          while state.routes.count > 1, let screen = state.routes.last?.screen {
+            let isCompletedFlowRoute: Bool
+            switch screen {
+            case let .aiVote(previous):
+              isCompletedFlowRoute = previous.room.id == vote.room.id
+            case let .aiChat(previous):
+              isCompletedFlowRoute = previous.room.id == vote.room.id
+            default:
+              isCompletedFlowRoute = false
+            }
+            guard isCompletedFlowRoute else { break }
+            state.routes.goBack()
+          }
         }
+        var battleFlowState = ClassBattleFlowFeature.State()
+        battleFlowState.room = vote.room
+        battleFlowState.opensResultsDirectly = true
+        state.routes.push(.battleFlow(battleFlowState))
         return .none
       }
       state.routes.push(.aiChat(.init(
@@ -1368,6 +1394,7 @@ extension ClassCoordinator {
     case aiVote(ClassAIVoteFeature)
     case aiChat(ClassAIChatFeature)
     case battleFlow(ClassBattleFlowFeature)
+    case perspectiveDetail(CommentReplyFeature)
     case chat(ChatCoordinator)
   }
 }

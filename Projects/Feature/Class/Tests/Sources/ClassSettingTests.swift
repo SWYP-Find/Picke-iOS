@@ -104,7 +104,7 @@ struct ClassSettingTests {
       ClassSettingFeature()
     } withDependencies: {
       $0.date.now = deadline.addingTimeInterval(1)
-      $0.classUseCase = FailingClassUseCase()
+      $0.classRoomUseCase = FailingClassUseCase()
     }
 
     await store.send(.view(.createTapped)) {
@@ -127,7 +127,7 @@ struct ClassSettingTests {
     } withDependencies: {
       $0.date.now = deadline.addingTimeInterval(1)
       $0.classMockRepository = nil
-      $0.classUseCase = FailingClassUseCase()
+      $0.classRoomUseCase = FailingClassUseCase()
     }
 
     await store.send(.view(.createTapped)) {
@@ -241,7 +241,7 @@ struct ClassSettingTests {
     } withDependencies: {
       $0.date.now = deadline.addingTimeInterval(-3600)
       $0.classMockRepository = repository
-      $0.classUseCase = FailingClassUseCase()
+      $0.classRoomUseCase = FailingClassUseCase()
     }
     await store.send(.view(.createTapped)) {
       $0.unavailableNotice = .init()
@@ -283,14 +283,8 @@ struct ClassSettingTests {
   }
 }
 
-private struct FailingClassUseCase: ClassInterface {
+private struct FailingClassUseCase: ClassRoomInterface {
   func fetchMyClasses() async throws -> [ClassRoom] {
-    fatalError("live use case called")
-  }
-
-  func fetchRecommendedBattles(filter _: ClassTopicFilter) async throws
-    -> [ClassBattleSummary]
-  {
     fatalError("live use case called")
   }
 
@@ -322,11 +316,4 @@ private struct FailingClassUseCase: ClassInterface {
     fatalError("live use case called")
   }
 
-  func fetchReport(roomID _: Int) async throws -> ClassReport? {
-    fatalError("live use case called")
-  }
-
-  func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
-    fatalError("live use case called")
-  }
 }

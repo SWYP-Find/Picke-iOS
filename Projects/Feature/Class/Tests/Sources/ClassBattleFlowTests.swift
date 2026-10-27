@@ -12,6 +12,37 @@ struct ClassBattleFlowTests {
   private let requestID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
   @Test
+  func 이미_제출한_의견은_빈_재조회_응답으로_다시_작성할_수_없다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.hasSubmittedInCurrentSession = true
+    state.hasPublishedPerspective = true
+    state.myPerspectiveRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+
+    await store.send(.inner(.myPerspectiveResponse(requestID, .success([])))) {
+      $0.myPerspectiveRequestID = nil
+    }
+    #expect(!store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 화면_이탈_중에도_제출_응답을_받도록_요청_ID를_유지한다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.submitRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.view(.onDisappear))
+    #expect(store.state.submitRequestID == requestID)
+    await store.finish()
+  }
+
+  @Test
   func 클래스_배틀_로드는_서버_세션과_시나리오의_HTTP_오디오를_사용한다() async throws {
     let room = ClassRoom.mocks[0]
     let session = session(step: .preVote, commentRequired: true)
@@ -221,14 +252,17 @@ struct ClassBattleFlowTests {
   }
 
   @Test
-  func 의견_필수_여부는_클래스_요약이_아닌_서버_세션을_따른다() {
+  func 의견이_필수가_아니어도_최종투표_후_의견을_쓸_수_있다() {
     var state = battleState(room: .mocks[0])
     state.viewState = .loaded
     state.session = session(step: .completed, commentRequired: false)
+    state.hasPublishedPerspective = false
 
-    #expect(!state.shouldShowComposer)
+    #expect(state.shouldShowComposer)
+    #expect(!state.canSubmit)
+    state.draft = "제 생각은 달라요."
     #expect(state.canSubmit)
-    #expect(state.buttonTitle == "완료")
+    #expect(state.buttonTitle == "의견 등록하기")
   }
 
   private func session(

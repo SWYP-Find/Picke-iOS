@@ -14,10 +14,18 @@ import Testing
 
 @MainActor
 struct ClassDetailTests {
+  private func makeState(room: ClassRoom) -> ClassDetailFeature.State {
+    withDependencies {
+      $0.uuid = .constant(UUID())
+    } operation: {
+      ClassDetailFeature.State(room: room)
+    }
+  }
+
   @Test
   func 상세_조회_실패시_불완전한_목록_데이터로_진입하지_않고_재시도를_요청한다() async {
     let room = ClassRoom.mocks[0]
-    var state = ClassDetailFeature.State(room: room)
+    var state = makeState(room: room)
     state.viewState = .error
     state.loadErrorMessage = "상세 정보를 불러올 수 없어요"
     let store = TestStore(initialState: state) { ClassDetailFeature() }
@@ -33,7 +41,7 @@ struct ClassDetailTests {
   @Test
   func 열린_클래스는_목_저장소_설정_없이_배틀에_입장한다() async {
     let room = ClassRoom.mocks[0]
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -59,7 +67,7 @@ struct ClassDetailTests {
       memberCapacity: source.memberCapacity
     )
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     } withDependencies: {
       $0.classMockRepository = repository
@@ -77,7 +85,7 @@ struct ClassDetailTests {
   @Test
   func 선생님은_관리_모달을_닫고_마감일_편집을_상위에_요청한다() async {
     let room = ClassRoom.mocks[0]
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -92,7 +100,7 @@ struct ClassDetailTests {
 
   @Test
   func 학생은_마감일과_삭제_동작을_사용할_수_없다() async {
-    let store = TestStore(initialState: ClassDetailFeature.State(room: ClassRoom.mockJoinable)) {
+    let store = TestStore(initialState: makeState(room: ClassRoom.mockJoinable)) {
       ClassDetailFeature()
     }
 
@@ -103,7 +111,7 @@ struct ClassDetailTests {
   @Test
   func 열린_클래스_배틀은_준비_안내_없이_코디네이터로_이동한다() async {
     for room in ClassRoom.mocks where room.status == .open {
-      let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+      let store = TestStore(initialState: makeState(room: room)) {
         ClassDetailFeature()
       }
 
@@ -115,7 +123,7 @@ struct ClassDetailTests {
   @Test
   func 마감된_클래스는_라이브_배틀_대신_결과_진입_화면을_연다() async {
     let room = ClassRoom.mockClosedSociety
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -126,7 +134,7 @@ struct ClassDetailTests {
   @Test
   func 마감된_운영자_배틀_카드도_결과_진입_화면을_연다() async {
     let room = ClassRoom.mocks[2]
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -167,7 +175,7 @@ struct ClassDetailTests {
       memberCapacity: original.memberCapacity
     )
     let repository = MockClassRepository(rooms: [room], availableRooms: [])
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     } withDependencies: {
       $0.classMockRepository = repository
@@ -180,7 +188,7 @@ struct ClassDetailTests {
   @Test
   func 결과보기를_누르면_현재_클래스를_리포트로_전달한다() async {
     let room = ClassRoom.mocks[0]
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -204,7 +212,7 @@ struct ClassDetailTests {
       requiresComment: room.requiresComment,
       memberCapacity: room.memberCapacity
     )
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -230,7 +238,7 @@ struct ClassDetailTests {
       ownerParticipates: room.ownerParticipates,
       memberCapacity: room.memberCapacity
     )
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 
@@ -243,7 +251,7 @@ struct ClassDetailTests {
   @Test
   func 삭제가_완료된_뒤에만_화면을_닫는다() async {
     let room = ClassRoom.mocks[0]
-    let store = TestStore(initialState: ClassDetailFeature.State(room: room)) {
+    let store = TestStore(initialState: makeState(room: room)) {
       ClassDetailFeature()
     }
 

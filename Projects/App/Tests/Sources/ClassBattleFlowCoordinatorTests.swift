@@ -40,7 +40,7 @@ struct ClassBattleFlowCoordinatorTests {
   }
 
   @Test
-  func TTS_클래스는_Mock_주입과_무관하게_배틀_Flow로_진입하고_상세로_돌아온다() async {
+  func TTS_클래스는_Mock_주입과_무관하게_배틀_Flow로_진입하고_리포트로_이동한다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
     state.routes.push(.detail(.init(room: room)))
@@ -61,14 +61,18 @@ struct ClassBattleFlowCoordinatorTests {
 
     await store.send(.router(.routeAction(
       id: 2,
-      action: .battleFlow(.delegate(.completed(classID: room.id)))
+      action: .battleFlow(.delegate(.openReport(classID: room.id)))
     )))
-    #expect(store.state.routes.count == 2)
-    guard case let .detail(detail)? = store.state.routes.last?.screen else {
-      Issue.record("배틀 완료 후 상세로 돌아오지 않았습니다")
+    #expect(store.state.routes.count == 4)
+    guard case .battleFlow = store.state.routes[2].screen else {
+      Issue.record("리포트 뒤로가기를 위한 의견 화면 경로가 사라졌습니다")
       return
     }
-    #expect(detail.room.id == room.id)
+    guard case let .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
+      Issue.record("TTS 의견 화면에서 리포트로 이동하지 않았습니다")
+      return
+    }
+    #expect(dashboard.room.id == room.id)
   }
 
   @Test
@@ -105,5 +109,60 @@ struct ClassBattleFlowCoordinatorTests {
     #expect(vote.isLiveClassBattle)
     #expect(!vote.isPostVote)
     #expect(vote.battleID == room.battle.id)
+  }
+
+  @Test
+  func AI_최종투표_후_이전_투표와_채팅을_정리하고_의견으로_이동한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: false)))
+    state.routes.push(.aiChat(.init(room: room, battleID: room.battle.id, selectedOptionID: 1)))
+    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: true)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 4,
+      action: .aiVote(.delegate(.voteSubmitted(
+        battleID: room.battle.id,
+        selectedOptionID: 1,
+        hasCompletedPostVote: true
+      )))
+    )))
+
+    #expect(store.state.routes.count == 3)
+    guard case let .battleFlow(flow)? = store.state.routes.last?.screen else {
+      Issue.record("AI 최종 투표 후 의견 화면이 열리지 않았습니다")
+      return
+    }
+    #expect(flow.opensResultsDirectly)
+    #expect(flow.room?.id == room.id)
+  }
+
+  @Test
+  func 상세_경로가_없어도_AI_완료_경로를_모두_정리한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassCoordinator.State()
+    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: false)))
+    state.routes.push(.aiChat(.init(room: room, battleID: room.battle.id, selectedOptionID: 1)))
+    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: true)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .aiVote(.delegate(.voteSubmitted(
+        battleID: room.battle.id,
+        selectedOptionID: 1,
+        hasCompletedPostVote: true
+      )))
+    )))
+
+    #expect(store.state.routes.count == 2)
+    guard case .battleFlow? = store.state.routes.last?.screen else {
+      Issue.record("AI 완료 후 이전 단계가 남았습니다")
+      return
+    }
   }
 }

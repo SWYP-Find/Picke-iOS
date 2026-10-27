@@ -180,7 +180,7 @@ struct MainTabCoordinatorTests {
     quickBattle.selectedTab = MainTabCoordinator.Tab.classroom.rawValue
     #expect(quickBattle.shouldHideTabBar)
     var list = MyClassFeature.State()
-    list.rooms = ClassRoom.mocks
+    list.rooms = IdentifiedArrayOf<ClassRoom>(uniqueElements: ClassRoom.mocks)
     list.viewState = .loaded
     quickBattle.classState.routes.push(.myClasses(list))
     #expect(!quickBattle.shouldHideTabBar)

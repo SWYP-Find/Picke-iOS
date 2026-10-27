@@ -17,18 +17,18 @@ struct ClassAIChatTests {
     var hasExistingSession = true
     var spy: DebateSpy?
 
-    func fetch(classID _: Int) async throws -> ClassDebate {
+    func fetchDebate(classID _: Int) async throws -> ClassDebate {
       if !hasExistingSession {
         throw ClassAIChatError.noSession
       }
       return debate
     }
 
-    func start(classID _: Int) async throws -> ClassDebate {
+    func startDebate(classID _: Int) async throws -> ClassDebate {
       debate
     }
 
-    func submitReply(
+    func submitDebateReply(
       classID _: Int,
       round: Int,
       content: String,
@@ -38,7 +38,7 @@ struct ClassAIChatTests {
       return debate
     }
 
-    func retry(classID _: Int) async throws -> ClassDebate {
+    func retryDebate(classID _: Int) async throws -> ClassDebate {
       debate
     }
   }
@@ -47,15 +47,15 @@ struct ClassAIChatTests {
     let debate: ClassDebate
     let spy: TransportRetrySpy
 
-    func fetch(classID _: Int) async throws -> ClassDebate {
+    func fetchDebate(classID _: Int) async throws -> ClassDebate {
       try await spy.fetch(debate)
     }
 
-    func start(classID _: Int) async throws -> ClassDebate {
+    func startDebate(classID _: Int) async throws -> ClassDebate {
       debate
     }
 
-    func submitReply(
+    func submitDebateReply(
       classID _: Int,
       round _: Int,
       content _: String,
@@ -64,7 +64,7 @@ struct ClassAIChatTests {
       debate
     }
 
-    func retry(classID _: Int) async throws -> ClassDebate {
+    func retryDebate(classID _: Int) async throws -> ClassDebate {
       await spy.recordServerRetry()
       return debate
     }

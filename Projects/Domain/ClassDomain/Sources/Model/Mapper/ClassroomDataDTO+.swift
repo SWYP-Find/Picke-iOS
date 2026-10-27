@@ -92,7 +92,7 @@ private extension ClassBattleSummary {
 
 private extension String {
   func classDate() throws -> Date {
-    guard let date = date(as: .serverDateTime) else {
+    guard let date = ServerDateParser.parse(self) else {
       throw ClassError.unknown("클래스 날짜 형식을 읽을 수 없습니다: \(self)")
     }
     return date

@@ -259,11 +259,11 @@ struct ClassOwnerDashboardTests {
     var feedback: ClassAIPersonalFeedback? = nil
     var insight: ClassAIInsight? = nil
 
-    func fetch(roomID _: Int) async throws -> ClassResult {
+    func fetchResult(roomID _: Int) async throws -> ClassResult {
       try result.get()
     }
 
-    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
       guard let feedback else { throw ClassAIFeedbackError.temporarilyUnavailable }
       return feedback
     }
@@ -381,7 +381,7 @@ struct ClassOwnerDashboardTests {
     let room = ClassRoom.mocks[0]
     let option = ClassResultOption(id: 1, title: "찬성", preVoteCount: 2, postVoteCount: 3, postVoteRatio: 60)
     let result = serverResult(room, options: [option])
-    var state = ClassOwnerDashboardFeature.State(room: room)
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
     state.classResult = result
     let stats = result.stats
     #expect(state.serverParticipationRate == "\(stats.participationRate.formatted(.number.precision(.fractionLength(1))))%")

@@ -23,11 +23,11 @@ struct ClassReportTests {
       self.feedback = feedback
     }
 
-    func fetch(roomID _: Int) async throws -> ClassResult {
+    func fetchResult(roomID _: Int) async throws -> ClassResult {
       try result.get()
     }
 
-    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
       guard let feedback else { throw ClassAIFeedbackError.temporarilyUnavailable }
       return feedback
     }
@@ -65,7 +65,7 @@ struct ClassReportTests {
 
   @Test
   func 서버_결과_표시값은_State에서_계산한다() throws {
-    var state = ClassReportFeature.State(room: .mockClosedSociety)
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
     state.classResult = result(room: .mockClosedSociety, reportState: "SUCCEEDED")
     #expect(state.serverActiveMemberCount == "12")
     #expect(state.serverCompletedCount == "10")
