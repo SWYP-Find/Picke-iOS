@@ -275,7 +275,21 @@ jobs:
               const boundedPrompt = attempt === 0
                 ? prompt
                 : `${prompt}\nReturn at most two comments. Keep each body under 300 characters and the summary under 300 characters. Do not include suggestion blocks.`;
-              const result = await model.generateContent(boundedPrompt);
+              let result;
+              for (let requestAttempt = 0; requestAttempt < 3; requestAttempt++) {
+                try {
+                  result = await model.generateContent(boundedPrompt);
+                  break;
+                } catch (error) {
+                  const status = Number(error.status);
+                  if (![429, 500, 502, 503, 504].includes(status) || requestAttempt === 2) {
+                    throw error;
+                  }
+                  const delayMs = 1000 * (requestAttempt + 1);
+                  console.log(`Gemini transient HTTP ${status}; retrying request ${requestAttempt + 2}/3 after ${delayMs}ms`);
+                  await new Promise(resolve => setTimeout(resolve, delayMs));
+                }
+              }
               const finishReason = result.response.candidates?.[0]?.finishReason || "unknown";
               const outputTokens = result.response.usageMetadata?.candidatesTokenCount ?? "unknown";
               const thoughtTokens = result.response.usageMetadata?.thoughtsTokenCount ?? "unknown";
