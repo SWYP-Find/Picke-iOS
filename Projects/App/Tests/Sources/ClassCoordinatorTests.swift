@@ -2392,6 +2392,105 @@ struct ClassDeadlineSheetCoordinatorTests {
 }
 
 @MainActor
+struct ClassBattleFlowSwipeLifecycleTests {
+  @Test
+  func TTS_재생_중_스와이프로_나가면_오디오_구독을_취소하고_일시정지한다() async throws {
+    let player = ControlledClassAudioPlayer()
+    let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000071"))
+    let room = ClassRoom.mocks[0]
+    var flow = ClassBattleFlowFeature.State()
+    flow.room = room
+    flow.audioRequestID = requestID
+    flow.session = testBattleFlowSession(room: room)
+    var state = ClassCoordinator.State()
+    state.routes.push(.battleFlow(flow))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .battleFlow(.inner(.audioLoaded(
+      requestID,
+      true,
+      30
+    )))))) {
+      flow.audioRequestID = nil
+      flow.isAudioReady = true
+      flow.audioDuration = 30
+      flow.isPlaying = true
+      $0.routes[screenAt: 1] = .battleFlow(flow)
+      $0.battleFlowInstanceIDs = [flow.instanceID]
+    }
+    #expect(await player.waitForSubscriptions(1))
+
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.battleFlowInstanceIDs = []
+    }
+    #expect(await player.waitForTerminations(1))
+    await store.finish(timeout: .seconds(1))
+    #expect(await player.pauseCalls() == 1)
+  }
+
+  @Test
+  func 제출_중_스와이프로_나가면_요청을_취소한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000072"))
+    let tracker = SlowBattleRequestTracker()
+    var flow = ClassBattleFlowFeature.State()
+    flow.room = room
+    flow.session = testBattleFlowSession(room: room)
+    flow.viewState = .loaded
+    flow.hasListened = true
+    var state = ClassCoordinator.State()
+    state.routes.push(.battleFlow(flow))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = SlowBattleUseCase(tracker: tracker)
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .battleFlow(.view(.submitTapped))))) {
+      flow.submitRequestID = requestID
+      $0.routes[screenAt: 1] = .battleFlow(flow)
+      $0.battleFlowInstanceIDs = [flow.instanceID]
+    }
+    #expect(await tracker.waitForStarted())
+
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.battleFlowInstanceIDs = []
+    }
+    #expect(await tracker.waitForCancellation())
+    await store.finish(timeout: .seconds(1))
+  }
+}
+
+@MainActor
+private func testBattleFlowSession(room: ClassRoom) -> ClassBattleSession {
+  ClassBattleSession(
+    classID: room.id,
+    myRole: .member,
+    closeAt: .now,
+    closed: false,
+    commentRequired: false,
+    canParticipate: true,
+    participationCompleted: false,
+    battle: ClassBattleDetail(
+      id: 22,
+      title: "배틀",
+      summary: "요약",
+      thumbnailURL: nil,
+      description: "설명",
+      shareURL: nil,
+      userVoteStatus: nil,
+      currentStep: .ttsListening,
+      participantsCount: 1,
+      audioDuration: 30,
+      options: []
+    )
+  )
+}
+
+@MainActor
 struct ChatPlayerLifecycleTests {
   private enum ClassExit: CaseIterable, Sendable {
     case back
@@ -2622,6 +2721,103 @@ struct ChatPlayerLifecycleTests {
   }
 }
 
+private struct SlowBattleUseCase: ClassBattleInterface {
+  let tracker: SlowBattleRequestTracker
+  private let fallback = MockClassRepository()
+
+  func fetchBattle(classID: Int) async throws -> ClassBattleSession {
+    try await fallback.fetchBattle(classID: classID)
+  }
+
+  func submitPreVote(
+    classID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitPreVote(classID: classID, optionID: optionID)
+  }
+
+  func completeTTS(classID _: Int) async throws {
+    await tracker.markStarted()
+    do {
+      try await Task.sleep(for: .seconds(60))
+    } catch {
+      await tracker.markCancelled()
+      throw error
+    }
+  }
+
+  func submitPostVote(
+    classID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitPostVote(classID: classID, optionID: optionID)
+  }
+
+  func fetchMyVotes(classID: Int) async throws -> ClassVoteHistory {
+    try await fallback.fetchMyVotes(classID: classID)
+  }
+
+  func fetchVoteStats(classID: Int) async throws -> ClassVoteStats {
+    try await fallback.fetchVoteStats(classID: classID)
+  }
+
+  func publishPerspective(
+    classID: Int,
+    content: String
+  ) async throws -> ClassPerspectiveReceipt {
+    try await fallback.publishPerspective(classID: classID, content: content)
+  }
+
+  func fetchPerspectives(
+    classID: Int,
+    cursor: String?,
+    size: Int?,
+    optionID: Int?,
+    sort: String?
+  ) async throws -> ClassPerspectivePage {
+    try await fallback.fetchPerspectives(
+      classID: classID,
+      cursor: cursor,
+      size: size,
+      optionID: optionID,
+      sort: sort
+    )
+  }
+
+  func fetchMyPerspectives(classID: Int) async throws -> [ClassPerspectiveItem] {
+    try await fallback.fetchMyPerspectives(classID: classID)
+  }
+}
+
+private actor SlowBattleRequestTracker {
+  private var started = false
+  private var cancelled = false
+
+  func markStarted() {
+    started = true
+  }
+
+  func markCancelled() {
+    cancelled = true
+  }
+
+  func waitForStarted() async -> Bool {
+    for _ in 0 ..< 100 {
+      if started { return true }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+
+  func waitForCancellation() async -> Bool {
+    for _ in 0 ..< 100 {
+      if cancelled { return true }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+}
+
 private actor ControlledClassAudioPlayer: AudioPlayerInterface {
   private var continuations: [UUID: AsyncStream<TimeInterval>.Continuation] = [:]
   private var subscriptionIDs: [UUID] = []
@@ -2640,7 +2836,14 @@ private actor ControlledClassAudioPlayer: AudioPlayerInterface {
   }
 
   func play() async {}
-  func pause() async {}
+  private var pauseCount = 0
+  func pause() async {
+    pauseCount += 1
+  }
+
+  func pauseCalls() -> Int {
+    pauseCount
+  }
   func setPlaybackRate(_ rate: Float) async {
     playbackRates.append(rate)
   }

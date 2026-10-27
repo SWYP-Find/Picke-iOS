@@ -593,15 +593,6 @@ private extension ClassBattleFlowView {
       }
     }
     .background(.white)
-    .simultaneousGesture(
-      DragGesture(minimumDistance: 30).onEnded { gesture in
-        guard gesture.startLocation.x <= 24,
-              gesture.translation.width > 80,
-              abs(gesture.translation.height) < gesture.translation.width
-        else { return }
-        send(.backTapped)
-      }
-    )
   }
 
   @ViewBuilder

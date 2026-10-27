@@ -99,6 +99,7 @@ public struct ClassCoordinatorView: View {
 
       case let .battleFlow(battleFlowStore):
         ClassBattleFlowView(store: battleFlowStore)
+          .swipeBackButtonHidden()
           .toolbar(.hidden, for: .tabBar)
 
       case let .perspectiveDetail(detailStore):

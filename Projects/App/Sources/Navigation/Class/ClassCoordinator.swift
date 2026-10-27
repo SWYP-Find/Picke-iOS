@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import AudioPlayerServiceInterface
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
@@ -17,6 +18,7 @@ public struct ClassCoordinator {
   @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
   @Dependency(\.date) private var date
+  @Dependency(\.audioPlayer) private var audioPlayer
 
   public init() {}
 
@@ -42,6 +44,7 @@ public struct ClassCoordinator {
     var detailInstanceIDs: Set<UUID> = []
     var aiVoteInstanceIDs: Set<UUID> = []
     var ticketInstanceIDs: Set<UUID> = []
+    var battleFlowInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
@@ -413,19 +416,25 @@ private extension ClassCoordinator {
       guard case let .ticket(ticket) = route.screen else { return nil }
       return ticket.instanceID
     })
+    let battleFlowIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .battleFlow(flow) = route.screen else { return nil }
+      return flow.instanceID
+    })
     let removedOwners = state.ownerNameInstanceIDs.subtracting(ownerIDs)
     let removedJoins = state.participantJoinInstanceIDs.subtracting(joinIDs)
     let removedMembers = state.memberInstanceIDs.subtracting(memberIDs)
     let removedDetails = state.detailInstanceIDs.subtracting(detailIDs)
     let removedVotes = state.aiVoteInstanceIDs.subtracting(voteIDs)
     let removedTickets = state.ticketInstanceIDs.subtracting(ticketIDs)
+    let removedBattleFlows = state.battleFlowInstanceIDs.subtracting(battleFlowIDs)
     state.ownerNameInstanceIDs = ownerIDs
     state.participantJoinInstanceIDs = joinIDs
     state.memberInstanceIDs = memberIDs
     state.detailInstanceIDs = detailIDs
     state.aiVoteInstanceIDs = voteIDs
     state.ticketInstanceIDs = ticketIDs
-    return .merge(
+    state.battleFlowInstanceIDs = battleFlowIDs
+    var effects: [Effect<Action>] =
       removedOwners.map { .cancel(id: ClassJoinFeature.CancelID.nameOwner($0)) }
         + removedJoins.flatMap { id in
           [
@@ -442,7 +451,22 @@ private extension ClassCoordinator {
           ]
         }
         + removedTickets.map { .cancel(id: ClassTicketFeature.CancelID.check($0)) }
-    )
+        + removedBattleFlows.flatMap { id in
+          [
+            .cancel(id: ClassBattleFlowFeature.CancelID.load(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.submit(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.audio(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.time(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectives(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.voteStats(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveLike(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.myPerspective(id)),
+          ]
+        }
+    if !removedBattleFlows.isEmpty {
+      effects.append(.run { [player = audioPlayer] _ in await player.pause() })
+    }
+    return .merge(effects)
   }
 
   func cancelRemovedChatObservers(state: inout State) -> Effect<Action> {
