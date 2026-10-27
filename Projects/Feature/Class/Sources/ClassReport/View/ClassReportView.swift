@@ -451,7 +451,7 @@ private extension ClassReportView {
         .frame(minHeight: 17)
         .pickeBadge(.filled, size: .tag)
     case .closed:
-      Text("마감")
+      Text("종료")
         .pretendardFont(.semiBold12)
         .foregroundStyle(.gray300)
         .padding(.horizontal, 4)
