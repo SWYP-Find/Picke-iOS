@@ -1,6 +1,7 @@
 import AudioPlayerServiceInterface
 import BattleDomainInterface
 import ClassDomainInterface
+import CommentDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
@@ -27,6 +28,7 @@ public struct ClassBattleFlowFeature {
     public var selectedOptionID: Int?
     public var draft = ""
     public var perspectives: [ClassPerspectiveItem] = []
+    public var pendingPerspectiveLikeResults: [Int: CommentLikeResult] = [:]
     public var nextPerspectiveCursor: String?
     public var hasMorePerspectives = false
     public var isLoadingPerspectives = false
@@ -101,6 +103,12 @@ public struct ClassBattleFlowFeature {
     public var voteDeadlineLabel: String? {
       guard let closeAt = session?.closeAt else { return nil }
       return closeAt.formatted(.dottedDateTimeWithWeekday) + "까지"
+    }
+
+    public var voteStatsPercentageLabels: [String] {
+      (voteStats?.options ?? []).map { option in
+        "\(option.ratio.formatted(.number.precision(.fractionLength(1))))%"
+      }
     }
 
     public var playbackRateTitle: String {
@@ -213,7 +221,7 @@ public struct ClassBattleFlowFeature {
     case playerTimeUpdated(UUID, TimeInterval)
     case perspectivePageResponse(UUID, Result<ClassPerspectivePage, ClassBattleError>)
     case voteStatsResponse(UUID, Result<ClassVoteStats, ClassBattleError>)
-    case perspectiveLikeResponse(UUID, Int, Bool, Result<Bool, ClassBattleError>)
+    case perspectiveLikeResponse(UUID, Int, Result<CommentLikeResult, ClassBattleError>)
     case myPerspectiveResponse(UUID, Result<[ClassPerspectiveItem], ClassBattleError>)
   }
 
@@ -300,6 +308,7 @@ extension ClassBattleFlowFeature {
       state.audioRequestID = nil
       state.perspectiveRequestID = nil
       state.perspectiveLikeRequestID = nil
+      state.pendingPerspectiveLikeResults = [:]
       state.voteStatsRequestID = nil
       state.myPerspectiveRequestID = nil
       state.isLoadingPerspectives = false
@@ -439,13 +448,11 @@ extension ClassBattleFlowFeature {
       return .run { [useCase = perspectiveUseCase, isLiked = item.isLiked] send in
         let result = await Result {
           if isLiked {
-            _ = try await useCase.unlikePerspective(perspectiveId: id)
-          } else {
-            _ = try await useCase.likePerspective(perspectiveId: id)
+            return try await useCase.unlikePerspective(perspectiveId: id)
           }
-          return true
+          return try await useCase.likePerspective(perspectiveId: id)
         }.mapError(Self.mapError)
-        await send(.inner(.perspectiveLikeResponse(requestID, id, !isLiked, result)))
+        await send(.inner(.perspectiveLikeResponse(requestID, id, result)))
       }
       .cancellable(id: CancelID.perspectiveLike(state.instanceID), cancelInFlight: true)
     }
@@ -588,12 +595,18 @@ extension ClassBattleFlowFeature {
         } else {
           state.perspectives.append(contentsOf: page.items)
         }
+        let pendingLikeResults = state.pendingPerspectiveLikeResults
+        state.perspectives = state.perspectives.map { item in
+          guard let likeResult = pendingLikeResults[item.id] else { return item }
+          return Self.updatingLike(item, with: likeResult)
+        }
         state.nextPerspectiveCursor = page.nextCursor
         state.hasMorePerspectives = page.hasNext
         state.perspectiveErrorMessage = nil
       case let .failure(error):
         state.perspectiveErrorMessage = error.message
       }
+      state.pendingPerspectiveLikeResults = [:]
       return .none
     case let .voteStatsResponse(requestID, result):
       guard state.voteStatsRequestID == requestID else { return .none }
@@ -602,25 +615,20 @@ extension ClassBattleFlowFeature {
         state.voteStats = stats
       }
       return .none
-    case let .perspectiveLikeResponse(requestID, id, isLiked, result):
+    case let .perspectiveLikeResponse(requestID, id, result):
       guard state.perspectiveLikeRequestID == requestID else { return .none }
       state.perspectiveLikeRequestID = nil
       switch result {
-      case .success:
+      case let .success(likeResult):
+        guard likeResult.perspectiveId == id else {
+          state.perspectiveErrorMessage = ClassBattleError.invalidResponse.message
+          return .none
+        }
+        if state.perspectiveRequestID != nil {
+          state.pendingPerspectiveLikeResults[id] = likeResult
+        }
         if let index = state.perspectives.firstIndex(where: { $0.id == id }) {
-          let item = state.perspectives[index]
-          state.perspectives[index] = ClassPerspectiveItem(
-            id: item.id,
-            author: item.author,
-            option: item.option,
-            content: item.content,
-            likeCount: max(0, item.likeCount + (isLiked ? 1 : -1)),
-            commentCount: item.commentCount,
-            isLiked: isLiked,
-            isMyPerspective: item.isMyPerspective,
-            status: item.status,
-            createdAt: item.createdAt
-          )
+          state.perspectives[index] = Self.updatingLike(state.perspectives[index], with: likeResult)
         }
         return .none
       case let .failure(error):
@@ -676,6 +684,7 @@ extension ClassBattleFlowFeature {
     guard let classID = state.room?.id else { return .none }
     let requestID = uuid()
     state.perspectiveRequestID = requestID
+    state.pendingPerspectiveLikeResults = [:]
     state.isLoadingPerspectives = true
     state.perspectiveErrorMessage = nil
     if cursor == nil {
@@ -811,6 +820,24 @@ extension ClassBattleFlowFeature {
       .cancel(id: CancelID.audio(instanceID)),
       .cancel(id: CancelID.time(instanceID)),
       .run { [player = audioPlayer] _ in await player.pause() }
+    )
+  }
+
+  private static func updatingLike(
+    _ item: ClassPerspectiveItem,
+    with result: CommentLikeResult
+  ) -> ClassPerspectiveItem {
+    ClassPerspectiveItem(
+      id: item.id,
+      author: item.author,
+      option: item.option,
+      content: item.content,
+      likeCount: result.likeCount,
+      commentCount: item.commentCount,
+      isLiked: result.isLiked,
+      isMyPerspective: item.isMyPerspective,
+      status: item.status,
+      createdAt: item.createdAt
     )
   }
 

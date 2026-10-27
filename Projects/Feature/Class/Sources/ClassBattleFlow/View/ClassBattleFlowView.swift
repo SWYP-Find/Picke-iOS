@@ -624,7 +624,7 @@ private extension ClassBattleFlowView {
   func voteStatsSummary(_ stats: ClassVoteStats) -> some View {
     HStack(alignment: .center, spacing: 12) {
       if let first = stats.options.first {
-        voteStatsOption(first)
+        voteStatsOption(first, index: 0)
       }
       VStack(spacing: 20) {
         if let opinionChangeLabel = store.opinionChangeLabel {
@@ -645,7 +645,7 @@ private extension ClassBattleFlowView {
       }
       .frame(maxWidth: .infinity)
       if stats.options.count > 1 {
-        voteStatsOption(stats.options[1])
+        voteStatsOption(stats.options[1], index: 1)
       }
     }
   }
@@ -667,7 +667,10 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func voteStatsOption(_ option: ClassVoteStatsOption) -> some View {
+  func voteStatsOption(
+    _ option: ClassVoteStatsOption,
+    index: Int
+  ) -> some View {
     VStack(spacing: 2) {
       AsyncImage(url: option.imageURL) { image in
         image.resizable().scaledToFill()
@@ -683,7 +686,7 @@ private extension ClassBattleFlowView {
         .pretendardFont(.medium11)
         .foregroundStyle(.gray800)
         .lineLimit(1)
-      Text("\(option.ratio.formatted(.number.precision(.fractionLength(1))))%")
+      Text(store.voteStatsPercentageLabels[index])
         .pretendardFont(.semiBold13)
         .foregroundStyle(.gray800)
     }

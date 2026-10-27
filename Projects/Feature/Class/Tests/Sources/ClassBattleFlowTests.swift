@@ -2,6 +2,7 @@ import AudioPlayerServiceInterface
 @testable import Class
 import BattleDomainInterface
 import ClassDomainInterface
+import CommentDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
@@ -285,7 +286,11 @@ struct ClassBattleFlowTests {
       $0.perspectiveLikeRequestID = nil
       $0.perspectives = []
     }
-    await store.send(.inner(.perspectiveLikeResponse(requestID, 77, true, .success(true))))
+    await store.send(.inner(.perspectiveLikeResponse(
+      requestID,
+      77,
+      .success(.init(perspectiveId: 77, likeCount: 5, isLiked: true))
+    )))
     await store.send(.view(.perspectiveLikeTapped(77)))
     await store.send(.view(.onAppear)) {
       $0.perspectiveRequestID = nextRequestID
@@ -299,7 +304,11 @@ struct ClassBattleFlowTests {
     await store.send(.view(.perspectiveLikeTapped(77))) {
       $0.perspectiveLikeRequestID = nextRequestID
     }
-    await store.receive(\.inner, .perspectiveLikeResponse(nextRequestID, 77, false, .success(true))) {
+    await store.receive(\.inner, .perspectiveLikeResponse(
+      nextRequestID,
+      77,
+      .success(.init(perspectiveId: 77, likeCount: 0, isLiked: false))
+    )) {
       $0.perspectiveLikeRequestID = nil
       let item = $0.perspectives[0]
       $0.perspectives[0] = ClassPerspectiveItem(
@@ -307,13 +316,141 @@ struct ClassBattleFlowTests {
         author: item.author,
         option: item.option,
         content: item.content,
-        likeCount: 4,
+        likeCount: 0,
         commentCount: item.commentCount,
         isLiked: false,
         isMyPerspective: item.isMyPerspective,
         status: item.status,
         createdAt: item.createdAt
       )
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 목록_재조회와_좋아요_응답의_순서가_달라도_서버_좋아요_수를_유지한다() async {
+    let likeRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000043")!
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.perspectiveRequestID = requestID
+    state.isLoadingPerspectives = true
+    state.perspectiveLikeRequestID = likeRequestID
+    let original = ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "내 생각",
+      likeCount: 4,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )
+    state.perspectives = [original]
+    let refreshed = ClassPerspectiveItem(
+      id: original.id,
+      author: original.author,
+      option: original.option,
+      content: original.content,
+      likeCount: 5,
+      commentCount: original.commentCount,
+      isLiked: true,
+      isMyPerspective: original.isMyPerspective,
+      status: original.status,
+      createdAt: original.createdAt
+    )
+    let page = ClassPerspectivePage(items: [refreshed], nextCursor: nil, hasNext: false)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+
+    await store.send(.inner(.perspectivePageResponse(requestID, .success(page)))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectives = [refreshed]
+    }
+    await store.send(.inner(.perspectiveLikeResponse(
+      likeRequestID,
+      77,
+      .success(.init(perspectiveId: 77, likeCount: 5, isLiked: true))
+    ))) {
+      $0.perspectiveLikeRequestID = nil
+    }
+    #expect(store.state.perspectives[0].likeCount == 5)
+    #expect(store.state.perspectives[0].isLiked)
+    await store.finish()
+
+    let stalePage = ClassPerspectivePage(items: [original], nextCursor: nil, hasNext: false)
+    let reverseStore = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    let likeResult = CommentLikeResult(perspectiveId: 77, likeCount: 5, isLiked: true)
+    await reverseStore.send(.inner(.perspectiveLikeResponse(
+      likeRequestID,
+      77,
+      .success(likeResult)
+    ))) {
+      $0.perspectiveLikeRequestID = nil
+      $0.pendingPerspectiveLikeResults[77] = likeResult
+      $0.perspectives = [refreshed]
+    }
+    await reverseStore.send(.inner(.perspectivePageResponse(requestID, .success(stalePage)))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.pendingPerspectiveLikeResults = [:]
+      $0.perspectives = [refreshed]
+    }
+    #expect(reverseStore.state.perspectives[0].likeCount == 5)
+    #expect(reverseStore.state.perspectives[0].isLiked)
+    await reverseStore.finish()
+
+    let newRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000044")!
+    let newer = ClassPerspectiveItem(
+      id: original.id,
+      author: original.author,
+      option: original.option,
+      content: original.content,
+      likeCount: 7,
+      commentCount: original.commentCount,
+      isLiked: true,
+      isMyPerspective: original.isMyPerspective,
+      status: original.status,
+      createdAt: original.createdAt
+    )
+    var newState = state
+    newState.perspectiveLikeRequestID = nil
+    newState.pendingPerspectiveLikeResults[77] = likeResult
+    let newPage = ClassPerspectivePage(items: [newer], nextCursor: nil, hasNext: false)
+    let newStore = TestStore(initialState: newState) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(newRequestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy(), perspectivesPage: newPage)
+    }
+    await newStore.send(.view(.perspectiveSortTapped("latest"))) {
+      $0.perspectiveSort = "latest"
+      $0.perspectiveRequestID = newRequestID
+      $0.pendingPerspectiveLikeResults = [:]
+      $0.perspectives = []
+    }
+    await newStore.receive(\.inner, .perspectivePageResponse(newRequestID, .success(newPage))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectives = [newer]
+    }
+    #expect(newStore.state.perspectives[0].likeCount == 7)
+    await newStore.finish()
+  }
+
+  @Test
+  func 좋아요_응답의_의견_ID가_다르면_오류를_표시한다() async {
+    var state = ClassBattleFlowFeature.State()
+    state.perspectiveLikeRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+
+    await store.send(.inner(.perspectiveLikeResponse(
+      requestID,
+      77,
+      .success(.init(perspectiveId: 78, likeCount: 5, isLiked: true))
+    ))) {
+      $0.perspectiveLikeRequestID = nil
+      $0.perspectiveErrorMessage = ClassBattleError.invalidResponse.message
     }
     await store.finish()
   }
@@ -398,6 +535,32 @@ struct ClassBattleFlowTests {
     state.session = session(step: .completed, commentRequired: true)
     state.showsPreVoteLanding = true
     #expect(state.voteFooterButtonTitle == "결과 보기")
+  }
+
+  @Test
+  func 결과_화면의_투표_비율_문구는_State에서_계산한다() {
+    var state = ClassBattleFlowFeature.State()
+    #expect(state.voteStatsPercentageLabels.isEmpty)
+
+    state.voteStats = ClassVoteStats(
+      options: [
+        .init(id: 31, title: "찬성", imageURL: nil, voteCount: 8, ratio: 53.4),
+        .init(id: 32, title: "반대", imageURL: nil, voteCount: 7, ratio: 46.6),
+      ],
+      totalCount: 15,
+      updatedAt: .now
+    )
+    #expect(state.voteStatsPercentageLabels == ["53.4%", "46.6%"])
+
+    state.voteStats = ClassVoteStats(
+      options: [
+        .init(id: 31, title: "찬성", imageURL: nil, voteCount: 8, ratio: 53.4),
+        .init(id: 31, title: "중복", imageURL: nil, voteCount: 7, ratio: 46.6),
+      ],
+      totalCount: 15,
+      updatedAt: .now
+    )
+    #expect(state.voteStatsPercentageLabels == ["53.4%", "46.6%"])
   }
 
   @Test
