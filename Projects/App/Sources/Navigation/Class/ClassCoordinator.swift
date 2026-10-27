@@ -434,7 +434,7 @@ private extension ClassCoordinator {
     state.aiVoteInstanceIDs = voteIDs
     state.ticketInstanceIDs = ticketIDs
     state.battleFlowInstanceIDs = battleFlowIDs
-    var effects: [Effect<Action>] =
+    let effects: [Effect<Action>] =
       removedOwners.map { .cancel(id: ClassJoinFeature.CancelID.nameOwner($0)) }
         + removedJoins.flatMap { id in
           [
@@ -456,6 +456,7 @@ private extension ClassCoordinator {
             .cancel(id: ClassBattleFlowFeature.CancelID.load(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.submit(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.audio(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.playback(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.time(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.perspectives(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.voteStats(id)),
@@ -463,10 +464,11 @@ private extension ClassCoordinator {
             .cancel(id: ClassBattleFlowFeature.CancelID.myPerspective(id)),
           ]
         }
-    if !removedBattleFlows.isEmpty {
-      effects.append(.run { [player = audioPlayer] _ in await player.pause() })
-    }
-    return .merge(effects)
+    guard !removedBattleFlows.isEmpty else { return .merge(effects) }
+    return .concatenate(
+      .merge(effects),
+      .run { [player = audioPlayer] _ in await player.pause() }
+    )
   }
 
   func cancelRemovedChatObservers(state: inout State) -> Effect<Action> {

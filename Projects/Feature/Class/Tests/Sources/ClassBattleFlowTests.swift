@@ -14,6 +14,39 @@ struct ClassBattleFlowTests {
   private let requestID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
   @Test
+  func 의견_수_표시는_중복_ID에도_각_카드의_순서를_따른다() {
+    let first = ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "첫 의견",
+      likeCount: 1_200,
+      commentCount: 3,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )
+    let second = ClassPerspectiveItem(
+      id: 77,
+      author: first.author,
+      option: first.option,
+      content: "두 번째 의견",
+      likeCount: 5,
+      commentCount: 2_300,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )
+    var state = ClassBattleFlowFeature.State()
+    state.perspectives = [first, second]
+
+    #expect(state.perspectiveRows.map(\.likeCountLabel) == ["1,200", "5"])
+    #expect(state.perspectiveRows.map(\.commentCountLabel) == ["3", "2,300"])
+  }
+
+  @Test
   func 이미_제출한_의견은_빈_재조회_응답으로_다시_작성할_수_없다() async {
     var state = battleState(room: .mocks[0])
     state.session = session(step: .completed, commentRequired: false)

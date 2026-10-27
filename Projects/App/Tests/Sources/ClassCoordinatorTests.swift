@@ -2394,6 +2394,47 @@ struct ClassDeadlineSheetCoordinatorTests {
 @MainActor
 struct ClassBattleFlowSwipeLifecycleTests {
   @Test
+  func 대기_중인_재생은_스와이프_이탈_후_다시_시작되지_않는다() async throws {
+    let player = ControlledClassAudioPlayer(delayPlay: true)
+    let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000073"))
+    let room = ClassRoom.mocks[0]
+    var flow = ClassBattleFlowFeature.State()
+    flow.room = room
+    flow.audioRequestID = requestID
+    flow.session = testBattleFlowSession(room: room)
+    var state = ClassCoordinator.State()
+    state.routes.push(.battleFlow(flow))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .battleFlow(.inner(.audioLoaded(
+      requestID,
+      true,
+      30
+    )))))) {
+      flow.audioRequestID = nil
+      flow.isAudioReady = true
+      flow.audioDuration = 30
+      flow.isPlaying = true
+      $0.routes[screenAt: 1] = .battleFlow(flow)
+      $0.battleFlowInstanceIDs = [flow.instanceID]
+    }
+    #expect(await player.waitForPlayStarted())
+    #expect(await player.waitForSubscriptions(1))
+
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.battleFlowInstanceIDs = []
+    }
+    await player.releasePlay()
+    #expect(await player.waitForTerminations(1))
+    await store.finish(timeout: .seconds(1))
+    #expect(await player.playCalls() == 0)
+    #expect(await player.pauseCalls() == 1)
+  }
+
+  @Test
   func TTS_재생_중_스와이프로_나가면_오디오_구독을_취소하고_일시정지한다() async throws {
     let player = ControlledClassAudioPlayer()
     let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000071"))
@@ -2819,9 +2860,17 @@ private actor SlowBattleRequestTracker {
 }
 
 private actor ControlledClassAudioPlayer: AudioPlayerInterface {
+  private let delayPlay: Bool
+  private var playContinuation: CheckedContinuation<Void, Never>?
+  private var playStarted = false
+  private var playCount = 0
   private var continuations: [UUID: AsyncStream<TimeInterval>.Continuation] = [:]
   private var subscriptionIDs: [UUID] = []
   private var terminatedIDs: Set<UUID> = []
+
+  init(delayPlay: Bool = false) {
+    self.delayPlay = delayPlay
+  }
 
   nonisolated func currentTimes() -> AsyncStream<TimeInterval> {
     AsyncStream { continuation in
@@ -2835,7 +2884,29 @@ private actor ControlledClassAudioPlayer: AudioPlayerInterface {
     true
   }
 
-  func play() async {}
+  func play() async {
+    if delayPlay {
+      playStarted = true
+      await withCheckedContinuation { playContinuation = $0 }
+    }
+    guard !Task.isCancelled else { return }
+    playCount += 1
+  }
+
+  func releasePlay() {
+    playContinuation?.resume()
+    playContinuation = nil
+  }
+
+  func playCalls() -> Int { playCount }
+
+  func waitForPlayStarted() async -> Bool {
+    for _ in 0 ..< 100 {
+      if playStarted { return true }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
   private var pauseCount = 0
   func pause() async {
     pauseCount += 1

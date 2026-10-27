@@ -28,6 +28,16 @@ public struct ClassBattleFlowFeature {
     public var selectedOptionID: Int?
     public var draft = ""
     public var perspectives: [ClassPerspectiveItem] = []
+    public var perspectiveRows: [ClassPerspectiveRow] {
+      perspectives.enumerated().map { index, perspective in
+        ClassPerspectiveRow(
+          id: index,
+          perspective: perspective,
+          likeCountLabel: perspective.likeCount.decimalFormatted,
+          commentCountLabel: perspective.commentCount.decimalFormatted
+        )
+      }
+    }
     public var pendingPerspectiveLikeResults: [Int: CommentLikeResult] = [:]
     public var nextPerspectiveCursor: String?
     public var hasMorePerspectives = false
@@ -236,6 +246,7 @@ public struct ClassBattleFlowFeature {
     case load(UUID)
     case submit(UUID)
     case audio(UUID)
+    case playback(UUID)
     case time(UUID)
     case perspectives(UUID)
     case voteStats(UUID)
@@ -402,6 +413,7 @@ extension ClassBattleFlowFeature {
       return .run { [player = audioPlayer, shouldPlay = state.isPlaying] _ in
         if shouldPlay { await player.play() } else { await player.pause() }
       }
+      .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .seekBy(delta):
       guard state.isAudioStep, state.isAudioReady else { return .none }
       let target = min(state.audioDuration, max(0, state.currentTime + delta))
@@ -420,6 +432,7 @@ extension ClassBattleFlowFeature {
         await player.seek(to: 0)
         await player.play()
       }
+      .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .playbackRateSelected(rate):
       guard state.isAudioStep, state.isAudioReady else { return .none }
       state.playbackRate = rate
@@ -568,7 +581,8 @@ extension ClassBattleFlowFeature {
       state.audioDuration = duration
       state.isPlaying = true
       return .merge(
-        .run { [player = audioPlayer] _ in await player.play() },
+        .run { [player = audioPlayer] _ in await player.play() }
+          .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true),
         observePlayerTime(instanceID: state.instanceID)
       )
     case let .transcriptLoaded(requestID, transcript):
@@ -584,6 +598,7 @@ extension ClassBattleFlowFeature {
       guard state.isPlaying else { return .none }
       state.isPlaying = false
       return .run { [player = audioPlayer] _ in await player.pause() }
+        .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .perspectivePageResponse(requestID, result):
       guard state.perspectiveRequestID == requestID else { return .none }
       state.perspectiveRequestID = nil
@@ -816,9 +831,12 @@ extension ClassBattleFlowFeature {
   }
 
   private func stopPlayback(instanceID: UUID) -> Effect<Action> {
-    .merge(
-      .cancel(id: CancelID.audio(instanceID)),
-      .cancel(id: CancelID.time(instanceID)),
+    .concatenate(
+      .merge(
+        .cancel(id: CancelID.audio(instanceID)),
+        .cancel(id: CancelID.playback(instanceID)),
+        .cancel(id: CancelID.time(instanceID))
+      ),
       .run { [player = audioPlayer] _ in await player.pause() }
     )
   }

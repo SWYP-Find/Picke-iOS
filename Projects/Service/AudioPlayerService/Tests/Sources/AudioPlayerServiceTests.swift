@@ -44,6 +44,19 @@ struct AudioPlayerServiceTests {
     #expect(player.defaultRate == 1.5)
     #expect(player.rate == 1.5)
   }
+
+  @Test
+  func cancelledTaskDoesNotStartPlayback() async {
+    let player = PlaybackCommandSpy()
+    let service = AudioPlayerService(player: player, configuresSession: false)
+
+    await Task { @MainActor in
+      withUnsafeCurrentTask { $0?.cancel() }
+      service.play()
+    }.value
+
+    #expect(player.rate == 0)
+  }
 }
 
 /// Verifies service commands independently of asset loading and hardware playback.

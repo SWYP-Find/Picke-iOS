@@ -78,6 +78,7 @@ private actor Clock {
   }
 
   func play() {
+    guard !Task.isCancelled else { return }
     guard startedAt == nil else { return }
     startedAt = now()
   }

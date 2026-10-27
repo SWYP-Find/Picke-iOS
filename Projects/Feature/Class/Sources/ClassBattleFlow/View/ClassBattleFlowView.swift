@@ -555,8 +555,8 @@ private extension ClassBattleFlowView {
       ScrollView(showsIndicators: false) {
         VStack(alignment: .leading, spacing: 0) {
           perspectiveSortRow()
-          ForEach(store.perspectives) { perspective in
-            perspectiveCard(perspective)
+          ForEach(store.perspectiveRows) { row in
+            perspectiveCard(row)
           }
           if store.isLoadingPerspectives {
             SkeletonView(.rect).frame(height: 90)
@@ -748,7 +748,8 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func perspectiveCard(_ perspective: ClassPerspectiveItem) -> some View {
+  func perspectiveCard(_ row: ClassPerspectiveRow) -> some View {
+    let perspective = row.perspective
     VStack(alignment: .leading, spacing: 8) {
       perspectiveHeader(perspective)
       VStack(alignment: .leading, spacing: 4) {
@@ -766,7 +767,7 @@ private extension ClassBattleFlowView {
           .foregroundStyle(.gray200)
           .buttonStyle(.plain)
       }
-      perspectiveActions(perspective)
+      perspectiveActions(row)
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 18)
@@ -804,7 +805,8 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func perspectiveActions(_ perspective: ClassPerspectiveItem) -> some View {
+  func perspectiveActions(_ row: ClassPerspectiveRow) -> some View {
+    let perspective = row.perspective
     HStack(spacing: 10) {
       Button { send(.perspectiveLikeTapped(perspective.id)) } label: {
         HStack(spacing: 2) {
@@ -812,7 +814,7 @@ private extension ClassBattleFlowView {
             .resizable()
             .scaledToFit()
             .frame(width: 16, height: 16)
-          Text(perspective.likeCount.decimalFormatted)
+          Text(row.likeCountLabel)
             .pretendardFont(.labelSmall)
         }
         .foregroundStyle(perspective.isLiked ? .primary500 : .gray500)
@@ -824,7 +826,7 @@ private extension ClassBattleFlowView {
             .resizable()
             .scaledToFit()
             .frame(width: 16, height: 16)
-          Text(perspective.commentCount.decimalFormatted)
+          Text(row.commentCountLabel)
             .pretendardFont(.labelSmall)
         }
         .foregroundStyle(.gray500)
@@ -880,6 +882,7 @@ private extension ClassBattleFlowView {
 
   var perspectiveNavigationBar: some View {
     PickeNavigationBar(
+      onBack: { send(.backTapped) },
       centerTitle: store.displayTitle
     ) {
       Button { send(.reportTapped) } label: {

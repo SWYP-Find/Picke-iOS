@@ -103,7 +103,10 @@ final class AudioPlayerService {
     }
   }
 
-  func play() { player.play() }
+  func play() {
+    guard !Task.isCancelled else { return }
+    player.play()
+  }
   func pause() { player.pause() }
 
   func setPlaybackRate(_ rate: Float) {
