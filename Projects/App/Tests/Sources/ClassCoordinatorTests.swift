@@ -15,6 +15,27 @@ import TCAFlow
 import Testing
 
 @MainActor
+private func testDetailState(room: ClassRoom) -> ClassDetailFeature.State {
+  withDependencies {
+    $0.uuid = .incrementing
+  } operation: {
+    ClassDetailFeature.State(room: room)
+  }
+}
+
+@MainActor
+private func testDetailState(
+  room: ClassRoom,
+  instanceID: UUID
+) -> ClassDetailFeature.State {
+  withDependencies {
+    $0.uuid = .constant(instanceID)
+  } operation: {
+    ClassDetailFeature.State(room: room)
+  }
+}
+
+@MainActor
 struct ClassCoordinatorTests {
   @Test
   func 추천_배틀_미리듣기는_push로_열고_뒤로가면_추천_목록으로_돌아온다() async {
@@ -112,7 +133,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mockJoinable
     var state = ClassCoordinator.State()
     state.chatRoomsByBattleID[-1_000_000 - room.id] = room
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     let store = TestStore(initialState: state) { ClassCoordinator() }
     store.exhaustivity = .off
 
@@ -294,7 +315,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mocks[0]
     let battleID = -1_000_000 - room.id
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     var chat = ChatCoordinator.State(route: .preVote(battleId: battleID))
     var vote = PreVoteFeature.State(battleId: battleID)
     vote.showsResultsForExistingParticipation = true
@@ -453,7 +474,7 @@ struct ClassCoordinatorTests {
   @Test
   func 상세_관리_모달을_닫으면_탭바가_다시_보인다() {
     var state = ClassCoordinator.State()
-    var detail = ClassDetailFeature.State(room: .mocks[0])
+    var detail = testDetailState(room: .mocks[0])
     state.routes.push(.detail(detail))
     #expect(state.showsTabBar)
 
@@ -476,7 +497,7 @@ struct ClassCoordinatorTests {
     var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
     dashboard.management = .init(kind: .management)
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.ownerDashboard(dashboard))
     #expect(!state.showsTabBar)
 
@@ -509,8 +530,24 @@ struct ClassCoordinatorTests {
       id: room.id,
       deadline: room.deadline.addingTimeInterval(86400)
     )
+    let result = ClassResult(
+      classID: updatedRoom.id,
+      closed: true,
+      closeAt: updatedRoom.deadline,
+      stats: .init(
+        activeMemberCount: 12,
+        completedCount: 10,
+        participationRate: 83.3,
+        commentWriterCount: 9,
+        commentRate: 75,
+        postVoteCount: 11,
+        options: []
+      ),
+      myReportState: nil,
+      insightState: nil
+    )
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
     var editor = ClassDeadlineEditFeature.State(
       room: room,
@@ -524,6 +561,7 @@ struct ClassCoordinatorTests {
       ClassCoordinator()
     } withDependencies: {
       $0.classUseCase = repository
+      $0.classResultUseCase = FixedClassResultUseCase(result: result)
       $0.uuid = .incrementing
     }
     store.exhaustivity = .off
@@ -550,7 +588,7 @@ struct ClassCoordinatorTests {
     }
     await store.receive {
       guard case let .router(.routeAction(id: 2, action: .ownerDashboard(action))) = $0,
-            case .inner(.dashboardResponse) = action else { return false }
+            case .inner(.resultResponse) = action else { return false }
       return true
     }
     await store.finish()
@@ -561,16 +599,14 @@ struct ClassCoordinatorTests {
     }
     #expect(dashboard.room.deadline == updatedRoom.deadline)
     #expect(dashboard.sourceViewState == .ready)
-    #expect(dashboard.members == MockClassOwnerDashboard.figma.members)
-    #expect(dashboard.opinions == MockClassOwnerDashboard.figma.opinions)
-    #expect(dashboard.metrics == MockClassOwnerDashboard.figma.metrics)
+    #expect(dashboard.classResult == result)
   }
 
   @Test
   func 마감_배틀에서_연_운영자_요약의_삭제는_상세_확인창으로_돌아간다() async {
     let room = ClassRoom.mocks[2]
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.closedBattle(.init(room: room)))
     state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
     let store = TestStore(initialState: state) {
@@ -600,7 +636,7 @@ struct ClassCoordinatorTests {
   func 운영자_멤버_목록은_필터와_저장중에만_탭바를_숨긴다() {
     var state = ClassCoordinator.State()
     #expect(!state.showsTabBar)
-    state.routes.push(.detail(.init(room: .mocks[0])))
+    state.routes.push(.detail(testDetailState(room: .mocks[0])))
     var members = ClassMemberFeature.State(room: .mocks[0], instanceID: UUID())
     state.routes.push(.members(members))
     #expect(state.showsTabBar)
@@ -644,7 +680,7 @@ struct ClassCoordinatorTests {
   @Test
   func 참가자_멤버_목록도_확정_시안처럼_탭바를_보여준다() {
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: .mockJoinable)))
+    state.routes.push(.detail(testDetailState(room: .mockJoinable)))
     #expect(state.showsTabBar)
     state.routes.push(.members(.init(room: .mockJoinable, instanceID: UUID())))
     #expect(state.showsTabBar)
@@ -718,9 +754,11 @@ struct ClassCoordinatorTests {
     )
     var opinions = ClassMyOpinionsFeature.State()
     opinions.opinions = MockClassReport.figmaMyOpinions.resolvedOpinions
+    let detail = testDetailState(room: .mockClosedSociety)
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: .mockClosedSociety)))
+    state.routes.push(.detail(detail))
     state.routes.push(.report(report))
+    state.detailInstanceIDs = [detail.instanceID]
     state.reportInstanceIDs = [report.instanceID]
     let originalRoutes = state.routes
     let store = TestStore(initialState: state) { ClassCoordinator() }
@@ -742,7 +780,7 @@ struct ClassCoordinatorTests {
       $0.routes.goBack()
     }
     #expect(store.state.routes == originalRoutes)
-    #expect(store.state.showsTabBar)
+    #expect(!store.state.showsTabBar)
     await store.finish()
   }
 
@@ -820,6 +858,7 @@ struct ClassCoordinatorTests {
     report.sourceViewState = .ready
     var state = ClassCoordinator.State()
     state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
     let store = TestStore(initialState: state) { ClassCoordinator() }
     var opinions = ClassMyOpinionsFeature.State()
     opinions.classID = room.id
@@ -864,9 +903,11 @@ struct ClassCoordinatorTests {
     dashboard.generatedInsight = "보존할 인사이트"
     var expectedOpinions = ClassMyOpinionsFeature.State()
     expectedOpinions.opinions = MockClassReport.figmaMyOpinions.resolvedOpinions
+    let detail = testDetailState(room: room)
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(detail))
     state.routes.push(.ownerDashboard(dashboard))
+    state.detailInstanceIDs = [detail.instanceID]
     state.dashboardInstanceIDs = [dashboard.instanceID]
     let originalRoutes = state.routes
     let store = TestStore(initialState: state) { ClassCoordinator() }
@@ -887,7 +928,7 @@ struct ClassCoordinatorTests {
       $0.routes.goBack()
     }
     #expect(store.state.routes == originalRoutes)
-    #expect(store.state.showsTabBar)
+    #expect(!store.state.showsTabBar)
     await store.finish()
   }
 
@@ -944,7 +985,7 @@ struct ClassCoordinatorTests {
   func 클래스_댓글의_리포트는_상세를_보존하고_뒤로가면_탭바를_보인다() async {
     let room = ClassRoom.mockClosedSociety
     let battleID = -1_000_000 - room.id
-    var detail = ClassDetailFeature.State(room: room)
+    var detail = testDetailState(room: room)
     detail.errorMessage = "보존할 상세 상태"
     var state = ClassCoordinator.State()
     state.routes.push(.detail(detail))
@@ -965,7 +1006,7 @@ struct ClassCoordinatorTests {
     }
     #expect(preservedDetail == detail)
     #expect(report.room == room)
-    #expect(store.state.showsTabBar)
+    #expect(!store.state.showsTabBar)
 
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
@@ -988,7 +1029,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mockClosedSociety
     let battleID = -1_000_000 - room.id
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.aiVote(.init(room: room, battleID: battleID, instanceID: UUID())))
     state.routes.push(.aiChat(.init(room: room, battleID: battleID, selectedOptionID: 1)))
     state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
@@ -1017,7 +1058,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mockClosedSociety
     let battleID = -1_000_000 - room.id
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.aiVote(.init(room: room, battleID: battleID, instanceID: UUID())))
     state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
     state.chatRoomsByBattleID[battleID] = room
@@ -1042,7 +1083,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mocks[0]
     let battleID = -1_000_000 - room.id
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
     state.chatRoomsByBattleID[battleID] = room
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
@@ -1067,7 +1108,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mockClosedSociety
     let battleID = -1_000_000 - room.id
     var valid = ClassCoordinator.State()
-    valid.routes.push(.detail(.init(room: room)))
+    valid.routes.push(.detail(testDetailState(room: room)))
     valid.routes.push(.chat(.init(route: .comment(battleId: battleID))))
     valid.chatRoomsByBattleID[battleID] = room
 
@@ -1112,7 +1153,7 @@ struct ClassCoordinatorTests {
   func 마감된_멤버_배틀은_결과_진입과_리포트로_연결된다() async {
     let room = ClassRoom.mockClosedSociety
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     let store = TestStore(initialState: state) {
       ClassCoordinator()
     } withDependencies: {
@@ -1157,7 +1198,7 @@ struct ClassCoordinatorTests {
   func 운영자_대시보드에서는_탭바를_숨긴다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.uuid = .incrementing
     }
@@ -1210,7 +1251,7 @@ struct ClassCoordinatorTests {
   func 마감_배틀_화면의_뒤로가기는_클래스_상세로_돌아온다() async {
     let room = ClassRoom.mockClosedSociety
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.closedBattle(.init(room: room)))
     let store = TestStore(initialState: state) {
       ClassCoordinator()
@@ -1235,7 +1276,7 @@ struct ClassCoordinatorTests {
   func 마감된_운영자_결과는_요약으로_직접_이동한다() async {
     let room = ClassRoom.mocks[2]
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     let store = TestStore(initialState: state) {
       ClassCoordinator()
     } withDependencies: {
@@ -1266,7 +1307,7 @@ struct ClassCoordinatorTests {
     myClasses.viewState = .loaded
     var state = ClassCoordinator.State()
     state.routes.push(.myClasses(myClasses))
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.members(.init(
       room: room,
       members: originalMembers,
@@ -1279,6 +1320,7 @@ struct ClassCoordinatorTests {
     } withDependencies: {
       $0.classRepository = repository
       $0.classUseCase = ClassUseCaseImpl()
+      $0.classRoomUseCase = repository
       $0.classMockRepository = repository
     }
     store.exhaustivity = .off
@@ -1305,7 +1347,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mockClosedSociety
     let useCase = SuspendedClassUseCase()
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.report(.init(room: room, instanceID: UUID())))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = useCase
@@ -1327,7 +1369,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mockClosedSociety
     let useCase = SuspendedClassUseCase()
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.report(.init(room: room, instanceID: UUID())))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = useCase
@@ -1349,7 +1391,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mocks[0]
     let useCase = SuspendedClassUseCase()
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = useCase
@@ -1371,7 +1413,7 @@ struct ClassCoordinatorTests {
     let room = ClassRoom.mocks[0]
     let useCase = SuspendedClassUseCase()
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = useCase
@@ -1415,7 +1457,7 @@ struct ClassCoordinatorTests {
     let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
     let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.report(.init(room: room, instanceID: firstID)))
     state.routes.push(.report(.init(room: room, instanceID: secondID)))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
@@ -1452,7 +1494,7 @@ struct ClassCoordinatorTests {
     let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000003"))
     let replacementID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000004"))
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.report(.init(room: room, instanceID: firstID)))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = useCase
@@ -1542,7 +1584,7 @@ struct ClassNavigationLoadingTests {
       action: .ownerName(.delegate(.ownerNamed(room, instanceID: newID)))
     ))) {
       $0.routes.goBackToRoot()
-      $0.routes.push(.detail(.init(room: room)))
+      $0.routes.push(.detail(testDetailState(room: room)))
       $0.ownerNameInstanceIDs = []
     }
     guard case let .detail(detail)? = store.state.routes.last?.screen else {
@@ -1563,7 +1605,7 @@ struct ClassNavigationLoadingTests {
     member.activeLoadRequestID = newRequestID
     member.isLoading = true
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.members(member))
     let store = TestStore(initialState: state) { ClassCoordinator() }
 
@@ -1972,7 +2014,7 @@ struct ClassParticipantPushTests {
       $0.completingJoinCodeInstanceID = nil
       $0.completingJoinNicknameInstanceID = nil
       $0.routes.goBackToRoot()
-      $0.routes.push(.detail(.init(room: room)))
+      $0.routes.push(.detail(testDetailState(room: room)))
       $0.participantJoinInstanceIDs = []
     }
   }
@@ -2012,7 +2054,7 @@ struct ClassParticipantPushTests {
       $0.completingJoinCodeInstanceID = nil
       $0.completingJoinNicknameInstanceID = nil
       $0.routes.goBackToRoot()
-      $0.routes.push(.detail(.init(room: room)))
+      $0.routes.push(.detail(testDetailState(room: room)))
       $0.participantJoinInstanceIDs = []
     }
   }
@@ -2068,7 +2110,7 @@ struct ClassDeadlineSheetCoordinatorTests {
     editor.activeRequestID = saveRequestID
     editor.isSaving = true
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.members(member))
     state.deadlineEdit = editor
     let store = TestStore(initialState: state) { ClassCoordinator() }
@@ -2161,11 +2203,11 @@ struct ClassDeadlineSheetCoordinatorTests {
   @Test
   func 교체된_상세_경로는_이전_조회_응답을_무시한다() async {
     let room = ClassRoom.mocks[0]
-    var oldDetail = ClassDetailFeature.State(room: room)
+    var oldDetail = testDetailState(room: room, instanceID: UUID())
     let requestID = UUID()
     oldDetail.viewState = .loading
     oldDetail.activeLoadRequestID = requestID
-    let newDetail = ClassDetailFeature.State(room: room)
+    let newDetail = testDetailState(room: room, instanceID: UUID())
     var state = ClassCoordinator.State()
     state.routes.push(.detail(newDetail))
     let store = TestStore(initialState: state) { ClassCoordinator() }
@@ -2227,7 +2269,7 @@ struct ClassDeadlineSheetCoordinatorTests {
     editor.isSaving = true
     editor.activeRequestID = UUID()
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.deadlineEdit = editor
     let store = TestStore(initialState: state) { ClassCoordinator() }
     store.exhaustivity = .off
@@ -2261,7 +2303,7 @@ struct ClassDeadlineSheetCoordinatorTests {
     let requestID = try #require(editor.activeRequestID)
     var state = ClassCoordinator.State()
     state.routes.push(.myClasses(list))
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.ownerDashboard(dashboard))
     state.chatRoomsByBattleID[99] = room
     state.chatRoomsByBattleID[100] = other
@@ -2371,7 +2413,7 @@ struct ChatPlayerLifecycleTests {
     }
     let instanceID = chatRoom.instanceID
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     state.routes.push(.chat(chat))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.audioPlayer = player
@@ -2565,7 +2607,7 @@ struct ChatPlayerLifecycleTests {
   @Test
   func 클래스_탭_재선택은_클래스_루트_액션으로_전달된다() async {
     var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
-    state.classState.routes.push(.detail(.init(room: ClassRoom.mocks[0])))
+    state.classState.routes.push(.detail(testDetailState(room: ClassRoom.mocks[0])))
     let store = TestStore(initialState: state) { MainTabCoordinator() }
     await store.send(.tabReselected(MainTabCoordinator.Tab.classroom.rawValue))
     await store.receive {
@@ -2664,6 +2706,24 @@ private actor ControlledClassAudioPlayer: AudioPlayerInterface {
 
   private func terminate(_ id: UUID) {
     terminatedIDs.insert(id)
+  }
+}
+
+private struct FixedClassResultUseCase: ClassResultInterface {
+  let result: ClassResult
+
+  func fetchResult(roomID _: Int) async throws -> ClassResult { result }
+
+  func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    throw ClassError.unknown("이 테스트는 개인 결과 조회를 사용하지 않습니다.")
+  }
+
+  func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+    throw ClassError.unknown("이 테스트는 인사이트 조회를 사용하지 않습니다.")
+  }
+
+  func retryInsight(roomID _: Int) async throws {
+    throw ClassError.unknown("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
   }
 }
 

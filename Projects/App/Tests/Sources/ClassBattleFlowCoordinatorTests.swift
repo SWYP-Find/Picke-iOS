@@ -3,9 +3,19 @@ import ClassDomainInterface
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
+import Foundation
 @testable import Picke
 import TCAFlow
 import Testing
+
+@MainActor
+private func testDetailState(room: ClassRoom) -> ClassDetailFeature.State {
+  withDependencies {
+    $0.uuid = .incrementing
+  } operation: {
+    ClassDetailFeature.State(room: room)
+  }
+}
 
 @MainActor
 struct ClassBattleFlowCoordinatorTests {
@@ -43,9 +53,10 @@ struct ClassBattleFlowCoordinatorTests {
   func TTS_클래스는_Mock_주입과_무관하게_배틀_Flow로_진입하고_리포트로_이동한다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classMockRepository = MockClassRepository(rooms: [room])
+      $0.uuid = .incrementing
     }
     store.exhaustivity = .off
 
@@ -92,9 +103,10 @@ struct ClassBattleFlowCoordinatorTests {
       battleType: .custom
     )
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(testDetailState(room: room)))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classMockRepository = MockClassRepository(rooms: [room])
+      $0.uuid = .incrementing
     }
     store.exhaustivity = .off
 
@@ -115,11 +127,23 @@ struct ClassBattleFlowCoordinatorTests {
   func AI_최종투표_후_이전_투표와_채팅을_정리하고_의견으로_이동한다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
-    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: false)))
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.aiVote(.init(
+      room: room,
+      battleID: room.battle.id,
+      instanceID: UUID(),
+      isPostVote: false
+    )))
     state.routes.push(.aiChat(.init(room: room, battleID: room.battle.id, selectedOptionID: 1)))
-    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: true)))
-    let store = TestStore(initialState: state) { ClassCoordinator() }
+    state.routes.push(.aiVote(.init(
+      room: room,
+      battleID: room.battle.id,
+      instanceID: UUID(),
+      isPostVote: true
+    )))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
     store.exhaustivity = .off
 
     await store.send(.router(.routeAction(
@@ -144,10 +168,22 @@ struct ClassBattleFlowCoordinatorTests {
   func 상세_경로가_없어도_AI_완료_경로를_모두_정리한다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
-    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: false)))
+    state.routes.push(.aiVote(.init(
+      room: room,
+      battleID: room.battle.id,
+      instanceID: UUID(),
+      isPostVote: false
+    )))
     state.routes.push(.aiChat(.init(room: room, battleID: room.battle.id, selectedOptionID: 1)))
-    state.routes.push(.aiVote(.init(room: room, battleID: room.battle.id, isPostVote: true)))
-    let store = TestStore(initialState: state) { ClassCoordinator() }
+    state.routes.push(.aiVote(.init(
+      room: room,
+      battleID: room.battle.id,
+      instanceID: UUID(),
+      isPostVote: true
+    )))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
     store.exhaustivity = .off
 
     await store.send(.router(.routeAction(
