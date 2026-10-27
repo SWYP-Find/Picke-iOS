@@ -128,6 +128,15 @@ public struct ClassBattleFlowFeature {
       session?.battle.summary ?? room?.battle.summary ?? ""
     }
 
+    public var opinionChangeLabel: String? {
+      guard let voteHistory else { return nil }
+      guard let changed = voteHistory.opinionChanged
+        ?? voteHistory.postVote.map({ $0.optionID != voteHistory.preVote.optionID }) else {
+        return nil
+      }
+      return changed ? "생각이 바뀌었어요" : "처음 생각을 유지했어요"
+    }
+
     public var displayArtworkURL: URL? {
       session?.battle.thumbnailURL ?? room?.battle.thumbnailURL
     }

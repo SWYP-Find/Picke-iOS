@@ -344,6 +344,73 @@ struct ClassBattleFlowTests {
     #expect(state.buttonTitle == "의견 등록하기")
   }
 
+  @Test
+  func 투표_변경_라벨은_투표_이력의_판정에_따른다() {
+    var state = battleState(room: .mocks[0])
+    #expect(state.opinionChangeLabel == nil)
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 32, label: "B", title: "반대"),
+      status: .completed,
+      opinionChanged: true
+    )
+    #expect(state.opinionChangeLabel == "생각이 바뀌었어요")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 31, label: "A", title: "찬성"),
+      status: .completed,
+      opinionChanged: false
+    )
+    #expect(state.opinionChangeLabel == "처음 생각을 유지했어요")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 32, label: "B", title: "반대"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.opinionChangeLabel == "생각이 바뀌었어요")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 31, label: "A", title: "찬성"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.opinionChangeLabel == "처음 생각을 유지했어요")
+  }
+
+  @Test
+  func 의견_제출_실패는_입력창을_유지하고_수정하면_오류를_지운다() async {
+    var state = battleState(room: .mocks[0])
+    state.viewState = .loaded
+    state.session = session(step: .completed, commentRequired: false)
+    state.hasPublishedPerspective = false
+    state.draft = "제 생각"
+    state.submitRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    let error = ClassBattleError.network("등록 실패")
+
+    await store.send(.inner(.submissionResponse(requestID, .completed, .failure(error)))) {
+      $0.submitRequestID = nil
+      $0.errorMessage = error.message
+    }
+    #expect(store.state.shouldShowComposer)
+    #expect(store.state.draft == "제 생각")
+
+    await store.send(.view(.draftChanged("수정한 생각"))) {
+      $0.draft = "수정한 생각"
+      $0.errorMessage = nil
+    }
+    await store.finish()
+  }
+
   private func session(
     step: ClassBattleStep,
     commentRequired: Bool

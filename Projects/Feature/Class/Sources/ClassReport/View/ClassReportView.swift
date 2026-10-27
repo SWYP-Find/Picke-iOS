@@ -354,7 +354,10 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
-  func highlightRow(_ evidence: ClassAIFeedbackEvidence, index: Int) -> some View {
+  func highlightRow(
+    _ evidence: ClassAIFeedbackEvidence,
+    index: Int
+  ) -> some View {
     VStack(alignment: .leading, spacing: 6) {
       Text("주요 의견 \(index + 1)")
         .pretendardFont(.semiBold11)

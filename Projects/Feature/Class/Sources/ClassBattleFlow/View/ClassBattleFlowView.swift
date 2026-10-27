@@ -627,9 +627,9 @@ private extension ClassBattleFlowView {
         voteStatsOption(first)
       }
       VStack(spacing: 20) {
-        if let opinionChanged = store.voteHistory?.opinionChanged {
+        if let opinionChangeLabel = store.opinionChangeLabel {
           Label(
-            opinionChanged ? "생각이 바뀌었어요" : "처음 생각을 유지했어요",
+            opinionChangeLabel,
             systemImage: "lightbulb"
           )
           .pretendardFont(.medium11)
@@ -842,28 +842,37 @@ private extension ClassBattleFlowView {
 
   @ViewBuilder
   func composerBar() -> some View {
-    HStack(spacing: 12) {
-      TextField(
-        "의견을 입력하세요",
-        text: Binding(
-          get: { store.draft },
-          set: { send(.draftChanged($0)) }
-        )
-      )
-      .pretendardFont(.bodyMedium)
-      .padding(.horizontal, 12)
-      .frame(height: 44)
-      .background(.white, in: RoundedRectangle(cornerRadius: 4))
-      Button { send(.submitTapped) } label: {
-        Image(systemName: "paperplane.fill")
-          .foregroundStyle(.white)
-          .frame(width: 44, height: 44)
-          .background(.primary500, in: Circle())
+    VStack(alignment: .leading, spacing: 0) {
+      if let error = store.errorMessage {
+        Text(error)
+          .pretendardFont(.regular13)
+          .foregroundStyle(.primary500)
+          .padding(.horizontal, 16)
+          .padding(.top, 12)
       }
-      .buttonStyle(.plain)
-      .disabled(!store.canSubmit)
+      HStack(spacing: 12) {
+        TextField(
+          "의견을 입력하세요",
+          text: Binding(
+            get: { store.draft },
+            set: { send(.draftChanged($0)) }
+          )
+        )
+        .pretendardFont(.bodyMedium)
+        .padding(.horizontal, 12)
+        .frame(height: 44)
+        .background(.white, in: RoundedRectangle(cornerRadius: 4))
+        Button { send(.submitTapped) } label: {
+          Image(systemName: "paperplane.fill")
+            .foregroundStyle(.white)
+            .frame(width: 44, height: 44)
+            .background(.primary500, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!store.canSubmit)
+      }
+      .padding(16)
     }
-    .padding(16)
     .background(.beige200)
   }
 
