@@ -77,10 +77,60 @@ public struct ClassReportFeature {
         + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
     }
 
+    public var serverParticipationRate: String {
+      guard let rate = classResult?.stats.participationRate else { return "" }
+      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+    }
+
+    public var serverCommentRate: String {
+      guard let rate = classResult?.stats.commentRate else { return "" }
+      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+    }
+
+    public var serverParticipationCount: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.completedCount) / \(stats.activeMemberCount)명"
+    }
+
+    public var serverCommentCount: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.commentWriterCount) / \(stats.activeMemberCount)명"
+    }
+
+    public var serverParticipationProgress: Double {
+      min(max((classResult?.stats.participationRate ?? 0) / 100, 0), 1)
+    }
+
+    public var serverCommentProgress: Double {
+      min(max((classResult?.stats.commentRate ?? 0) / 100, 0), 1)
+    }
+
     public var serverOptionCounts: [Int: String] {
       guard let options = classResult?.stats.options else { return [:] }
       return options.reduce(into: [:]) { values, option in
         values[option.id] = "사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)"
+      }
+    }
+
+    public var serverDistributionTotalText: String {
+      "\(classResult?.stats.postVoteCount ?? 0)명"
+    }
+
+    public var serverDistributionProgress: Double {
+      min(max((classResult?.stats.options.first?.postVoteRatio ?? 0) / 100, 0), 1)
+    }
+
+    public var serverDistributionOptionCountTexts: [Int: String] {
+      guard let options = classResult?.stats.options else { return [:] }
+      return options.reduce(into: [:]) { values, option in
+        values[option.id] = "\(option.postVoteCount)명"
+      }
+    }
+
+    public var serverDistributionOptionRatioTexts: [Int: String] {
+      guard let options = classResult?.stats.options else { return [:] }
+      return options.reduce(into: [:]) { values, option in
+        values[option.id] = option.postVoteRatio.formatted(.number.precision(.fractionLength(0...1))) + "%"
       }
     }
 

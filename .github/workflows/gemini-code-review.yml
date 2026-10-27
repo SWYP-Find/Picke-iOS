@@ -180,12 +180,33 @@ jobs:
             const annotated_diff = fs.readFileSync("annotated_diff.txt", "utf8");
             const pr_title = context.payload.pull_request.title;
             const pr_body = context.payload.pull_request.body || "내용 없음";
-            const { GoogleGenerativeAI } = require("@google/generative-ai");
+            const { GoogleGenerativeAI, SchemaType } = require("@google/generative-ai");
             const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({
               model: "gemini-2.5-flash",
               generationConfig: {
                 responseMimeType: "application/json",
+                responseSchema: {
+                  type: SchemaType.OBJECT,
+                  properties: {
+                    summary: { type: SchemaType.STRING },
+                    comments: {
+                      type: SchemaType.ARRAY,
+                      maxItems: 5,
+                      items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                          path: { type: SchemaType.STRING },
+                          line: { type: SchemaType.INTEGER },
+                          code_snippet: { type: SchemaType.STRING },
+                          body: { type: SchemaType.STRING },
+                        },
+                        required: ["path", "line", "code_snippet", "body"],
+                      },
+                    },
+                  },
+                  required: ["summary", "comments"],
+                },
               },
             });
             const promptLines = [
@@ -228,7 +249,7 @@ jobs:
               "",
               "Ignore optional formatting, naming, View suffixes, Spacer placement, import ordering, and comments. Apply the mandatory subview rule above when it is actually violated.",
               "",
-              "Report at most five distinct, evidence-backed P1/P2 findings. If more substantive findings remain, summarize them concisely in summary. Prefer no comments over uncertain findings. Write in Korean Markdown without greetings or closings.",
+              "Report at most five distinct, evidence-backed P1/P2 findings. Keep the summary under 600 characters and each comment body under 500 characters. If more substantive findings remain, summarize them concisely in summary. Prefer no comments over uncertain findings. Write in Korean Markdown without greetings or closings.",
               "",
               "Respond ONLY with a JSON object in this exact format:",
               "{",
@@ -249,9 +270,33 @@ jobs:
               "</annotated_diff>"
             ];
             const prompt = promptLines.join("\n");
-            const result = await model.generateContent(prompt);
-            const text = result.response.text();
-            fs.writeFileSync("review_result.json", text);
+            let lastFailure = "unknown";
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const boundedPrompt = attempt === 0
+                ? prompt
+                : `${prompt}\nReturn at most two comments. Keep each body under 300 characters and the summary under 300 characters. Do not include suggestion blocks.`;
+              const result = await model.generateContent(boundedPrompt);
+              const finishReason = result.response.candidates?.[0]?.finishReason || "unknown";
+              const outputTokens = result.response.usageMetadata?.candidatesTokenCount ?? "unknown";
+              const thoughtTokens = result.response.usageMetadata?.thoughtsTokenCount ?? "unknown";
+              const totalTokens = result.response.usageMetadata?.totalTokenCount ?? "unknown";
+              let generatedText = "";
+              try {
+                generatedText = result.response.text();
+                const parsed = JSON.parse(generatedText);
+                if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+                  || !Array.isArray(parsed.comments)) {
+                  throw new Error("missing review object or comments array");
+                }
+                fs.writeFileSync("review_result.json", JSON.stringify(parsed));
+                console.log(`Gemini review JSON valid: finish=${finishReason}, outputTokens=${outputTokens}, thoughtTokens=${thoughtTokens}, totalTokens=${totalTokens}, chars=${generatedText.length}, attempt=${attempt + 1}`);
+                return;
+              } catch (error) {
+                lastFailure = `finish=${finishReason}, outputTokens=${outputTokens}, thoughtTokens=${thoughtTokens}, totalTokens=${totalTokens}, chars=${generatedText.length}, error=${error.message}`;
+                console.log(`Gemini review JSON invalid on attempt ${attempt + 1}: ${lastFailure}`);
+              }
+            }
+            throw new Error(`Gemini did not produce valid review JSON after two attempts: ${lastFailure}`);
 
       - name: Post Inline Review Comments
         if: steps.get_diff.outputs.skip_review == 'false' && steps.existing_review.outputs.already_reviewed != 'true'

@@ -232,7 +232,7 @@
           download(zip(entries), 'picke-class-figma-audit.zip', 'application/zip');
         } else {
           for (const entry of entries) {
-            download([entry.data], entry.name, entry.name.endsWith('.png') ? 'image/png' : 'application/json');
+            download(entry.data, entry.name, entry.name.endsWith('.png') ? 'image/png' : 'application/json');
           }
         }
         status.className = message.errors.length ? 'error' : '';

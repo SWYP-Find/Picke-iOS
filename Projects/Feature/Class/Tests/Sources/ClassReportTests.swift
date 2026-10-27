@@ -43,7 +43,8 @@ struct ClassReportTests {
 
   private func result(
     room: ClassRoom,
-    reportState: String?
+    reportState: String?,
+    postVoteRatio: Double = 54.5
   ) -> ClassResult {
     ClassResult(
       classID: room.id,
@@ -56,7 +57,7 @@ struct ClassReportTests {
         commentWriterCount: 9,
         commentRate: 75,
         postVoteCount: 11,
-        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: 54.5)]
+        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: postVoteRatio)]
       ),
       myReportState: reportState,
       insightState: nil
@@ -71,8 +72,31 @@ struct ClassReportTests {
     #expect(state.serverCompletedCount == "10")
     #expect(state.serverPostVoteCount == "11")
     #expect(state.serverParticipationSummary == "참여율 83.3% · 의견 작성률 75.0%")
+    #expect(state.serverParticipationRate == "83.3%")
+    #expect(state.serverCommentRate == "75%")
+    #expect(state.serverParticipationCount == "10 / 12명")
+    #expect(state.serverCommentCount == "9 / 12명")
+    #expect(abs(state.serverParticipationProgress - 0.833) < 0.0001)
+    #expect(abs(state.serverCommentProgress - 0.75) < 0.0001)
     let option = try #require(state.classResult?.stats.options.first)
     #expect(state.serverOptionCounts[option.id] == "사전 8 · 사후 6")
+    #expect(state.serverDistributionTotalText == "11명")
+    #expect(abs(state.serverDistributionProgress - 0.545) < 0.0001)
+    #expect(state.serverDistributionOptionCountTexts[option.id] == "6명")
+    #expect(state.serverDistributionOptionRatioTexts[option.id] == "54.5%")
+
+    state.classResult = result(
+      room: .mockClosedSociety,
+      reportState: "SUCCEEDED",
+      postVoteRatio: -10
+    )
+    #expect(state.serverDistributionProgress == 0)
+    state.classResult = result(
+      room: .mockClosedSociety,
+      reportState: "SUCCEEDED",
+      postVoteRatio: 110
+    )
+    #expect(state.serverDistributionProgress == 1)
   }
 
   @Test

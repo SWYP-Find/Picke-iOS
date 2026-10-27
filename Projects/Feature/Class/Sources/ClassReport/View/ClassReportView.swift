@@ -160,14 +160,16 @@ private extension ClassReportView {
           reportCard {
             participationBar(
               title: "배틀 참여율",
-              rate: result.stats.participationRate,
-              detail: "\(result.stats.completedCount) / \(result.stats.activeMemberCount)명",
+              rate: store.serverParticipationRate,
+              detail: store.serverParticipationCount,
+              progress: store.serverParticipationProgress,
               color: .primary500
             )
             participationBar(
               title: "댓글 작성률",
-              rate: result.stats.commentRate,
-              detail: "\(result.stats.commentWriterCount) / \(result.stats.activeMemberCount)명",
+              rate: store.serverCommentRate,
+              detail: store.serverCommentCount,
+              progress: store.serverCommentProgress,
               color: .secondary500
             )
           }
@@ -279,17 +281,17 @@ private extension ClassReportView {
   @ViewBuilder
   func participationBar(
     title: String,
-    rate: Double,
+    rate: String,
     detail: String,
+    progress: Double,
     color: Color
   ) -> some View {
-    let progress = min(max(rate / 100, 0), 1)
     VStack(alignment: .leading, spacing: 5) {
       HStack {
         Text(title)
           .pretendardFont(.semiBold12)
         Spacer()
-        Text(rate.formatted(.number.precision(.fractionLength(0...1))) + "%")
+        Text(rate)
           .pretendardFont(.semiBold12)
       }
       .foregroundStyle(.gray800)
@@ -309,16 +311,15 @@ private extension ClassReportView {
 
   @ViewBuilder
   func stanceDistribution(_ options: [ClassResultOption]) -> some View {
-    let firstRatio = min(max((options.first?.postVoteRatio ?? 0) / 100, 0), 1)
     HStack(spacing: 24) {
       ZStack {
         Circle().stroke(.secondary500, lineWidth: 12)
         Circle()
-          .trim(from: 0, to: firstRatio)
+          .trim(from: 0, to: store.serverDistributionProgress)
           .stroke(.primary500, style: StrokeStyle(lineWidth: 12, lineCap: .butt))
           .rotationEffect(.degrees(-90))
         VStack(spacing: 1) {
-          Text("\(options.reduce(0) { $0 + $1.postVoteCount })명")
+          Text(store.serverDistributionTotalText)
             .pretendardFont(.semiBold15)
             .foregroundStyle(.gray800)
           Text("총 참여")
@@ -338,12 +339,12 @@ private extension ClassReportView {
                 .pretendardFont(.semiBold11)
                 .foregroundStyle(.gray800)
                 .lineLimit(1)
-              Text("\(option.postVoteCount)명")
+              Text(store.serverDistributionOptionCountTexts[option.id] ?? "")
                 .pretendardFont(.medium10)
                 .foregroundStyle(.gray300)
             }
             Spacer(minLength: 2)
-            Text(option.postVoteRatio.formatted(.number.precision(.fractionLength(0...1))) + "%")
+            Text(store.serverDistributionOptionRatioTexts[option.id] ?? "")
               .pretendardFont(.semiBold11)
               .foregroundStyle(.gray800)
           }
