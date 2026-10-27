@@ -76,6 +76,84 @@ struct ClassReportTests {
   }
 
   @Test
+  func 개인_결과의_입장_및_활동_표시값은_State에서_계산한다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    #expect(state.personalPerspectiveCountText == "—")
+    #expect(state.personalCommentCountText == "—")
+
+    state.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "요약",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      preOption: .init(id: 1, title: "찬성"),
+      postOption: .init(id: 2, title: "반대"),
+      perspectiveCount: 3,
+      commentCount: 0
+    )
+    #expect(state.personalPerspectiveCountText == "3")
+    #expect(state.personalCommentCountText == "0")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "배틀",
+      preVote: .init(optionID: 1, label: "A", title: "찬성"),
+      postVote: .init(optionID: 2, label: "B", title: "반대"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.personalOpinionChangeTitle == "입장 변경")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "배틀",
+      preVote: .init(optionID: 1, label: "A", title: "찬성"),
+      postVote: .init(optionID: 1, label: "A", title: "찬성"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.personalOpinionChangeTitle == "입장 유지")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "배틀",
+      preVote: .init(optionID: 1, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.personalPostVoteTitle == "반대")
+    #expect(state.personalOpinionChangeTitle == "입장 변경")
+
+    state.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "요약",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      preOption: nil,
+      postOption: .init(id: 2, title: "반대"),
+      perspectiveCount: 3,
+      commentCount: 0
+    )
+    #expect(state.personalPreVoteTitle == "찬성")
+    #expect(state.personalPostVoteTitle == "반대")
+    #expect(state.personalOpinionChangeTitle == "입장 변경")
+
+    state.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "요약",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      preOption: .init(id: 1, title: "찬성"),
+      postOption: .init(id: 1, title: "찬성"),
+      perspectiveCount: 3,
+      commentCount: 0
+    )
+    #expect(state.personalPostVoteTitle == "찬성")
+    #expect(state.personalOpinionChangeTitle == "입장 유지")
+  }
+
+  @Test
   func 뒤로가기와_닫기는_리포트를_닫는다() async {
     let state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
     let backStore = TestStore(initialState: state) { ClassReportFeature() }

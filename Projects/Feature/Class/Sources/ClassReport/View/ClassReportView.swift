@@ -52,8 +52,6 @@ public struct ClassReportView: View {
 }
 
 private extension ClassReportView {
-  var insightBackground: Color { Color(hex: "FCF5F3") }
-
   var navigationBar: some View {
     ClassReportNavigationBar(
       title: store.room.name,
@@ -117,7 +115,7 @@ private extension ClassReportView {
       HStack(spacing: 0) {
         voteChoice("사전 선택", value: preVoteTitle)
         if let postVoteTitle = store.personalPostVoteTitle {
-          Text(store.personalOpinionChanged ? "입장 변경" : "입장 유지")
+          Text(store.personalOpinionChangeTitle)
             .pretendardFont(.labelXSmall)
             .foregroundStyle(.beige50)
             .padding(.horizontal, 6)
@@ -132,9 +130,9 @@ private extension ClassReportView {
       .padding(.vertical, 12)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       HStack(spacing: 0) {
-        activityCount(store.feedback.map { String($0.perspectiveCount) } ?? "—", label: "작성한 의견")
+        activityCount(store.personalPerspectiveCountText, label: "작성한 의견")
         Rectangle().fill(.beige600).frame(width: 1, height: 38)
-        activityCount(store.feedback.map { String($0.commentCount) } ?? "—", label: "작성한 댓글")
+        activityCount(store.personalCommentCountText, label: "작성한 댓글")
       }
     } else if store.voteHistoryRequestID != nil {
       SkeletonView(.round(cornerRadius: 2)).frame(height: 48)
@@ -248,7 +246,7 @@ private extension ClassReportView {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
-    .background(insightBackground)
+    .background(.secondary50)
     .overlay(Rectangle().stroke(.primary100, lineWidth: 1))
   }
 
@@ -274,7 +272,7 @@ private extension ClassReportView {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(12)
-    .background(insightBackground)
+    .background(.secondary50)
     .overlay(Rectangle().stroke(.primary100, lineWidth: 1))
   }
 
@@ -774,7 +772,7 @@ private extension ClassReportView {
       .foregroundStyle(.primary500)
       .padding(16)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .background(insightBackground)
+      .background(.secondary50)
 
       VStack(alignment: .leading, spacing: 16) {
         ForEach(feedback.points.indices, id: \.self) { index in

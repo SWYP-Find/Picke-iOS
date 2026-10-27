@@ -259,9 +259,14 @@ extension ClassBattleFlowFeature {
       }
       return .none
     case .onDisappear:
+      if state.perspectiveLikeRequestID != nil {
+        // A cancelled request may already have changed the server's like state.
+        state.perspectives = []
+      }
       state.loadRequestID = nil
       state.audioRequestID = nil
       state.perspectiveRequestID = nil
+      state.perspectiveLikeRequestID = nil
       state.voteStatsRequestID = nil
       state.myPerspectiveRequestID = nil
       state.isLoadingPerspectives = false

@@ -5,6 +5,7 @@ import ClassDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
+import PerspectiveDomainInterface
 import Testing
 
 @MainActor
@@ -204,6 +205,84 @@ struct ClassBattleFlowTests {
   }
 
   @Test
+  func 화면_이탈로_좋아요_요청이_취소되어도_다시_좋아요를_누를_수_있다() async {
+    let nextRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000043")!
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.perspectiveLikeRequestID = requestID
+    state.voteStats = .init(options: [], totalCount: 0, updatedAt: .now)
+    state.hasPublishedPerspective = false
+    state.perspectives = [ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "내 생각",
+      likeCount: 4,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )]
+    let serverItem = ClassPerspectiveItem(
+      id: 77,
+      author: state.perspectives[0].author,
+      option: state.perspectives[0].option,
+      content: state.perspectives[0].content,
+      likeCount: 5,
+      commentCount: 0,
+      isLiked: true,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: state.perspectives[0].createdAt
+    )
+    let page = ClassPerspectivePage(items: [serverItem], nextCursor: nil, hasNext: false)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(nextRequestID)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.perspectiveUseCase = MockPerspectiveRepository()
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy(), perspectivesPage: page)
+    }
+
+    await store.send(.view(.onDisappear)) {
+      $0.perspectiveLikeRequestID = nil
+      $0.perspectives = []
+    }
+    await store.send(.inner(.perspectiveLikeResponse(requestID, 77, true, .success(true))))
+    await store.send(.view(.perspectiveLikeTapped(77)))
+    await store.send(.view(.onAppear)) {
+      $0.perspectiveRequestID = nextRequestID
+      $0.isLoadingPerspectives = true
+    }
+    await store.receive(\.inner, .perspectivePageResponse(nextRequestID, .success(page))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectives = [serverItem]
+    }
+    await store.send(.view(.perspectiveLikeTapped(77))) {
+      $0.perspectiveLikeRequestID = nextRequestID
+    }
+    await store.receive(\.inner, .perspectiveLikeResponse(nextRequestID, 77, false, .success(true))) {
+      $0.perspectiveLikeRequestID = nil
+      let item = $0.perspectives[0]
+      $0.perspectives[0] = ClassPerspectiveItem(
+        id: item.id,
+        author: item.author,
+        option: item.option,
+        content: item.content,
+        likeCount: 4,
+        commentCount: item.commentCount,
+        isLiked: false,
+        isMyPerspective: item.isMyPerspective,
+        status: item.status,
+        createdAt: item.createdAt
+      )
+    }
+    await store.finish()
+  }
+
+  @Test
   func 클래스_API_실패는_오류_화면에_표시한다() async {
     let spy = ClassBattleFlowSpy()
     let store = TestStore(initialState: battleState(room: .mocks[0])) {
@@ -319,6 +398,7 @@ private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
   let spy: ClassBattleFlowSpy
   var session: ClassBattleSession?
   var history: ClassVoteHistory?
+  var perspectivesPage: ClassPerspectivePage?
   var failsLoad = false
 
   func fetchBattle(classID: Int) async throws -> ClassBattleSession {
@@ -345,7 +425,10 @@ private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
     size _: Int?,
     optionID _: Int?,
     sort _: String?
-  ) async throws -> ClassPerspectivePage { throw ClassBattleError.invalidResponse }
+  ) async throws -> ClassPerspectivePage {
+    guard let perspectivesPage else { throw ClassBattleError.invalidResponse }
+    return perspectivesPage
+  }
   func fetchMyPerspectives(classID _: Int) async throws -> [ClassPerspectiveItem] { throw ClassBattleError.invalidResponse }
 }
 

@@ -136,11 +136,24 @@ public struct ClassReportFeature {
     }
 
     public var personalOpinionChanged: Bool {
-      if let voteHistory {
-        return voteHistory.opinionChanged
-          ?? (voteHistory.preVote.optionID != voteHistory.postVote?.optionID)
+      if let opinionChanged = voteHistory?.opinionChanged { return opinionChanged }
+      guard let preID = voteHistory?.preVote.optionID ?? feedback?.preOption?.id,
+            let postID = voteHistory?.postVote?.optionID ?? feedback?.postOption?.id else {
+        return false
       }
-      return feedback?.preOption?.id != feedback?.postOption?.id
+      return preID != postID
+    }
+
+    public var personalOpinionChangeTitle: String {
+      personalOpinionChanged ? "입장 변경" : "입장 유지"
+    }
+
+    public var personalPerspectiveCountText: String {
+      feedback.map { String($0.perspectiveCount) } ?? "—"
+    }
+
+    public var personalCommentCountText: String {
+      feedback.map { String($0.commentCount) } ?? "—"
     }
 
     public var myOpinionsButtonTitle: String {
