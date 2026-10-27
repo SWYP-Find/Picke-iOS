@@ -381,6 +381,26 @@ struct ClassBattleFlowTests {
   }
 
   @Test
+  func 투표_화면의_표시값은_State에서_계산한다() {
+    var state = ClassBattleFlowFeature.State()
+    #expect(state.voteFooterButtonTitle == "불러오는 중")
+    #expect(state.voteCategoryLabel == nil)
+    #expect(state.voteCommentCountLabel == nil)
+    #expect(state.voteDeadlineLabel == nil)
+
+    state.room = .mocks[0]
+    state.session = session(step: .none, commentRequired: true)
+    #expect(state.voteFooterButtonTitle == "사전 투표하기")
+    #expect(state.voteCategoryLabel == "#사회")
+    #expect(state.voteCommentCountLabel == "23")
+    #expect(state.voteDeadlineLabel == "2027. 01. 15. 금요일 17:00까지")
+
+    state.session = session(step: .completed, commentRequired: true)
+    state.showsPreVoteLanding = true
+    #expect(state.voteFooterButtonTitle == "결과 보기")
+  }
+
+  @Test
   func 투표_변경_라벨은_투표_이력의_판정에_따른다() {
     var state = battleState(room: .mocks[0])
     #expect(state.opinionChangeLabel == nil)

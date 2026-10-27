@@ -85,6 +85,24 @@ public struct ClassBattleFlowFeature {
       }
     }
 
+    public var voteFooterButtonTitle: String {
+      step == .some(.completed) && showsPreVoteLanding ? "결과 보기" : buttonTitle
+    }
+
+    public var voteCategoryLabel: String? {
+      guard let category = room?.battle.categoryDisplayTitle, !category.isEmpty else { return nil }
+      return "#\(category)"
+    }
+
+    public var voteCommentCountLabel: String? {
+      room.map { String($0.battle.commentCount) }
+    }
+
+    public var voteDeadlineLabel: String? {
+      guard let closeAt = session?.closeAt else { return nil }
+      return closeAt.formatted(.dottedDateTimeWithWeekday) + "까지"
+    }
+
     public var playbackRateTitle: String {
       playbackRate.formatted(.number.precision(.fractionLength(1...2)))
     }

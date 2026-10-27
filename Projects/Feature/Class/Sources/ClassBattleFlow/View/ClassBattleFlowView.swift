@@ -181,8 +181,8 @@ private extension ClassBattleFlowView {
   func voteIntroduction() -> some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack(spacing: 8) {
-        if let category = store.room?.battle.categoryDisplayTitle, !category.isEmpty {
-          Text("#\(category)")
+        if let category = store.voteCategoryLabel {
+          Text(category)
             .pretendardFont(.medium11)
             .foregroundStyle(isFinalVote ? .beige200 : .primary500)
             .padding(.horizontal, 4)
@@ -190,8 +190,8 @@ private extension ClassBattleFlowView {
             .background(isFinalVote ? Color.clear : .beige200)
         }
         Spacer(minLength: 0)
-        if !isFinalVote, let commentCount = store.room?.battle.commentCount {
-          Label("\(commentCount)", systemImage: "bubble.right")
+        if !isFinalVote, let commentCount = store.voteCommentCountLabel {
+          Label(commentCount, systemImage: "bubble.right")
             .pretendardFont(.medium11)
             .foregroundStyle(.gray500)
             .padding(.horizontal, 5)
@@ -298,14 +298,14 @@ private extension ClassBattleFlowView {
           .pretendardFont(.regular13)
           .foregroundStyle(.primary500)
       }
-      Button(isPreVoteLanding ? "결과 보기" : store.buttonTitle) {
+      Button(store.voteFooterButtonTitle) {
         send(isPreVoteLanding ? .preVoteResultTapped : .submitTapped)
       }
         .ctaButtonStyle(.primary, size: .large, height: 52)
         .disabled(!isPreVoteLanding && !store.canSubmit)
-      if !isFinalVote, let closeAt = store.session?.closeAt {
+      if !isFinalVote, let deadline = store.voteDeadlineLabel {
         Label(
-          closeAt.formatted(.dottedDateTimeWithWeekday) + "까지",
+          deadline,
           systemImage: "clock"
         )
           .pretendardFont(.regular13)
