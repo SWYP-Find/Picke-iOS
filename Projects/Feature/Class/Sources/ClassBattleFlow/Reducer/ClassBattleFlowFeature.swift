@@ -272,7 +272,13 @@ extension ClassBattleFlowFeature {
         // A cancelled request may already have changed the server's like state.
         state.perspectives = []
       }
+      if state.submitRequestID != nil {
+        // The server may have accepted a request before its client effect was cancelled.
+        state.viewState = .loading
+        state.hasPublishedPerspective = nil
+      }
       state.loadRequestID = nil
+      state.submitRequestID = nil
       state.audioRequestID = nil
       state.perspectiveRequestID = nil
       state.perspectiveLikeRequestID = nil

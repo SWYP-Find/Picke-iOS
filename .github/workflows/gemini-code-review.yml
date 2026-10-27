@@ -68,15 +68,22 @@ jobs:
               .find(({ match }) => match?.[1] === headSHA);
             if (marked) {
               const expected = Number(marked.match[2]);
-              for (let attempt = 0; attempt < 5; attempt++) {
+              for (let attempt = 0; attempt < 8; attempt++) {
                 if (attempt) await new Promise((resolve) => setTimeout(resolve, 2000));
-                const comments = await github.paginate(github.rest.pulls.listComments, request);
-                const actual = comments.filter((item) => item.pull_request_review_id === marked.item.id).length;
-                if (actual === expected) {
-                  core.setOutput("already_reviewed", "true");
-                  return;
+                try {
+                  const comments = await github.paginate(
+                    "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments",
+                    { ...request, review_id: marked.item.id }
+                  );
+                  if (comments.length === expected) {
+                    core.setOutput("already_reviewed", "true");
+                    return;
+                  }
+                  console.log(`Review ${marked.item.id} has ${comments.length}/${expected} inline comments for ${headSHA}`);
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                  console.log(`Review ${marked.item.id} comments are not visible yet (404)`);
                 }
-                console.log(`Review ${marked.item.id} has ${actual}/${expected} inline comments for ${headSHA}`);
               }
               // A deleted bot comment can leave this mismatch until the PR head changes.
               throw new Error(`Incomplete persisted review for ${headSHA}`);
@@ -327,8 +334,18 @@ jobs:
                 .find(({ match }) => match?.[1] === headSHA);
               if (marked) {
                 const expected = Number(marked.match[2]);
-                const comments = await github.paginate(github.rest.pulls.listComments, { ...request, per_page: 100 });
-                const actual = comments.filter((item) => item.pull_request_review_id === marked.item.id).length;
+                let actual;
+                try {
+                  const comments = await github.paginate(
+                    "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments",
+                    { ...request, review_id: marked.item.id, per_page: 100 }
+                  );
+                  actual = comments.length;
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                  console.log(`Review ${marked.item.id} comments are not visible yet (404)`);
+                  return "incomplete";
+                }
                 if (actual !== expected) {
                   console.log(`Review ${marked.item.id} has ${actual}/${expected} inline comments for ${headSHA}`);
                   // Deleting a bot comment makes this mismatch permanent until a new head SHA.
@@ -354,7 +371,7 @@ jobs:
             if (prior === "incomplete") {
               // Never repost when a marked review exists. Allow bounded read-back
               // for delayed comment visibility, then keep the job failed if incomplete.
-              for (let attempt = 1; attempt < 5; attempt++) {
+              for (let attempt = 1; attempt < 8; attempt++) {
                 await new Promise((resolve) => setTimeout(resolve, 2000));
                 if (await persistedReview() === "complete") return;
               }
@@ -377,7 +394,7 @@ jobs:
 
             // A 5xx may arrive after GitHub has saved the review. Read back before failing.
             let finalState = "missing";
-            for (let attempt = 0; attempt < 5; attempt++) {
+            for (let attempt = 0; attempt < 8; attempt++) {
               if (attempt) await new Promise((resolve) => setTimeout(resolve, 2000));
               try {
                 finalState = await persistedReview();

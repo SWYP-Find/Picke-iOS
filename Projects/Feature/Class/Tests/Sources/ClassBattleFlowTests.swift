@@ -29,18 +29,54 @@ struct ClassBattleFlowTests {
   }
 
   @Test
-  func 화면_이탈_중에도_제출_응답을_받도록_요청_ID를_유지한다() async {
+  func 제출_중_화면을_이탈하면_재진입_시_서버_진행상태를_확인한다() async {
+    let spy = ClassBattleFlowSpy()
+    let serverSession = session(step: .postVote, commentRequired: false)
+    let history = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .postVote,
+      opinionChanged: nil
+    )
     var state = battleState(room: .mocks[0])
-    state.session = session(step: .completed, commentRequired: false)
+    state.session = session(step: .postVote, commentRequired: false)
     state.viewState = .loaded
+    state.selectedOptionID = 31
+    state.hasPublishedPerspective = false
     state.submitRequestID = requestID
     let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
-      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: spy,
+        session: serverSession,
+        history: history
+      )
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
     }
 
-    await store.send(.view(.onDisappear))
-    #expect(store.state.submitRequestID == requestID)
+    #expect(!store.state.canSubmit)
+    await store.send(.view(.onDisappear)) {
+      $0.submitRequestID = nil
+      $0.viewState = .loading
+      $0.hasPublishedPerspective = nil
+    }
+    await store.send(.inner(.submissionResponse(requestID, .postVote, .success(true))))
+    #expect(!store.state.canSubmit)
+    await store.send(.view(.onAppear)) { $0.loadRequestID = requestID }
+    #expect(!store.state.canSubmit)
+    await store.receive(\.inner, .progressResponse(
+      requestID,
+      .success(.init(session: serverSession, voteHistory: history))
+    )) {
+      $0.loadRequestID = nil
+      $0.viewState = .loaded
+      $0.voteHistory = history
+      $0.selectedOptionID = nil
+    }
     await store.finish()
+    #expect(await spy.classIDs == [ClassRoom.mocks[0].id])
+    #expect(await spy.voteHistoryClassIDs == [ClassRoom.mocks[0].id])
   }
 
   @Test
