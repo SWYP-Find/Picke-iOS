@@ -96,7 +96,7 @@ private extension ClassBattleFlowView {
             voteIntroduction()
             if !isPreVoteLanding {
               optionSection()
-                .padding(.top, isFinalVote ? 36 : 24)
+                .padding(.top, isFinalVote ? 36 : 40)
             }
           }
           .padding(.horizontal, 16)
