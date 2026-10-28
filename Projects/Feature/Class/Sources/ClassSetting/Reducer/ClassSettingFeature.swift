@@ -97,7 +97,7 @@ public struct ClassSettingFeature {
           allowsAnonymousOpinion: false,
           requiresComment: requiresComment,
           ownerParticipates: ownerParticipates,
-          requestKey: creationRequestKey
+          requestKey: creationRequestKey(subject: "battle:\(battle.id)")
         )
       }
       guard let topicVersionID, aiQuestion != nil else { return nil }
@@ -108,7 +108,7 @@ public struct ClassSettingFeature {
         allowsAnonymousOpinion: false,
         requiresComment: requiresComment,
         ownerParticipates: ownerParticipates,
-        requestKey: creationRequestKey
+        requestKey: creationRequestKey(subject: "topic:\(topicVersionID)")
       )
     }
 
@@ -142,15 +142,15 @@ public struct ClassSettingFeature {
         allowsAnonymousOpinion: false,
         requiresComment: requiresComment,
         ownerParticipates: ownerParticipates,
-        requestKey: creationRequestKey
+        requestKey: creationRequestKey(subject: "topic:\(topicVersionID)")
       )
     }
 
-    private var creationRequestKey: String {
+    private func creationRequestKey(subject: String) -> String {
       let fields = [
         instanceID.uuidString,
         Data(trimmedName.utf8).base64EncodedString(),
-        battle.map { "battle:\($0.id)" } ?? "topic:\(topicVersionID.map { String($0) } ?? "nil")",
+        subject,
         String((isDeadlineEnabled ? deadline : Date.distantFuture).timeIntervalSinceReferenceDate.bitPattern),
         String(requiresComment),
         String(ownerParticipates),
