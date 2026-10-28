@@ -59,6 +59,16 @@ public struct ClassBattleFlowFeature {
     public var audioDuration: TimeInterval = 0
     public var playbackRate: Float = 1
     public var transcript: [ClassBattleTranscriptLine] = []
+    public var scenario: BattleScenario?
+    public var currentNodeID: Int?
+    public var pendingCheckpointID: Int?
+    public var selectedMidOptionID: Int?
+    public var selectedPaths: [Int: Int] = [:]
+    public var loadedAudioURL: URL?
+    public var midVoteRequestID: UUID?
+    public var pendingSeekTime: TimeInterval?
+    public var needsMidVoteRecovery = false
+    public var midVoteDisabledLocally = false
     public var selectedPerspectiveOptionID: Int?
     public var perspectiveSort: String = "popular"
 
@@ -72,11 +82,15 @@ public struct ClassBattleFlowFeature {
       guard viewState == .loaded, canParticipate, submitRequestID == nil else { return false }
       guard let step else { return false }
       switch step {
-      case .none, .postVote: return selectedOptionID != nil
+      case .none: return selectedOptionID != nil
+      case .postVote:
+        return selectedOptionID != nil
+          && (!needsMidVoteRecovery || (hasListened && pendingCheckpointID == nil))
       case .preVote:
         guard selectedOptionID != nil else { return false }
-        return selectedOptionID != voteHistory?.preVote.optionID || hasListened
-      case .ttsListening: return hasListened
+        return (!isPreVoteLocked && selectedOptionID != voteHistory?.preVote.optionID) || hasListened
+      case .ttsListening:
+        return hasListened && pendingCheckpointID == nil && hasAnsweredCurrentPath
       case .completed:
         return !hasSubmittedInCurrentSession
           && hasPublishedPerspective == false
@@ -84,12 +98,18 @@ public struct ClassBattleFlowFeature {
       }
     }
 
+    public var isPreVoteLocked: Bool {
+      session?.midVoteEnabled == true
+        && (!(voteHistory?.midVotes.isEmpty ?? true) || !selectedPaths.isEmpty)
+    }
+
     public var buttonTitle: String {
       guard let step else { return "불러오는 중" }
       switch step {
       case .none: return "사전 투표하기"
       case .preVote:
-        return selectedOptionID != voteHistory?.preVote.optionID ? "사전투표 변경하기" : "청취 완료"
+        return !isPreVoteLocked && selectedOptionID != voteHistory?.preVote.optionID
+          ? "사전투표 변경하기" : "청취 완료"
       case .ttsListening: return "청취 완료"
       case .postVote: return "최종 투표하기"
       case .completed:
@@ -150,6 +170,7 @@ public struct ClassBattleFlowFeature {
 
     public var isAudioStep: Bool {
       step == .some(.preVote) || step == .some(.ttsListening)
+        || (step == .some(.postVote) && needsMidVoteRecovery)
     }
 
     public var audioProgress: Double {
@@ -167,6 +188,38 @@ public struct ClassBattleFlowFeature {
 
     public var visibleTranscript: [ClassBattleTranscriptLine] {
       transcript.filter { $0.startTime <= currentTime }
+    }
+
+    public var midVoteOptions: [ScenarioInteractiveOption] {
+      guard let pendingCheckpointID else { return [] }
+      return scenario?.nodes.first { $0.nodeId == pendingCheckpointID }?.interactiveOptions ?? []
+    }
+
+    public var currentNode: ScenarioNode? {
+      guard let scenario else { return nil }
+      return scenario.nodes.first { $0.nodeId == (currentNodeID ?? scenario.startNodeId) }
+    }
+
+    public var canConfirmMidVote: Bool {
+      pendingCheckpointID != nil && selectedMidOptionID != nil && midVoteRequestID == nil
+    }
+
+    public var hasAnsweredCurrentPath: Bool {
+      guard session?.midVoteEnabled == true, let scenario else { return true }
+      var nodeID: Int? = scenario.startNodeId
+      var visited = Set<Int>()
+      while let id = nodeID, visited.insert(id).inserted,
+            let node = scenario.nodes.first(where: { $0.nodeId == id }) {
+        if !node.interactiveOptions.isEmpty {
+          guard let chosenNextID = selectedPaths[id],
+                node.interactiveOptions.contains(where: { $0.nextNodeId == chosenNextID })
+          else { return false }
+          nodeID = chosenNextID
+        } else {
+          nodeID = scenario.nextNodeId(for: node)
+        }
+      }
+      return true
     }
 
     public var visibleTranscriptRows: [ClassBattleTranscriptRow] {
@@ -248,6 +301,8 @@ public struct ClassBattleFlowFeature {
     case scrub(TimeInterval)
     case replayTapped
     case playbackRateSelected(Float)
+    case midVoteOptionTapped(Int)
+    case confirmMidVoteTapped
     case perspectiveOptionTapped(Int?)
     case perspectiveSortTapped(String)
     case perspectiveTapped(Int)
@@ -258,7 +313,8 @@ public struct ClassBattleFlowFeature {
     case progressResponse(UUID, Result<ClassBattleProgress, ClassBattleError>)
     case submissionResponse(UUID, ClassBattleStep, Result<Bool, ClassBattleError>)
     case audioURLResponse(UUID, Result<URL, ClassBattleError>)
-    case transcriptLoaded(UUID, [ClassBattleTranscriptLine])
+    case scenarioLoaded(UUID, BattleScenario)
+    case midVoteResponse(UUID, Int, Int, Result<Bool, ClassBattleError>)
     case audioLoaded(UUID, Bool, TimeInterval)
     case playerTimeUpdated(UUID, TimeInterval)
     case perspectivePageResponse(UUID, Result<ClassPerspectivePage, ClassBattleError>)
@@ -284,6 +340,7 @@ public struct ClassBattleFlowFeature {
     case voteStats(UUID)
     case perspectiveLike(UUID)
     case myPerspective(UUID)
+    case midVote(UUID)
   }
 
   @Dependency(\.uuid) private var uuid
@@ -354,6 +411,7 @@ extension ClassBattleFlowFeature {
       state.pendingPerspectiveLikeResults = [:]
       state.voteStatsRequestID = nil
       state.myPerspectiveRequestID = nil
+      state.midVoteRequestID = nil
       state.isLoadingPerspectives = false
       state.isPlaying = false
       return stopAudio(instanceID: state.instanceID)
@@ -384,6 +442,7 @@ extension ClassBattleFlowFeature {
       guard state.canParticipate,
             let step = state.step,
             [.none, .preVote, .postVote].contains(step),
+            !(step == .preVote && state.isPreVoteLocked),
             state.options.contains(where: { $0.id == optionID }),
             state.submitRequestID == nil
       else { return .none }
@@ -411,6 +470,7 @@ extension ClassBattleFlowFeature {
       guard let classID = state.room?.id else { return .none }
       let optionID = state.selectedOptionID
       let preVoteOptionID = state.voteHistory?.preVote.optionID
+      let isPreVoteLocked = state.isPreVoteLocked
       let draft = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
       return .run { [useCase = classUseCase] send in
         let result = await Result {
@@ -419,7 +479,7 @@ extension ClassBattleFlowFeature {
             guard let optionID else { throw ClassBattleError.invalidOption }
             _ = try await useCase.submitPreVote(classID: classID, optionID: optionID)
           case .preVote:
-            if optionID != preVoteOptionID {
+            if !isPreVoteLocked && optionID != preVoteOptionID {
               guard let optionID else { throw ClassBattleError.invalidOption }
               _ = try await useCase.submitPreVote(classID: classID, optionID: optionID)
             } else {
@@ -439,26 +499,78 @@ extension ClassBattleFlowFeature {
         await send(.inner(.submissionResponse(requestID, step, result)))
       }
       .cancellable(id: CancelID.submit(state.instanceID), cancelInFlight: true)
+    case let .midVoteOptionTapped(nextNodeID):
+      guard state.pendingCheckpointID != nil,
+            state.midVoteOptions.contains(where: { $0.nextNodeId == nextNodeID }),
+            state.midVoteRequestID == nil else { return .none }
+      state.selectedMidOptionID = nextNodeID
+      state.errorMessage = nil
+      return .none
+    case .confirmMidVoteTapped:
+      guard state.canConfirmMidVote,
+            let checkpointID = state.pendingCheckpointID,
+            let nextNodeID = state.selectedMidOptionID,
+            let option = state.midVoteOptions.first(where: { $0.nextNodeId == nextNodeID }),
+            let classID = state.room?.id else { return .none }
+      guard let session = state.session else { return .none }
+      if !session.midVoteEnabled || state.midVoteDisabledLocally {
+        return advanceAfterChoice(state: &state, checkpointID: checkpointID, option: option)
+      }
+      guard let optionID = option.optionID else {
+        state.errorMessage = ClassBattleError.invalidResponse.message
+        return .none
+      }
+      let requestID = uuid()
+      state.midVoteRequestID = requestID
+      state.errorMessage = nil
+      return .run { [useCase = classUseCase] send in
+        let result = await Result {
+          _ = try await useCase.submitMidVote(
+            classID: classID,
+            checkpointID: checkpointID,
+            optionID: optionID
+          )
+          return true
+        }.mapError(Self.mapError)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.midVoteResponse(requestID, checkpointID, optionID, result)))
+      }
+      .cancellable(id: CancelID.midVote(state.instanceID), cancelInFlight: true)
     case .playbackTapped:
-      guard state.isAudioStep, state.isAudioReady else { return .none }
+      guard state.isAudioStep, state.isAudioReady,
+            state.pendingCheckpointID == nil else { return .none }
       state.isPlaying.toggle()
       return .run { [player = audioPlayer, shouldPlay = state.isPlaying] _ in
         if shouldPlay { await player.play() } else { await player.pause() }
       }
       .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .seekBy(delta):
-      guard state.isAudioStep, state.isAudioReady else { return .none }
-      let target = min(state.audioDuration, max(0, state.currentTime + delta))
+      guard state.isAudioStep, state.isAudioReady,
+            state.pendingCheckpointID == nil else { return .none }
+      let checkpointBoundary = state.currentNode.flatMap { node in
+        node.interactiveOptions.isEmpty ? nil : state.scenario?.nodeEndTime(for: node)
+      }
+      let target = min(
+        state.audioDuration,
+        min(checkpointBoundary ?? .infinity, max(0, state.currentTime + delta))
+      )
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in await player.seek(to: target) }
     case let .scrub(time):
-      guard state.isAudioStep, state.isAudioReady, state.hasListened else { return .none }
+      guard state.isAudioStep, state.isAudioReady, state.hasListened,
+            state.pendingCheckpointID == nil else { return .none }
       let target = min(state.audioDuration, max(0, time))
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in await player.seek(to: target) }
     case .replayTapped:
       guard state.isAudioStep, state.isAudioReady, state.hasListened else { return .none }
       state.currentTime = 0
+      state.currentNodeID = state.scenario?.startNodeId
+      state.pendingCheckpointID = nil
+      state.selectedMidOptionID = nil
+      state.pendingSeekTime = 0
       state.isPlaying = true
       return .run { [player = audioPlayer] _ in
         await player.seek(to: 0)
@@ -536,6 +648,17 @@ extension ClassBattleFlowFeature {
         state.viewState = .loaded
         state.session = progress.session
         state.voteHistory = progress.voteHistory
+        if progress.session.midVoteEnabled {
+          state.selectedPaths = state.scenario.map {
+            Self.selectedPaths(from: progress.voteHistory, scenario: $0)
+          } ?? [:]
+          if let scenario = state.scenario {
+            state.transcript = ClassBattleTranscriptLine.from(
+              scenario: scenario,
+              selectedPaths: state.selectedPaths
+            )
+          }
+        }
         if progress.session.battle.currentStep == .completed {
           if state.hasSubmittedInCurrentSession
             || (progress.session.commentRequired && progress.session.participationCompleted) {
@@ -577,6 +700,7 @@ extension ClassBattleFlowFeature {
       case .success:
         state.draft = ""
         state.hasAdvancedInCurrentSession = true
+        if submittedStep == .postVote { state.needsMidVoteRecovery = false }
         if submittedStep == .completed {
           state.hasSubmittedInCurrentSession = true
           state.hasPublishedPerspective = true
@@ -584,12 +708,35 @@ extension ClassBattleFlowFeature {
         return loadProgress(state: &state)
       case let .failure(error):
         state.errorMessage = error.message
+        if submittedStep == .postVote, error == .midVoteRequired {
+          state.needsMidVoteRecovery = true
+          state.hasListened = false
+          state.currentNodeID = state.scenario?.startNodeId
+          state.pendingCheckpointID = nil
+          state.selectedMidOptionID = nil
+          state.currentTime = 0
+          state.pendingSeekTime = 0
+          if state.isAudioReady {
+            state.isPlaying = true
+            return .merge(
+              .run { [player = audioPlayer] _ in
+                await player.seek(to: 0)
+                await player.play()
+              },
+              observePlayerTime(instanceID: state.instanceID)
+            )
+          }
+          if let battleID = state.session?.battle.id {
+            return loadAudio(state: &state, battleID: battleID)
+          }
+        }
         return .none
       }
     case let .audioURLResponse(requestID, result):
       guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
       switch result {
       case let .success(url):
+        state.loadedAudioURL = url
         return .run { [player = audioPlayer] send in
           let loaded = await player.load(url: url)
           let duration = loaded ? await player.duration() : 0
@@ -602,6 +749,47 @@ extension ClassBattleFlowFeature {
         state.audioRequestID = nil
         return .none
       }
+    case let .scenarioLoaded(requestID, scenario):
+      guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
+      state.scenario = scenario
+      state.currentNodeID = scenario.startNodeId
+      state.pendingCheckpointID = nil
+      state.selectedMidOptionID = nil
+      if state.session?.midVoteEnabled == true {
+        state.selectedPaths = Self.selectedPaths(from: state.voteHistory, scenario: scenario)
+      }
+      state.transcript = ClassBattleTranscriptLine.from(
+        scenario: scenario,
+        selectedPaths: state.selectedPaths
+      )
+      return .none
+    case let .midVoteResponse(requestID, checkpointID, optionID, result):
+      guard state.midVoteRequestID == requestID,
+            state.pendingCheckpointID == checkpointID,
+            let option = state.midVoteOptions.first(where: { $0.optionID == optionID })
+      else { return .none }
+      state.midVoteRequestID = nil
+      switch result {
+      case .success:
+        if state.step == .some(.preVote) {
+          state.selectedOptionID = state.voteHistory?.preVote.optionID
+        }
+        return advanceAfterChoice(state: &state, checkpointID: checkpointID, option: option)
+      case let .failure(error):
+        state.errorMessage = error.message
+        if error == .midVoteUnavailable {
+          let effect = advanceAfterChoice(state: &state, checkpointID: checkpointID, option: option)
+          state.midVoteDisabledLocally = true
+          state.errorMessage = error.message
+          return effect
+        }
+        if error == .midVoteLocked || error == .invalidMidVoteOption || error == .voteNotFound {
+          state.pendingCheckpointID = nil
+          state.isAudioReady = false
+          return .merge(stopPlayback(instanceID: state.instanceID), loadProgress(state: &state))
+        }
+        return .none
+      }
     case let .audioLoaded(requestID, loaded, duration):
       guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
       state.audioRequestID = nil
@@ -612,20 +800,28 @@ extension ClassBattleFlowFeature {
       state.isAudioReady = true
       state.audioDuration = duration
       state.isPlaying = true
+      let seekTime = state.pendingSeekTime
       return .merge(
-        .run { [player = audioPlayer] _ in await player.play() }
+        .run { [player = audioPlayer] _ in
+          if let seekTime { await player.seek(to: seekTime) }
+          await player.play()
+        }
           .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true),
         observePlayerTime(instanceID: state.instanceID)
       )
-    case let .transcriptLoaded(requestID, transcript):
-      guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
-      state.transcript = transcript
-      return .none
     case let .playerTimeUpdated(instanceID, time):
       guard state.instanceID == instanceID, state.isAudioStep,
-            state.isAudioReady else { return .none }
+            state.isAudioReady, state.pendingCheckpointID == nil else { return .none }
+      if let pendingSeekTime = state.pendingSeekTime {
+        guard abs(time - pendingSeekTime) < 1 else { return .none }
+        state.pendingSeekTime = nil
+      }
       state.currentTime = min(state.audioDuration, max(0, time))
-      guard time >= max(0, state.audioDuration - 0.3) else { return .none }
+      if let effect = advanceNodeIfNeeded(state: &state, time: time) {
+        return effect
+      }
+      guard state.pendingCheckpointID == nil,
+            time >= max(0, state.audioDuration - 0.3) else { return .none }
       state.hasListened = true
       guard state.isPlaying else { return .none }
       state.isPlaying = false
@@ -764,28 +960,141 @@ extension ClassBattleFlowFeature {
     let requestID = uuid()
     state.audioRequestID = requestID
     state.errorMessage = nil
-    return .run { [useCase = battleUseCase] send in
+    return .run { [
+      useCase = battleUseCase,
+      history = state.voteHistory,
+      priorPaths = state.selectedPaths
+    ] send in
       let result = await Result {
         let scenario = try await useCase.fetchScenario(battleId: battleID)
-        guard let rawURL = scenario.audios[scenario.recommendedPathKey.rawValue]
+        let paths = Self.selectedPaths(from: history, scenario: scenario)
+        let chosenNodeID = (paths.isEmpty ? priorPaths : paths).values.first
+        let pathKey = chosenNodeID.flatMap { Self.branchPathKey(from: $0, scenario: scenario) }
+        guard let rawURL = pathKey.flatMap({ scenario.audios[$0] })
+          ?? scenario.audios[scenario.recommendedPathKey.rawValue]
           ?? scenario.audios.values.first,
           let url = URL(string: rawURL),
           ["http", "https"].contains(url.scheme?.lowercased() ?? "")
         else { throw ClassBattleError.invalidResponse }
-        return (url, ClassBattleTranscriptLine.from(scenario: scenario))
+        return (url, scenario)
       }.mapError(Self.mapError)
       guard !Task.isCancelled else { return }
       switch result {
-      case let .success((url, transcript)):
-        if !transcript.isEmpty {
-          await send(.inner(.transcriptLoaded(requestID, transcript)))
-        }
+      case let .success((url, scenario)):
+        await send(.inner(.scenarioLoaded(requestID, scenario)))
         await send(.inner(.audioURLResponse(requestID, .success(url))))
       case let .failure(error):
         await send(.inner(.audioURLResponse(requestID, .failure(error))))
       }
     }
     .cancellable(id: CancelID.audio(state.instanceID), cancelInFlight: true)
+  }
+
+  private func advanceNodeIfNeeded(
+    state: inout State,
+    time: TimeInterval
+  ) -> Effect<Action>? {
+    guard let scenario = state.scenario, state.pendingCheckpointID == nil else { return nil }
+    var visited = Set<Int>()
+    while let node = state.currentNode, visited.insert(node.nodeId).inserted,
+          time >= scenario.nodeEndTime(for: node) {
+      if !node.interactiveOptions.isEmpty {
+        if let selectedNextID = state.selectedPaths[node.nodeId],
+           let selectedOption = node.interactiveOptions.first(where: { $0.nextNodeId == selectedNextID }) {
+          return advanceAfterChoice(state: &state, checkpointID: node.nodeId, option: selectedOption)
+        }
+        state.pendingCheckpointID = node.nodeId
+        state.selectedMidOptionID = state.selectedPaths[node.nodeId]
+        state.currentTime = scenario.nodeEndTime(for: node)
+        state.isPlaying = false
+        return .run { [player = audioPlayer] _ in await player.pause() }
+      }
+      guard let nextNodeID = scenario.nextNodeId(for: node),
+            scenario.nodes.contains(where: { $0.nodeId == nextNodeID })
+      else { return nil }
+      state.currentNodeID = nextNodeID
+    }
+    return nil
+  }
+
+  private func advanceAfterChoice(
+    state: inout State,
+    checkpointID: Int,
+    option: ScenarioInteractiveOption
+  ) -> Effect<Action> {
+    guard let scenario = state.scenario else { return .none }
+    let pathKey = Self.branchPathKey(from: option.nextNodeId, scenario: scenario)
+    let branchURL: URL?
+    if let pathKey, let rawURL = scenario.audios[pathKey] {
+      branchURL = URL(string: rawURL)
+    } else if pathKey != nil,
+              scenario.audios["PATH_A"] != nil || scenario.audios["PATH_B"] != nil {
+      state.errorMessage = ClassBattleError.invalidResponse.message
+      return .none
+    } else {
+      branchURL = state.loadedAudioURL
+    }
+    state.selectedPaths[checkpointID] = option.nextNodeId
+    state.transcript = ClassBattleTranscriptLine.from(
+      scenario: scenario,
+      selectedPaths: state.selectedPaths
+    )
+    state.currentNodeID = option.nextNodeId
+    state.pendingCheckpointID = nil
+    state.selectedMidOptionID = nil
+    state.errorMessage = nil
+    let targetTime = scenario.nodeStartTime(for: option.nextNodeId)
+    state.currentTime = targetTime
+    state.pendingSeekTime = targetTime
+    state.isPlaying = true
+    if let branchURL, branchURL != state.loadedAudioURL {
+      let requestID = uuid()
+      state.audioRequestID = requestID
+      state.loadedAudioURL = branchURL
+      state.isAudioReady = false
+      state.isPlaying = false
+      return .run { [player = audioPlayer] send in
+        let loaded = await player.load(url: branchURL)
+        let duration = loaded ? await player.duration() : 0
+        guard !Task.isCancelled else { return }
+        await send(.inner(.audioLoaded(requestID, loaded, duration)))
+      }
+      .cancellable(id: CancelID.audio(state.instanceID), cancelInFlight: true)
+    }
+    return .run { [player = audioPlayer] _ in
+      await player.seek(to: targetTime)
+      await player.play()
+    }
+  }
+
+  private static func selectedPaths(
+    from history: ClassVoteHistory?,
+    scenario: BattleScenario
+  ) -> [Int: Int] {
+    Dictionary(
+      history?.midVotes.compactMap { choice in
+        scenario.nodes.first(where: { $0.nodeId == choice.checkpointID })?
+          .interactiveOptions.first(where: { $0.optionID == choice.optionID })
+          .map { (choice.checkpointID, $0.nextNodeId) }
+      } ?? [],
+      uniquingKeysWith: { _, newest in newest }
+    )
+  }
+
+  private static func branchPathKey(
+    from firstNodeID: Int,
+    scenario: BattleScenario
+  ) -> String? {
+    var nodeID: Int? = firstNodeID
+    var visited = Set<Int>()
+    while let id = nodeID, visited.insert(id).inserted,
+          let node = scenario.nodes.first(where: { $0.nodeId == id }) {
+      let name = node.nodeName.uppercased()
+      if name.contains("_A") { return "PATH_A" }
+      if name.contains("_B") { return "PATH_B" }
+      nodeID = node.autoNextNodeId
+    }
+    return nil
   }
 
   private func observePlayerTime(instanceID: UUID) -> Effect<Action> {
@@ -802,6 +1111,7 @@ extension ClassBattleFlowFeature {
     .merge(
       .cancel(id: CancelID.load(instanceID)),
       .cancel(id: CancelID.submit(instanceID)),
+      .cancel(id: CancelID.midVote(instanceID)),
       .cancel(id: CancelID.perspectives(instanceID)),
       .cancel(id: CancelID.perspectiveLike(instanceID)),
       .cancel(id: CancelID.myPerspective(instanceID)),

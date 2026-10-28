@@ -4,6 +4,19 @@ import PickeCoreUtility
 
 struct ClassResultDTO: Decodable, Sendable {
   struct Stats: Decodable, Sendable {
+    struct MidVoteCheckpoint: Decodable, Sendable {
+      struct Option: Decodable, Sendable {
+        let optionId: Int
+        let label: String
+        let voteCount: Int
+        let ratio: Double
+      }
+
+      let checkpointId: Int
+      let voteCount: Int
+      let options: [Option]
+    }
+
     struct Option: Decodable, Sendable {
       let optionId: Int
       let title: String
@@ -19,6 +32,9 @@ struct ClassResultDTO: Decodable, Sendable {
     let commentWriterCount: Int
     let commentRate: Double
     let postVoteCount: Int
+    let midVoteEnabled: Bool?
+    let midVoteCount: Int?
+    let midVoteCheckpoints: [MidVoteCheckpoint]?
     let options: [Option]
 
   }

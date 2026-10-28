@@ -55,7 +55,8 @@ extension ClassBattleSessionDTO {
       commentRequired: commentRequired,
       canParticipate: canParticipate,
       participationCompleted: participationCompleted,
-      battle: try battle.toDomain()
+      battle: try battle.toDomain(),
+      midVoteEnabled: midVoteEnabled ?? false
     )
   }
 }

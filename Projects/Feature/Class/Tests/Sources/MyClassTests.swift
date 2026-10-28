@@ -14,6 +14,31 @@ import Testing
 @MainActor
 struct MyClassTests {
   @Test
+  func 목록_500_실패는_빈_클래스로_표시하지_않고_재시도한다() async {
+    let store = TestStore(initialState: MyClassFeature.State()) { MyClassFeature() } withDependencies: {
+      $0.classRoomUseCase = MockClassRepository(rooms: [], availableRooms: [])
+    }
+
+    await store.send(.inner(.roomsResponse(0, .failure(.network("HTTP 500"))))) {
+      $0.viewState = .error
+      $0.errorMessage = "HTTP 500"
+    }
+    #expect(store.state.rooms.isEmpty)
+    #expect(store.state.viewState == .error)
+    await store.send(.view(.retryTapped))
+    await store.receive(\.async, .fetchRooms) {
+      $0.fetchGeneration = 1
+      $0.isLoading = true
+      $0.errorMessage = nil
+      $0.viewState = .loading
+    }
+    await store.receive(\.inner, .roomsResponse(1, .success([]))) {
+      $0.isLoading = false
+      $0.viewState = .empty
+    }
+  }
+
+  @Test
   func 진행_상태로_필터링한다() async {
     var state = MyClassFeature.State()
     state.rooms = .init(uniqueElements: ClassRoom.mocks)

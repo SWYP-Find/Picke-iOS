@@ -2777,6 +2777,14 @@ private struct SlowBattleUseCase: ClassBattleInterface {
     try await fallback.submitPreVote(classID: classID, optionID: optionID)
   }
 
+  func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitMidVote(classID: classID, checkpointID: checkpointID, optionID: optionID)
+  }
+
   func completeTTS(classID _: Int) async throws {
     await tracker.markStarted()
     do {

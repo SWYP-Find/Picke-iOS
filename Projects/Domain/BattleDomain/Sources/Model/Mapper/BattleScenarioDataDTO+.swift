@@ -50,7 +50,7 @@ public extension ScenarioNodeDTO {
       audioDuration: audioDuration,
       autoNextNodeId: autoNextNodeId,
       scripts: scripts.map { $0.toDomain() },
-      interactiveOptions: (interactiveOptions ?? []).map { $0.toDomain() }
+      interactiveOptions: (interactiveOptions ?? []).compactMap { $0.toDomain() }
     )
   }
 }
@@ -68,7 +68,16 @@ public extension ScenarioScriptDTO {
 }
 
 public extension ScenarioInteractiveOptionDTO {
-  func toDomain() -> ScenarioInteractiveOption {
-    ScenarioInteractiveOption(label: label, nextNodeId: nextNodeId)
+  func toDomain() -> ScenarioInteractiveOption? {
+    guard let nextNodeId else { return nil }
+    let displayLabel = label?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let displayTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let resolvedLabel = (displayLabel?.isEmpty == false ? displayLabel : nil) ?? displayTitle ?? "선택지"
+    return ScenarioInteractiveOption(
+      label: resolvedLabel,
+      nextNodeId: nextNodeId,
+      optionID: optionId,
+      title: displayTitle
+    )
   }
 }

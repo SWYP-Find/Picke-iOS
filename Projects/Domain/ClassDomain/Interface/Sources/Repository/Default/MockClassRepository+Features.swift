@@ -9,6 +9,14 @@ public extension MockClassRepository {
     throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: submitPreVote")
   }
 
+  public func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: submitMidVote")
+  }
+
   public func completeTTS(classID: Int) async throws {
     throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: completeTTS")
   }

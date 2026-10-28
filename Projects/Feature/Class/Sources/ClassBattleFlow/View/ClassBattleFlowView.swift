@@ -22,7 +22,10 @@ public struct ClassBattleFlowView: View {
       case .error: errorScreen()
       case .loaded:
         switch store.step {
-        case .some(.none), .some(.postVote): voteScreen()
+        case .some(.none): voteScreen()
+        case .some(.postVote):
+          if store.needsMidVoteRecovery { listeningScreen() }
+          else { voteScreen() }
         case .some(.preVote): listeningScreen()
         case .some(.ttsListening): listeningScreen()
         case .some(.completed):
@@ -356,6 +359,9 @@ private extension ClassBattleFlowView {
           }
         }
       }
+      if store.pendingCheckpointID != nil {
+        midVoteChoiceSection()
+      }
       audioFooter()
     }
     .screenBackground()
@@ -363,6 +369,50 @@ private extension ClassBattleFlowView {
       preVoteEditor()
         .presentationDetents([.medium])
     }
+  }
+
+  @ViewBuilder
+  func midVoteChoiceSection() -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("선택의 시간")
+        .pretendardFont(.headingMedium)
+        .foregroundStyle(.neutral900)
+      ForEach(store.midVoteOptions) { option in
+        Button {
+          send(.midVoteOptionTapped(option.nextNodeId))
+        } label: {
+          VStack(alignment: .leading, spacing: 4) {
+            if let title = option.title, !title.isEmpty, title != option.label {
+              Text(option.label)
+                .pretendardFont(.labelSmall)
+                .foregroundStyle(.neutral600)
+            }
+            Text(option.title.flatMap { $0.isEmpty ? nil : $0 } ?? option.label)
+              .pretendardFont(.bodyMedium)
+              .foregroundStyle(.neutral900)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .padding(12)
+            .background(
+              store.selectedMidOptionID == option.nextNodeId ? .beige300 : .white,
+              in: RoundedRectangle(cornerRadius: 4)
+            )
+            .overlay {
+              RoundedRectangle(cornerRadius: 4)
+                .strokeBorder(
+                  store.selectedMidOptionID == option.nextNodeId ? .primary500 : .beige600,
+                  lineWidth: 1
+                )
+            }
+        }
+        .buttonStyle(.plain)
+      }
+      Button("입장 선택하기") { send(.confirmMidVoteTapped) }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
+        .disabled(!store.canConfirmMidVote)
+    }
+    .padding(16)
+    .background(.beige200)
   }
 
   @ViewBuilder
@@ -470,7 +520,9 @@ private extension ClassBattleFlowView {
             .pretendardFont(.regular13)
             .foregroundStyle(.primary500)
           Spacer()
-          Button("다시 시도") { send(.retryAudioTapped) }
+          if store.pendingCheckpointID == nil {
+            Button("다시 시도") { send(.retryAudioTapped) }
+          }
         }
       }
       audioProgressBar()
@@ -485,7 +537,7 @@ private extension ClassBattleFlowView {
         playbackRateTitle: store.playbackRateTitle,
         onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
       )
-      .disabled(!store.isAudioReady)
+      .disabled(!store.isAudioReady || store.pendingCheckpointID != nil)
       if store.hasListened {
         Button(store.buttonTitle) { send(.submitTapped) }
           .ctaButtonStyle(.primary, size: .large, height: 52)
