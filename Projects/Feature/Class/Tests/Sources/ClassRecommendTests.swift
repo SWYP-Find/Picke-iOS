@@ -299,20 +299,20 @@ private struct StubTopicDraftUseCase: ClassTopicDraftInterface {
   let draft: ClassTopicDraft
   let version: ClassTopicVersion
 
-  func create(filter: ClassTopicFilter) async throws -> ClassTopicDraft { draft }
-  func fetch(id: Int) async throws -> ClassTopicDraft { draft }
-  func suggest(
+  func createTopicDraft(filter: ClassTopicFilter) async throws -> ClassTopicDraft { draft }
+  func fetchTopicDraft(id: Int) async throws -> ClassTopicDraft { draft }
+  func suggestTopicDraft(
     id: Int,
     filter: ClassTopicFilter?
   ) async throws -> ClassTopicDraft { draft }
 
-  func select(
+  func selectTopicDraft(
     draftID: Int,
     batchNo: Int,
     candidateID: Int
   ) async throws -> ClassTopicVersion { version }
 
-  func validate(
+  func validateTopicDraft(
     draftID: Int,
     baseVersionID: Int,
     candidate: ClassTopicCandidate

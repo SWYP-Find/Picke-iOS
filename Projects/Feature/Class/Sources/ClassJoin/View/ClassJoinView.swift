@@ -55,7 +55,6 @@ public struct ClassJoinView: View {
         .padding(.vertical, 16)
     }
     .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-    .ignoresSafeArea(.container, edges: store.mode == .code ? .bottom : [])
     .screenBackground(.white)
     .hidesSystemBars()
     .onAppear {
@@ -103,7 +102,7 @@ private extension ClassJoinView {
           }
         }
 
-        TextField("", text: $store.joinCode)
+        TextField("", text: joinCodeBinding)
           .textInputAutocapitalization(.characters)
           .autocorrectionDisabled()
           .keyboardType(.asciiCapable)
@@ -151,7 +150,7 @@ private extension ClassJoinView {
   }
 
   var nicknameInput: some View {
-    TextField("", text: $store.nickname, prompt: Text(store.nicknamePlaceholder).foregroundStyle(.gray300))
+    TextField("", text: nicknameBinding, prompt: Text(store.nicknamePlaceholder).foregroundStyle(.gray300))
       .textInputAutocapitalization(.never)
       .autocorrectionDisabled()
       .focused($isNicknameFocused)
@@ -170,6 +169,26 @@ private extension ClassJoinView {
       .pretendardFont(.bodySmall)
       .foregroundStyle(.errorDefault)
       .fixedSize(horizontal: false, vertical: true)
+  }
+
+  var joinCodeBinding: Binding<String> {
+    Binding(
+      get: { store.joinCode },
+      set: { value in
+        guard value != store.joinCode else { return }
+        store.send(.binding(.set(\.joinCode, value)))
+      }
+    )
+  }
+
+  var nicknameBinding: Binding<String> {
+    Binding(
+      get: { store.nickname },
+      set: { value in
+        guard value != store.nickname else { return }
+        store.send(.binding(.set(\.nickname, value)))
+      }
+    )
   }
 
   var bottomAction: some View {

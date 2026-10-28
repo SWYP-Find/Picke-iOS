@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import AudioPlayerServiceInterface
 import ComposableArchitecture
 import DomainAssembly
 import FeatureAssembly
@@ -17,6 +18,7 @@ public struct ClassCoordinator {
   @Dependency(\.classUseCase) private var classUseCase
   @Dependency(\.uuid) private var uuid
   @Dependency(\.date) private var date
+  @Dependency(\.audioPlayer) private var audioPlayer
 
   public init() {}
 
@@ -42,12 +44,13 @@ public struct ClassCoordinator {
     var detailInstanceIDs: Set<UUID> = []
     var aiVoteInstanceIDs: Set<UUID> = []
     var ticketInstanceIDs: Set<UUID> = []
+    var battleFlowInstanceIDs: Set<UUID> = []
 
     public init() {
       routes = [.root(.intro(.init()), embedInNavigationView: true)]
     }
 
-    /// 클래스 목록·상세·리포트·의견·운영자 화면에서 모달이 닫힌 동안 탭바를 보여준다.
+    /// 클래스 목록·상세·멤버·이용권 화면에서 모달이 닫힌 동안 탭바를 보여준다.
     public var showsTabBar: Bool {
       guard !isDeadlinePanelPresented else { return false }
       switch routes.last?.screen {
@@ -58,9 +61,7 @@ public struct ClassCoordinator {
       case let .members(members)?:
         return members.filter == nil && members.editName == nil
           && members.customAlert == nil && !members.isSaving
-      case let .ownerDashboard(dashboard)?:
-        return dashboard.management == nil
-      case .report?, .myOpinions?, .ticket?:
+      case .ticket?:
         return true
       default:
         return false
@@ -415,19 +416,25 @@ private extension ClassCoordinator {
       guard case let .ticket(ticket) = route.screen else { return nil }
       return ticket.instanceID
     })
+    let battleFlowIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .battleFlow(flow) = route.screen else { return nil }
+      return flow.instanceID
+    })
     let removedOwners = state.ownerNameInstanceIDs.subtracting(ownerIDs)
     let removedJoins = state.participantJoinInstanceIDs.subtracting(joinIDs)
     let removedMembers = state.memberInstanceIDs.subtracting(memberIDs)
     let removedDetails = state.detailInstanceIDs.subtracting(detailIDs)
     let removedVotes = state.aiVoteInstanceIDs.subtracting(voteIDs)
     let removedTickets = state.ticketInstanceIDs.subtracting(ticketIDs)
+    let removedBattleFlows = state.battleFlowInstanceIDs.subtracting(battleFlowIDs)
     state.ownerNameInstanceIDs = ownerIDs
     state.participantJoinInstanceIDs = joinIDs
     state.memberInstanceIDs = memberIDs
     state.detailInstanceIDs = detailIDs
     state.aiVoteInstanceIDs = voteIDs
     state.ticketInstanceIDs = ticketIDs
-    return .merge(
+    state.battleFlowInstanceIDs = battleFlowIDs
+    let effects: [Effect<Action>] =
       removedOwners.map { .cancel(id: ClassJoinFeature.CancelID.nameOwner($0)) }
         + removedJoins.flatMap { id in
           [
@@ -444,6 +451,23 @@ private extension ClassCoordinator {
           ]
         }
         + removedTickets.map { .cancel(id: ClassTicketFeature.CancelID.check($0)) }
+        + removedBattleFlows.flatMap { id in
+          [
+            .cancel(id: ClassBattleFlowFeature.CancelID.load(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.submit(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.audio(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.playback(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.time(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectives(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.voteStats(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveLike(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.myPerspective(id)),
+          ]
+        }
+    guard !removedBattleFlows.isEmpty else { return .merge(effects) }
+    return .concatenate(
+      .merge(effects),
+      .run { [player = audioPlayer] _ in await player.pause() }
     )
   }
 
@@ -1013,23 +1037,38 @@ private extension ClassCoordinator {
     case .routeAction(_, action: .aiVote(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
+    case let .routeAction(_, action: .aiVote(.delegate(.showResults(room)))):
+      var flow = ClassBattleFlowFeature.State()
+      flow.room = room
+      flow.opensResultsDirectly = true
+      state.routes.push(.battleFlow(flow))
+      return .none
+
     case let .routeAction(routeID, action: .battleFlow(.delegate(.dismiss))):
       guard routeID == state.routes.count - 1,
             case .battleFlow? = state.routes.last?.screen else { return .none }
       return .send(.view(.backAction))
 
-    case let .routeAction(routeID, action: .battleFlow(.delegate(.completed(classID: classID)))):
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.openReport(classID: classID)))):
       guard routeID == state.routes.count - 1,
             case let .battleFlow(flow)? = state.routes.last?.screen,
-            flow.room?.id == classID else { return .none }
-      guard let detailIndex = state.routes.lastIndex(where: {
-        guard case let .detail(detail) = $0.screen else { return false }
-        return detail.room.id == classID
-      }) else { return .none }
-      for _ in (detailIndex + 1) ..< state.routes.count {
-        state.routes.goBack()
+            let room = flow.room,
+            room.id == classID else { return .none }
+      if room.role == .owner {
+        state.routes.push(.ownerDashboard(.init(room: room)))
+      } else {
+        state.routes.push(.report(.init(room: room)))
       }
       return .none
+
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.openPerspective(id)))):
+      guard routeID == state.routes.count - 1,
+            case .battleFlow? = state.routes.last?.screen else { return .none }
+      state.routes.push(.perspectiveDetail(.init(perspectiveId: id)))
+      return .none
+
+    case .routeAction(_, action: .perspectiveDetail(.delegate(.dismiss))):
+      return .send(.view(.backAction))
 
     case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(
       battleID: battleID,
@@ -1038,19 +1077,32 @@ private extension ClassCoordinator {
     )))):
       guard case let .aiVote(vote)? = state.routes.last?.screen else { return .none }
       if hasCompletedPostVote {
-        if vote.room.requiresComment {
-          var battleFlowState = ClassBattleFlowFeature.State()
-          battleFlowState.room = vote.room
-          state.routes.push(.battleFlow(battleFlowState))
-          return .none
-        }
-        guard let detailIndex = state.routes.lastIndex(where: {
+        if let detailIndex = state.routes.lastIndex(where: {
           guard case let .detail(detail) = $0.screen else { return false }
           return detail.room.id == vote.room.id
-        }) else { return .none }
-        for _ in (detailIndex + 1) ..< state.routes.count {
-          state.routes.goBack()
+        }) {
+          for _ in (detailIndex + 1) ..< state.routes.count {
+            state.routes.goBack()
+          }
+        } else {
+          while state.routes.count > 1, let screen = state.routes.last?.screen {
+            let isCompletedFlowRoute: Bool
+            switch screen {
+            case let .aiVote(previous):
+              isCompletedFlowRoute = previous.room.id == vote.room.id
+            case let .aiChat(previous):
+              isCompletedFlowRoute = previous.room.id == vote.room.id
+            default:
+              isCompletedFlowRoute = false
+            }
+            guard isCompletedFlowRoute else { break }
+            state.routes.goBack()
+          }
         }
+        var battleFlowState = ClassBattleFlowFeature.State()
+        battleFlowState.room = vote.room
+        battleFlowState.opensResultsDirectly = true
+        state.routes.push(.battleFlow(battleFlowState))
         return .none
       }
       state.routes.push(.aiChat(.init(
@@ -1368,6 +1420,7 @@ extension ClassCoordinator {
     case aiVote(ClassAIVoteFeature)
     case aiChat(ClassAIChatFeature)
     case battleFlow(ClassBattleFlowFeature)
+    case perspectiveDetail(CommentReplyFeature)
     case chat(ChatCoordinator)
   }
 }

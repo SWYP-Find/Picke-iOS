@@ -239,11 +239,11 @@ private struct TicketStub: ClassTicketInterface {
   var myTicket: Result<ClassTicket, ClassTicketError> = .failure(.notFound)
   var myTicketFetch: (@Sendable () async throws -> ClassTicket)?
 
-  func preview(code _: String) async throws -> ClassTicketPreview {
+  func previewTicket(code _: String) async throws -> ClassTicketPreview {
     try preview.get()
   }
 
-  func register(code _: String) async throws -> ClassTicket {
+  func registerTicket(code _: String) async throws -> ClassTicket {
     try register.get()
   }
 

@@ -20,6 +20,8 @@ public struct ClassReportFeature {
     public var room: ClassRoom
     public var report: ClassReport?
     public var classResult: ClassResult?
+    public var voteHistory: ClassVoteHistory?
+    public var voteHistoryRequestID: UUID?
     public var selectedTab: ClassReportTab = .summary
     public var sourceViewState: ClassReportSourceViewState = .loading
     public var sourceError: ClassError?
@@ -28,8 +30,23 @@ public struct ClassReportFeature {
     public var feedbackContext: ClassAIFeedbackContext?
     public var feedbackError: ClassAIFeedbackError?
     public var feedbackRequestID: UUID?
+    public var insight: ClassAIInsight?
+    public var insightError: ClassAIFeedbackError?
+    public var insightRequestID: UUID?
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
+
+    public var highlightRows: [ClassReportHighlightRow] {
+      guard let highlights = insight?.highlights else { return [] }
+      return highlights.enumerated().map { index, evidence in
+        ClassReportHighlightRow(
+          id: index,
+          title: "주요 의견 \(index + 1)",
+          text: evidence.quote ?? evidence.content,
+          isLast: index == highlights.count - 1
+        )
+      }
+    }
 
     public var sourceErrorMessage: String {
       sourceError?.message ?? "리포트를 불러오지 못했어요"
@@ -72,12 +89,81 @@ public struct ClassReportFeature {
         + "의견 작성률 \(stats.commentRate.formatted(.number.precision(.fractionLength(1))))%"
     }
 
+    public var serverParticipationRate: String {
+      guard let rate = classResult?.stats.participationRate else { return "" }
+      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+    }
+
+    public var serverCommentRate: String {
+      guard let rate = classResult?.stats.commentRate else { return "" }
+      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+    }
+
+    public var serverParticipationCount: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.completedCount) / \(stats.activeMemberCount)명"
+    }
+
+    public var serverCommentCount: String {
+      guard let stats = classResult?.stats else { return "" }
+      return "\(stats.commentWriterCount) / \(stats.activeMemberCount)명"
+    }
+
+    public var serverParticipationProgress: Double {
+      min(max((classResult?.stats.participationRate ?? 0) / 100, 0), 1)
+    }
+
+    public var serverCommentProgress: Double {
+      min(max((classResult?.stats.commentRate ?? 0) / 100, 0), 1)
+    }
+
     public var serverOptionCounts: [Int: String] {
       guard let options = classResult?.stats.options else { return [:] }
       return options.reduce(into: [:]) { values, option in
         values[option.id] = "사전 \(option.preVoteCount) · 사후 \(option.postVoteCount)"
       }
     }
+
+    public var serverDistributionTotalText: String {
+      "\(classResult?.stats.postVoteCount ?? 0)명"
+    }
+
+    public var serverDistributionProgress: Double {
+      min(max((classResult?.stats.options.first?.postVoteRatio ?? 0) / 100, 0), 1)
+    }
+
+    public var serverDistributionOptionCountTexts: [Int: String] {
+      guard let options = classResult?.stats.options else { return [:] }
+      return options.reduce(into: [:]) { values, option in
+        values[option.id] = "\(option.postVoteCount)명"
+      }
+    }
+
+    public var serverDistributionOptionRatioTexts: [Int: String] {
+      guard let options = classResult?.stats.options else { return [:] }
+      return options.reduce(into: [:]) { values, option in
+        values[option.id] = option.postVoteRatio.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      }
+    }
+
+    public var insightStatusMessage: String {
+      if insightRequestID != nil { return "분석 결과를 불러오는 중이에요." }
+      if let insightError {
+        switch insightError {
+        case .serverRetryAvailable, .generationFailed:
+          return "AI 인사이트 생성에 실패했어요."
+        case .accessDenied:
+          return "AI 인사이트를 볼 권한이 없어요."
+        case .resultExpired:
+          return "AI 인사이트 열람 기간이 끝났어요."
+        default:
+          return "AI 인사이트를 불러오지 못했어요."
+        }
+      }
+      return "분석 결과를 준비하고 있어요."
+    }
+
+    public var canRetryInsight: Bool { insightError?.isRetryable == true }
 
     public var feedbackViewState: ClassReportFeedbackViewState {
       if let feedback {
@@ -101,6 +187,35 @@ public struct ClassReportFeature {
     public var myOpinionCount: Int {
       if classResult != nil { return feedback?.perspectiveCount ?? 0 }
       return report?.resolvedOpinions.count ?? 0
+    }
+
+    public var personalPreVoteTitle: String? {
+      voteHistory?.preVote.title ?? feedback?.preOption?.title
+    }
+
+    public var personalPostVoteTitle: String? {
+      voteHistory?.postVote?.title ?? feedback?.postOption?.title
+    }
+
+    public var personalOpinionChanged: Bool {
+      if let opinionChanged = voteHistory?.opinionChanged { return opinionChanged }
+      guard let preID = voteHistory?.preVote.optionID ?? feedback?.preOption?.id,
+            let postID = voteHistory?.postVote?.optionID ?? feedback?.postOption?.id else {
+        return false
+      }
+      return preID != postID
+    }
+
+    public var personalOpinionChangeTitle: String {
+      personalOpinionChanged ? "입장 변경" : "입장 유지"
+    }
+
+    public var personalPerspectiveCountText: String {
+      feedback.map { String($0.perspectiveCount) } ?? "—"
+    }
+
+    public var personalCommentCountText: String {
+      feedback.map { String($0.commentCount) } ?? "—"
     }
 
     public var myOpinionsButtonTitle: String {
@@ -134,6 +249,7 @@ public struct ClassReportFeature {
     case onAppear
     case retryTapped
     case feedbackRetryTapped
+    case insightRetryTapped
     case backTapped
     case closeTapped
     case tabSelected(ClassReportTab)
@@ -143,12 +259,15 @@ public struct ClassReportFeature {
   @CasePathable
   public enum AsyncAction: Equatable {
     case fetch
+    case fetchVoteHistory
     case generateFeedback
+    case fetchInsight
   }
 
   @CasePathable
   public enum InnerAction: Equatable {
     case resultResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassResult, ClassError>)
+    case voteHistoryResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassVoteHistory, ClassError>)
     case reportResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassReport?, ClassError>)
     case feedbackResponse(
       instanceID: UUID,
@@ -157,6 +276,7 @@ public struct ClassReportFeature {
       Result<ClassAIFeedbackResult, ClassAIFeedbackError>,
       wasUnknown: Bool
     )
+    case insightResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassAIInsight, ClassAIFeedbackError>)
   }
 
   @CasePathable
@@ -167,10 +287,13 @@ public struct ClassReportFeature {
 
   public enum CancelID: Hashable, Sendable {
     case load(UUID)
+    case voteHistory(UUID)
     case generate(UUID)
+    case insight(UUID)
   }
 
   @Dependency(\.classResultUseCase) private var classUseCase
+  @Dependency(\.classBattleUseCase) private var battleUseCase
   @Dependency(\.uuid) private var uuid
 
   public var body: some Reducer<State, Action> {
@@ -206,13 +329,20 @@ extension ClassReportFeature {
       guard state.feedbackError?.isRetryable == true,
             !state.isGeneratingFeedback else { return .none }
       return .send(.async(.generateFeedback))
+    case .insightRetryTapped:
+      guard state.canRetryInsight, state.insightRequestID == nil else { return .none }
+      return .send(.async(.fetchInsight))
     case .backTapped, .closeTapped:
       state.requestID = nil
+      state.voteHistoryRequestID = nil
       state.feedbackRequestID = nil
+      state.insightRequestID = nil
       state.isGeneratingFeedback = false
       return .merge(
         .cancel(id: CancelID.load(state.instanceID)),
+        .cancel(id: CancelID.voteHistory(state.instanceID)),
         .cancel(id: CancelID.generate(state.instanceID)),
+        .cancel(id: CancelID.insight(state.instanceID)),
         .send(.delegate(.dismiss))
       )
     case let .tabSelected(tab):
@@ -233,8 +363,13 @@ extension ClassReportFeature {
     switch action {
     case .fetch:
       state.classResult = nil
+      state.voteHistory = nil
+      state.voteHistoryRequestID = nil
       state.sourceError = nil
       state.feedbackRequestID = nil
+      state.insightRequestID = nil
+      state.insight = nil
+      state.insightError = nil
       state.feedback = nil
       state.feedbackContext = nil
       state.feedbackError = nil
@@ -260,7 +395,28 @@ extension ClassReportFeature {
         )))
       }
       .cancellable(id: CancelID.load(state.instanceID), cancelInFlight: true)
-      return .concatenate(.cancel(id: CancelID.generate(state.instanceID)), fetch)
+      return .concatenate(
+        .cancel(id: CancelID.voteHistory(state.instanceID)),
+        .cancel(id: CancelID.generate(state.instanceID)),
+        .cancel(id: CancelID.insight(state.instanceID)),
+        fetch
+      )
+    case .fetchVoteHistory:
+      let requestID = uuid()
+      state.voteHistoryRequestID = requestID
+      return .run { [battleUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        let result = await Result {
+          try await battleUseCase.fetchMyVotes(classID: roomID)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.voteHistoryResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result
+        )))
+      }
+      .cancellable(id: CancelID.voteHistory(state.instanceID), cancelInFlight: true)
     case .generateFeedback:
       let requestID = uuid()
       state.feedbackRequestID = requestID
@@ -287,6 +443,28 @@ extension ClassReportFeature {
         )))
       }
       .cancellable(id: CancelID.generate(state.instanceID), cancelInFlight: true)
+    case .fetchInsight:
+      let retryServerGeneration = state.insightError == .serverRetryAvailable
+      let requestID = uuid()
+      state.insightRequestID = requestID
+      state.insightError = nil
+      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        let result = await Result {
+          if retryServerGeneration {
+            try await classUseCase.retryInsight(roomID: roomID)
+          }
+          return try await classUseCase.fetchInsight(roomID: roomID)
+        }
+        .mapError { ($0 as? ClassAIFeedbackError) ?? .temporarilyUnavailable }
+        guard !Task.isCancelled else { return }
+        await send(.inner(.insightResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result
+        )))
+      }
+      .cancellable(id: CancelID.insight(state.instanceID), cancelInFlight: true)
     }
   }
 
@@ -303,15 +481,35 @@ extension ClassReportFeature {
       switch result {
       case let .success(classResult):
         state.classResult = classResult
+        state.insightError = classResult.insightState == "FAILED" ? .serverRetryAvailable : nil
         state.sourceError = nil
         state.sourceViewState = .ready
-        return classResult.myReportState == nil ? .none : .send(.async(.generateFeedback))
+        var effects: [Effect<Action>] = []
+        if state.room.role == .member {
+          effects.append(.send(.async(.fetchVoteHistory)))
+        }
+        if classResult.myReportState != nil {
+          effects.append(.send(.async(.generateFeedback)))
+        }
+        if state.room.role != .member,
+           (classResult.insightState == "SUCCEEDED" || classResult.insightState == "LIMITED") {
+          effects.append(.send(.async(.fetchInsight)))
+        }
+        return .merge(effects)
       case let .failure(error):
         state.classResult = nil
         state.sourceError = error
         state.sourceViewState = .failed
         return .none
       }
+
+    case let .voteHistoryResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.voteHistoryRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.voteHistoryRequestID = nil
+      state.voteHistory = try? result.get()
+      return .none
 
     case let .reportResponse(instanceID, requestID, roomID, result):
       guard state.instanceID == instanceID,
@@ -352,6 +550,20 @@ extension ClassReportFeature {
         } else {
           state.feedbackError = error
         }
+      }
+      return .none
+    case let .insightResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.insightRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.insightRequestID = nil
+      switch result {
+      case let .success(insight):
+        state.insight = insight
+        state.insightError = nil
+      case let .failure(error):
+        state.insight = nil
+        state.insightError = error
       }
       return .none
     }

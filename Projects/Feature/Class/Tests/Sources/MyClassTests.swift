@@ -144,7 +144,7 @@ struct MyClassTests {
     state.viewState = .loaded
     state.selectedRoomID = 1
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
-      $0.classUseCase = repository
+      $0.classRoomUseCase = repository
     }
 
     await store.send(.view(.deleteTapped)) {
@@ -213,7 +213,7 @@ struct MyClassTests {
     state.viewState = .loaded
     state.selectedRoomID = room.id
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
-      $0.classUseCase = repository
+      $0.classRoomUseCase = repository
     }
 
     await store.send(.view(.leaveTapped)) {
@@ -267,7 +267,7 @@ struct MyClassTests {
     state.viewState = .loaded
     state.selectedRoomID = room.id
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
-      $0.classUseCase = repository
+      $0.classRoomUseCase = repository
     }
 
     await store.send(.view(.leaveTapped)) {
@@ -332,7 +332,7 @@ struct MyClassTests {
     state.viewState = .loaded
     state.isDeleting = true
     let store = TestStore(initialState: state) { MyClassFeature() } withDependencies: {
-      $0.classUseCase = repository
+      $0.classRoomUseCase = repository
     }
 
     await store.send(.inner(.deleted(.success(ClassRoom.mocks[0].id)))) {

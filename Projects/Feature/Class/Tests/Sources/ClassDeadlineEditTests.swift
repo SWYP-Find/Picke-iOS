@@ -158,7 +158,7 @@ struct ClassDeadlineEditTests {
     state.draftDeadline = deadline
     let repository = MockClassRepository(rooms: [room])
     let store = TestStore(initialState: state) { ClassDeadlineEditFeature() } withDependencies: {
-      $0.classUseCase = repository
+      $0.classRoomUseCase = repository
       $0.date.now = referenceNow
       $0.uuid = .constant(requestID)
     }
@@ -198,7 +198,7 @@ struct ClassDeadlineEditTests {
     )
     state.draftDeadline = deadline
     let store = TestStore(initialState: state) { ClassDeadlineEditFeature() } withDependencies: {
-      $0.classUseCase = MockClassRepository(rooms: [])
+      $0.classRoomUseCase = MockClassRepository(rooms: [])
       $0.date.now = referenceNow
       $0.uuid = .constant(requestID)
     }

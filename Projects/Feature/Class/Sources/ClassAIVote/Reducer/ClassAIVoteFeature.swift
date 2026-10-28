@@ -56,17 +56,24 @@ public struct ClassAIVoteFeature {
     }
 
     public var submitTitle: String {
+      if isShowingParticipationResult {
+        return "결과 보기"
+      }
       if shouldResubmitPreVote {
         return "투표 수정하기"
       }
       if hasSubmitted {
         return "의견 보기"
       }
-      return isPostVote ? "최종 투표하기" : "투표하기"
+      return isPostVote ? "최종 투표하기" : isLiveClassBattle ? "사전 투표하기" : "투표하기"
     }
 
     public var shouldResubmitPreVote: Bool {
       hasSubmitted && canChangePreVote && selectedOptionID != submittedOptionID
+    }
+
+    public var isShowingParticipationResult: Bool {
+      isLiveClassBattle && !isPostVote && hasSubmitted && hasCompletedPostVote
     }
 
     public var canSubmit: Bool {
@@ -166,6 +173,7 @@ public struct ClassAIVoteFeature {
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
+    case showResults(ClassRoom)
     case voteSubmitted(battleID: Int, selectedOptionID: Int, hasCompletedPostVote: Bool)
   }
 
@@ -233,6 +241,9 @@ extension ClassAIVoteFeature {
 
     case .submitTapped:
       guard state.canSubmit, let optionID = state.selectedOptionID else { return .none }
+      if state.isShowingParticipationResult {
+        return .send(.delegate(.showResults(state.room)))
+      }
       if state.hasSubmitted, !state.shouldResubmitPreVote {
         return .send(.delegate(.voteSubmitted(
           battleID: state.battleID,

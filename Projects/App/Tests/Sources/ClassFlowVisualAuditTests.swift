@@ -7,6 +7,7 @@
 
 import AudioPlayerServiceInterface
 import BattleDomainInterface
+import ClassDomainInterface
 import ComposableArchitecture
 import ConcurrencyExtras
 import DomainAssembly
@@ -68,7 +69,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           .dependency(\.battleUseCase, session)
           .dependency(\.perspectiveUseCase, session)
           .dependency(\.commentUseCase, session)
-          .dependency(\.classAIChatUseCase, MockClassAIChatUseCase())
+          .dependency(\.classDebateUseCase, repository)
           .dependency(\.classResultUseCase, Self.visualResultUseCase())
           .dependency(\.analyticsUseCase, .testValue)
           .dependency(\.shareUseCase, .testValue)
@@ -118,7 +119,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         throw error
       }
       XCTAssertEqual(store.routes.count, 3)
-      XCTAssertTrue(store.showsTabBar)
+      XCTAssertFalse(store.showsTabBar)
       let reportName = isAI ? "comment-to-report-ai" : "comment-to-report-regular"
       let reportImage = try await saveClassAudit(window: window, name: reportName)
       let reportText = try recognizedAuditText(in: reportImage, name: reportName)
@@ -2467,20 +2468,29 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       )
       state.hasStarted = true
       state.messages = messages
-      let starts = LockIsolated(0)
-      let responses = LockIsolated(0)
-      let endedIDs = LockIsolated<[UUID]>([])
+      let fetches = LockIsolated(0)
+      let replies = LockIsolated(0)
+      let debate = ClassDebate(
+        sessionID: 801,
+        status: .waitingUser,
+        round: 1,
+        canReply: true,
+        canRetry: false,
+        philosopherName: "플라톤",
+        participantOptionTitle: "비난할 수 있다",
+        opponentOptionTitle: "비난할 수 없다",
+        messages: [
+          .init(id: 802, round: 1, speaker: .ai, content: messages[0].text),
+          .init(id: 803, round: 1, speaker: .user, content: messages[1].text),
+        ],
+        aiNotice: "AI의 주장이에요",
+        replyMinLength: 50,
+        replyMaxLength: 1000
+      )
       let store = Store(initialState: state) {
         ClassAIChatFeature().dependency(
-          \.classAIChatUseCase,
-          MockClassAIChatUseCase(
-            start: { _, _ in starts.withValue { $0 += 1 } },
-            respond: { _, _, _ in
-              responses.withValue { $0 += 1 }
-              return "Unexpected model response during design capture"
-            },
-            end: { id in endedIDs.withValue { $0.append(id) } }
-          )
+          \.classDebateUseCase,
+          ClassDebateVisualStub(debate: debate, fetches: fetches, replies: replies)
         )
       }
       var checkedMountedState = false
@@ -2514,9 +2524,8 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         }
       )
       XCTAssertTrue(checkedMountedState)
-      XCTAssertEqual(starts.value, 0)
-      XCTAssertEqual(responses.value, 0)
-      XCTAssertTrue(endedIDs.value.allSatisfy { $0 == conversationID })
+      XCTAssertGreaterThanOrEqual(fetches.value, 1)
+      XCTAssertEqual(replies.value, 0)
       XCTAssertEqual(image.size, viewport)
       let name = "ai-chat-figma-only-seeded-\(Int(viewport.width))"
       let attachment = XCTAttachment(image: image)
@@ -3054,7 +3063,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   private struct VisualResultUseCase: ClassResultInterface {
-    func fetch(roomID: Int) async throws -> ClassResult {
+    func fetchResult(roomID: Int) async throws -> ClassResult {
       ClassResult(
         classID: roomID,
         closed: true,
@@ -3073,7 +3082,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       )
     }
 
-    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
       ClassFlowVisualAuditTests.visualPersonalFeedback
     }
 
@@ -3155,7 +3164,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
 
     func classTab(_ screen: ClassCoordinator.ClassScreen.State) -> AnyView {
       let repository: MockClassRepository = if case let .myClasses(list) = screen {
-        MockClassRepository(rooms: list.rooms, availableRooms: [])
+        MockClassRepository(rooms: Array(list.rooms), availableRooms: [])
       } else {
         previewRepository
       }
@@ -3275,10 +3284,10 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     existingRecommend.viewState = .loaded
     existingRecommend.selectedBattleId = ClassBattleSummary.mocks[0].id
     var ownerList = MyClassFeature.State()
-    ownerList.rooms = ClassRoom.mocks
+    ownerList.rooms = .init(uniqueElements: ClassRoom.mocks)
     ownerList.viewState = .loaded
     var memberList = MyClassFeature.State()
-    memberList.rooms = memberRooms
+    memberList.rooms = .init(uniqueElements: memberRooms)
     memberList.viewState = .loaded
     var ownerReport = ClassOwnerDashboardFeature.State(room: owner, instanceID: UUID())
     ownerReport.selectedTab = .report
@@ -3509,7 +3518,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         "final-vote-alert",
         "AI chat completed; final vote confirmation",
         AnyView(ClassAIChatView(store: Store(initialState: aiChatAlert) {
-          ClassAIChatFeature().dependency(\.classAIChatUseCase, MockClassAIChatUseCase())
+          ClassAIChatFeature().dependency(\.classDebateUseCase, MockClassRepository())
         }))
       ),
       frame(
@@ -3521,7 +3530,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
           room: aiRoom,
           battleID: -1_000_801,
           selectedOptionID: 1
-        )) { ClassAIChatFeature().dependency(\.classAIChatUseCase, MockClassAIChatUseCase()) }))
+        )) { ClassAIChatFeature().dependency(\.classDebateUseCase, MockClassRepository()) }))
       ),
       frame(
         28,
@@ -3537,6 +3546,35 @@ final class ClassFlowVisualAuditTests: XCTestCase {
         }))
       ),
     ]
+  }
+}
+
+private struct ClassDebateVisualStub: ClassDebateInterface {
+  let debate: ClassDebate
+  let fetches: LockIsolated<Int>
+  let replies: LockIsolated<Int>
+
+  func fetchDebate(classID _: Int) async throws -> ClassDebate {
+    fetches.withValue { $0 += 1 }
+    return debate
+  }
+
+  func startDebate(classID _: Int) async throws -> ClassDebate {
+    throw ClassAIChatError.noSession
+  }
+
+  func submitDebateReply(
+    classID _: Int,
+    round _: Int,
+    content _: String,
+    requestKey _: UUID
+  ) async throws -> ClassDebate {
+    replies.withValue { $0 += 1 }
+    return debate
+  }
+
+  func retryDebate(classID _: Int) async throws -> ClassDebate {
+    throw ClassAIChatError.noSession
   }
 }
 

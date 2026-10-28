@@ -1,10 +1,12 @@
 import AudioPlayerServiceInterface
 import BattleDomainInterface
 import ClassDomainInterface
+import CommentDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
 import PickeCoreUtility
+import PerspectiveDomainInterface
 
 @Reducer
 public struct ClassBattleFlowFeature {
@@ -17,24 +19,48 @@ public struct ClassBattleFlowFeature {
     public var viewState: ClassBattleFlowViewState = .loading
     public var session: ClassBattleSession?
     public var voteHistory: ClassVoteHistory?
+    public var voteStats: ClassVoteStats?
+    public var opensResultsDirectly = false
+    public var showsPreVoteLanding = false
+    public var hasSubmittedInCurrentSession = false
+    public var hasAdvancedInCurrentSession = false
+    public var hasPublishedPerspective: Bool?
     public var selectedOptionID: Int?
     public var draft = ""
     public var perspectives: [ClassPerspectiveItem] = []
+    public var perspectiveRows: [ClassPerspectiveRow] {
+      perspectives.enumerated().map { index, perspective in
+        ClassPerspectiveRow(
+          id: index,
+          perspective: perspective,
+          likeCountLabel: perspective.likeCount.decimalFormatted,
+          commentCountLabel: perspective.commentCount.decimalFormatted
+        )
+      }
+    }
+    public var pendingPerspectiveLikeResults: [Int: CommentLikeResult] = [:]
     public var nextPerspectiveCursor: String?
     public var hasMorePerspectives = false
     public var isLoadingPerspectives = false
+    public var refreshAfterPerspectiveDetail = false
     public var perspectiveErrorMessage: String?
     public var errorMessage: String?
     public var loadRequestID: UUID?
     public var submitRequestID: UUID?
     public var audioRequestID: UUID?
     public var perspectiveRequestID: UUID?
+    public var voteStatsRequestID: UUID?
+    public var perspectiveLikeRequestID: UUID?
+    public var myPerspectiveRequestID: UUID?
     public var isAudioReady = false
     public var isPlaying = false
     public var hasListened = false
     public var currentTime: TimeInterval = 0
     public var audioDuration: TimeInterval = 0
     public var playbackRate: Float = 1
+    public var transcript: [ClassBattleTranscriptLine] = []
+    public var selectedPerspectiveOptionID: Int?
+    public var perspectiveSort: String = "popular"
 
     public init() {}
 
@@ -52,25 +78,59 @@ public struct ClassBattleFlowFeature {
         return selectedOptionID != voteHistory?.preVote.optionID || hasListened
       case .ttsListening: return hasListened
       case .completed:
-        return session?.participationCompleted == true
-          || session?.commentRequired == false
-          || !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return !hasSubmittedInCurrentSession
+          && hasPublishedPerspective == false
+          && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       }
     }
 
     public var buttonTitle: String {
       guard let step else { return "불러오는 중" }
       switch step {
-      case .none: return "사전투표 하기"
+      case .none: return "사전 투표하기"
       case .preVote:
         return selectedOptionID != voteHistory?.preVote.optionID ? "사전투표 변경하기" : "청취 완료"
       case .ttsListening: return "청취 완료"
-      case .postVote: return "사후투표 제출하기"
+      case .postVote: return "최종 투표하기"
       case .completed:
-        if session?.participationCompleted == true || session?.commentRequired == false {
-          return "완료"
-        }
         return "의견 등록하기"
+      }
+    }
+
+    public var voteFooterButtonTitle: String {
+      step == .some(.completed) && showsPreVoteLanding ? "결과 보기" : buttonTitle
+    }
+
+    public var voteCategoryLabel: String? {
+      guard let category = room?.battle.categoryDisplayTitle, !category.isEmpty else { return nil }
+      return "#\(category)"
+    }
+
+    public var voteCommentCountLabel: String? {
+      room.map { String($0.battle.commentCount) }
+    }
+
+    public var voteDeadlineLabel: String? {
+      guard let closeAt = session?.closeAt else { return nil }
+      return closeAt.formatted(.dottedDateTimeWithWeekday) + "까지"
+    }
+
+    public var voteStatsPercentageLabels: [String] {
+      (voteStats?.options ?? []).map { option in
+        "\(option.ratio.formatted(.number.precision(.fractionLength(1))))%"
+      }
+    }
+
+    public var voteStatsOptionRows: [ClassVoteStatsOptionRow] {
+      guard let options = voteStats?.options else { return [] }
+      let labels = voteStatsPercentageLabels
+      return options.enumerated().map { index, option in
+        ClassVoteStatsOptionRow(
+          index: index,
+          option: option,
+          avatarFallback: avatarFallback(for: option.title),
+          percentageLabel: labels[index]
+        )
       }
     }
 
@@ -84,7 +144,8 @@ public struct ClassBattleFlowFeature {
     }
 
     public var shouldShowComposer: Bool {
-      step == .some(.completed) && session?.participationCompleted == false && session?.commentRequired == true
+      step == .some(.completed) && canParticipate
+        && hasPublishedPerspective == false && !hasSubmittedInCurrentSession
     }
 
     public var isAudioStep: Bool {
@@ -104,12 +165,44 @@ public struct ClassBattleFlowFeature {
       Int(max(0, audioDuration)).clockTimeText
     }
 
+    public var visibleTranscript: [ClassBattleTranscriptLine] {
+      transcript.filter { $0.startTime <= currentTime }
+    }
+
+    public var visibleTranscriptRows: [ClassBattleTranscriptRow] {
+      let lines = visibleTranscript
+      return lines.enumerated().map { index, line in
+        let isNewSpeaker = index == 0 || lines[index - 1].speakerName != line.speakerName
+        return ClassBattleTranscriptRow(
+          line: line,
+          avatarFallback: avatarFallback(for: line.speakerName),
+          showsHeader: isNewSpeaker,
+          isActive: index == lines.count - 1,
+          hasTopSpacing: index > 0 && isNewSpeaker
+        )
+      }
+    }
+
+    private func avatarFallback(for title: String) -> String {
+      let initial = String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1))
+      return initial.isEmpty ? "?" : initial
+    }
+
     public var displayTitle: String {
       session?.battle.title ?? room?.battle.title ?? ""
     }
 
     public var displaySummary: String {
       session?.battle.summary ?? room?.battle.summary ?? ""
+    }
+
+    public var opinionChangeLabel: String? {
+      guard let voteHistory else { return nil }
+      guard let changed = voteHistory.opinionChanged
+        ?? voteHistory.postVote.map({ $0.optionID != voteHistory.preVote.optionID }) else {
+        return nil
+      }
+      return changed ? "생각이 바뀌었어요" : "처음 생각을 유지했어요"
     }
 
     public var displayArtworkURL: URL? {
@@ -143,43 +236,61 @@ public struct ClassBattleFlowFeature {
     case retryTapped
     case retryAudioTapped
     case loadMorePerspectivesTapped
+    case retryMyPerspectiveTapped
     case backTapped
     case optionTapped(Int)
+    case preVoteResultTapped
+    case reportTapped
     case draftChanged(String)
     case submitTapped
     case playbackTapped
     case seekBy(TimeInterval)
+    case scrub(TimeInterval)
     case replayTapped
     case playbackRateSelected(Float)
+    case perspectiveOptionTapped(Int?)
+    case perspectiveSortTapped(String)
+    case perspectiveTapped(Int)
+    case perspectiveLikeTapped(Int)
   }
 
   public enum InnerAction: Equatable {
     case progressResponse(UUID, Result<ClassBattleProgress, ClassBattleError>)
-    case submissionResponse(UUID, Result<Bool, ClassBattleError>)
+    case submissionResponse(UUID, ClassBattleStep, Result<Bool, ClassBattleError>)
     case audioURLResponse(UUID, Result<URL, ClassBattleError>)
+    case transcriptLoaded(UUID, [ClassBattleTranscriptLine])
     case audioLoaded(UUID, Bool, TimeInterval)
     case playerTimeUpdated(UUID, TimeInterval)
     case perspectivePageResponse(UUID, Result<ClassPerspectivePage, ClassBattleError>)
+    case voteStatsResponse(UUID, Result<ClassVoteStats, ClassBattleError>)
+    case perspectiveLikeResponse(UUID, Int, Result<CommentLikeResult, ClassBattleError>)
+    case myPerspectiveResponse(UUID, Result<[ClassPerspectiveItem], ClassBattleError>)
   }
 
   @CasePathable
   public enum DelegateAction: Equatable {
     case dismiss
-    case completed(classID: Int)
+    case openReport(classID: Int)
+    case openPerspective(Int)
   }
 
   public enum CancelID: Hashable, Sendable {
     case load(UUID)
     case submit(UUID)
     case audio(UUID)
+    case playback(UUID)
     case time(UUID)
     case perspectives(UUID)
+    case voteStats(UUID)
+    case perspectiveLike(UUID)
+    case myPerspective(UUID)
   }
 
   @Dependency(\.uuid) private var uuid
   @Dependency(\.classBattleUseCase) private var classUseCase
   @Dependency(\.battleUseCase) private var battleUseCase
   @Dependency(\.audioPlayer) private var audioPlayer
+  @Dependency(\.perspectiveUseCase) private var perspectiveUseCase
 
   public var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -203,23 +314,46 @@ extension ClassBattleFlowFeature {
       if state.session == nil || state.viewState == .loading {
         return loadProgress(state: &state)
       }
-      if state.isAudioStep, let battleID = state.session?.battle.id {
+      if state.isAudioStep, !state.showsPreVoteLanding,
+         let battleID = state.session?.battle.id {
         if state.isAudioReady {
           return observePlayerTime(instanceID: state.instanceID)
         }
         return loadAudio(state: &state, battleID: battleID)
       }
-      if state.step == .some(.completed), state.perspectives.isEmpty,
-         state.perspectiveRequestID == nil
+      if state.step == .some(.completed), state.perspectiveRequestID == nil
       {
-        return loadPerspectives(state: &state, cursor: nil)
+        let shouldRefresh = state.refreshAfterPerspectiveDetail
+        state.refreshAfterPerspectiveDetail = false
+        if shouldRefresh { state.hasSubmittedInCurrentSession = false }
+        return .merge(
+          state.perspectives.isEmpty || shouldRefresh
+            ? loadPerspectives(state: &state, cursor: nil, preserveExisting: shouldRefresh) : .none,
+          state.voteStats == nil ? loadVoteStats(state: &state) : .none,
+          (state.hasPublishedPerspective == nil || shouldRefresh)
+            && state.myPerspectiveRequestID == nil
+            ? loadMyPerspectives(state: &state) : .none
+        )
       }
       return .none
     case .onDisappear:
+      if state.perspectiveLikeRequestID != nil {
+        // A cancelled request may already have changed the server's like state.
+        state.perspectives = []
+      }
+      if state.submitRequestID != nil {
+        // The server may have accepted a request before its client effect was cancelled.
+        state.viewState = .loading
+        state.hasPublishedPerspective = nil
+      }
       state.loadRequestID = nil
       state.submitRequestID = nil
       state.audioRequestID = nil
       state.perspectiveRequestID = nil
+      state.perspectiveLikeRequestID = nil
+      state.pendingPerspectiveLikeResults = [:]
+      state.voteStatsRequestID = nil
+      state.myPerspectiveRequestID = nil
       state.isLoadingPerspectives = false
       state.isPlaying = false
       return stopAudio(instanceID: state.instanceID)
@@ -235,6 +369,11 @@ extension ClassBattleFlowFeature {
             state.perspectiveRequestID == nil else { return .none }
       let cursor = state.nextPerspectiveCursor
       return loadPerspectives(state: &state, cursor: cursor)
+    case .retryMyPerspectiveTapped:
+      guard state.step == .some(.completed), state.hasPublishedPerspective == nil,
+            state.myPerspectiveRequestID == nil else { return .none }
+      state.perspectiveErrorMessage = nil
+      return loadMyPerspectives(state: &state)
     case .backTapped:
       let instanceID = state.instanceID
       return .concatenate(
@@ -251,6 +390,14 @@ extension ClassBattleFlowFeature {
       state.selectedOptionID = optionID
       state.errorMessage = nil
       return .none
+    case .preVoteResultTapped:
+      guard state.step == .some(.completed), state.showsPreVoteLanding else { return .none }
+      state.showsPreVoteLanding = false
+      return .none
+    case .reportTapped:
+      guard state.step == .some(.completed), state.submitRequestID == nil,
+            let classID = state.room?.id else { return .none }
+      return .send(.delegate(.openReport(classID: classID)))
     case let .draftChanged(text):
       state.draft = text
       state.errorMessage = nil
@@ -258,12 +405,6 @@ extension ClassBattleFlowFeature {
     case .submitTapped:
       guard state.canSubmit else { return .none }
       guard let step = state.step else { return .none }
-      if step == .completed,
-         state.session?.participationCompleted == true || state.session?.commentRequired == false
-      {
-        guard let room = state.room else { return .none }
-        return .send(.delegate(.completed(classID: room.id)))
-      }
       let requestID = uuid()
       state.submitRequestID = requestID
       state.errorMessage = nil
@@ -295,7 +436,7 @@ extension ClassBattleFlowFeature {
           return true
         }.mapError(Self.mapError)
         guard !Task.isCancelled else { return }
-        await send(.inner(.submissionResponse(requestID, result)))
+        await send(.inner(.submissionResponse(requestID, step, result)))
       }
       .cancellable(id: CancelID.submit(state.instanceID), cancelInFlight: true)
     case .playbackTapped:
@@ -304,9 +445,15 @@ extension ClassBattleFlowFeature {
       return .run { [player = audioPlayer, shouldPlay = state.isPlaying] _ in
         if shouldPlay { await player.play() } else { await player.pause() }
       }
+      .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .seekBy(delta):
       guard state.isAudioStep, state.isAudioReady else { return .none }
       let target = min(state.audioDuration, max(0, state.currentTime + delta))
+      state.currentTime = target
+      return .run { [player = audioPlayer] _ in await player.seek(to: target) }
+    case let .scrub(time):
+      guard state.isAudioStep, state.isAudioReady, state.hasListened else { return .none }
+      let target = min(state.audioDuration, max(0, time))
       state.currentTime = target
       return .run { [player = audioPlayer] _ in await player.seek(to: target) }
     case .replayTapped:
@@ -317,10 +464,42 @@ extension ClassBattleFlowFeature {
         await player.seek(to: 0)
         await player.play()
       }
+      .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .playbackRateSelected(rate):
       guard state.isAudioStep, state.isAudioReady else { return .none }
       state.playbackRate = rate
       return .run { [player = audioPlayer] _ in await player.setPlaybackRate(rate) }
+    case let .perspectiveOptionTapped(optionID):
+      guard state.step == .some(.completed), state.selectedPerspectiveOptionID != optionID else { return .none }
+      state.selectedPerspectiveOptionID = optionID
+      return loadPerspectives(state: &state, cursor: nil)
+    case let .perspectiveSortTapped(sort):
+      guard state.step == .some(.completed), ["popular", "latest"].contains(sort),
+            state.perspectiveSort != sort else { return .none }
+      state.perspectiveSort = sort
+      return loadPerspectives(state: &state, cursor: nil)
+    case let .perspectiveTapped(id):
+      guard state.step == .some(.completed), state.submitRequestID == nil,
+            state.perspectives.contains(where: { $0.id == id }) else { return .none }
+      state.refreshAfterPerspectiveDetail = true
+      return .send(.delegate(.openPerspective(id)))
+    case let .perspectiveLikeTapped(id):
+      guard state.step == .some(.completed), state.canParticipate,
+            state.perspectiveLikeRequestID == nil,
+            let item = state.perspectives.first(where: { $0.id == id }),
+            item.isMyPerspective == false else { return .none }
+      let requestID = uuid()
+      state.perspectiveLikeRequestID = requestID
+      return .run { [useCase = perspectiveUseCase, isLiked = item.isLiked] send in
+        let result = await Result {
+          if isLiked {
+            return try await useCase.unlikePerspective(perspectiveId: id)
+          }
+          return try await useCase.likePerspective(perspectiveId: id)
+        }.mapError(Self.mapError)
+        await send(.inner(.perspectiveLikeResponse(requestID, id, result)))
+      }
+      .cancellable(id: CancelID.perspectiveLike(state.instanceID), cancelInFlight: true)
     }
   }
 
@@ -357,18 +536,32 @@ extension ClassBattleFlowFeature {
         state.viewState = .loaded
         state.session = progress.session
         state.voteHistory = progress.voteHistory
+        if progress.session.battle.currentStep == .completed {
+          if state.hasSubmittedInCurrentSession
+            || (progress.session.commentRequired && progress.session.participationCompleted) {
+            state.hasPublishedPerspective = true
+          } else if progress.session.commentRequired {
+            state.hasPublishedPerspective = false
+          }
+        }
+        state.showsPreVoteLanding = progress.session.battle.currentStep == .completed
+          && progress.session.participationCompleted
+          && !state.opensResultsDirectly
+          && !state.hasAdvancedInCurrentSession
         state.selectedOptionID = progress.session.battle.currentStep == .preVote
           ? progress.voteHistory?.preVote.optionID
           : progress.session.battle.currentStep == .completed
             ? progress.voteHistory?.postVote?.optionID
             : nil
-        if state.isAudioStep {
+        if state.isAudioStep, !state.showsPreVoteLanding {
           return loadAudio(state: &state, battleID: progress.session.battle.id)
         }
         if progress.session.battle.currentStep == .completed {
           return .merge(
             stopPlayback(instanceID: state.instanceID),
-            loadPerspectives(state: &state, cursor: nil)
+            loadPerspectives(state: &state, cursor: nil),
+            loadVoteStats(state: &state),
+            state.hasPublishedPerspective == nil ? loadMyPerspectives(state: &state) : .none
           )
         }
         return stopPlayback(instanceID: state.instanceID)
@@ -377,12 +570,17 @@ extension ClassBattleFlowFeature {
         state.errorMessage = error.message
         return .none
       }
-    case let .submissionResponse(requestID, result):
+    case let .submissionResponse(requestID, submittedStep, result):
       guard state.submitRequestID == requestID else { return .none }
       state.submitRequestID = nil
       switch result {
       case .success:
         state.draft = ""
+        state.hasAdvancedInCurrentSession = true
+        if submittedStep == .completed {
+          state.hasSubmittedInCurrentSession = true
+          state.hasPublishedPerspective = true
+        }
         return loadProgress(state: &state)
       case let .failure(error):
         state.errorMessage = error.message
@@ -415,9 +613,14 @@ extension ClassBattleFlowFeature {
       state.audioDuration = duration
       state.isPlaying = true
       return .merge(
-        .run { [player = audioPlayer] _ in await player.play() },
+        .run { [player = audioPlayer] _ in await player.play() }
+          .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true),
         observePlayerTime(instanceID: state.instanceID)
       )
+    case let .transcriptLoaded(requestID, transcript):
+      guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
+      state.transcript = transcript
+      return .none
     case let .playerTimeUpdated(instanceID, time):
       guard state.instanceID == instanceID, state.isAudioStep,
             state.isAudioReady else { return .none }
@@ -427,6 +630,7 @@ extension ClassBattleFlowFeature {
       guard state.isPlaying else { return .none }
       state.isPlaying = false
       return .run { [player = audioPlayer] _ in await player.pause() }
+        .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .perspectivePageResponse(requestID, result):
       guard state.perspectiveRequestID == requestID else { return .none }
       state.perspectiveRequestID = nil
@@ -438,9 +642,52 @@ extension ClassBattleFlowFeature {
         } else {
           state.perspectives.append(contentsOf: page.items)
         }
+        let pendingLikeResults = state.pendingPerspectiveLikeResults
+        state.perspectives = state.perspectives.map { item in
+          guard let likeResult = pendingLikeResults[item.id] else { return item }
+          return Self.updatingLike(item, with: likeResult)
+        }
         state.nextPerspectiveCursor = page.nextCursor
         state.hasMorePerspectives = page.hasNext
         state.perspectiveErrorMessage = nil
+      case let .failure(error):
+        state.perspectiveErrorMessage = error.message
+      }
+      state.pendingPerspectiveLikeResults = [:]
+      return .none
+    case let .voteStatsResponse(requestID, result):
+      guard state.voteStatsRequestID == requestID else { return .none }
+      state.voteStatsRequestID = nil
+      if case let .success(stats) = result {
+        state.voteStats = stats
+      }
+      return .none
+    case let .perspectiveLikeResponse(requestID, id, result):
+      guard state.perspectiveLikeRequestID == requestID else { return .none }
+      state.perspectiveLikeRequestID = nil
+      switch result {
+      case let .success(likeResult):
+        guard likeResult.perspectiveId == id else {
+          state.perspectiveErrorMessage = ClassBattleError.invalidResponse.message
+          return .none
+        }
+        if state.perspectiveRequestID != nil {
+          state.pendingPerspectiveLikeResults[id] = likeResult
+        }
+        if let index = state.perspectives.firstIndex(where: { $0.id == id }) {
+          state.perspectives[index] = Self.updatingLike(state.perspectives[index], with: likeResult)
+        }
+        return .none
+      case let .failure(error):
+        state.perspectiveErrorMessage = error.message
+        return .none
+      }
+    case let .myPerspectiveResponse(requestID, result):
+      guard state.myPerspectiveRequestID == requestID else { return .none }
+      state.myPerspectiveRequestID = nil
+      switch result {
+      case let .success(items):
+        state.hasPublishedPerspective = !items.isEmpty || state.hasSubmittedInCurrentSession
       case let .failure(error):
         state.perspectiveErrorMessage = error.message
       }
@@ -448,27 +695,59 @@ extension ClassBattleFlowFeature {
     }
   }
 
+  private func loadMyPerspectives(state: inout State) -> Effect<Action> {
+    guard let classID = state.room?.id else { return .none }
+    let requestID = uuid()
+    state.myPerspectiveRequestID = requestID
+    return .run { [useCase = classUseCase] send in
+      let result = await Result {
+        try await useCase.fetchMyPerspectives(classID: classID)
+      }.mapError(Self.mapError)
+      guard !Task.isCancelled else { return }
+      await send(.inner(.myPerspectiveResponse(requestID, result)))
+    }
+    .cancellable(id: CancelID.myPerspective(state.instanceID), cancelInFlight: true)
+  }
+
+  private func loadVoteStats(state: inout State) -> Effect<Action> {
+    guard let classID = state.room?.id else { return .none }
+    let requestID = uuid()
+    state.voteStatsRequestID = requestID
+    return .run { [useCase = classUseCase] send in
+      let result = await Result {
+        try await useCase.fetchVoteStats(classID: classID)
+      }.mapError(Self.mapError)
+      guard !Task.isCancelled else { return }
+      await send(.inner(.voteStatsResponse(requestID, result)))
+    }
+    .cancellable(id: CancelID.voteStats(state.instanceID), cancelInFlight: true)
+  }
+
   private func loadPerspectives(
     state: inout State,
-    cursor: String?
+    cursor: String?,
+    preserveExisting: Bool = false
   ) -> Effect<Action> {
     guard let classID = state.room?.id else { return .none }
     let requestID = uuid()
     state.perspectiveRequestID = requestID
+    state.pendingPerspectiveLikeResults = [:]
     state.isLoadingPerspectives = true
     state.perspectiveErrorMessage = nil
     if cursor == nil {
       state.nextPerspectiveCursor = nil
-      state.perspectives = []
+      if !preserveExisting { state.perspectives = [] }
     }
+    let optionID = state.selectedPerspectiveOptionID
+    let sort = state.perspectiveSort
     return .run { [useCase = classUseCase] send in
       let result = await Result {
         try await useCase.fetchPerspectives(
           classID: classID,
           cursor: cursor,
           size: nil,
-          optionID: nil,
-          sort: "latest"
+          optionID: optionID,
+          sort: sort
         )
       }.mapError(Self.mapError)
       guard !Task.isCancelled else { return }
@@ -493,10 +772,18 @@ extension ClassBattleFlowFeature {
           let url = URL(string: rawURL),
           ["http", "https"].contains(url.scheme?.lowercased() ?? "")
         else { throw ClassBattleError.invalidResponse }
-        return url
+        return (url, ClassBattleTranscriptLine.from(scenario: scenario))
       }.mapError(Self.mapError)
       guard !Task.isCancelled else { return }
-      await send(.inner(.audioURLResponse(requestID, result)))
+      switch result {
+      case let .success((url, transcript)):
+        if !transcript.isEmpty {
+          await send(.inner(.transcriptLoaded(requestID, transcript)))
+        }
+        await send(.inner(.audioURLResponse(requestID, .success(url))))
+      case let .failure(error):
+        await send(.inner(.audioURLResponse(requestID, .failure(error))))
+      }
     }
     .cancellable(id: CancelID.audio(state.instanceID), cancelInFlight: true)
   }
@@ -516,15 +803,39 @@ extension ClassBattleFlowFeature {
       .cancel(id: CancelID.load(instanceID)),
       .cancel(id: CancelID.submit(instanceID)),
       .cancel(id: CancelID.perspectives(instanceID)),
+      .cancel(id: CancelID.perspectiveLike(instanceID)),
+      .cancel(id: CancelID.myPerspective(instanceID)),
+      .cancel(id: CancelID.voteStats(instanceID)),
       stopPlayback(instanceID: instanceID)
     )
   }
 
   private func stopPlayback(instanceID: UUID) -> Effect<Action> {
-    .merge(
-      .cancel(id: CancelID.audio(instanceID)),
-      .cancel(id: CancelID.time(instanceID)),
+    .concatenate(
+      .merge(
+        .cancel(id: CancelID.audio(instanceID)),
+        .cancel(id: CancelID.playback(instanceID)),
+        .cancel(id: CancelID.time(instanceID))
+      ),
       .run { [player = audioPlayer] _ in await player.pause() }
+    )
+  }
+
+  private static func updatingLike(
+    _ item: ClassPerspectiveItem,
+    with result: CommentLikeResult
+  ) -> ClassPerspectiveItem {
+    ClassPerspectiveItem(
+      id: item.id,
+      author: item.author,
+      option: item.option,
+      content: item.content,
+      likeCount: result.likeCount,
+      commentCount: item.commentCount,
+      isLiked: result.isLiked,
+      isMyPerspective: item.isMyPerspective,
+      status: item.status,
+      createdAt: item.createdAt
     )
   }
 

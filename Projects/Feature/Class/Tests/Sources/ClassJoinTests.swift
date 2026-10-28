@@ -51,7 +51,7 @@ struct ClassJoinTests {
       ClassJoinFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
-      $0.classUseCase = StubClassUseCase(fetchClass: { _ in room })
+      $0.classRoomUseCase = StubClassUseCase(fetchClass: { _ in room })
     }
 
     await store.send(.binding(.set(\.joinCode, " pk9t3s "))) {
@@ -79,7 +79,7 @@ struct ClassJoinTests {
       ClassJoinFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
-      $0.classUseCase = StubClassUseCase(joinClass: { code, nickname in
+      $0.classRoomUseCase = StubClassUseCase(joinClass: { code, nickname in
         #expect(code == room.joinCode)
         #expect(nickname == "민지")
         return room
@@ -120,7 +120,7 @@ struct ClassJoinTests {
         return ClassMember(id: 1, name: name, isOwner: true)
       }
       $0.uuid = .constant(requestID)
-      $0.classUseCase = StubClassUseCase(joinClass: { _, _ in
+      $0.classRoomUseCase = StubClassUseCase(joinClass: { _, _ in
         Issue.record("운영자 이름 저장에서 joinClass를 호출하면 안 됩니다.")
         throw ClassError.invalidCode
       })
@@ -298,7 +298,7 @@ struct ClassJoinTests {
       ClassJoinFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
-      $0.classUseCase = StubClassUseCase(joinClass: { _, _ in room })
+      $0.classRoomUseCase = StubClassUseCase(joinClass: { _, _ in room })
     }
 
     await store.send(.view(.joinTapped))
@@ -328,7 +328,7 @@ struct ClassJoinTests {
       ClassJoinFeature()
     } withDependencies: {
       $0.uuid = .constant(requestID)
-      $0.classUseCase = StubClassUseCase(fetchClass: { _ in
+      $0.classRoomUseCase = StubClassUseCase(fetchClass: { _ in
         throw ClassError.invalidCode
       })
     }
@@ -458,17 +458,11 @@ struct ClassJoinTests {
   }
 }
 
-private struct StubClassUseCase: ClassInterface {
+private struct StubClassUseCase: ClassRoomInterface {
   var fetchClass: @Sendable (String) async throws -> ClassRoom = { _ in .mockJoinable }
   var joinClass: @Sendable (String, String) async throws -> ClassRoom = { _, _ in .mockJoinable }
 
   func fetchMyClasses() async throws -> [ClassRoom] {
-    []
-  }
-
-  func fetchRecommendedBattles(
-    filter _: ClassTopicFilter
-  ) async throws -> [ClassBattleSummary] {
     []
   }
 
@@ -496,13 +490,6 @@ private struct StubClassUseCase: ClassInterface {
 
   func leaveClass(id _: Int) async throws {}
 
-  func fetchReport(roomID _: Int) async throws -> ClassReport? {
-    nil
-  }
-
-  func fetchOwnerDashboard(roomID _: Int) async throws -> ClassOwnerDashboardData? {
-    nil
-  }
 }
 
 private struct StubClassMemberUseCase: ClassMemberInterface {

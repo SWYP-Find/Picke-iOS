@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Picke Class Design Audit</title>
+  <style>
+    :root { font-family: Inter, -apple-system, sans-serif; color: var(--figma-color-text, #222); background: var(--figma-color-bg, #fff); }
+    body { margin: 0; padding: 20px; }
+    h1 { margin: 0 0 6px; font-size: 18px; }
+    p { margin: 0 0 18px; color: var(--figma-color-text-secondary, #666); font-size: 12px; line-height: 1.5; }
+    #file { overflow-wrap: anywhere; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--figma-color-border, #ddd); }
+    .node { min-width: 0; }
+    .node strong { display: block; font-size: 13px; }
+    .node small { color: var(--figma-color-text-secondary, #666); }
+    button { border: 1px solid var(--figma-color-border, #aaa); border-radius: 5px; background: var(--figma-color-bg, #fff); color: var(--figma-color-text, #222); padding: 8px 10px; cursor: pointer; white-space: nowrap; }
+    button:disabled { opacity: .5; cursor: wait; }
+    #all { width: 100%; margin-top: 20px; color: #fff; background: #8d3d28; border-color: #8d3d28; font-weight: 600; }
+    #status { min-height: 44px; margin-top: 14px; font-size: 12px; white-space: pre-wrap; }
+    .error { color: #c33; }
+    .compare { margin-top: 20px; padding: 12px; border: 1px solid var(--figma-color-border, #ddd); border-radius: 6px; }
+    .compare label { display: block; margin: 8px 0; font-size: 12px; }
+    .compare select, .compare input { max-width: 100%; margin-top: 5px; }
+    #diff { display: none; width: 100%; margin-top: 10px; image-rendering: auto; }
+  </style>
+</head>
+<body>
+  <h1>클래스 확정 시안 내보내기</h1>
+  <p>열린 Figma 파일: <span id="file">확인 중…</span><br>지정한 5개 노드만 읽습니다. 파일을 수정하거나 외부로 전송하지 않습니다.</p>
+  <div id="rows"></div>
+  <button id="all" disabled>전체 ZIP 내려받기</button>
+  <section class="compare">
+    <strong>앱 화면 대조</strong>
+    <p>Device Hub에서 화면 부분만 잘라낸 PNG를 선택하세요. 상태 표시줄과 기기 테두리는 제외해야 합니다. 픽셀 차이는 화면 상태와 글꼴 렌더링의 영향도 받습니다.</p>
+    <label>확정 시안 <select id="compare-node"></select></label>
+    <label>앱 캡처 PNG <input id="compare-file" type="file" accept="image/png,image/jpeg"></label>
+    <button id="compare-button" disabled>차이 이미지 만들기</button>
+    <div id="compare-result" role="status"></div>
+    <canvas id="diff"></canvas>
+    <button id="diff-download" style="display:none">차이 PNG 내려받기</button>
+  </section>
+  <div id="status" role="status" aria-live="polite"></div>
+  <script>
+    const rows = document.getElementById('rows');
+    const allButton = document.getElementById('all');
+    const status = document.getElementById('status');
+    const encoder = new TextEncoder();
+    const compareNode = document.getElementById('compare-node');
+    const compareFile = document.getElementById('compare-file');
+    const compareButton = document.getElementById('compare-button');
+    const compareResult = document.getElementById('compare-result');
+    const diffCanvas = document.getElementById('diff');
+    const diffDownload = document.getElementById('diff-download');
+    let comparisonFile = null;
+
+    function setBusy(busy) {
+      document.querySelectorAll('button').forEach(button => { button.disabled = busy; });
+    }
+
+    function fileStem(result) {
+      return 'picke-class-' + result.id.replace(':', '-');
+    }
+
+    function download(bytes, name, mime) {
+      const blob = new Blob([bytes], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = name;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+
+    // ZIP stored entries: no dependency, no network, and no lossy image re-encoding.
+    const crcTable = Array.from({ length: 256 }, (_, n) => {
+      let value = n;
+      for (let i = 0; i < 8; i++) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+      return value >>> 0;
+    });
+
+    function crc32(data) {
+      let value = 0xffffffff;
+      for (const byte of data) value = crcTable[(value ^ byte) & 255] ^ (value >>> 8);
+      return (value ^ 0xffffffff) >>> 0;
+    }
+
+    function zip(entries) {
+      const parts = [];
+      const central = [];
+      let offset = 0;
+      for (const entry of entries) {
+        const name = encoder.encode(entry.name);
+        const data = entry.data;
+        const crc = crc32(data);
+        const local = new Uint8Array(30 + name.length);
+        const view = new DataView(local.buffer);
+        view.setUint32(0, 0x04034b50, true);
+        view.setUint16(4, 20, true);
+        view.setUint16(6, 0x0800, true);
+        view.setUint16(26, name.length, true);
+        view.setUint32(14, crc, true);
+        view.setUint32(18, data.length, true);
+        view.setUint32(22, data.length, true);
+        local.set(name, 30);
+        parts.push(local, data);
+
+        const record = new Uint8Array(46 + name.length);
+        const recordView = new DataView(record.buffer);
+        recordView.setUint32(0, 0x02014b50, true);
+        recordView.setUint16(4, 20, true);
+        recordView.setUint16(6, 20, true);
+        recordView.setUint16(8, 0x0800, true);
+        recordView.setUint32(16, crc, true);
+        recordView.setUint32(20, data.length, true);
+        recordView.setUint32(24, data.length, true);
+        recordView.setUint16(28, name.length, true);
+        recordView.setUint32(42, offset, true);
+        record.set(name, 46);
+        central.push(record);
+        offset += local.length + data.length;
+      }
+      const centralSize = central.reduce((total, record) => total + record.length, 0);
+      const end = new Uint8Array(22);
+      const endView = new DataView(end.buffer);
+      endView.setUint32(0, 0x06054b50, true);
+      endView.setUint16(8, entries.length, true);
+      endView.setUint16(10, entries.length, true);
+      endView.setUint32(12, centralSize, true);
+      endView.setUint32(16, offset, true);
+      return new Blob([...parts, ...central, end], { type: 'application/zip' });
+    }
+
+    function asEntries(results) {
+      return results.flatMap(result => {
+        const stem = fileStem(result);
+        return [
+          { name: stem + '.png', data: new Uint8Array(result.png) },
+          { name: stem + '.json', data: encoder.encode(JSON.stringify(result.structure, null, 2)) },
+        ];
+      });
+    }
+
+    async function compare(result, file) {
+      const reference = await createImageBitmap(new Blob([new Uint8Array(result.png)], { type: 'image/png' }));
+      const capture = await createImageBitmap(file);
+      const width = reference.width;
+      const height = reference.height;
+      const referenceCanvas = document.createElement('canvas');
+      const captureCanvas = document.createElement('canvas');
+      referenceCanvas.width = captureCanvas.width = diffCanvas.width = width;
+      referenceCanvas.height = captureCanvas.height = diffCanvas.height = height;
+      const referenceContext = referenceCanvas.getContext('2d', { willReadFrequently: true });
+      const captureContext = captureCanvas.getContext('2d', { willReadFrequently: true });
+      referenceContext.drawImage(reference, 0, 0);
+      captureContext.drawImage(capture, 0, 0, width, height);
+      const expected = referenceContext.getImageData(0, 0, width, height).data;
+      const actual = captureContext.getImageData(0, 0, width, height).data;
+      const context = diffCanvas.getContext('2d');
+      const output = context.createImageData(width, height);
+      let changed = 0;
+      for (let pixel = 0; pixel < width * height; pixel++) {
+        const offset = pixel * 4;
+        const delta = Math.max(
+          Math.abs(expected[offset] - actual[offset]),
+          Math.abs(expected[offset + 1] - actual[offset + 1]),
+          Math.abs(expected[offset + 2] - actual[offset + 2])
+        );
+        if (delta > 30) changed++;
+        output.data[offset] = delta > 30 ? 220 : actual[offset] / 3;
+        output.data[offset + 1] = delta > 30 ? 50 : actual[offset + 1] / 3;
+        output.data[offset + 2] = delta > 30 ? 50 : actual[offset + 2] / 3;
+        output.data[offset + 3] = 255;
+      }
+      context.putImageData(output, 0, 0);
+      diffCanvas.style.display = 'block';
+      diffDownload.style.display = 'inline-block';
+      compareResult.textContent = `Figma ${width}×${height} / 앱 ${capture.width}×${capture.height}; 임계값 30 초과 픽셀 ${((changed / (width * height)) * 100).toFixed(1)}%. 빨간색은 차이 영역입니다.`;
+      reference.close();
+      capture.close();
+    }
+
+    window.onmessage = event => {
+      const message = event.data.pluginMessage;
+      if (!message) return;
+      if (message.type === 'ready') {
+        document.getElementById('file').textContent = message.fileName;
+        for (const target of message.targets) {
+          const row = document.createElement('div');
+          row.className = 'row';
+          const node = document.createElement('div');
+          node.className = 'node';
+          const title = document.createElement('strong');
+          title.textContent = target.label;
+          const id = document.createElement('small');
+          id.textContent = target.id;
+          node.append(title, id);
+          const button = document.createElement('button');
+          button.textContent = 'PNG + JSON';
+          button.onclick = () => parent.postMessage({ pluginMessage: { type: 'export-one', id: target.id } }, '*');
+          row.append(node, button);
+          rows.appendChild(row);
+          const option = document.createElement('option');
+          option.value = target.id;
+          option.textContent = target.label + ' (' + target.id + ')';
+          compareNode.appendChild(option);
+        }
+        allButton.disabled = false;
+        compareButton.disabled = false;
+      } else if (message.type === 'busy') {
+        setBusy(true);
+        status.className = '';
+        status.textContent = message.count + '개 노드를 읽고 있습니다…';
+      } else if (message.type === 'exported') {
+        setBusy(false);
+        if (comparisonFile) {
+          const file = comparisonFile;
+          comparisonFile = null;
+          if (message.results.length) {
+            compare(message.results[0], file).catch(error => {
+              compareResult.textContent = '대조 실패: ' + error.message;
+            });
+          } else {
+            compareResult.textContent = message.errors.map(error => error.message).join('\n');
+          }
+          return;
+        }
+        const entries = asEntries(message.results);
+        if (message.bundle && entries.length) {
+          download(zip(entries), 'picke-class-figma-audit.zip', 'application/zip');
+        } else {
+          for (const entry of entries) {
+            download(entry.data, entry.name, entry.name.endsWith('.png') ? 'image/png' : 'application/json');
+          }
+        }
+        status.className = message.errors.length ? 'error' : '';
+        status.textContent = message.results.length + '개 내보냄' + (message.errors.length
+          ? '\n' + message.errors.map(error => error.id + ': ' + error.message).join('\n')
+          : '');
+      } else if (message.type === 'error') {
+        comparisonFile = null;
+        setBusy(false);
+        status.className = 'error';
+        status.textContent = message.message;
+        compareResult.textContent = message.message;
+      }
+    };
+
+    allButton.onclick = () => parent.postMessage({ pluginMessage: { type: 'export-all' } }, '*');
+    compareButton.onclick = () => {
+      if (!compareFile.files.length) {
+        compareResult.textContent = '앱 캡처 PNG를 먼저 선택하세요.';
+        return;
+      }
+      comparisonFile = compareFile.files[0];
+      compareResult.textContent = 'Figma 노드를 읽고 대조하는 중…';
+      parent.postMessage({ pluginMessage: { type: 'export-one', id: compareNode.value } }, '*');
+    };
+    diffDownload.onclick = () => diffCanvas.toBlob(blob => {
+      if (blob) download(blob, fileStem({ id: compareNode.value }) + '-diff.png', 'image/png');
+    });
+    parent.postMessage({ pluginMessage: { type: 'init' } }, '*');
+  </script>
+</body>
+</html>

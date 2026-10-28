@@ -11,6 +11,23 @@ import Testing
 
 @MainActor
 struct ClassReportTests {
+  @Test
+  func 주요_의견_표시값은_인용문_우선순위와_목록_순서를_따른다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    state.insight = ClassAIInsight(
+      text: "요약",
+      highlights: [
+        ClassAIFeedbackEvidence(sourceID: 7, content: "첫 원문", quote: "첫 인용"),
+        ClassAIFeedbackEvidence(sourceID: 7, content: "두 번째 원문")
+      ]
+    )
+
+    #expect(state.highlightRows == [
+      ClassReportHighlightRow(id: 0, title: "주요 의견 1", text: "첫 인용", isLast: false),
+      ClassReportHighlightRow(id: 1, title: "주요 의견 2", text: "두 번째 원문", isLast: true)
+    ])
+  }
+
   private struct ResultStub: ClassResultInterface {
     let result: Result<ClassResult, ClassError>
     let feedback: ClassAIPersonalFeedback?
@@ -23,11 +40,11 @@ struct ClassReportTests {
       self.feedback = feedback
     }
 
-    func fetch(roomID _: Int) async throws -> ClassResult {
+    func fetchResult(roomID _: Int) async throws -> ClassResult {
       try result.get()
     }
 
-    func fetchPersonal(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
       guard let feedback else { throw ClassAIFeedbackError.temporarilyUnavailable }
       return feedback
     }
@@ -43,7 +60,8 @@ struct ClassReportTests {
 
   private func result(
     room: ClassRoom,
-    reportState: String?
+    reportState: String?,
+    postVoteRatio: Double = 54.5
   ) -> ClassResult {
     ClassResult(
       classID: room.id,
@@ -56,7 +74,7 @@ struct ClassReportTests {
         commentWriterCount: 9,
         commentRate: 75,
         postVoteCount: 11,
-        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: 54.5)]
+        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: postVoteRatio)]
       ),
       myReportState: reportState,
       insightState: nil
@@ -65,14 +83,115 @@ struct ClassReportTests {
 
   @Test
   func 서버_결과_표시값은_State에서_계산한다() throws {
-    var state = ClassReportFeature.State(room: .mockClosedSociety)
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
     state.classResult = result(room: .mockClosedSociety, reportState: "SUCCEEDED")
     #expect(state.serverActiveMemberCount == "12")
     #expect(state.serverCompletedCount == "10")
     #expect(state.serverPostVoteCount == "11")
     #expect(state.serverParticipationSummary == "참여율 83.3% · 의견 작성률 75.0%")
+    #expect(state.serverParticipationRate == "83.3%")
+    #expect(state.serverCommentRate == "75%")
+    #expect(state.serverParticipationCount == "10 / 12명")
+    #expect(state.serverCommentCount == "9 / 12명")
+    #expect(abs(state.serverParticipationProgress - 0.833) < 0.0001)
+    #expect(abs(state.serverCommentProgress - 0.75) < 0.0001)
     let option = try #require(state.classResult?.stats.options.first)
     #expect(state.serverOptionCounts[option.id] == "사전 8 · 사후 6")
+    #expect(state.serverDistributionTotalText == "11명")
+    #expect(abs(state.serverDistributionProgress - 0.545) < 0.0001)
+    #expect(state.serverDistributionOptionCountTexts[option.id] == "6명")
+    #expect(state.serverDistributionOptionRatioTexts[option.id] == "54.5%")
+
+    state.classResult = result(
+      room: .mockClosedSociety,
+      reportState: "SUCCEEDED",
+      postVoteRatio: -10
+    )
+    #expect(state.serverDistributionProgress == 0)
+    state.classResult = result(
+      room: .mockClosedSociety,
+      reportState: "SUCCEEDED",
+      postVoteRatio: 110
+    )
+    #expect(state.serverDistributionProgress == 1)
+  }
+
+  @Test
+  func 개인_결과의_입장_및_활동_표시값은_State에서_계산한다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    #expect(state.personalPerspectiveCountText == "—")
+    #expect(state.personalCommentCountText == "—")
+
+    state.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "요약",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      preOption: .init(id: 1, title: "찬성"),
+      postOption: .init(id: 2, title: "반대"),
+      perspectiveCount: 3,
+      commentCount: 0
+    )
+    #expect(state.personalPerspectiveCountText == "3")
+    #expect(state.personalCommentCountText == "0")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "배틀",
+      preVote: .init(optionID: 1, label: "A", title: "찬성"),
+      postVote: .init(optionID: 2, label: "B", title: "반대"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.personalOpinionChangeTitle == "입장 변경")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "배틀",
+      preVote: .init(optionID: 1, label: "A", title: "찬성"),
+      postVote: .init(optionID: 1, label: "A", title: "찬성"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.personalOpinionChangeTitle == "입장 유지")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "배틀",
+      preVote: .init(optionID: 1, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.personalPostVoteTitle == "반대")
+    #expect(state.personalOpinionChangeTitle == "입장 변경")
+
+    state.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "요약",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      preOption: nil,
+      postOption: .init(id: 2, title: "반대"),
+      perspectiveCount: 3,
+      commentCount: 0
+    )
+    #expect(state.personalPreVoteTitle == "찬성")
+    #expect(state.personalPostVoteTitle == "반대")
+    #expect(state.personalOpinionChangeTitle == "입장 변경")
+
+    state.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "요약",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      preOption: .init(id: 1, title: "찬성"),
+      postOption: .init(id: 1, title: "찬성"),
+      perspectiveCount: 3,
+      commentCount: 0
+    )
+    #expect(state.personalPostVoteTitle == "찬성")
+    #expect(state.personalOpinionChangeTitle == "입장 유지")
   }
 
   @Test
