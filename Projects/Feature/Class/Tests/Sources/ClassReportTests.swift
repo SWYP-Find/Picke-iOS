@@ -11,6 +11,23 @@ import Testing
 
 @MainActor
 struct ClassReportTests {
+  @Test
+  func 주요_의견_표시값은_인용문_우선순위와_목록_순서를_따른다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    state.insight = ClassAIInsight(
+      text: "요약",
+      highlights: [
+        ClassAIFeedbackEvidence(sourceID: 7, content: "첫 원문", quote: "첫 인용"),
+        ClassAIFeedbackEvidence(sourceID: 7, content: "두 번째 원문")
+      ]
+    )
+
+    #expect(state.highlightRows == [
+      ClassReportHighlightRow(id: 0, title: "주요 의견 1", text: "첫 인용", isLast: false),
+      ClassReportHighlightRow(id: 1, title: "주요 의견 2", text: "두 번째 원문", isLast: true)
+    ])
+  }
+
   private struct ResultStub: ClassResultInterface {
     let result: Result<ClassResult, ClassError>
     let feedback: ClassAIPersonalFeedback?

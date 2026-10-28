@@ -147,6 +147,7 @@ private extension ClassReportView {
 
   @ViewBuilder
   func serverResultPages(_ result: ClassResult) -> some View {
+    let highlightRows = store.highlightRows
     ScrollView {
       VStack(alignment: .leading, spacing: 22) {
         if let insight = store.insight {
@@ -182,13 +183,13 @@ private extension ClassReportView {
           }
         }
 
-        if let insight = store.insight, !insight.highlights.isEmpty {
+        if !highlightRows.isEmpty {
           VStack(alignment: .leading, spacing: 12) {
             sectionHeading("주요 의견")
             reportCard(padding: 0, horizontalPadding: 0, spacing: 0) {
-              ForEach(insight.highlights.indices, id: \.self) { index in
-                highlightRow(insight.highlights[index], index: index)
-                if index < insight.highlights.count - 1 {
+              ForEach(highlightRows) { row in
+                highlightRow(row)
+                if !row.isLast {
                   Rectangle().fill(.beige600).frame(height: 1)
                 }
               }
@@ -355,15 +356,12 @@ private extension ClassReportView {
   }
 
   @ViewBuilder
-  func highlightRow(
-    _ evidence: ClassAIFeedbackEvidence,
-    index: Int
-  ) -> some View {
+  func highlightRow(_ row: ClassReportHighlightRow) -> some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("주요 의견 \(index + 1)")
+      Text(row.title)
         .pretendardFont(.semiBold11)
         .foregroundStyle(.primary500)
-      Text(evidence.quote ?? evidence.content)
+      Text(row.text)
         .pretendardFont(.regular13)
         .foregroundStyle(.gray700)
         .fixedSize(horizontal: false, vertical: true)

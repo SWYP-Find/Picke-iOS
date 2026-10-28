@@ -36,6 +36,18 @@ public struct ClassReportFeature {
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
 
+    public var highlightRows: [ClassReportHighlightRow] {
+      guard let highlights = insight?.highlights else { return [] }
+      return highlights.enumerated().map { index, evidence in
+        ClassReportHighlightRow(
+          id: index,
+          title: "주요 의견 \(index + 1)",
+          text: evidence.quote ?? evidence.content,
+          isLast: index == highlights.count - 1
+        )
+      }
+    }
+
     public var sourceErrorMessage: String {
       sourceError?.message ?? "리포트를 불러오지 못했어요"
     }
