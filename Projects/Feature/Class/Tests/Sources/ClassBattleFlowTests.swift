@@ -114,6 +114,67 @@ struct ClassBattleFlowTests {
   }
 
   @Test
+  func TTS_대본은_화자와_문장_시각을_노드_순서대로_변환한다() async throws {
+    let spy = ClassBattleFlowSpy()
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "토론",
+      philosophers: [ScenarioPhilosopher(label: "B", name: "소크라테스", stance: "반대", imageUrl: "https://example.com/b.png")],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: ["COMMON": "https://example.com/class-battle.mp3"],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "첫 노드",
+          audioDuration: 4,
+          autoNextNodeId: 2,
+          scripts: [
+            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "찬성자", text: "A. B."),
+            ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .philosopher, speakerName: "소크라테스", text: "생각해요.")
+          ],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 2,
+          nodeName: "다음 노드",
+          audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 4_000, speakerType: .b, speakerName: "반대자", text: "반대해요.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .preVote, commentRequired: true)
+    state.viewState = .loaded
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.battleUseCase = ClassBattleFlowScenarioStub(spy: spy, scenario: scenario)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+
+    await store.send(.view(.onAppear)) { $0.audioRequestID = requestID }
+    let expected = [
+      ClassBattleTranscriptLine(id: 0, startTime: 0, speakerName: "찬성자", speakerImageURL: nil, text: "A.", side: "A"),
+      ClassBattleTranscriptLine(id: 1, startTime: 1, speakerName: "찬성자", speakerImageURL: nil, text: "B.", side: "A"),
+      ClassBattleTranscriptLine(id: 2, startTime: 2, speakerName: "소크라테스", speakerImageURL: "https://example.com/b.png", text: "생각해요.", side: "B"),
+      ClassBattleTranscriptLine(id: 3, startTime: 4, speakerName: "소크라테스", speakerImageURL: "https://example.com/b.png", text: "반대해요.", side: "B")
+    ]
+    await store.receive(\.inner, .transcriptLoaded(requestID, expected)) {
+      $0.transcript = expected
+    }
+    let audioURL = try #require(URL(string: "https://example.com/class-battle.mp3"))
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL)))
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
+    await store.finish()
+  }
+
+  @Test
   func 클래스_배틀_로드는_서버_세션과_시나리오의_HTTP_오디오를_사용한다() async throws {
     let room = ClassRoom.mocks[0]
     let session = session(step: .preVote, commentRequired: true)
@@ -753,10 +814,12 @@ private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
 
 private struct ClassBattleFlowScenarioStub: BattleInterface {
   let spy: ClassBattleFlowSpy
+  var scenario: BattleScenario?
   private let fallback = MockBattleRepository()
 
   func fetchScenario(battleId: Int) async throws -> BattleScenario {
     await spy.recordScenario(battleId)
+    if let scenario { return scenario }
     return BattleScenario(
       battleId: battleId,
       title: "서버 시나리오",
