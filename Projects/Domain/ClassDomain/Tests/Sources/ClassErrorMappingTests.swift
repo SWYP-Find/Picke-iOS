@@ -13,6 +13,7 @@ struct ClassErrorMappingTests {
     ("CLASS_404", .notFound),
     ("CLASS_409_FULL", .full),
     ("CLASS_409_DELETED", .deleted),
+    ("CLASS_409_REQUEST_KEY", .requestKeyConflict),
     ("CLASS_409_OWNER", .ownClass),
     ("CLASS_403_REMOVED", .removed),
     ("CLASS_403_TICKET", .ticketRequired),

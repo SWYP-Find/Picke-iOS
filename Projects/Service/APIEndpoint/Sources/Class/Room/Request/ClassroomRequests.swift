@@ -10,6 +10,7 @@ struct CreateClassBody: Encodable, Sendable {
   let commentRequired: Bool
   let ownerParticipates: Bool
   let ownerDisplayName: String?
+  let requestKey: String?
 
   init(creation: ClassCreation) {
     name = creation.name
@@ -21,6 +22,7 @@ struct CreateClassBody: Encodable, Sendable {
     commentRequired = creation.requiresComment
     ownerParticipates = creation.ownerParticipates
     ownerDisplayName = creation.ownerDisplayName
+    requestKey = creation.requestKey
   }
 }
 

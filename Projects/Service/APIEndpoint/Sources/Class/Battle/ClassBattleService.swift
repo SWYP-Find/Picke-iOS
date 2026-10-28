@@ -6,6 +6,7 @@ import PickeNetwork
 public enum ClassBattleService {
   case detail(classID: Int)
   case preVote(classID: Int, optionID: Int)
+  case midVote(classID: Int, checkpointID: Int, optionID: Int)
   case ttsComplete(classID: Int)
   case postVote(classID: Int, optionID: Int)
   case myVotes(classID: Int)
@@ -22,6 +23,7 @@ extension ClassBattleService: PickeDataRequest {
     switch self {
     case let .detail(classID): return ClassBattleAPI.detail(classID: classID).description
     case let .preVote(classID, _): return ClassBattleAPI.preVote(classID: classID).description
+    case let .midVote(classID, _, _): return ClassBattleAPI.midVote(classID: classID).description
     case let .ttsComplete(classID): return ClassBattleAPI.ttsComplete(classID: classID).description
     case let .postVote(classID, _): return ClassBattleAPI.postVote(classID: classID).description
     case let .myVotes(classID): return ClassBattleAPI.myVotes(classID: classID).description
@@ -35,7 +37,7 @@ extension ClassBattleService: PickeDataRequest {
   public var method: HTTPMethod {
     switch self {
     case .detail, .myVotes, .voteStats, .perspectives, .myPerspectives: return .get
-    case .preVote, .ttsComplete, .postVote, .publishPerspective: return .post
+    case .preVote, .midVote, .ttsComplete, .postVote, .publishPerspective: return .post
     }
   }
 
@@ -43,6 +45,8 @@ extension ClassBattleService: PickeDataRequest {
     switch self {
     case let .preVote(_, optionID), let .postVote(_, optionID):
       return VoteBody(optionId: optionID)
+    case let .midVote(_, checkpointID, optionID):
+      return MidVoteBody(checkpointId: checkpointID, optionId: optionID)
     case let .publishPerspective(_, content):
       return PerspectiveBody(content: content)
     case let .perspectives(_, cursor, size, optionID, sort):

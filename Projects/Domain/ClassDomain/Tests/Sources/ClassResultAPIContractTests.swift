@@ -44,6 +44,11 @@ struct ClassResultAPIContractTests {
       "stats": {
         "activeMemberCount": 12, "completedCount": 10, "participationRate": 83.3,
         "commentWriterCount": 9, "commentRate": 75.0, "postVoteCount": 11,
+        "midVoteEnabled": true, "midVoteCount": 10,
+        "midVoteCheckpoints": [{
+          "checkpointId": 801, "voteCount": 10,
+          "options": [{"optionId": 9002, "label": "무죄", "voteCount": 6, "ratio": 60.0}]
+        }],
         "options": [
           { "optionId": 31, "title": "창작이다", "preVoteCount": 8,
             "postVoteCount": 6, "postVoteRatio": 54.5 }
@@ -59,6 +64,11 @@ struct ClassResultAPIContractTests {
     #expect(result.stats.completedCount == 10)
     #expect(result.stats.participationRate == 83.3)
     #expect(result.stats.options.first?.id == 31)
+    #expect(result.stats.midVoteEnabled)
+    #expect(result.stats.midVoteCount == 10)
+    #expect(result.stats.midVoteCheckpoints.first?.id == 801)
+    #expect(result.stats.midVoteCheckpoints.first?.options.first?.id == 9002)
+    #expect(result.stats.midVoteCheckpoints.first?.options.first?.ratio == 60.0)
     #expect(result.myReportState == nil)
     #expect(result.insightState == "SUCCEEDED")
   }
@@ -84,6 +94,7 @@ struct ClassResultAPIContractTests {
     {
       "state": "SUCCEEDED",
       "preOption": { "optionId": 31, "title": "창작이다", "stance": "처음 의견" },
+      "midVotes": [{"checkpointId":801,"optionId":9002,"label":"무죄"}],
       "postOption": { "optionId": 32, "title": "창작이 아니다", "stance": "바뀐 의견" },
       "perspectiveCount": 1,
       "commentCount": 2,
@@ -106,9 +117,33 @@ struct ClassResultAPIContractTests {
     #expect(feedback.evidence.first?.content == "삭제되지 않은 원문")
     #expect(feedback.evidence.first?.quote == "짧은 인용")
     #expect(feedback.preOption?.id == 31)
+    #expect(feedback.midVotes == [ClassMidVoteChoice(checkpointID: 801, optionID: 9002, label: "무죄")])
     #expect(feedback.postOption?.title == "창작이 아니다")
     #expect(feedback.perspectiveCount == 1)
     #expect(feedback.commentCount == 2)
+  }
+
+  @Test
+  func 투표_이력의_중간_선택을_보존한다() throws {
+    let json = """
+    {"battleTitle":"Picke(TTS) 배틀","preVote":{"optionId":31,"label":"A","title":"창작이다"},
+    "midVotes":[{"checkpointId":801,"optionId":9002,"label":"무죄"}],
+    "postVote":null,"status":"PRE_VOTE","opinionChanged":null}
+    """
+
+    let history = try JSONDecoder().decode(ClassVoteHistoryDTO.self, from: Data(json.utf8)).toDomain()
+    #expect(history.midVotes == [ClassMidVoteChoice(checkpointID: 801, optionID: 9002, label: "무죄")])
+  }
+
+  @Test
+  func 중간_투표가_없는_이전_응답도_빈_선택으로_읽는다() throws {
+    let json = """
+    {"battleTitle":"일반 배틀","preVote":{"optionId":31,"label":"A","title":"창작이다"},
+    "postVote":null,"status":"PRE_VOTE","opinionChanged":null}
+    """
+
+    let history = try JSONDecoder().decode(ClassVoteHistoryDTO.self, from: Data(json.utf8)).toDomain()
+    #expect(history.midVotes.isEmpty)
   }
 
   @Test

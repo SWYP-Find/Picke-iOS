@@ -39,5 +39,6 @@ struct ClassBattleSessionDTO: Decodable, Sendable {
   let commentRequired: Bool
   let canParticipate: Bool
   let participationCompleted: Bool
+  let midVoteEnabled: Bool?
   let battle: Battle
 }

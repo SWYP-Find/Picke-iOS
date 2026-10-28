@@ -7,6 +7,7 @@
 
 import ClassDomainInterface
 import ComposableArchitecture
+import CryptoKit
 import Foundation
 import PickeCoreUtility
 import PickeSharedUI
@@ -95,7 +96,8 @@ public struct ClassSettingFeature {
           battleId: battle.id,
           allowsAnonymousOpinion: false,
           requiresComment: requiresComment,
-          ownerParticipates: ownerParticipates
+          ownerParticipates: ownerParticipates,
+          requestKey: creationRequestKey
         )
       }
       guard let topicVersionID, aiQuestion != nil else { return nil }
@@ -105,7 +107,8 @@ public struct ClassSettingFeature {
         topicVersionId: topicVersionID,
         allowsAnonymousOpinion: false,
         requiresComment: requiresComment,
-        ownerParticipates: ownerParticipates
+        ownerParticipates: ownerParticipates,
+        requestKey: creationRequestKey
       )
     }
 
@@ -138,8 +141,22 @@ public struct ClassSettingFeature {
         topicVersionId: topicVersionID,
         allowsAnonymousOpinion: false,
         requiresComment: requiresComment,
-        ownerParticipates: ownerParticipates
+        ownerParticipates: ownerParticipates,
+        requestKey: creationRequestKey
       )
+    }
+
+    private var creationRequestKey: String {
+      let fields = [
+        instanceID.uuidString,
+        Data(trimmedName.utf8).base64EncodedString(),
+        battle.map { "battle:\($0.id)" } ?? "topic:\(topicVersionID.map { String($0) } ?? "nil")",
+        String((isDeadlineEnabled ? deadline : Date.distantFuture).timeIntervalSinceReferenceDate.bitPattern),
+        String(requiresComment),
+        String(ownerParticipates),
+      ]
+      let digest = SHA256.hash(data: Data(fields.joined(separator: "|").utf8))
+      return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     private var trimmedName: String {

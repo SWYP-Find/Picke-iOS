@@ -9,6 +9,7 @@ public struct ClassBattleSession: Equatable, Sendable {
   public let canParticipate: Bool
   public let participationCompleted: Bool
   public let battle: ClassBattleDetail
+  public let midVoteEnabled: Bool
 
   public init(
     classID: Int,
@@ -18,7 +19,8 @@ public struct ClassBattleSession: Equatable, Sendable {
     commentRequired: Bool,
     canParticipate: Bool,
     participationCompleted: Bool,
-    battle: ClassBattleDetail
+    battle: ClassBattleDetail,
+    midVoteEnabled: Bool = false
   ) {
     self.classID = classID
     self.myRole = myRole
@@ -28,5 +30,6 @@ public struct ClassBattleSession: Equatable, Sendable {
     self.canParticipate = canParticipate
     self.participationCompleted = participationCompleted
     self.battle = battle
+    self.midVoteEnabled = midVoteEnabled
   }
 }

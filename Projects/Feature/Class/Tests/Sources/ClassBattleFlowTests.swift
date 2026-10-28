@@ -14,6 +14,377 @@ struct ClassBattleFlowTests {
   private let requestID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
   @Test
+  func 중간투표_선택_전에는_청취완료를_제출할_수_없다() {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false)
+    state.viewState = .loaded
+    state.hasListened = true
+    state.pendingCheckpointID = 801
+    #expect(!state.canSubmit)
+    state.pendingCheckpointID = nil
+    #expect(state.canSubmit)
+  }
+
+  @Test
+  func 중간투표_후에는_사전투표를_변경할_수_없다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .preVote, commentRequired: false, midVoteEnabled: true)
+    state.viewState = .loaded
+    state.selectedOptionID = 31
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .preVote,
+      opinionChanged: nil
+    )
+    state.selectedPaths = [801: 802]
+    #expect(state.isPreVoteLocked)
+    #expect(!state.canSubmit)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    await store.send(.view(.optionTapped(32)))
+    #expect(store.state.selectedOptionID == 31)
+  }
+
+  @Test
+  func 사후투표_중간투표_누락_복구는_오디오_시간_관찰을_재개한다() async {
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .postVote, commentRequired: false)
+    state.viewState = .loaded
+    state.needsMidVoteRecovery = true
+    state.isAudioReady = true
+    state.submitRequestID = requestID
+    state.currentTime = 15
+    state.hasListened = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+    await store.send(.inner(.submissionResponse(requestID, .postVote, .failure(.midVoteRequired)))) {
+      $0.submitRequestID = nil
+      $0.errorMessage = ClassBattleError.midVoteRequired.message
+      $0.hasListened = false
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+    }
+    await store.finish()
+    #expect(await spy.timeSubscriptions == 1)
+  }
+
+  @Test
+  func 중간투표_선택_경로의_대본만_노출한다() {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801,
+          nodeName: "선택",
+          audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "선택하세요.")],
+          interactiveOptions: [
+            ScenarioInteractiveOption(label: "첫째", nextNodeId: 802, optionID: 9001),
+            ScenarioInteractiveOption(label: "둘째", nextNodeId: 803, optionID: 9002)
+          ]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "첫째 경로", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .a, speakerName: "A", text: "첫째.")],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 803, nodeName: "둘째 경로", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 2_000, speakerType: .b, speakerName: "B", text: "둘째.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    #expect(ClassBattleTranscriptLine.from(scenario: scenario).count == 1)
+    #expect(ClassBattleTranscriptLine.from(scenario: scenario, selectedPaths: [801: 803])
+      .map(\.text) == ["선택하세요.", "둘째."])
+  }
+
+  @Test
+  func 이미_기록된_중간투표는_재생할_때_다시_제출하지_않는다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "선택", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "선택")],
+          interactiveOptions: [ScenarioInteractiveOption(label: "첫째", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "첫째 경로", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .a, speakerName: "A", text: "첫째")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false)
+    state.viewState = .loaded
+    state.isAudioReady = true
+    state.isPlaying = true
+    state.audioDuration = 4
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.selectedPaths = [801: 802]
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.inner(.playerTimeUpdated(requestID, 2))) {
+      $0.currentTime = 2
+      $0.currentNodeID = 802
+      $0.transcript = ClassBattleTranscriptLine.from(scenario: scenario, selectedPaths: [801: 802])
+      $0.pendingSeekTime = 2
+    }
+    #expect(store.state.pendingCheckpointID == nil)
+    await store.finish()
+  }
+
+  @Test
+  func 다른_분기를_선택하면_해당_경로의_오디오를_불러온다() async throws {
+    let commonURL = try #require(URL(string: "https://example.com/common.mp3"))
+    let branchURL = try #require(URL(string: "https://example.com/path-b.mp3"))
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: ["COMMON": commonURL.absoluteString, "PATH_B": branchURL.absoluteString],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "선택")],
+          interactiveOptions: [ScenarioInteractiveOption(label: "둘째", nextNodeId: 803, optionID: 9002)]
+        ),
+        ScenarioNode(
+          nodeId: 803, nodeName: "NODE_B", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .b, speakerName: "B", text: "둘째")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false)
+    state.viewState = .loaded
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 803
+    state.isAudioReady = true
+    state.loadedAudioURL = commonURL
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+
+    await store.send(.view(.confirmMidVoteTapped)) {
+      $0.selectedPaths = [801: 803]
+      $0.transcript = ClassBattleTranscriptLine.from(scenario: scenario, selectedPaths: [801: 803])
+      $0.currentNodeID = 803
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 2
+      $0.pendingSeekTime = 2
+      $0.audioRequestID = requestID
+      $0.loadedAudioURL = branchURL
+      $0.isAudioReady = false
+    }
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
+    await store.finish()
+    #expect(await spy.loadedURLs == [branchURL])
+  }
+
+  @Test
+  func 서버에서_중간투표가_비활성화되면_로컬_선택으로_재생을_계속한다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [],
+          interactiveOptions: [ScenarioInteractiveOption(label: "다음", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "NEXT", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [], interactiveOptions: []
+        )
+      ]
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false, midVoteEnabled: true)
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 802
+    state.midVoteRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+    await store.send(.inner(.midVoteResponse(requestID, 801, 9001, .failure(.midVoteUnavailable)))) {
+      $0.midVoteRequestID = nil
+      $0.selectedPaths = [801: 802]
+      $0.currentNodeID = 802
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+      $0.midVoteDisabledLocally = true
+      $0.errorMessage = ClassBattleError.midVoteUnavailable.message
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 사후투표_복구_후에도_사용자가_고른_최종_선택을_제출한다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [],
+          interactiveOptions: [ScenarioInteractiveOption(label: "다음", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "NEXT", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [], interactiveOptions: []
+        )
+      ]
+    )
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .postVote, commentRequired: false, midVoteEnabled: true)
+    state.viewState = .loaded
+    state.scenario = scenario
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .postVote,
+      opinionChanged: nil
+    )
+    state.selectedOptionID = 32
+    state.needsMidVoteRecovery = true
+    state.hasListened = true
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 802
+    state.midVoteRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+    await store.send(.inner(.midVoteResponse(requestID, 801, 9001, .success(true)))) {
+      $0.midVoteRequestID = nil
+      $0.selectedPaths = [801: 802]
+      $0.currentNodeID = 802
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+    }
+    #expect(store.state.selectedOptionID == 32)
+    await store.send(.view(.submitTapped)) { $0.submitRequestID = requestID }
+    await store.receive(\.inner, .submissionResponse(requestID, .postVote, .failure(.invalidResponse))) {
+      $0.submitRequestID = nil
+      $0.errorMessage = ClassBattleError.invalidResponse.message
+    }
+    await store.finish()
+    #expect(await spy.postVoteOptionIDs == [32])
+  }
+
+  @Test
+  func 중간투표_확인은_체크포인트와_서버_선택지_ID를_제출한다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [],
+          interactiveOptions: [ScenarioInteractiveOption(label: "다음", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "NEXT", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [], interactiveOptions: []
+        )
+      ]
+    )
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false, midVoteEnabled: true)
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 802
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+    await store.send(.view(.confirmMidVoteTapped)) { $0.midVoteRequestID = requestID }
+    await store.receive(\.inner, .midVoteResponse(requestID, 801, 9001, .success(true))) {
+      $0.midVoteRequestID = nil
+      $0.selectedPaths = [801: 802]
+      $0.currentNodeID = 802
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+    }
+    await store.finish()
+    #expect(await spy.midVoteArguments.map { "\($0.0):\($0.1):\($0.2)" } == ["\(ClassRoom.mocks[0].id):801:9001"])
+  }
+
+  @Test
   func TTS_대본은_다음_노드_시작을_넘기지_않는다() {
     let scenario = BattleScenario(
       battleId: 22,
@@ -288,11 +659,15 @@ struct ClassBattleFlowTests {
       ClassBattleTranscriptLine(id: 2, startTime: 2, speakerName: "소크라테스", speakerImageURL: "https://example.com/b.png", text: "생각해요.", side: "B"),
       ClassBattleTranscriptLine(id: 3, startTime: 4, speakerName: "소크라테스", speakerImageURL: "https://example.com/b.png", text: "반대해요.", side: "B")
     ]
-    await store.receive(\.inner, .transcriptLoaded(requestID, expected)) {
+    await store.receive(\.inner, .scenarioLoaded(requestID, scenario)) {
+      $0.scenario = scenario
+      $0.currentNodeID = scenario.startNodeId
       $0.transcript = expected
     }
     let audioURL = try #require(URL(string: "https://example.com/class-battle.mp3"))
-    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL)))
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL))) {
+      $0.loadedAudioURL = audioURL
+    }
     await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
       $0.audioRequestID = nil
       $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
@@ -335,7 +710,16 @@ struct ClassBattleFlowTests {
       $0.audioRequestID = requestID
     }
     let audioURL = try #require(URL(string: "https://example.com/class-battle.mp3"))
-    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL)))
+    let scenario = try await ClassBattleFlowScenarioStub(spy: ClassBattleFlowSpy())
+      .fetchScenario(battleId: session.battle.id)
+    await store.receive(\.inner, .scenarioLoaded(requestID, scenario)) {
+      $0.scenario = scenario
+      $0.currentNodeID = scenario.startNodeId
+      $0.transcript = ClassBattleTranscriptLine.from(scenario: scenario)
+    }
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL))) {
+      $0.loadedAudioURL = audioURL
+    }
     await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
       $0.audioRequestID = nil
       $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
@@ -344,6 +728,7 @@ struct ClassBattleFlowTests {
       $0.audioRequestID = requestID
       $0.errorMessage = nil
     }
+    await store.receive(\.inner, .scenarioLoaded(requestID, scenario))
     await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL)))
     await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
       $0.audioRequestID = nil
@@ -852,7 +1237,8 @@ struct ClassBattleFlowTests {
 
   private func session(
     step: ClassBattleStep,
-    commentRequired: Bool
+    commentRequired: Bool,
+    midVoteEnabled: Bool = false
   ) -> ClassBattleSession {
     ClassBattleSession(
       classID: 1,
@@ -874,7 +1260,8 @@ struct ClassBattleFlowTests {
         participantsCount: 1,
         audioDuration: 30,
         options: []
-      )
+      ),
+      midVoteEnabled: midVoteEnabled
     )
   }
 
@@ -892,12 +1279,18 @@ private actor ClassBattleFlowSpy {
   private(set) var scenarioBattleIDs: [Int] = []
   private(set) var loadedURLs: [URL] = []
   private(set) var timeSubscriptions = 0
+  private(set) var midVoteArguments: [(Int, Int, Int)] = []
+  private(set) var postVoteOptionIDs: [Int] = []
 
   func recordClass(_ id: Int) { classIDs.append(id) }
   func recordVoteHistory(_ id: Int) { voteHistoryClassIDs.append(id) }
   func recordScenario(_ id: Int) { scenarioBattleIDs.append(id) }
   func recordAudio(_ url: URL) { loadedURLs.append(url) }
   func recordTimeSubscription() { timeSubscriptions += 1 }
+  func recordMidVote(classID: Int, checkpointID: Int, optionID: Int) {
+    midVoteArguments.append((classID, checkpointID, optionID))
+  }
+  func recordPostVote(optionID: Int) { postVoteOptionIDs.append(optionID) }
 }
 
 private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
@@ -921,8 +1314,19 @@ private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
   }
 
   func submitPreVote(classID _: Int, optionID _: Int) async throws -> ClassVoteReceipt { throw ClassBattleError.invalidResponse }
+  func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    await spy.recordMidVote(classID: classID, checkpointID: checkpointID, optionID: optionID)
+    return ClassVoteReceipt(voteID: 1, status: .ttsListening)
+  }
   func completeTTS(classID _: Int) async throws { throw ClassBattleError.invalidResponse }
-  func submitPostVote(classID _: Int, optionID _: Int) async throws -> ClassVoteReceipt { throw ClassBattleError.invalidResponse }
+  func submitPostVote(classID _: Int, optionID: Int) async throws -> ClassVoteReceipt {
+    await spy.recordPostVote(optionID: optionID)
+    throw ClassBattleError.invalidResponse
+  }
   func fetchVoteStats(classID _: Int) async throws -> ClassVoteStats { throw ClassBattleError.invalidResponse }
   func publishPerspective(classID _: Int, content _: String) async throws -> ClassPerspectiveReceipt { throw ClassBattleError.invalidResponse }
   func fetchPerspectives(

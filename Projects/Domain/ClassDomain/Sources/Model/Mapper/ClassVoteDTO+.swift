@@ -17,6 +17,16 @@ extension ClassVoteHistoryDTO.Choice {
   }
 }
 
+extension ClassMidVoteDTO {
+  func toDomain() -> ClassMidVoteChoice {
+    ClassMidVoteChoice(
+      checkpointID: checkpointId,
+      optionID: optionId,
+      label: label
+    )
+  }
+}
+
 extension ClassVoteHistoryDTO {
   func toDomain() throws -> ClassVoteHistory {
     guard let status = ClassBattleStep(rawValue: status) else {
@@ -25,6 +35,7 @@ extension ClassVoteHistoryDTO {
     return ClassVoteHistory(
       battleTitle: battleTitle,
       preVote: preVote.toDomain(),
+      midVotes: midVotes?.map { $0.toDomain() } ?? [],
       postVote: postVote?.toDomain(),
       status: status,
       opinionChanged: opinionChanged

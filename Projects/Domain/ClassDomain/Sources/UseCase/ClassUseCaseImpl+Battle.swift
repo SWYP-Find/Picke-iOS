@@ -17,6 +17,14 @@ extension ClassUseCaseImpl {
     try await repository.submitPreVote(classID: classID, optionID: optionID)
   }
 
+  public func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await repository.submitMidVote(classID: classID, checkpointID: checkpointID, optionID: optionID)
+  }
+
   public func completeTTS(classID: Int) async throws {
     try await repository.completeTTS(classID: classID)
   }

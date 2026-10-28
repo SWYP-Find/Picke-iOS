@@ -10,6 +10,7 @@ struct ClassBattleAPIContractTests {
   func 클래스_배틀_경로와_투표_의견_요청_본문이_명세와_일치한다() throws {
     let detail = ClassBattleService.detail(classID: 5)
     let preVote = ClassBattleService.preVote(classID: 5, optionID: 31)
+    let midVote = ClassBattleService.midVote(classID: 5, checkpointID: 801, optionID: 9001)
     let postVote = ClassBattleService.postVote(classID: 5, optionID: 32)
     let publish = ClassBattleService.publishPerspective(classID: 5, content: "의견")
     let perspectives = ClassBattleService.perspectives(
@@ -24,6 +25,8 @@ struct ClassBattleAPIContractTests {
     #expect(detail.method == .get)
     #expect(try preVote.url().path == "/api/v1/classes/5/battle/votes/pre")
     #expect(preVote.method == .post)
+    #expect(try midVote.url().path == "/api/v1/classes/5/battle/votes/mid")
+    #expect(midVote.method == .post)
     #expect(try postVote.url().path == "/api/v1/classes/5/battle/votes/post")
     #expect(postVote.method == .post)
     #expect(try ClassBattleService.ttsComplete(classID: 5).url().path == "/api/v1/classes/5/battle/votes/tts-complete")
@@ -35,6 +38,7 @@ struct ClassBattleAPIContractTests {
     #expect(try ClassBattleService.myPerspectives(classID: 5).url().path == "/api/v1/classes/5/battle/perspectives/me")
 
     guard let preVoteParameters = preVote.parameters,
+          let midVoteParameters = midVote.parameters,
           let postVoteParameters = postVote.parameters,
           let publishParameters = publish.parameters,
           let perspectiveParameters = perspectives.parameters
@@ -44,10 +48,12 @@ struct ClassBattleAPIContractTests {
     }
     let encoder = JSONEncoder()
     let preVoteJSON = try JSONSerialization.jsonObject(with: encoder.encode(preVoteParameters)) as? [String: Int]
+    let midVoteJSON = try JSONSerialization.jsonObject(with: encoder.encode(midVoteParameters)) as? [String: Int]
     let postVoteJSON = try JSONSerialization.jsonObject(with: encoder.encode(postVoteParameters)) as? [String: Int]
     let publishJSON = try JSONSerialization.jsonObject(with: encoder.encode(publishParameters)) as? [String: String]
     let perspectiveJSON = try JSONSerialization.jsonObject(with: encoder.encode(perspectiveParameters)) as? [String: Any]
     #expect(preVoteJSON == ["optionId": 31])
+    #expect(midVoteJSON == ["checkpointId": 801, "optionId": 9001])
     #expect(postVoteJSON == ["optionId": 32])
     #expect(publishJSON == ["content": "의견"])
     #expect(perspectiveJSON?["cursor"] as? String == "next")
@@ -86,7 +92,7 @@ struct ClassBattleAPIContractTests {
   func 클래스_배틀_응답은_클래스_권한과_배틀_진행을_함께_복원한다() throws {
     let json = """
     {"classId":5,"myRole":"MEMBER","closeAt":"2026-12-31T23:59:59","closed":false,
-    "commentRequired":true,"canParticipate":true,"participationCompleted":false,
+    "commentRequired":true,"canParticipate":true,"participationCompleted":false,"midVoteEnabled":true,
     "battle":{"battleInfo":{"battleId":9,"title":"AI가 쓴 글도 창작일까?",
     "options":[{"optionId":31,"label":"A","title":"창작이다"}]},
     "userVoteStatus":"PRE_VOTE","currentStep":"PRE_VOTE"}}
@@ -96,6 +102,7 @@ struct ClassBattleAPIContractTests {
     #expect(session.classID == 5)
     #expect(session.myRole == .member)
     #expect(session.canParticipate)
+    #expect(session.midVoteEnabled)
     #expect(session.battle.currentStep == .preVote)
     #expect(session.battle.options.first?.id == 31)
   }

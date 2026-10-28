@@ -30,6 +30,7 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
   case topicVersionNotFound
   case topicDraftUsed
   case inviteCodeFailed
+  case requestKeyConflict
   case network(String)
   case unknown(String)
 
@@ -61,6 +62,7 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
     case .topicVersionNotFound: return "존재하지 않는 주제 버전입니다."
     case .topicDraftUsed: return "이 주제 초안으로 이미 만든 클래스가 있습니다."
     case .inviteCodeFailed: return "초대코드 생성에 실패했습니다. 다시 시도해 주세요."
+    case .requestKeyConflict: return "클래스 생성 요청이 충돌했어요. 입력 내용을 확인하고 다시 시도해 주세요."
     case let .network(message), let .unknown(message): return message
     }
   }
