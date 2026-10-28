@@ -14,6 +14,132 @@ struct ClassBattleFlowTests {
   private let requestID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
   @Test
+  func TTS_대본은_다음_노드_시작을_넘기지_않는다() {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "토론",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "첫 노드",
+          audioDuration: 90,
+          autoNextNodeId: 3,
+          scripts: [
+            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "A. B."),
+            ScenarioScript(scriptId: 2, startTimeMs: 0, speakerType: .b, speakerName: "B", text: "C. D.")
+          ],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 3,
+          nodeName: "대사 없는 노드",
+          audioDuration: 90,
+          autoNextNodeId: 2,
+          scripts: [],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 2,
+          nodeName: "다음 노드",
+          audioDuration: 5,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 85_000, speakerType: .a, speakerName: "A", text: "끝.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+
+    let lines = ClassBattleTranscriptLine.from(scenario: scenario)
+    #expect(lines.map(\.startTime) == [0, 21.25, 42.5, 63.75, 85])
+    #expect(lines.dropLast().allSatisfy { $0.startTime < 85 })
+    #expect(lines.map(\.id) == Array(0..<lines.count))
+  }
+
+  @Test
+  func TTS_대본은_역전된_서버_시각과_빈_노드를_안전하게_처리한다() {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "토론",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "늦은 노드",
+          audioDuration: 90,
+          autoNextNodeId: 2,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 10_000, speakerType: .a, speakerName: "A", text: "늦은 문장.")],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 2,
+          nodeName: "이른 노드",
+          audioDuration: 5,
+          autoNextNodeId: 3,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 5_000, speakerType: .b, speakerName: "B", text: "이른 문장.")],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 3,
+          nodeName: "빈 노드",
+          audioDuration: 3,
+          autoNextNodeId: 4,
+          scripts: [],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 4,
+          nodeName: "마지막 노드",
+          audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 12_000, speakerType: .a, speakerName: "A", text: "마지막 문장.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+
+    let lines = ClassBattleTranscriptLine.from(scenario: scenario)
+    #expect(lines.map(\.startTime) == [5, 10, 12])
+    #expect(lines.map(\.id) == [0, 1, 2])
+  }
+
+  @Test
+  func 대본과_투표_아바타_표시값은_상태에서_행별로_제공한다() {
+    var state = ClassBattleFlowFeature.State()
+    state.currentTime = 3
+    state.transcript = [
+      .init(id: 7, startTime: 0, speakerName: "  한글", speakerImageURL: nil, text: "하나", side: "A"),
+      .init(id: 8, startTime: 1, speakerName: "  한글", speakerImageURL: nil, text: "둘", side: "A"),
+      .init(id: 9, startTime: 2, speakerName: "👨‍👩‍👧‍👦 가족", speakerImageURL: nil, text: "셋", side: "B"),
+      .init(id: 10, startTime: 3, speakerName: " \n", speakerImageURL: nil, text: "넷", side: "B")
+    ]
+    state.voteStats = ClassVoteStats(
+      options: [
+        .init(id: 4, title: " \n", imageURL: nil, voteCount: 1, ratio: 25),
+        .init(id: 4, title: "  찬성", imageURL: nil, voteCount: 3, ratio: 75)
+      ],
+      totalCount: 4,
+      updatedAt: .now
+    )
+
+    #expect(state.visibleTranscriptRows.map(\.id) == [7, 8, 9, 10])
+    #expect(state.visibleTranscriptRows.map(\.avatarFallback) == ["한", "한", "👨‍👩‍👧‍👦", "?"])
+    #expect(state.visibleTranscriptRows.map(\.showsHeader) == [true, false, true, true])
+    #expect(state.visibleTranscriptRows.map(\.isActive) == [false, false, false, true])
+    #expect(state.voteStatsOptionRows.map(\.id) == [0, 1])
+    #expect(state.voteStatsOptionRows.map(\.avatarFallback) == ["?", "찬"])
+    #expect(state.voteStatsOptionRows.map(\.percentageLabel) == ["25.0%", "75.0%"])
+  }
+
+  @Test
   func 의견_수_표시는_중복_ID에도_각_카드의_순서를_따른다() {
     let first = ClassPerspectiveItem(
       id: 77,

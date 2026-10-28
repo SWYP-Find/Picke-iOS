@@ -121,6 +121,19 @@ public struct ClassBattleFlowFeature {
       }
     }
 
+    public var voteStatsOptionRows: [ClassVoteStatsOptionRow] {
+      guard let options = voteStats?.options else { return [] }
+      let labels = voteStatsPercentageLabels
+      return options.enumerated().map { index, option in
+        ClassVoteStatsOptionRow(
+          index: index,
+          option: option,
+          avatarFallback: avatarFallback(for: option.title),
+          percentageLabel: labels[index]
+        )
+      }
+    }
+
     public var playbackRateTitle: String {
       playbackRate.formatted(.number.precision(.fractionLength(1...2)))
     }
@@ -154,6 +167,25 @@ public struct ClassBattleFlowFeature {
 
     public var visibleTranscript: [ClassBattleTranscriptLine] {
       transcript.filter { $0.startTime <= currentTime }
+    }
+
+    public var visibleTranscriptRows: [ClassBattleTranscriptRow] {
+      let lines = visibleTranscript
+      return lines.enumerated().map { index, line in
+        let isNewSpeaker = index == 0 || lines[index - 1].speakerName != line.speakerName
+        return ClassBattleTranscriptRow(
+          line: line,
+          avatarFallback: avatarFallback(for: line.speakerName),
+          showsHeader: isNewSpeaker,
+          isActive: index == lines.count - 1,
+          hasTopSpacing: index > 0 && isNewSpeaker
+        )
+      }
+    }
+
+    private func avatarFallback(for title: String) -> String {
+      let initial = String(title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1))
+      return initial.isEmpty ? "?" : initial
     }
 
     public var displayTitle: String {

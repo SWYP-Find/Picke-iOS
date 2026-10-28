@@ -37,17 +37,20 @@ public extension ClassBattleTranscriptLine {
       visitedNodeIDs.insert(visibleNodeID)
       let scripts = node.scripts
       let firstStartMs = scripts.map(\.startTimeMs).min() ?? 0
+      let nodeEndMs = nextVisibleStartMs(after: node, in: scenario)
+        ?? Int((scenario.nodeEndTime(for: node) * 1000).rounded())
+      let boundaryMs = max(nodeEndMs, scripts.map(\.startTimeMs).max() ?? firstStartMs)
       let hasDistinctStarts = Set(scripts.map(\.startTimeMs)).count > 1
       func revealStart(_ index: Int) -> Int {
         hasDistinctStarts
           ? scripts[index].startTimeMs
-          : firstStartMs + node.audioDuration * 1000 * index / max(1, scripts.count)
+          : firstStartMs + (boundaryMs - firstStartMs) * index / max(1, scripts.count)
       }
       for (index, script) in scripts.enumerated() {
         let startMs = revealStart(index)
         let endMs = index + 1 < scripts.count
-          ? revealStart(index + 1)
-          : firstStartMs + node.audioDuration * 1000
+          ? max(startMs, min(boundaryMs, revealStart(index + 1)))
+          : boundaryMs
         let side: String
         switch script.speakerType {
         case .a: side = "A"
@@ -66,7 +69,7 @@ public extension ClassBattleTranscriptLine {
         var previousCharacters = 0
         for sentence in parts {
           let sentenceStartMs = startMs
-            + max(1, endMs - startMs) * previousCharacters / totalCharacters
+            + max(0, endMs - startMs) * previousCharacters / totalCharacters
           previousCharacters += sentence.count
           transcript.append(ClassBattleTranscriptLine(
             id: transcript.count,
@@ -81,6 +84,33 @@ public extension ClassBattleTranscriptLine {
       guard let nextNodeID = scenario.nextNodeId(for: node) else { break }
       visibleNodeID = nextNodeID
     }
-    return transcript
+    return transcript.sorted {
+      $0.startTime == $1.startTime ? $0.id < $1.id : $0.startTime < $1.startTime
+    }
+    .enumerated()
+    .map { index, line in
+      ClassBattleTranscriptLine(
+        id: index,
+        startTime: line.startTime,
+        speakerName: line.speakerName,
+        speakerImageURL: line.speakerImageURL,
+        text: line.text,
+        side: line.side
+      )
+    }
+  }
+
+  private static func nextVisibleStartMs(
+    after node: ScenarioNode,
+    in scenario: BattleScenario
+  ) -> Int? {
+    var nextNodeID = scenario.nextNodeId(for: node)
+    var visitedNodeIDs = Set<Int>()
+    while let id = nextNodeID, visitedNodeIDs.insert(id).inserted {
+      guard let nextNode = scenario.nodes.first(where: { $0.nodeId == id }) else { break }
+      if let startMs = nextNode.scripts.map(\.startTimeMs).min() { return startMs }
+      nextNodeID = scenario.nextNodeId(for: nextNode)
+    }
+    return nil
   }
 }

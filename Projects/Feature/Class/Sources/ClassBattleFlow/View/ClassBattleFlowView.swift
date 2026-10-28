@@ -336,26 +336,22 @@ private extension ClassBattleFlowView {
       .background(.beige200)
       ScrollViewReader { proxy in
         ScrollView(showsIndicators: false) {
-          let lines = store.visibleTranscript
+          let rows = store.visibleTranscriptRows
           LazyVStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(lines.enumerated()), id: \.element.id) { index, line in
-              transcriptRow(
-                line,
-                showsHeader: index == 0 || lines[index - 1].speakerName != line.speakerName,
-                isActive: index == lines.count - 1
-              )
-                .padding(.top, index > 0 && lines[index - 1].speakerName != line.speakerName ? 16 : 0)
-                .id(line.id)
+            ForEach(rows) { row in
+              transcriptRow(row)
+                .padding(.top, row.hasTopSpacing ? 16 : 0)
+                .id(row.id)
             }
           }
           .padding(.horizontal, 16)
           .padding(.top, 24)
           .padding(.bottom, 40)
         }
-        .onChange(of: store.currentTime) { _, time in
-          if let line = store.visibleTranscript.last(where: { $0.startTime <= time }) {
+        .onChange(of: store.currentTime) { _, _ in
+          if let row = store.visibleTranscriptRows.last {
             withAnimation(.easeInOut(duration: 0.2)) {
-              proxy.scrollTo(line.id, anchor: .bottom)
+              proxy.scrollTo(row.id, anchor: .bottom)
             }
           }
         }
@@ -395,11 +391,8 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func transcriptRow(
-    _ line: ClassBattleTranscriptLine,
-    showsHeader: Bool,
-    isActive: Bool
-  ) -> some View {
+  func transcriptRow(_ row: ClassBattleTranscriptRow) -> some View {
+    let line = row.line
     if line.side == "NARRATOR" {
       Text(line.text)
         .pretendardFont(.labelSmall)
@@ -414,10 +407,10 @@ private extension ClassBattleFlowView {
       let bubbleBorder: Color = line.side == "B" ? .beige700 : .beige500
       HStack(alignment: .top, spacing: 6) {
         if line.side != "B" {
-          transcriptAvatar(line, showsAvatar: showsHeader)
+          transcriptAvatar(row)
         }
         VStack(alignment: line.side == "B" ? .trailing : .leading, spacing: 6) {
-          if showsHeader {
+          if row.showsHeader {
             Text(line.speakerName)
               .pretendardFont(.headingSmall)
               .foregroundStyle(.gray400)
@@ -431,7 +424,7 @@ private extension ClassBattleFlowView {
             .padding(12)
             .pickeCard(bubbleBackground, border: bubbleBorder)
             .overlay(alignment: line.side == "B" ? .leading : .trailing) {
-              if isActive && store.isPlaying {
+              if row.isActive && store.isPlaying {
                 AudioEqualizerView(isPlaying: true)
                   .frame(width: 24, height: 24)
                   .offset(x: line.side == "B" ? -36 : 36)
@@ -440,7 +433,7 @@ private extension ClassBattleFlowView {
         }
         .frame(maxWidth: 272, alignment: line.side == "B" ? .trailing : .leading)
         if line.side == "B" {
-          transcriptAvatar(line, showsAvatar: showsHeader)
+          transcriptAvatar(row)
         }
       }
       .frame(maxWidth: .infinity, alignment: line.side == "B" ? .trailing : .leading)
@@ -448,19 +441,16 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func transcriptAvatar(
-    _ line: ClassBattleTranscriptLine,
-    showsAvatar: Bool
-  ) -> some View {
+  func transcriptAvatar(_ row: ClassBattleTranscriptRow) -> some View {
     ZStack {
-      if showsAvatar {
+      if row.showsHeader {
         Group {
-          if let url = line.speakerImageURL, !url.isEmpty {
+          if let url = row.line.speakerImageURL, !url.isEmpty {
             PickeRemoteImage(url: url, shape: .round(cornerRadius: 16))
               .content(.fit)
               .frame(width: 32, height: 36)
           } else {
-            Text(String(line.speakerName.prefix(1)))
+            Text(row.avatarFallback)
               .pretendardFont(.semiBold13)
           }
         }
@@ -613,9 +603,10 @@ private extension ClassBattleFlowView {
 
   @ViewBuilder
   func voteStatsSummary(_ stats: ClassVoteStats) -> some View {
+    let rows = store.voteStatsOptionRows
     HStack(alignment: .center, spacing: 12) {
-      if let first = stats.options.first {
-        voteStatsOption(first, index: 0)
+      if let first = rows.first {
+        voteStatsOption(first)
       }
       VStack(spacing: 20) {
         if let opinionChangeLabel = store.opinionChangeLabel {
@@ -635,8 +626,8 @@ private extension ClassBattleFlowView {
         voteRatioBar(stats)
       }
       .frame(maxWidth: .infinity)
-      if stats.options.count > 1 {
-        voteStatsOption(stats.options[1], index: 1)
+      if rows.count > 1 {
+        voteStatsOption(rows[1])
       }
     }
   }
@@ -658,15 +649,13 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func voteStatsOption(
-    _ option: ClassVoteStatsOption,
-    index: Int
-  ) -> some View {
+  func voteStatsOption(_ row: ClassVoteStatsOptionRow) -> some View {
+    let option = row.option
     VStack(spacing: 2) {
       AsyncImage(url: option.imageURL) { image in
         image.resizable().scaledToFill()
       } placeholder: {
-        Text(String(option.title.prefix(1)))
+        Text(row.avatarFallback)
           .pretendardFont(.semiBold13)
           .foregroundStyle(.gray800)
       }
@@ -677,7 +666,7 @@ private extension ClassBattleFlowView {
         .pretendardFont(.medium11)
         .foregroundStyle(.gray800)
         .lineLimit(1)
-      Text(store.voteStatsPercentageLabels[index])
+      Text(row.percentageLabel)
         .pretendardFont(.semiBold13)
         .foregroundStyle(.gray800)
     }
