@@ -44,4 +44,18 @@ struct ClassErrorMappingTests {
   func 메시지가_없으면_기본_문구를_보여준다() {
     #expect(ClassErrorMapper.map(code: nil, message: nil, fallback: "기본 문구") == .network("기본 문구"))
   }
+
+  @Test
+  func 알수없는_내부_오류는_구현_상세를_화면에_표시하지_않는다() {
+    let error = ClassError.unknown("AuthenticationError.excessiveRefresh")
+    #expect(error.message == "클래스 요청을 처리하지 못했습니다. 다시 시도해 주세요.")
+  }
+
+  @Test
+  func 알수없는_오류여도_명시적인_사용자_안내는_유지한다() {
+    let message = "AI 주제 생성 시간이 초과됐어요. 다시 확인해 주세요."
+    #expect(ClassError.userMessage(message).message == message)
+    #expect(ClassError.unknown("AuthenticationError.excessiveRefresh: 인증 토큰 갱신 실패").message !=
+      "AuthenticationError.excessiveRefresh: 인증 토큰 갱신 실패")
+  }
 }

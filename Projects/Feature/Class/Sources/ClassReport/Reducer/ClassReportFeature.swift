@@ -90,13 +90,17 @@ public struct ClassReportFeature {
     }
 
     public var serverParticipationRate: String {
-      guard let rate = classResult?.stats.participationRate else { return "" }
-      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      guard let stats = classResult?.stats else { return "" }
+      guard stats.activeMemberCount > 0 else { return "아직 참여 없음" }
+      return (Double(stats.completedCount) / Double(stats.activeMemberCount) * 100)
+        .formatted(.number.precision(.fractionLength(0...1))) + "%"
     }
 
     public var serverCommentRate: String {
-      guard let rate = classResult?.stats.commentRate else { return "" }
-      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      guard let stats = classResult?.stats else { return "" }
+      guard stats.activeMemberCount > 0 else { return "아직 참여 없음" }
+      return (Double(stats.commentWriterCount) / Double(stats.activeMemberCount) * 100)
+        .formatted(.number.precision(.fractionLength(0...1))) + "%"
     }
 
     public var serverParticipationCount: String {
@@ -110,11 +114,13 @@ public struct ClassReportFeature {
     }
 
     public var serverParticipationProgress: Double {
-      min(max((classResult?.stats.participationRate ?? 0) / 100, 0), 1)
+      guard let stats = classResult?.stats, stats.activeMemberCount > 0 else { return 0 }
+      return min(max(Double(stats.completedCount) / Double(stats.activeMemberCount), 0), 1)
     }
 
     public var serverCommentProgress: Double {
-      min(max((classResult?.stats.commentRate ?? 0) / 100, 0), 1)
+      guard let stats = classResult?.stats, stats.activeMemberCount > 0 else { return 0 }
+      return min(max(Double(stats.commentWriterCount) / Double(stats.activeMemberCount), 0), 1)
     }
 
     public var serverOptionCounts: [Int: String] {
@@ -124,12 +130,18 @@ public struct ClassReportFeature {
       }
     }
 
+    public var serverDistributionTotalCount: Int {
+      classResult?.stats.options.reduce(0) { $0 + max($1.postVoteCount, 0) } ?? 0
+    }
+
     public var serverDistributionTotalText: String {
-      "\(classResult?.stats.postVoteCount ?? 0)명"
+      "\(serverDistributionTotalCount)명"
     }
 
     public var serverDistributionProgress: Double {
-      min(max((classResult?.stats.options.first?.postVoteRatio ?? 0) / 100, 0), 1)
+      guard serverDistributionTotalCount > 0 else { return 0 }
+      return Double(max(classResult?.stats.options.first?.postVoteCount ?? 0, 0))
+        / Double(serverDistributionTotalCount)
     }
 
     public var serverDistributionOptionCountTexts: [Int: String] {
@@ -141,8 +153,19 @@ public struct ClassReportFeature {
 
     public var serverDistributionOptionRatioTexts: [Int: String] {
       guard let options = classResult?.stats.options else { return [:] }
-      return options.reduce(into: [:]) { values, option in
-        values[option.id] = option.postVoteRatio.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      guard serverDistributionTotalCount > 0 else {
+        return options.reduce(into: [:]) { $0[$1.id] = "아직 참여 없음" }
+      }
+      var remainingTenths = 1000
+      return options.enumerated().reduce(into: [:]) { values, pair in
+        let (index, option) = pair
+        let tenths = index == options.count - 1
+          ? remainingTenths
+          : Int((Double(max(option.postVoteCount, 0)) * 1000
+            / Double(serverDistributionTotalCount)).rounded())
+        remainingTenths -= tenths
+        values[option.id] = (Double(tenths) / 10)
+          .formatted(.number.precision(.fractionLength(0...1))) + "%"
       }
     }
 

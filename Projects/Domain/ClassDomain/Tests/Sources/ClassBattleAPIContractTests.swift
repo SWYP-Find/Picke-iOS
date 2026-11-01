@@ -114,7 +114,7 @@ struct ClassBattleAPIContractTests {
     "postVote":{"optionId":32,"label":"B","title":"창작이 아니다"},"status":"COMPLETED","opinionChanged":true}
     """
     let pageJSON = """
-    {"items":[{"perspectiveId":50,"user":{"userTag":"u1","nickname":"피케"},
+    {"items":[{"perspectiveId":50,"user":{"userTag":null,"nickname":"피케"},
     "option":{"optionId":31,"label":"A","title":"창작이다"},"content":"의견",
     "likeCount":3,"commentCount":1,"isLiked":false,"isMyPerspective":true,
     "createdAt":"2026-10-21T12:00:00"}],"nextCursor":"next","hasNext":true}
@@ -125,6 +125,7 @@ struct ClassBattleAPIContractTests {
     #expect(history.status == .completed)
     #expect(history.opinionChanged == true)
     #expect(page.items.first?.id == 50)
+    #expect(page.items.first?.author.userTag == "")
     #expect(page.items.first?.isMyPerspective == true)
     #expect(page.nextCursor == "next")
     #expect(page.hasNext)

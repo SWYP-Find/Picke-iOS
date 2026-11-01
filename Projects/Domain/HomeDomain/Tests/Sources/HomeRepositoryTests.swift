@@ -70,6 +70,10 @@ struct HomeRepositoryTests {
           "viewCount": 900
         }
       ],
+      "bestComments": [
+        { "battleId": 21, "battleTitle": "인간은 본래 선한가", "optionTitle": "선하다", "content": "선하게 태어나요" },
+        { "battleId": null, "battleTitle": "제외", "optionTitle": "", "content": "" }
+      ],
       "todayQuizzes": [
         {
           "battleId": 31,
@@ -175,6 +179,12 @@ struct HomeRepositoryTests {
     #expect(bundle.bestBattles[1].rank == 2)
     #expect(bundle.bestBattles[1].battleId == 22)
     #expect(bundle.bestBattles[1].tags.isEmpty)
+    #expect(bundle.bestComments == [HomeBestComment(
+      battleId: 21,
+      battleTitle: "인간은 본래 선한가",
+      optionTitle: "선하다",
+      content: "선하게 태어나요"
+    )])
 
     #expect(bundle.quizzes.count == 1)
     #expect(bundle.quizzes[0].isCorrectA == true)
@@ -205,6 +215,7 @@ struct HomeRepositoryTests {
     #expect(bundle.heroes.isEmpty)
     #expect(bundle.hotBattles.isEmpty)
     #expect(bundle.bestBattles.isEmpty)
+    #expect(bundle.bestComments.isEmpty)
     #expect(bundle.quizzes.isEmpty)
     #expect(bundle.votes.isEmpty)
     #expect(bundle.newBattles.isEmpty)

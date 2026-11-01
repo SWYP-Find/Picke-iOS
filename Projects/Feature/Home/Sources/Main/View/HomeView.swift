@@ -32,6 +32,8 @@ public struct HomeView: View {
       ScrollView(showsIndicators: false) {
         if store.shouldShowSkeleton {
           HomeSkeletonView()
+        } else if !store.hasVisibleHomeContent {
+          emptyHomeSection()
         } else {
           VStack(spacing: 32) {
             if !store.heroes.isEmpty {
@@ -42,18 +44,15 @@ public struct HomeView: View {
               )
             }
 
-            if !store.hotBattles.isEmpty {
-              hotBattlesSection()
+            hotBattlesSection()
+            if !store.hotBattles.isEmpty || !store.bestBattles.isEmpty {
               adSection()
             }
             if !store.bestBattles.isEmpty {
               bestBattlesSection()
-              if store.hotBattles.isEmpty {
-                adSection()
-              }
             }
-            if !store.quizzes.isEmpty || !store.votes.isEmpty {
-              todayPickeSection()
+            if !store.bestComments.isEmpty {
+              bestCommentsSection()
             }
             if !store.newBattles.isEmpty {
               newBattlesSection()
@@ -82,6 +81,21 @@ public struct HomeView: View {
 // MARK: - Sections
 
 extension HomeView {
+  @ViewBuilder
+  private func emptyHomeSection() -> some View {
+    VStack(spacing: 16) {
+      Image(asset: .noDataLogo)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 160, height: 120)
+      Text("아직 준비된 배틀이 없어요!")
+        .pretendardFont(.bodyMedium)
+        .foregroundStyle(.beige800)
+    }
+    .frame(maxWidth: .infinity)
+    .frame(minHeight: 500)
+  }
+
   /// 배틀 섹션 아래 네이티브 광고 — AdFit 은 한 화면에 같은 단위 1개만 허용해 호출부에서 하나만 그린다.
   @ViewBuilder
   private func adSection() -> some View {
@@ -98,15 +112,43 @@ extension HomeView {
       HomeSectionHeader(title: "지금 뜨는 배틀") {
         send(.seeMoreTapped(.hotBattles))
       }
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 16) {
-          ForEach(store.hotBattles) { battle in
-            HotBattleCardView(battle: battle)
-              .contentShape(Rectangle())
-              .onTapGesture { send(.hotBattleTapped(battle)) }
+      if store.hotBattles.isEmpty {
+        Text("지금 뜨는 배틀이 아직 없어요")
+          .pretendardFont(.bodyMedium)
+          .foregroundStyle(.neutral300)
+          .frame(width: 220, height: 274)
+          .background(.beige50)
+          .roundedBorder(.beige600, lineWidth: 1)
+          .padding(.horizontal, 16)
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 16) {
+            ForEach(store.hotBattles) { battle in
+              HotBattleCardView(battle: battle)
+                .contentShape(Rectangle())
+                .onTapGesture { send(.hotBattleTapped(battle)) }
+            }
+          }
+          .padding(.horizontal, 16)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func bestCommentsSection() -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HomeSectionHeader(title: "Best 댓글", onSeeMoreTapped: nil)
+      VStack(spacing: 0) {
+        ForEach(Array(store.bestComments.enumerated()), id: \.offset) { index, comment in
+          HomeBestCommentRow(comment: comment)
+            .contentShape(Rectangle())
+            .onTapGesture { send(.bestCommentTapped(comment)) }
+          if index < store.bestComments.count - 1 {
+            PickeDivider(.beige600)
+              .padding(.horizontal, 16)
           }
         }
-        .padding(.horizontal, 16)
       }
     }
   }
@@ -125,26 +167,6 @@ extension HomeView {
           if index < store.bestBattles.count - 1 {
             PickeDivider(.beige600)
           }
-        }
-      }
-      .padding(.horizontal, 16)
-    }
-  }
-
-  @ViewBuilder
-  private func todayPickeSection() -> some View {
-    VStack(alignment: .leading, spacing: 16) {
-      HomeSectionHeader(title: "오늘의 Pické") {
-        send(.seeMoreTapped(.todayPicke))
-      }
-      VStack(spacing: 16) {
-        if let quiz = store.currentQuiz {
-          QuizCardView(question: quiz)
-        }
-        if let vote = store.currentVote {
-          VoteCardView(question: vote)
-            .contentShape(Rectangle())
-            .onTapGesture {}
         }
       }
       .padding(.horizontal, 16)

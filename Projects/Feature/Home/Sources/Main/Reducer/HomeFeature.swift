@@ -34,6 +34,7 @@ public struct HomeFeature {
     public var heroIndex: Int = 0
     public var hotBattles: [HotBattle] = []
     public var bestBattles: [BestBattle] = []
+    public var bestComments: [HomeBestComment] = []
     public var quizzes: [QuizQuestion] = []
     public var votes: [VoteQuestion] = []
     public var newBattles: [NewBattle] = []
@@ -49,11 +50,17 @@ public struct HomeFeature {
     public var currentQuiz: QuizQuestion? { quizzes.first }
     public var currentVote: VoteQuestion? { votes.first }
 
+    public var hasVisibleHomeContent: Bool {
+      !heroes.isEmpty || !hotBattles.isEmpty || !bestBattles.isEmpty ||
+        !bestComments.isEmpty || !newBattles.isEmpty
+    }
+
     public var shouldShowSkeleton: Bool {
       (viewState == .loading || !hasLoadedHome) &&
         heroes.isEmpty &&
         hotBattles.isEmpty &&
         bestBattles.isEmpty &&
+        bestComments.isEmpty &&
         quizzes.isEmpty &&
         votes.isEmpty &&
         newBattles.isEmpty
@@ -80,6 +87,7 @@ public struct HomeFeature {
     case heroTapped(HeroBattle)
     case hotBattleTapped(HotBattle)
     case bestBattleTapped(BestBattle)
+    case bestCommentTapped(HomeBestComment)
     case newBattleTapped(NewBattle)
     case notificationTapped
     /// 홈 피드 네이티브 광고 클릭
@@ -205,6 +213,13 @@ extension HomeFeature {
       )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
+    case let .bestCommentTapped(comment):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .battleCardTap,
+        contentID: "\(comment.battleId)"
+      )))
+      return .send(.delegate(.presentPreVote(battleId: comment.battleId)))
+
     case let .newBattleTapped(battle):
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .newBattleTap,
@@ -278,6 +293,7 @@ extension HomeFeature {
         state.heroIndex = 0
         state.hotBattles = home.hotBattles
         state.bestBattles = home.bestBattles
+        state.bestComments = home.bestComments
         state.quizzes = home.quizzes
         state.votes = home.votes
         state.newBattles = home.newBattles

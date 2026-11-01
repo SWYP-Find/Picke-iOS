@@ -162,6 +162,7 @@ private extension ClassReportView {
             participationBar(
               title: "배틀 참여율",
               rate: store.serverParticipationRate,
+              caption: "참여한 멤버",
               detail: store.serverParticipationCount,
               progress: store.serverParticipationProgress,
               color: .primary500
@@ -169,6 +170,7 @@ private extension ClassReportView {
             participationBar(
               title: "댓글 작성률",
               rate: store.serverCommentRate,
+              caption: "댓글을 남긴 멤버",
               detail: store.serverCommentCount,
               progress: store.serverCommentProgress,
               color: .secondary500
@@ -283,6 +285,7 @@ private extension ClassReportView {
   func participationBar(
     title: String,
     rate: String,
+    caption: String,
     detail: String,
     progress: Double,
     color: Color
@@ -296,16 +299,20 @@ private extension ClassReportView {
           .pretendardFont(.semiBold12)
       }
       .foregroundStyle(.gray800)
-      Text(detail)
-        .pretendardFont(.medium10)
-        .foregroundStyle(.gray300)
+      HStack {
+        Text(caption)
+        Spacer()
+        Text(detail)
+      }
+      .pretendardFont(.medium10)
+      .foregroundStyle(.gray300)
       GeometryReader { geometry in
         ZStack(alignment: .leading) {
           Capsule().fill(.beige500)
           Capsule().fill(color).frame(width: geometry.size.width * progress)
         }
       }
-      .frame(height: 5)
+      .frame(height: 6)
     }
     .padding(.vertical, 2)
   }
@@ -314,7 +321,11 @@ private extension ClassReportView {
   func stanceDistribution(_ options: [ClassResultOption]) -> some View {
     HStack(spacing: 24) {
       ZStack {
-        Circle().stroke(.secondary500, lineWidth: 12)
+        Circle()
+          .stroke(
+            store.serverDistributionTotalCount == 0 ? Color.beige500 : Color.secondary500,
+            lineWidth: 12
+          )
         Circle()
           .trim(from: 0, to: store.serverDistributionProgress)
           .stroke(.primary500, style: StrokeStyle(lineWidth: 12, lineCap: .butt))

@@ -53,6 +53,38 @@ struct HomeTests {
     #expect(store.state.hasUnreadNotification == false)
     #expect(store.state.shouldShowSkeleton == false)
   }
+
+  @Test
+  @MainActor
+  func homeResponseStoresBestCommentsWithoutMockFallback() async {
+    let comment = HomeBestComment(
+      battleId: 21,
+      battleTitle: "인간은 본래 선한가",
+      optionTitle: "선하다",
+      content: "선하게 태어나요"
+    )
+    let store = TestStore(initialState: HomeFeature.State()) {
+      HomeFeature()
+    }
+
+    await store.send(.inner(.homeResponse(.success(.commentsOnly(comment))))) {
+      $0.hasLoadedHome = true
+      $0.bestComments = [comment]
+    }
+
+    #expect(store.state.hotBattles.isEmpty)
+    #expect(store.state.hasVisibleHomeContent)
+    #expect(store.state.shouldShowSkeleton == false)
+  }
+
+  @Test
+  func loadedEmptyHomeHasNoVisibleContent() {
+    var state = HomeFeature.State()
+    state.hasLoadedHome = true
+
+    #expect(state.shouldShowSkeleton == false)
+    #expect(state.hasVisibleHomeContent == false)
+  }
 }
 
 private extension HomeBundle {
@@ -65,4 +97,17 @@ private extension HomeBundle {
     votes: [],
     newBattles: []
   )
+
+  static func commentsOnly(_ comment: HomeBestComment) -> HomeBundle {
+    HomeBundle(
+      newNotice: false,
+      heroes: [],
+      hotBattles: [],
+      bestBattles: [],
+      bestComments: [comment],
+      quizzes: [],
+      votes: [],
+      newBattles: []
+    )
+  }
 }

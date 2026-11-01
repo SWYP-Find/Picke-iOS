@@ -61,20 +61,26 @@ struct ClassReportTests {
   private func result(
     room: ClassRoom,
     reportState: String?,
-    postVoteRatio: Double = 54.5
+    postVoteRatio: Double = 54.5,
+    activeMemberCount: Int = 12,
+    firstCount: Int = 6,
+    secondCount: Int = 5
   ) -> ClassResult {
     ClassResult(
       classID: room.id,
       closed: true,
       closeAt: room.deadline,
       stats: .init(
-        activeMemberCount: 12,
-        completedCount: 10,
+        activeMemberCount: activeMemberCount,
+        completedCount: min(10, activeMemberCount),
         participationRate: 83.3,
-        commentWriterCount: 9,
+        commentWriterCount: min(9, activeMemberCount),
         commentRate: 75,
-        postVoteCount: 11,
-        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: postVoteRatio)]
+        postVoteCount: firstCount + secondCount,
+        options: [
+          .init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: firstCount, postVoteRatio: postVoteRatio),
+          .init(id: 32, title: "아니다", preVoteCount: 4, postVoteCount: secondCount, postVoteRatio: 100 - postVoteRatio)
+        ]
       ),
       myReportState: reportState,
       insightState: nil
@@ -93,27 +99,49 @@ struct ClassReportTests {
     #expect(state.serverCommentRate == "75%")
     #expect(state.serverParticipationCount == "10 / 12명")
     #expect(state.serverCommentCount == "9 / 12명")
-    #expect(abs(state.serverParticipationProgress - 0.833) < 0.0001)
+    #expect(abs(state.serverParticipationProgress - 0.833) < 0.001)
     #expect(abs(state.serverCommentProgress - 0.75) < 0.0001)
     let option = try #require(state.classResult?.stats.options.first)
     #expect(state.serverOptionCounts[option.id] == "사전 8 · 사후 6")
     #expect(state.serverDistributionTotalText == "11명")
-    #expect(abs(state.serverDistributionProgress - 0.545) < 0.0001)
+    #expect(abs(state.serverDistributionProgress - (6.0 / 11.0)) < 0.0001)
     #expect(state.serverDistributionOptionCountTexts[option.id] == "6명")
     #expect(state.serverDistributionOptionRatioTexts[option.id] == "54.5%")
+    #expect(state.serverDistributionOptionRatioTexts[32] == "45.5%")
 
     state.classResult = result(
       room: .mockClosedSociety,
       reportState: "SUCCEEDED",
       postVoteRatio: -10
     )
-    #expect(state.serverDistributionProgress == 0)
+    #expect(abs(state.serverDistributionProgress - (6.0 / 11.0)) < 0.0001)
     state.classResult = result(
       room: .mockClosedSociety,
       reportState: "SUCCEEDED",
       postVoteRatio: 110
     )
-    #expect(state.serverDistributionProgress == 1)
+    #expect(abs(state.serverDistributionProgress - 0.545) < 0.001)
+  }
+
+  @Test
+  func 참여_대상과_사후_투표가_없으면_미참여_상태를_표시한다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    state.classResult = result(
+      room: .mockClosedSociety,
+      reportState: "SUCCEEDED",
+      activeMemberCount: 0,
+      firstCount: 0,
+      secondCount: 0
+    )
+    #expect(state.serverParticipationRate == "아직 참여 없음")
+    #expect(state.serverCommentRate == "아직 참여 없음")
+    #expect(state.serverParticipationProgress == 0)
+    #expect(state.serverCommentProgress == 0)
+    #expect(state.serverDistributionTotalCount == 0)
+    #expect(state.serverDistributionTotalText == "0명")
+    #expect(state.serverDistributionProgress == 0)
+    #expect(state.serverDistributionOptionRatioTexts[31] == "아직 참여 없음")
+    #expect(state.serverDistributionOptionRatioTexts[32] == "아직 참여 없음")
   }
 
   @Test

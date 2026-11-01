@@ -23,7 +23,7 @@ public protocol ClassRoomInterface: Sendable {
 
 public extension ClassRoomInterface {
   func updateName(id _: Int, name _: String) async throws -> ClassRoom {
-    throw ClassError.unknown("클래스 이름 변경을 지원하지 않습니다.")
+    throw ClassError.userMessage("클래스 이름 변경을 지원하지 않습니다.")
   }
 
   func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {

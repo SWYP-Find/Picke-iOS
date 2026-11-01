@@ -63,6 +63,18 @@ public extension BestBattleDTO {
   }
 }
 
+public extension BestCommentDTO {
+  func toDomain() -> HomeBestComment? {
+    guard let battleId else { return nil }
+    return HomeBestComment(
+      battleId: battleId,
+      battleTitle: battleTitle ?? "",
+      optionTitle: optionTitle ?? "",
+      content: content ?? ""
+    )
+  }
+}
+
 public extension TodayQuizDTO {
   func toDomain() -> QuizQuestion {
     QuizQuestion(
@@ -127,6 +139,7 @@ public extension HomeDataDTO {
       bestBattles: bestBattles.enumerated().map { idx, dto in
         dto.toDomain(rank: idx + 1)
       },
+      bestComments: bestComments?.compactMap { $0.toDomain() } ?? [],
       quizzes: todayQuizzes.map { $0.toDomain() },
       votes: todayVotes.map { $0.toDomain() },
       newBattles: newBattles.map { $0.toDomain() }

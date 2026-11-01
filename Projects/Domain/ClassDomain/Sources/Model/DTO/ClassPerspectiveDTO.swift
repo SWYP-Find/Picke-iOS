@@ -10,7 +10,7 @@ struct ClassPerspectiveReceiptDTO: Decodable, Sendable {
 
 struct ClassPerspectiveItemDTO: Decodable, Sendable {
   struct User: Decodable, Sendable {
-    let userTag: String
+    let userTag: String?
     let nickname: String
     let characterType: String?
     let characterImageUrl: String?
