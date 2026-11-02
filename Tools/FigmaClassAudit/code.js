@@ -6,6 +6,7 @@ const targets = [
   { id: "13384:57726", label: "의견" },
   { id: "13757:17445", label: "결과" },
   { id: "13956:18883", label: "홈" },
+  { id: "12378:23897", label: "클래스 탭" },
 ];
 const sourceNodeId = "2027:2";
 
