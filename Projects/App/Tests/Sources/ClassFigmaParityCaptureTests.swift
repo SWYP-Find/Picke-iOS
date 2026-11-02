@@ -233,10 +233,10 @@ private extension ClassFigmaParityCaptureTests {
     let window = UIWindow(windowScene: scene)
     let host = UIHostingController(rootView: view.environment(\.colorScheme, .light))
     window.rootViewController = host
-    // The 1x window sits above the home indicator, so mirror a device bottom safe area.
-    host.additionalSafeAreaInsets = UIEdgeInsets(top: 0, left: 0, bottom: 34, right: 0)
     window.frame = CGRect(origin: .zero, size: size)
     window.makeKeyAndVisible()
+    // A window shorter than the screen sits above the home indicator, so mirror a device bottom safe area.
+    host.additionalSafeAreaInsets.bottom = max(0, 34 - window.safeAreaInsets.bottom)
     defer { window.isHidden = true }
     host.view.frame = window.bounds
     host.view.layoutIfNeeded()

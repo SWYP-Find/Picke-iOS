@@ -93,8 +93,8 @@ private extension ClassBattleFlowView {
               height: isPreVoteLanding
                 ? max(420, min(510, proxy.size.height * 0.63))
                 : isFinalVote
-                  ? max(330, min(405, proxy.size.height * 0.48 + 15))
-                  : max(315, min(390, proxy.size.height * 0.48))
+                  ? max(330, min(405, proxy.size.height * 0.5 + 15))
+                  : max(315, min(390, proxy.size.height * 0.5))
             )
             voteIntroduction()
             if !isPreVoteLanding {
@@ -106,7 +106,7 @@ private extension ClassBattleFlowView {
           .frame(minHeight: max(0, proxy.size.height - 110), alignment: .top)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-          voteFooter()
+          voteFooter(bottomPadding: voteFooterBottomPadding(hasBottomSafeArea: proxy.safeAreaInsets.bottom > 0))
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .background(voteBackground)
@@ -194,12 +194,12 @@ private extension ClassBattleFlowView {
       }
 
       Text(store.displayTitle)
-        .pretendardFont(.bold24)
+        .pretendardFont(.bold24, lineHeightMultiple: 1.3)
         .foregroundStyle(isFinalVote ? .white : .gray800)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.top, 20)
       Text(store.displaySummary)
-        .pretendardFont(.bodyMedium)
+        .pretendardFont(.bodyMedium, lineHeightMultiple: 1.4)
         .foregroundStyle(isFinalVote ? .gray300 : .gray400)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.top, 12)
@@ -292,9 +292,10 @@ private extension ClassBattleFlowView {
           .foregroundStyle(.gray800)
           .lineLimit(2)
           .multilineTextAlignment(.center)
+          .frame(minHeight: 20)
           .padding(.top, 12)
         Text(option.representative)
-          .pretendardFont(.labelSmall)
+          .pretendardFont(.labelSmall, lineHeightMultiple: 1.4)
           .foregroundStyle(.neutral300)
           .lineLimit(1)
           .padding(.top, 2)
@@ -317,7 +318,7 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func voteFooter() -> some View {
+  func voteFooter(bottomPadding: CGFloat) -> some View {
     VStack(spacing: 8) {
       if let error = store.errorMessage {
         Text(error)
@@ -334,12 +335,19 @@ private extension ClassBattleFlowView {
           deadline,
           systemImage: "clock"
         )
-          .pretendardFont(.regular13)
+          .pretendardFont(.regular13, lineHeightMultiple: 1.4)
           .foregroundStyle(.gray300)
       }
     }
     .frame(maxWidth: .infinity)
-    .padding(.bottom, isFinalVote ? 10 : 20)
+    .padding(.bottom, bottomPadding)
+  }
+
+  func voteFooterBottomPadding(hasBottomSafeArea: Bool) -> CGFloat {
+    if isFinalVote { return hasBottomSafeArea ? 6 : 10 }
+    // 홈 인디케이터가 있는 기기에서는 Figma처럼 마지막 줄인 마감 문구만 그 영역에 10pt 걸친다.
+    guard hasBottomSafeArea, store.voteDeadlineLabel != nil else { return 20 }
+    return -10
   }
 
   @ViewBuilder
@@ -485,13 +493,12 @@ private extension ClassBattleFlowView {
         VStack(alignment: line.side == "B" ? .trailing : .leading, spacing: 6) {
           if row.showsHeader {
             Text(line.speakerName)
-              .pretendardFont(.headingSmall)
+              .pretendardFont(.headingSmall, lineHeightMultiple: 1.4)
               .foregroundStyle(.gray800)
           }
           Text(line.text)
-            .pretendardFont(.regular13)
+            .pretendardFont(.regular13, lineHeightMultiple: 1.4)
             .foregroundStyle(.gray400)
-            .lineSpacing(2.7)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 8)
@@ -549,19 +556,21 @@ private extension ClassBattleFlowView {
           }
         }
       }
-      audioProgressBar()
-      AudioPlayerControlView(
-        isPlaying: .constant(store.isPlaying),
-        onBackward: { send(.seekBy(-15)) },
-        onTogglePlay: { send(.playbackTapped) },
-        onForward: { send(.seekBy(15)) },
-        onReplay: { send(.replayTapped) },
-        isReplayEnabled: store.hasListened,
-        tint: .neutral900,
-        playbackRateTitle: store.playbackRateTitle,
-        onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
-      )
-      .disabled(!store.isAudioReady || store.pendingCheckpointID != nil)
+      VStack(spacing: 0) {
+        audioProgressBar()
+        AudioPlayerControlView(
+          isPlaying: .constant(store.isPlaying),
+          onBackward: { send(.seekBy(-15)) },
+          onTogglePlay: { send(.playbackTapped) },
+          onForward: { send(.seekBy(15)) },
+          onReplay: { send(.replayTapped) },
+          isReplayEnabled: store.hasListened,
+          tint: .neutral900,
+          playbackRateTitle: store.playbackRateTitle,
+          onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
+        )
+        .disabled(!store.isAudioReady || store.pendingCheckpointID != nil)
+      }
       if store.hasListened {
         Button(store.buttonTitle) { send(.submitTapped) }
           .ctaButtonStyle(.primary, size: .large, height: 52)
@@ -606,7 +615,7 @@ private extension ClassBattleFlowView {
         Spacer()
         Text(store.audioDurationText)
       }
-      .pretendardFont(.regular13)
+      .pretendardFont(.regular13, lineHeightMultiple: 1.4)
       .foregroundStyle(.neutral300)
     }
   }
@@ -670,8 +679,8 @@ private extension ClassBattleFlowView {
       }
     }
     .padding(.horizontal, 16)
-    .padding(.top, 12)
-    .padding(.bottom, 16)
+    .padding(.top, 8)
+    .padding(.bottom, 8)
     .frame(maxWidth: .infinity)
     .background(.beige200)
   }
@@ -679,11 +688,12 @@ private extension ClassBattleFlowView {
   @ViewBuilder
   func voteStatsSummary(_ stats: ClassVoteStats) -> some View {
     let rows = store.voteStatsOptionRows
-    HStack(alignment: .center, spacing: 12) {
+    HStack(alignment: .top, spacing: 0) {
       if let first = rows.first {
         voteStatsOption(first)
       }
-      VStack(spacing: 20) {
+      // Figma는 높이 76 열에서 막대 영역(35)을 아래에 붙여 배지와 11 떨어진다.
+      VStack(spacing: 11) {
         if let opinionChangeLabel = store.opinionChangeLabel {
           Label(
             opinionChangeLabel,
@@ -692,14 +702,17 @@ private extension ClassBattleFlowView {
           .pretendardFont(.semiBold12)
           .foregroundStyle(.primary500)
           .padding(.horizontal, 4)
-          .padding(.vertical, 2)
+          .frame(height: 20)
           .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
           .fixedSize()
         } else {
           Color.clear.frame(height: 20)
         }
         voteRatioBar(stats)
+          .padding(.horizontal, 8)
+          .frame(height: 35)
       }
+      .padding(.top, 10)
       .frame(maxWidth: .infinity)
       if rows.count > 1 {
         voteStatsOption(rows[1])
@@ -726,7 +739,7 @@ private extension ClassBattleFlowView {
   @ViewBuilder
   func voteStatsOption(_ row: ClassVoteStatsOptionRow) -> some View {
     let option = row.option
-    VStack(spacing: 2) {
+    VStack(spacing: 0) {
       AsyncImage(url: option.imageURL) { image in
         image.resizable().scaledToFill()
       } placeholder: {
@@ -738,14 +751,15 @@ private extension ClassBattleFlowView {
       .background(.beige600, in: Circle())
       .clipShape(Circle())
       Text(option.title)
-        .pretendardFont(.medium11)
+        .pretendardFont(.medium11, lineHeightMultiple: 1.4)
         .foregroundStyle(.gray500)
         .lineLimit(1)
+        .padding(.top, 4)
       Text(row.percentageLabel)
-        .pretendardFont(.semiBold12)
+        .pretendardFont(.semiBold12, lineHeightMultiple: 1.4)
         .foregroundStyle(.gray500)
     }
-    .frame(width: 64)
+    .frame(width: 70)
   }
 
   @ViewBuilder
@@ -770,7 +784,7 @@ private extension ClassBattleFlowView {
         .lineLimit(1)
         .foregroundStyle(store.selectedPerspectiveOptionID == optionID ? .primary500 : .gray300)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .frame(height: 44)
         .overlay(alignment: .bottom) {
           if store.selectedPerspectiveOptionID == optionID {
             Rectangle().fill(.primary500).frame(height: 2)
@@ -821,16 +835,17 @@ private extension ClassBattleFlowView {
       VStack(alignment: .leading, spacing: 4) {
         Button { send(.perspectiveTapped(perspective.id)) } label: {
           Text(perspective.content)
-            .pretendardFont(.regular13)
+            .pretendardFont(.regular13, lineHeightMultiple: 1.4)
             .foregroundStyle(.gray300)
-            .lineSpacing(5)
             .lineLimit(3)
+            .padding(.horizontal, 2)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
         Button("자세히 보기") { send(.perspectiveTapped(perspective.id)) }
-          .pretendardFont(.labelSmall)
+          .pretendardFont(.labelSmall, lineHeightMultiple: 1.4)
           .foregroundStyle(.gray200)
+          .padding(.horizontal, 2)
           .buttonStyle(.plain)
       }
       perspectiveActions(row)
@@ -855,10 +870,10 @@ private extension ClassBattleFlowView {
       )
       VStack(alignment: .leading, spacing: 2) {
         Text(perspective.author.nickname)
-          .pretendardFont(.semiBold12)
+          .pretendardFont(.semiBold12, lineHeightMultiple: 1.4)
           .foregroundStyle(.gray800)
         Text(row.createdAtLabel)
-          .pretendardFont(.labelXSmall)
+          .pretendardFont(.labelXSmall, lineHeightMultiple: 1.4)
           .foregroundStyle(.gray300)
       }
       Spacer()
@@ -902,6 +917,7 @@ private extension ClassBattleFlowView {
       }
       Spacer()
     }
+    .frame(height: 24)
     .buttonStyle(.plain)
   }
 
@@ -915,30 +931,39 @@ private extension ClassBattleFlowView {
           .padding(.horizontal, 16)
           .padding(.top, 12)
       }
-      HStack(spacing: 12) {
+      HStack(spacing: 8) {
         TextField(
           "의견을 남겨보세요...",
           text: Binding(
             get: { store.draft },
             set: { send(.draftChanged($0)) }
-          )
+          ),
+          prompt: Text("의견을 남겨보세요...").foregroundStyle(.gray300)
         )
-        .pretendardFont(.bodyMedium)
+        .pretendardFont(.medium13)
         .padding(.horizontal, 12)
-        .frame(height: 44)
-        .background(.white, in: RoundedRectangle(cornerRadius: 4))
+        .frame(height: 52)
+        .background(.white, in: RoundedRectangle(cornerRadius: 2))
+        .overlay {
+          RoundedRectangle(cornerRadius: 2)
+            .strokeBorder(.beige600, lineWidth: 1)
+        }
         Button { send(.submitTapped) } label: {
           Image(systemName: "paperplane.fill")
             .foregroundStyle(.white)
-            .frame(width: 44, height: 44)
+            .frame(width: 40, height: 40)
             .background(.primary500, in: Circle())
+            .contentShape(Rectangle().inset(by: -2))
         }
         .buttonStyle(.plain)
         .disabled(!store.canSubmit)
       }
       .padding(16)
     }
-    .background(.beige200)
+    .background(.beige600)
+    .overlay(alignment: .top) {
+      Rectangle().fill(.beige700).frame(height: 1)
+    }
   }
 
   var plainNavigationBar: some View {
