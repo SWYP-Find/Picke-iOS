@@ -3007,6 +3007,13 @@ private struct FixedClassResultUseCase: ClassResultInterface {
   func retryInsight(roomID _: Int) async throws {
     throw ClassError.unknown("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
   }
+
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    throw ClassError.unknown("이 테스트는 내 활동 조회를 사용하지 않습니다.")
+  }
 }
 
 private actor SuspendedClassUseCase: ClassResultInterface {
@@ -3069,6 +3076,13 @@ private actor SuspendedClassUseCase: ClassResultInterface {
 
   func retryInsight(roomID _: Int) async throws {
     throw ClassError.network("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
+  }
+
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    throw ClassError.network("이 테스트는 내 활동 조회를 사용하지 않습니다.")
   }
 
   private static var fixture: ClassResult {

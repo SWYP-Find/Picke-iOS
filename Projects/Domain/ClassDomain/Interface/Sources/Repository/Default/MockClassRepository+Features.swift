@@ -117,6 +117,13 @@ public extension MockClassRepository {
     throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: fetchInsight")
   }
 
+  public func fetchMyActivity(
+    roomID: Int,
+    cursor: String?
+  ) async throws -> ClassMyActivity {
+    throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: fetchMyActivity")
+  }
+
   public func retryInsight(roomID: Int) async throws {
     throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: retryInsight")
   }

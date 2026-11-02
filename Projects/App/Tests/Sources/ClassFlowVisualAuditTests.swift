@@ -3153,6 +3153,13 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
 
     func retryInsight(roomID _: Int) async throws {}
+
+    func fetchMyActivity(
+      roomID _: Int,
+      cursor _: String?
+    ) async throws -> ClassMyActivity {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
   }
 
   private static func visualResultUseCase() -> VisualResultUseCase { VisualResultUseCase() }

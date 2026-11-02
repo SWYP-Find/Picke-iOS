@@ -63,6 +63,13 @@ struct ClassReportTests {
     func retryInsight(roomID _: Int) async throws {
       throw ClassAIFeedbackError.temporarilyUnavailable
     }
+
+    func fetchMyActivity(
+      roomID _: Int,
+      cursor _: String?
+    ) async throws -> ClassMyActivity {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
   }
 
   private func result(

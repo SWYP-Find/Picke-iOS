@@ -243,6 +243,13 @@ private actor SuspendedFeedbackGenerator: ClassResultInterface {
     throw ClassAIFeedbackError.generationFailed
   }
 
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    throw ClassAIFeedbackError.temporarilyUnavailable
+  }
+
   private func suspend<T: Sendable>(
     request: @escaping @Sendable (CheckedContinuation<T, Error>) -> Request
   ) async throws -> T {
