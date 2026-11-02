@@ -28,6 +28,13 @@ struct ClassReportTests {
     ])
   }
 
+  @Test
+  func 주요_의견_본문은_따옴표로_감싸_표시한다() {
+    let row = ClassReportHighlightRow(id: 0, title: "주요 의견 1", text: "첫 인용", isLast: true)
+
+    #expect(row.quotedText == "“첫 인용”")
+  }
+
   private struct ResultStub: ClassResultInterface {
     let result: Result<ClassResult, ClassError>
     let feedback: ClassAIPersonalFeedback?

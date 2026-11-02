@@ -544,6 +544,25 @@ struct ClassBattleFlowTests {
   }
 
   @Test
+  func 의견_작성_시각은_N분_전_형식으로_표시한다() {
+    let item = ClassPerspectiveItem(
+      id: 1,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "의견",
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: Date().addingTimeInterval(-150)
+    )
+    let row = ClassPerspectiveRow(id: 1, perspective: item, likeCountLabel: "0", commentCountLabel: "0")
+
+    #expect(row.createdAtLabel == "2분 전")
+  }
+
+  @Test
   func 이미_제출한_의견은_빈_재조회_응답으로_다시_작성할_수_없다() async {
     var state = battleState(room: .mocks[0])
     state.session = session(step: .completed, commentRequired: false)
@@ -1189,7 +1208,7 @@ struct ClassBattleFlowTests {
       status: .completed,
       opinionChanged: false
     )
-    #expect(state.opinionChangeLabel == "처음 생각을 유지했어요")
+    #expect(state.opinionChangeLabel == "생각이 동일해요")
 
     state.voteHistory = ClassVoteHistory(
       battleTitle: "토론",
@@ -1207,7 +1226,7 @@ struct ClassBattleFlowTests {
       status: .completed,
       opinionChanged: nil
     )
-    #expect(state.opinionChangeLabel == "처음 생각을 유지했어요")
+    #expect(state.opinionChangeLabel == "생각이 동일해요")
   }
 
   @Test

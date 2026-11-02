@@ -4,6 +4,8 @@ public struct ClassReportHighlightRow: Equatable, Identifiable {
   public let text: String
   public let isLast: Bool
 
+  public var quotedText: String { "“\(text)”" }
+
   public init(
     id: Int,
     title: String,
