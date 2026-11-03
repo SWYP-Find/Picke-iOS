@@ -199,7 +199,9 @@ public struct ClassOwnerDashboardFeature {
     }
 
     public var myOpinionsTitle: String {
-      "내가 남긴 의견 \(myOpinionCount)개 보기"
+      // 리포트 화면과 같이 개인 피드백을 받지 못하면 개수를 모르므로 표시하지 않는다.
+      if classResult != nil, generatedFeedback == nil { return "내가 남긴 의견 보기" }
+      return "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
     public var canOpenMyOpinions: Bool {

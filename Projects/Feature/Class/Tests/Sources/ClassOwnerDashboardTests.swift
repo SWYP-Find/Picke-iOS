@@ -259,6 +259,7 @@ struct ClassOwnerDashboardTests {
     var feedback: ClassAIPersonalFeedback? = nil
     var insight: ClassAIInsight? = nil
     var myActivity: ClassMyActivity? = nil
+    var suspendsMyActivity = false
 
     func fetchResult(roomID _: Int) async throws -> ClassResult {
       try result.get()
@@ -282,6 +283,7 @@ struct ClassOwnerDashboardTests {
       roomID _: Int,
       cursor _: String?
     ) async throws -> ClassMyActivity {
+      if suspendsMyActivity { try await Task.never() }
       guard let myActivity else { throw ClassAIFeedbackError.temporarilyUnavailable }
       return myActivity
     }
@@ -462,6 +464,84 @@ struct ClassOwnerDashboardTests {
     #expect(store.state.receivedLikeCount == nil)
     #expect(store.state.personalReceivedLikeCountText == "—")
     #expect(store.state.myActivityRequestID == nil)
+  }
+
+  @Test
+  func 뒤로_가면_진행중인_내_활동_조회를_취소한다() async {
+    let room = ClassRoom.mocks[0]
+    let state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(serverResult(room)),
+        suspendsMyActivity: true
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.async(.fetchMyActivity))
+    #expect(store.state.myActivityRequestID != nil)
+    await store.send(.view(.backTapped))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(store.state.myActivityRequestID == nil)
+  }
+
+  @Test
+  func 다시_불러오면_받은_추천을_비우고_이전_내_활동_응답을_무시한다() async throws {
+    let room = ClassRoom.mocks[0]
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.receivedLikeCount = 12
+    let activity = ClassMyActivity(
+      classID: room.id,
+      receivedLikeCount: 30,
+      commentCount: 0,
+      comments: [],
+      nextCursor: nil,
+      hasNext: false
+    )
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(serverResult(room)),
+        suspendsMyActivity: true
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.async(.fetchMyActivity))
+    let staleRequestID = try #require(store.state.myActivityRequestID)
+    await store.send(.view(.retryTapped))
+    await store.receive(\.async.fetchDashboard)
+    #expect(store.state.receivedLikeCount == nil)
+    #expect(store.state.myActivityRequestID == nil)
+    await store.receive(\.inner.resultResponse)
+    await store.send(.inner(.myActivityResponse(
+      instanceID: state.instanceID,
+      requestID: staleRequestID,
+      roomID: room.id,
+      .success(activity)
+    )))
+    #expect(store.state.receivedLikeCount == nil)
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 개인_피드백이_없으면_내가_남긴_의견_버튼에_개수를_표시하지_않는다() {
+    let room = ClassRoom.mocks[0]
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    #expect(state.myOpinionsTitle == "내가 남긴 의견 0개 보기")
+    state.classResult = serverResult(room)
+    #expect(state.myOpinionsTitle == "내가 남긴 의견 보기")
+    state.generatedFeedback = ClassAIPersonalFeedback(
+      summaryTitle: "개인 결과",
+      summaryDetail: "참여 분석",
+      points: [],
+      nextQuestion: "다음 질문",
+      nextHint: "",
+      perspectiveCount: 2
+    )
+    #expect(state.myOpinionsTitle == "내가 남긴 의견 2개 보기")
   }
 
   @Test
