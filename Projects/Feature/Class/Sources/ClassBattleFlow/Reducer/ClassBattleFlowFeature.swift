@@ -44,6 +44,7 @@ public struct ClassBattleFlowFeature {
     public var hasMorePerspectives = false
     public var isLoadingPerspectives = false
     public var refreshAfterPerspectiveDetail = false
+    public var refreshAfterOwnPerspectiveDetail = false
     public var perspectiveErrorMessage: String?
     public var errorMessage: String?
     public var loadRequestID: UUID?
@@ -446,8 +447,12 @@ extension ClassBattleFlowFeature {
       if state.step == .some(.completed), state.perspectiveRequestID == nil
       {
         let shouldRefresh = state.refreshAfterPerspectiveDetail
+        let returnedFromOwnPerspective = shouldRefresh && state.refreshAfterOwnPerspectiveDetail
         state.refreshAfterPerspectiveDetail = false
+        state.refreshAfterOwnPerspectiveDetail = false
         if shouldRefresh { state.hasSubmittedInCurrentSession = false }
+        // 내 의견 상세에서 삭제 후 돌아왔을 수 있으므로 /me 결과로 다시 판정한다.
+        if returnedFromOwnPerspective { state.hasPublishedPerspective = nil }
         return .merge(
           state.perspectives.isEmpty || shouldRefresh
             ? loadPerspectives(state: &state, cursor: nil, preserveExisting: shouldRefresh) : .none,
@@ -663,6 +668,8 @@ extension ClassBattleFlowFeature {
       guard state.step == .some(.completed), state.submitRequestID == nil,
             state.perspectives.contains(where: { $0.id == id }) else { return .none }
       state.refreshAfterPerspectiveDetail = true
+      state.refreshAfterOwnPerspectiveDetail =
+        state.perspectives.first(where: { $0.id == id })?.isMyPerspective == true
       return .send(.delegate(.openPerspective(id)))
     case let .perspectiveLikeTapped(id):
       guard state.step == .some(.completed), state.canParticipate,
@@ -1069,9 +1076,15 @@ extension ClassBattleFlowFeature {
       switch result {
       case let .success(items):
         state.myPerspective = items.first
-        state.hasPublishedPerspective = !items.isEmpty || state.hasSubmittedInCurrentSession
+        // 서버가 참여 완료로 판정한 뒤에는 /me가 비어도 입력창을 다시 열지 않는다(중복 의견 방지).
+        state.hasPublishedPerspective = state.hasPublishedPerspective == true
+          || !items.isEmpty
+          || state.hasSubmittedInCurrentSession
       case let .failure(error):
-        state.perspectiveErrorMessage = error.message
+        // 판정 전 실패만 재시도 문구를 띄운다. 이미 판정됐으면 목록 오류 문구를 덮지 않는다.
+        if state.hasPublishedPerspective == nil {
+          state.perspectiveErrorMessage = error.message
+        }
       }
       return .none
     case let .updatePerspectiveResponse(requestID, result):

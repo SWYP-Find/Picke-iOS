@@ -1464,7 +1464,7 @@ struct ClassBattleFlowTests {
   }
 
   @Test
-  func 의견을_제출한_뒤_완료_단계로_오면_내_의견을_다시_받아_검수_중_카드를_보여_준다() async {
+  func 의견을_제출한_뒤_완료_단계로_오면_내_의견을_다시_받아_검수_중_카드를_보여_준다() async throws {
     var state = battleState(room: .mocks[0])
     state.loadRequestID = requestID
     state.hasSubmittedInCurrentSession = true
@@ -1485,13 +1485,140 @@ struct ClassBattleFlowTests {
       .success(.init(session: session(step: .completed, commentRequired: false), voteHistory: nil))
     )))
     #expect(store.state.hasPublishedPerspective == true)
-    // uuid는 의견 목록(0)·투표 통계(1)·내 의견(2) 순서로 발급된다.
-    let myPerspectiveRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
     await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([pending])))
 
     #expect(store.state.myPerspective?.id == 5)
     #expect(store.state.hiddenMyPerspectiveRow?.statusBadgeTitle == "검수중")
     #expect(store.state.hasPublishedPerspective == true)
+  }
+
+  @Test
+  func 의견_필수_참여_완료면_내_의견이_비어도_입력창을_다시_열지_않는다() async throws {
+    var state = battleState(room: .mocks[0])
+    state.loadRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: []
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.progressResponse(
+      requestID,
+      .success(.init(
+        session: session(step: .completed, commentRequired: true, participationCompleted: true),
+        voteHistory: nil
+      ))
+    )))
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
+
+    #expect(store.state.hasPublishedPerspective == true)
+    #expect(!store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 판정이_끝난_뒤_내_의견_조회가_실패하면_목록_오류_문구를_덮지_않는다() async {
+    var state = completedState(perspectives: [])
+    state.hasPublishedPerspective = true
+    state.perspectiveErrorMessage = "목록 오류"
+    state.myPerspectiveRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myPerspectiveResponse(requestID, .failure(.invalidResponse))))
+
+    #expect(store.state.perspectiveErrorMessage == "목록 오류")
+    #expect(store.state.hasPublishedPerspective == true)
+  }
+
+  @Test
+  func 판정_전에_내_의견_조회가_실패하면_재시도_문구를_보여_준다() async {
+    var state = completedState(perspectives: [])
+    state.hasPublishedPerspective = nil
+    state.myPerspectiveRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myPerspectiveResponse(requestID, .failure(.invalidResponse))))
+
+    #expect(store.state.perspectiveErrorMessage == ClassBattleError.invalidResponse.message)
+    #expect(store.state.hasPublishedPerspective == nil)
+  }
+
+  @Test
+  func 내_의견_상세에서_돌아와_내_의견이_비면_입력창을_다시_연다() async throws {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: []
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveTapped(5)))
+    await store.send(.view(.onAppear))
+    #expect(store.state.hasPublishedPerspective == nil)
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
+
+    #expect(store.state.hasPublishedPerspective == false)
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 남의_의견_상세에서_돌아오면_내_의견이_비어도_참여_완료를_유지한다() async throws {
+    var state = completedState(perspectives: [
+      perspectiveItem(id: 5, isMine: true),
+      perspectiveItem(id: 9, isMine: false),
+    ])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: []
+      )
+    }
+    store.exhaustivity = .off
+
+    // 내 의견을 누른 뒤 복귀 처리 없이 남의 의견을 누르면 앞의 표시가 남지 않아야 한다.
+    await store.send(.view(.perspectiveTapped(5)))
+    await store.send(.view(.perspectiveTapped(9)))
+    await store.send(.view(.onAppear))
+    #expect(store.state.hasPublishedPerspective == true)
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
+
+    #expect(store.state.hasPublishedPerspective == true)
+    #expect(!store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 변경_요청_중에_알림을_확인하면_요청을_보내지_않고_대상을_비운다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    state.mutationRequestID = requestID
+    state.deleteTargetPerspectiveID = 5
+    state.customAlert = .deletePerspective()
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.scope(.customAlert(.presented(.confirmTapped))))
+
+    #expect(store.state.customAlert == nil)
+    #expect(store.state.deleteTargetPerspectiveID == nil)
+    #expect(store.state.mutationRequestID == requestID)
+    #expect(store.state.perspectives.map(\.id) == [5])
   }
 
   private func completedState(perspectives: [ClassPerspectiveItem]) -> ClassBattleFlowFeature.State {
@@ -1526,7 +1653,8 @@ struct ClassBattleFlowTests {
   private func session(
     step: ClassBattleStep,
     commentRequired: Bool,
-    midVoteEnabled: Bool = false
+    midVoteEnabled: Bool = false,
+    participationCompleted: Bool = false
   ) -> ClassBattleSession {
     ClassBattleSession(
       classID: 1,
@@ -1535,7 +1663,7 @@ struct ClassBattleFlowTests {
       closed: false,
       commentRequired: commentRequired,
       canParticipate: true,
-      participationCompleted: false,
+      participationCompleted: participationCompleted,
       battle: ClassBattleDetail(
         id: 10,
         title: "토론",
