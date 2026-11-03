@@ -642,7 +642,8 @@ private extension ClassBattleFlowView {
           }
           if store.isLoadingPerspectives {
             SkeletonView(.rect).frame(height: 90)
-          } else if store.perspectives.isEmpty && store.perspectiveErrorMessage == nil {
+          } else if store.perspectives.isEmpty && store.perspectiveErrorMessage == nil
+            && store.hiddenMyPerspectiveRow == nil {
             Text("아직 등록된 의견이 없어요.")
               .pretendardFont(.bodyMedium)
               .foregroundStyle(.gray500)
@@ -851,11 +852,13 @@ private extension ClassBattleFlowView {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
+        .disabled(row.statusBadgeTitle != nil)
         Button("자세히 보기") { send(.perspectiveTapped(perspective.id)) }
           .pretendardFont(.labelSmall, lineHeightMultiple: 1.4)
           .foregroundStyle(.gray200)
           .padding(.horizontal, 2)
           .buttonStyle(.plain)
+          .disabled(row.statusBadgeTitle != nil)
       }
       perspectiveActions(row)
     }
@@ -883,38 +886,16 @@ private extension ClassBattleFlowView {
     VStack(alignment: .trailing, spacing: 8) {
       switch row.menuKind {
       case .report:
-        perspectiveMenuButton("신고", systemImage: "bell") { send(.perspectiveReportTapped(id)) }
+        PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.perspectiveReportTapped(id)) }
       case .editOnly:
-        perspectiveMenuButton("수정", systemImage: "pencil") { send(.perspectiveEditTapped(id)) }
+        PickeActionPill(title: "수정", systemImage: "pencil") { send(.perspectiveEditTapped(id)) }
       case .editAndDelete:
-        perspectiveMenuButton("삭제", systemImage: "trash") { send(.perspectiveDeleteTapped(id)) }
-        perspectiveMenuButton("수정", systemImage: "pencil") { send(.perspectiveEditTapped(id)) }
+        PickeActionPill(title: "삭제", systemImage: "trash") { send(.perspectiveDeleteTapped(id)) }
+        PickeActionPill(title: "수정", systemImage: "pencil") { send(.perspectiveEditTapped(id)) }
       case .hidden:
         EmptyView()
       }
     }
-  }
-
-  func perspectiveMenuButton(
-    _ title: String,
-    systemImage: String,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button(action: action) {
-      HStack(spacing: 4) {
-        Image(systemName: systemImage)
-          .resizable()
-          .scaledToFit()
-          .frame(width: 13, height: 13)
-        Text(title)
-          .pretendardFont(.medium13)
-      }
-      .foregroundStyle(.beige50)
-      .padding(.horizontal, 14)
-      .padding(.vertical, 7)
-      .background(.primary500, in: Capsule())
-    }
-    .buttonStyle(.plain)
   }
 
   @ViewBuilder
@@ -984,6 +965,8 @@ private extension ClassBattleFlowView {
         }
         .foregroundStyle(.gray300)
       }
+      // Android처럼 검수 중·거절된 의견은 상세로 이동하지 않는다.
+      .disabled(row.statusBadgeTitle != nil)
       Spacer()
       if row.menuKind.hasMenu {
         Button { send(.perspectiveMoreTapped(perspective.id)) } label: {

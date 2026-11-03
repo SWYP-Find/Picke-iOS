@@ -258,6 +258,8 @@ public struct ClassMyOpinionsFeature {
         state.hasNext = activity.hasNext
       case .failure:
         state.toastMessage = Self.loadFailedMessage
+        // Android `RequestFailed`처럼 다음 페이지 실패 시 더 불러오기를 멈춰 무한 로딩·반복 토스트를 막는다.
+        if cursor != nil { state.hasNext = false }
       }
       return .none
     }

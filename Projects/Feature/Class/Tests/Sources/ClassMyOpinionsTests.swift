@@ -215,6 +215,23 @@ struct ClassMyOpinionsTests {
     #expect(store.state.toastMessage == "정보를 불러오지 못했어요")
   }
 
+  @Test
+  func 다음_대댓글_페이지_조회에_실패하면_더_불러오기를_멈춘다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.nextCursor = "c-2"
+    state.hasNext = true
+    state.isLoadingMore = true
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.replyPageResponse(cursor: "c-2", .failure(.network("실패")))))
+
+    #expect(!store.state.hasNext)
+    #expect(!store.state.canLoadMoreReplies)
+    #expect(store.state.toastMessage == "정보를 불러오지 못했어요")
+  }
+
   private func perspective(
     id: Int,
     status: String?

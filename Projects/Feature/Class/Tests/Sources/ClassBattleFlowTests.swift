@@ -1409,19 +1409,89 @@ struct ClassBattleFlowTests {
   }
 
   @Test
-  func 상세_이동으로_화면이_가려져도_의견_변경_응답을_처리한다() async {
-    var state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
-    state.mutationRequestID = requestID
+  func 상세_이동으로_화면이_가려져도_진행_중인_신고는_취소되지_않는다() async {
+    let gate = ReportGate()
+    let state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
     let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
       $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.perspectiveUseCase = SuspendedReportPerspective(gate: gate)
     }
     store.exhaustivity = .off
 
+    await store.send(.view(.perspectiveReportTapped(9)))
+    await store.send(.scope(.customAlert(.presented(.confirmTapped))))
+    await gate.waitForStart()
     await store.send(.view(.onDisappear))
-    #expect(store.state.mutationRequestID == requestID)
-    await store.send(.inner(.reportPerspectiveResponse(requestID, .success(true))))
+    #expect(store.state.mutationRequestID != nil)
+    await gate.release()
+    await store.receive(\.inner) // reportPerspectiveResponse
     #expect(store.state.mutationRequestID == nil)
     #expect(store.state.toastMessage == "신고가 정상 접수되었습니다.")
+  }
+
+  @Test
+  func 의견_변경_요청이_진행_중이면_다른_메뉴_동작을_막는다() async {
+    var state = completedState(perspectives: [
+      perspectiveItem(id: 5, isMine: true),
+      perspectiveItem(id: 9, isMine: false),
+    ])
+    state.mutationRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveMoreTapped(9)))
+    #expect(store.state.menuTargetPerspectiveID == nil)
+    await store.send(.view(.perspectiveReportTapped(9)))
+    await store.send(.view(.perspectiveDeleteTapped(5)))
+    #expect(store.state.customAlert == nil)
+    await store.send(.view(.perspectiveEditTapped(5)))
+    #expect(store.state.editingPerspectiveID == nil)
+    #expect(store.state.mutationRequestID == requestID)
+  }
+
+  @Test
+  func 수정_중_같은_의견의_수정을_다시_눌러도_고치던_내용을_유지한다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveEditTapped(5)))
+    await store.send(.view(.draftChanged("고치는 중")))
+    await store.send(.view(.perspectiveEditTapped(5)))
+    #expect(store.state.draft == "고치는 중")
+  }
+
+  @Test
+  func 의견을_제출한_뒤_완료_단계로_오면_내_의견을_다시_받아_검수_중_카드를_보여_준다() async {
+    var state = battleState(room: .mocks[0])
+    state.loadRequestID = requestID
+    state.hasSubmittedInCurrentSession = true
+    let pending = perspectiveItem(id: 5, isMine: true, status: "PENDING")
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: [pending]
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.progressResponse(
+      requestID,
+      .success(.init(session: session(step: .completed, commentRequired: false), voteHistory: nil))
+    )))
+    #expect(store.state.hasPublishedPerspective == true)
+    // uuid는 의견 목록(0)·투표 통계(1)·내 의견(2) 순서로 발급된다.
+    let myPerspectiveRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([pending])))
+
+    #expect(store.state.myPerspective?.id == 5)
+    #expect(store.state.hiddenMyPerspectiveRow?.statusBadgeTitle == "검수중")
+    #expect(store.state.hasPublishedPerspective == true)
   }
 
   private func completedState(perspectives: [ClassPerspectiveItem]) -> ClassBattleFlowFeature.State {
@@ -1517,6 +1587,7 @@ private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
   var history: ClassVoteHistory?
   var perspectivesPage: ClassPerspectivePage?
   var failsLoad = false
+  var myPerspectives: [ClassPerspectiveItem]?
 
   func fetchBattle(classID: Int) async throws -> ClassBattleSession {
     await spy.recordClass(classID)
@@ -1557,7 +1628,112 @@ private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
     guard let perspectivesPage else { throw ClassBattleError.invalidResponse }
     return perspectivesPage
   }
-  func fetchMyPerspectives(classID _: Int) async throws -> [ClassPerspectiveItem] { throw ClassBattleError.invalidResponse }
+  func fetchMyPerspectives(classID _: Int) async throws -> [ClassPerspectiveItem] {
+    guard let myPerspectives else { throw ClassBattleError.invalidResponse }
+    return myPerspectives
+  }
+}
+
+/// 신고 요청을 멈춰 두었다가 풀어 주는 관문.
+private actor ReportGate {
+  private var started = false
+  private var startWaiters: [CheckedContinuation<Void, Never>] = []
+  private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+  func wait() async {
+    started = true
+    startWaiters.forEach { $0.resume() }
+    startWaiters = []
+    await withCheckedContinuation { releaseContinuation = $0 }
+  }
+
+  func waitForStart() async {
+    if started { return }
+    await withCheckedContinuation { startWaiters.append($0) }
+  }
+
+  func release() {
+    releaseContinuation?.resume()
+    releaseContinuation = nil
+  }
+}
+
+/// 신고만 관문에서 멈추고 나머지는 Mock에 맡기는 의견 유스케이스.
+private struct SuspendedReportPerspective: PerspectiveInterface {
+  let gate: ReportGate
+  private let base = MockPerspectiveRepository()
+
+  init(gate: ReportGate) {
+    self.gate = gate
+  }
+
+  func fetchPerspective(perspectiveId: Int) async throws -> BattlePerspective {
+    try await base.fetchPerspective(perspectiveId: perspectiveId)
+  }
+
+  func fetchLabeledComments(
+    perspectiveId: Int,
+    cursor: String?,
+    size: Int?
+  ) async throws -> PerspectiveCommentPage {
+    try await base.fetchLabeledComments(perspectiveId: perspectiveId, cursor: cursor, size: size)
+  }
+
+  func createComment(
+    perspectiveId: Int,
+    content: String
+  ) async throws -> PerspectiveCommentMutationResult {
+    try await base.createComment(perspectiveId: perspectiveId, content: content)
+  }
+
+  func updateComment(
+    perspectiveId: Int,
+    commentId: Int,
+    content: String
+  ) async throws -> PerspectiveCommentMutationResult {
+    try await base.updateComment(perspectiveId: perspectiveId, commentId: commentId, content: content)
+  }
+
+  func deleteComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws {
+    try await base.deleteComment(perspectiveId: perspectiveId, commentId: commentId)
+  }
+
+  func updatePerspective(
+    perspectiveId: Int,
+    content: String
+  ) async throws {
+    try await base.updatePerspective(perspectiveId: perspectiveId, content: content)
+  }
+
+  func deletePerspective(perspectiveId: Int) async throws {
+    try await base.deletePerspective(perspectiveId: perspectiveId)
+  }
+
+  func likePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    try await base.likePerspective(perspectiveId: perspectiveId)
+  }
+
+  func unlikePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    try await base.unlikePerspective(perspectiveId: perspectiveId)
+  }
+
+  func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult {
+    try await base.fetchPerspectiveLikes(perspectiveId: perspectiveId)
+  }
+
+  func reportPerspective(perspectiveId _: Int) async throws {
+    await gate.wait()
+  }
+
+  func reportComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws {
+    try await base.reportComment(perspectiveId: perspectiveId, commentId: commentId)
+  }
 }
 
 private struct ClassBattleFlowScenarioStub: BattleInterface {

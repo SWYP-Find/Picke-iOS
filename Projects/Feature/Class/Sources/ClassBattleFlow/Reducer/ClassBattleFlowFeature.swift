@@ -358,7 +358,6 @@ public struct ClassBattleFlowFeature {
     case perspectiveTapped(Int)
     case perspectiveLikeTapped(Int)
     case perspectiveMoreTapped(Int)
-    case perspectiveMenuDismissed
     case perspectiveEditTapped(Int)
     case perspectiveDeleteTapped(Int)
     case perspectiveReportTapped(Int)
@@ -683,30 +682,31 @@ extension ClassBattleFlowFeature {
       }
       .cancellable(id: CancelID.perspectiveLike(state.instanceID), cancelInFlight: true)
     case let .perspectiveMoreTapped(id):
-      guard state.perspectiveMenuKind(id: id).hasMenu else { return .none }
+      // 진행 중인 수정·삭제·신고가 같은 CancelID로 취소되지 않게 한 번에 하나만 허용한다.
+      guard state.mutationRequestID == nil, state.perspectiveMenuKind(id: id).hasMenu else { return .none }
       state.menuTargetPerspectiveID = state.menuTargetPerspectiveID == id ? nil : id
-      return .none
-    case .perspectiveMenuDismissed:
-      state.menuTargetPerspectiveID = nil
       return .none
     case let .perspectiveEditTapped(id):
       state.menuTargetPerspectiveID = nil
-      guard [.editOnly, .editAndDelete].contains(state.perspectiveMenuKind(id: id)),
+      guard state.mutationRequestID == nil,
+            [.editOnly, .editAndDelete].contains(state.perspectiveMenuKind(id: id)),
             let item = state.perspectiveItem(id: id) else { return .none }
+      if state.editingPerspectiveID != id {
+        state.draft = item.content
+      }
       state.editingPerspectiveID = id
-      state.draft = item.content
       state.errorMessage = nil
       return .none
     case let .perspectiveDeleteTapped(id):
       state.menuTargetPerspectiveID = nil
-      guard state.perspectiveMenuKind(id: id) == .editAndDelete else { return .none }
+      guard state.mutationRequestID == nil, state.perspectiveMenuKind(id: id) == .editAndDelete else { return .none }
       state.deleteTargetPerspectiveID = id
       state.reportTargetPerspectiveID = nil
       state.customAlert = .deletePerspective()
       return .none
     case let .perspectiveReportTapped(id):
       state.menuTargetPerspectiveID = nil
-      guard state.perspectiveMenuKind(id: id) == .report else { return .none }
+      guard state.mutationRequestID == nil, state.perspectiveMenuKind(id: id) == .report else { return .none }
       state.reportTargetPerspectiveID = id
       state.deleteTargetPerspectiveID = nil
       state.customAlert = .report()
@@ -728,6 +728,11 @@ extension ClassBattleFlowFeature {
     switch action {
     case .customAlert(.presented(.confirmTapped)):
       state.customAlert = nil
+      guard state.mutationRequestID == nil else {
+        state.deleteTargetPerspectiveID = nil
+        state.reportTargetPerspectiveID = nil
+        return .none
+      }
       if let id = state.deleteTargetPerspectiveID {
         state.deleteTargetPerspectiveID = nil
         return deletePerspective(state: &state, id: id)
@@ -863,7 +868,8 @@ extension ClassBattleFlowFeature {
             stopPlayback(instanceID: state.instanceID),
             loadPerspectives(state: &state, cursor: nil),
             loadVoteStats(state: &state),
-            state.hasPublishedPerspective == nil ? loadMyPerspectives(state: &state) : .none
+            // 공개되지 않은 내 의견 카드·거절 의견 수정을 위해 완료 단계마다 내 의견을 다시 받는다(Android 제출 후 fetchMyPerspective).
+            loadMyPerspectives(state: &state)
           )
         }
         return stopPlayback(instanceID: state.instanceID)
