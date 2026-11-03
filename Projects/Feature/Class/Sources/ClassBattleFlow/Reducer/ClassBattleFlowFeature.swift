@@ -7,6 +7,7 @@ import Foundation
 import HomeDomainInterface
 import PickeCoreUtility
 import PerspectiveDomainInterface
+import PickeSharedUI
 
 @Reducer
 public struct ClassBattleFlowFeature {
@@ -52,6 +53,15 @@ public struct ClassBattleFlowFeature {
     public var voteStatsRequestID: UUID?
     public var perspectiveLikeRequestID: UUID?
     public var myPerspectiveRequestID: UUID?
+    /// 내 의견 API의 첫 항목. 공개되지 않았으면 목록 위 상태 카드로 보여 준다.
+    public var myPerspective: ClassPerspectiveItem?
+    public var menuTargetPerspectiveID: Int?
+    public var editingPerspectiveID: Int?
+    public var deleteTargetPerspectiveID: Int?
+    public var reportTargetPerspectiveID: Int?
+    public var mutationRequestID: UUID?
+    public var toastMessage: String?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var isAudioReady = false
     public var isPlaying = false
     public var hasListened = false
@@ -79,6 +89,11 @@ public struct ClassBattleFlowFeature {
     public var canParticipate: Bool { session?.canParticipate == true }
 
     public var canSubmit: Bool {
+      // 의견 수정은 이미 게시한 의견이 대상이라 게시 조건과 별도로 판단하고, 마감 여부는 서버에 맡긴다.
+      if editingPerspectiveID != nil {
+        return mutationRequestID == nil && submitRequestID == nil
+          && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      }
       guard viewState == .loaded, canParticipate, submitRequestID == nil else { return false }
       guard let step else { return false }
       switch step {
@@ -164,8 +179,37 @@ public struct ClassBattleFlowFeature {
     }
 
     public var shouldShowComposer: Bool {
-      step == .some(.completed) && canParticipate
+      if editingPerspectiveID != nil { return true }
+      return step == .some(.completed) && canParticipate
         && hasPublishedPerspective == false && !hasSubmittedInCurrentSession
+    }
+
+    /// 공개되지 않은 내 의견(검수중·거절됨)이 목록에 없을 때 목록 맨 위에 보여 줄 행.
+    public var hiddenMyPerspectiveRow: ClassPerspectiveRow? {
+      guard let myPerspective,
+            ["PENDING", "REJECTED"].contains(myPerspective.status?.uppercased() ?? ""),
+            !perspectives.contains(where: { $0.id == myPerspective.id }) else { return nil }
+      return ClassPerspectiveRow(
+        id: -1,
+        perspective: myPerspective,
+        likeCountLabel: myPerspective.likeCount.decimalFormatted,
+        commentCountLabel: myPerspective.commentCount.decimalFormatted,
+        menuKind: ClassPerspectiveMenuKind(myStatus: myPerspective.status)
+      )
+    }
+
+    func perspectiveItem(id: Int) -> ClassPerspectiveItem? {
+      perspectives.first { $0.id == id } ?? (myPerspective?.id == id ? myPerspective : nil)
+    }
+
+    func perspectiveMenuKind(id: Int) -> ClassPerspectiveMenuKind {
+      if let item = perspectives.first(where: { $0.id == id }) {
+        return ClassPerspectiveMenuKind(listItem: item)
+      }
+      if let myPerspective, myPerspective.id == id {
+        return ClassPerspectiveMenuKind(myStatus: myPerspective.status)
+      }
+      return .hidden
     }
 
     public var isAudioStep: Bool {
@@ -279,7 +323,13 @@ public struct ClassBattleFlowFeature {
   public enum Action: ViewAction {
     case view(View)
     case inner(InnerAction)
+    case scope(ScopeAction)
     case delegate(DelegateAction)
+  }
+
+  @CasePathable
+  public enum ScopeAction: Equatable {
+    case customAlert(PresentationAction<CustomAlertAction>)
   }
 
   @CasePathable
@@ -307,6 +357,13 @@ public struct ClassBattleFlowFeature {
     case perspectiveSortTapped(String)
     case perspectiveTapped(Int)
     case perspectiveLikeTapped(Int)
+    case perspectiveMoreTapped(Int)
+    case perspectiveMenuDismissed
+    case perspectiveEditTapped(Int)
+    case perspectiveDeleteTapped(Int)
+    case perspectiveReportTapped(Int)
+    case cancelEditTapped
+    case toastShown
   }
 
   public enum InnerAction: Equatable {
@@ -321,6 +378,9 @@ public struct ClassBattleFlowFeature {
     case voteStatsResponse(UUID, Result<ClassVoteStats, ClassBattleError>)
     case perspectiveLikeResponse(UUID, Int, Result<CommentLikeResult, ClassBattleError>)
     case myPerspectiveResponse(UUID, Result<[ClassPerspectiveItem], ClassBattleError>)
+    case updatePerspectiveResponse(UUID, Result<Bool, PerspectiveError>)
+    case deletePerspectiveResponse(UUID, Int, Result<Bool, PerspectiveError>)
+    case reportPerspectiveResponse(UUID, Result<Bool, PerspectiveError>)
   }
 
   @CasePathable
@@ -341,6 +401,8 @@ public struct ClassBattleFlowFeature {
     case perspectiveLike(UUID)
     case myPerspective(UUID)
     case midVote(UUID)
+    /// 의견 수정·삭제·신고. 상세 화면 이동(onDisappear)에서는 취소하지 않고 라우트 제거 시에만 취소한다.
+    case perspectiveMutation(UUID)
   }
 
   @Dependency(\.uuid) private var uuid
@@ -354,8 +416,12 @@ public struct ClassBattleFlowFeature {
       switch action {
       case let .view(viewAction): return handleView(state: &state, action: viewAction)
       case let .inner(innerAction): return handleInner(state: &state, action: innerAction)
+      case let .scope(scopeAction): return handleScope(state: &state, action: scopeAction)
       case .delegate: return .none
       }
+    }
+    .ifLet(\.$customAlert, action: \.scope.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -412,6 +478,7 @@ extension ClassBattleFlowFeature {
       state.voteStatsRequestID = nil
       state.myPerspectiveRequestID = nil
       state.midVoteRequestID = nil
+      state.menuTargetPerspectiveID = nil
       state.isLoadingPerspectives = false
       state.isPlaying = false
       return stopAudio(instanceID: state.instanceID)
@@ -463,6 +530,9 @@ extension ClassBattleFlowFeature {
       return .none
     case .submitTapped:
       guard state.canSubmit else { return .none }
+      if let editingID = state.editingPerspectiveID {
+        return updatePerspective(state: &state, id: editingID)
+      }
       guard let step = state.step else { return .none }
       let requestID = uuid()
       state.submitRequestID = requestID
@@ -612,7 +682,116 @@ extension ClassBattleFlowFeature {
         await send(.inner(.perspectiveLikeResponse(requestID, id, result)))
       }
       .cancellable(id: CancelID.perspectiveLike(state.instanceID), cancelInFlight: true)
+    case let .perspectiveMoreTapped(id):
+      guard state.perspectiveMenuKind(id: id).hasMenu else { return .none }
+      state.menuTargetPerspectiveID = state.menuTargetPerspectiveID == id ? nil : id
+      return .none
+    case .perspectiveMenuDismissed:
+      state.menuTargetPerspectiveID = nil
+      return .none
+    case let .perspectiveEditTapped(id):
+      state.menuTargetPerspectiveID = nil
+      guard [.editOnly, .editAndDelete].contains(state.perspectiveMenuKind(id: id)),
+            let item = state.perspectiveItem(id: id) else { return .none }
+      state.editingPerspectiveID = id
+      state.draft = item.content
+      state.errorMessage = nil
+      return .none
+    case let .perspectiveDeleteTapped(id):
+      state.menuTargetPerspectiveID = nil
+      guard state.perspectiveMenuKind(id: id) == .editAndDelete else { return .none }
+      state.deleteTargetPerspectiveID = id
+      state.reportTargetPerspectiveID = nil
+      state.customAlert = .deletePerspective()
+      return .none
+    case let .perspectiveReportTapped(id):
+      state.menuTargetPerspectiveID = nil
+      guard state.perspectiveMenuKind(id: id) == .report else { return .none }
+      state.reportTargetPerspectiveID = id
+      state.deleteTargetPerspectiveID = nil
+      state.customAlert = .report()
+      return .none
+    case .cancelEditTapped:
+      state.editingPerspectiveID = nil
+      state.draft = ""
+      return .none
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
     }
+  }
+
+  private func handleScope(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    switch action {
+    case .customAlert(.presented(.confirmTapped)):
+      state.customAlert = nil
+      if let id = state.deleteTargetPerspectiveID {
+        state.deleteTargetPerspectiveID = nil
+        return deletePerspective(state: &state, id: id)
+      }
+      if let id = state.reportTargetPerspectiveID {
+        state.reportTargetPerspectiveID = nil
+        return reportPerspective(state: &state, id: id)
+      }
+      return .none
+    case .customAlert(.presented(.cancelTapped)), .customAlert(.dismiss):
+      state.customAlert = nil
+      state.deleteTargetPerspectiveID = nil
+      state.reportTargetPerspectiveID = nil
+      return .none
+    }
+  }
+
+  private func updatePerspective(
+    state: inout State,
+    id: Int
+  ) -> Effect<Action> {
+    let requestID = uuid()
+    state.mutationRequestID = requestID
+    let content = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    return .run { [useCase = perspectiveUseCase] send in
+      let result = await Result {
+        try await useCase.updatePerspective(perspectiveId: id, content: content)
+        return true
+      }.mapError(PerspectiveError.from)
+      await send(.inner(.updatePerspectiveResponse(requestID, result)))
+    }
+    .cancellable(id: CancelID.perspectiveMutation(state.instanceID), cancelInFlight: true)
+  }
+
+  private func deletePerspective(
+    state: inout State,
+    id: Int
+  ) -> Effect<Action> {
+    let requestID = uuid()
+    state.mutationRequestID = requestID
+    return .run { [useCase = perspectiveUseCase] send in
+      let result = await Result {
+        try await useCase.deletePerspective(perspectiveId: id)
+        return true
+      }.mapError(PerspectiveError.from)
+      await send(.inner(.deletePerspectiveResponse(requestID, id, result)))
+    }
+    .cancellable(id: CancelID.perspectiveMutation(state.instanceID), cancelInFlight: true)
+  }
+
+  private func reportPerspective(
+    state: inout State,
+    id: Int
+  ) -> Effect<Action> {
+    let requestID = uuid()
+    state.mutationRequestID = requestID
+    return .run { [useCase = perspectiveUseCase] send in
+      let result = await Result {
+        try await useCase.reportPerspective(perspectiveId: id)
+        return true
+      }.mapError(PerspectiveError.from)
+      await send(.inner(.reportPerspectiveResponse(requestID, result)))
+    }
+    .cancellable(id: CancelID.perspectiveMutation(state.instanceID), cancelInFlight: true)
   }
 
   private func loadProgress(state: inout State) -> Effect<Action> {
@@ -883,9 +1062,58 @@ extension ClassBattleFlowFeature {
       state.myPerspectiveRequestID = nil
       switch result {
       case let .success(items):
+        state.myPerspective = items.first
         state.hasPublishedPerspective = !items.isEmpty || state.hasSubmittedInCurrentSession
       case let .failure(error):
         state.perspectiveErrorMessage = error.message
+      }
+      return .none
+    case let .updatePerspectiveResponse(requestID, result):
+      guard state.mutationRequestID == requestID else { return .none }
+      state.mutationRequestID = nil
+      switch result {
+      case .success:
+        state.editingPerspectiveID = nil
+        state.draft = ""
+        return .merge(
+          loadPerspectives(state: &state, cursor: nil, preserveExisting: true),
+          loadMyPerspectives(state: &state)
+        )
+      case .failure:
+        state.toastMessage = "의견을 수정하지 못했어요"
+        return .none
+      }
+    case let .deletePerspectiveResponse(requestID, id, result):
+      guard state.mutationRequestID == requestID else { return .none }
+      state.mutationRequestID = nil
+      switch result {
+      case .success:
+        // Android와 같이 삭제한 내 의견을 바로 빼고 새 의견을 다시 쓸 수 있게 한다.
+        state.perspectives.removeAll { $0.id == id }
+        if state.myPerspective?.id == id { state.myPerspective = nil }
+        if state.editingPerspectiveID == id {
+          state.editingPerspectiveID = nil
+          state.draft = ""
+        }
+        state.hasPublishedPerspective = false
+        state.hasSubmittedInCurrentSession = false
+      case .failure:
+        state.toastMessage = "의견을 삭제하지 못했어요"
+      }
+      return .merge(
+        loadPerspectives(state: &state, cursor: nil, preserveExisting: true),
+        loadMyPerspectives(state: &state)
+      )
+    case let .reportPerspectiveResponse(requestID, result):
+      guard state.mutationRequestID == requestID else { return .none }
+      state.mutationRequestID = nil
+      switch result {
+      case .success:
+        state.toastMessage = "신고가 정상 접수되었습니다."
+      case .failure(.alreadyReported):
+        state.toastMessage = "이미 신고한 사용자입니다."
+      case .failure:
+        state.toastMessage = "신고하지 못했어요"
       }
       return .none
     }

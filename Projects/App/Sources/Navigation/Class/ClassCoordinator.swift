@@ -462,6 +462,7 @@ private extension ClassCoordinator {
             .cancel(id: ClassBattleFlowFeature.CancelID.voteStats(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveLike(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.myPerspective(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveMutation(id)),
           ]
         }
     guard !removedBattleFlows.isEmpty else { return .merge(effects) }

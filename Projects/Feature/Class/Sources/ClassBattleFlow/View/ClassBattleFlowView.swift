@@ -38,6 +38,11 @@ public struct ClassBattleFlowView: View {
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
     .onDisappear { send(.onDisappear) }
+    .onChange(of: store.toastMessage) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showInfo(message)
+      send(.toastShown)
+    }
   }
 }
 
@@ -629,6 +634,9 @@ private extension ClassBattleFlowView {
       ScrollView(showsIndicators: false) {
         VStack(alignment: .leading, spacing: 0) {
           perspectiveSortRow()
+          if let row = store.hiddenMyPerspectiveRow {
+            perspectiveCard(row)
+          }
           ForEach(store.perspectiveRows) { row in
             perspectiveCard(row)
           }
@@ -667,6 +675,7 @@ private extension ClassBattleFlowView {
       }
     }
     .background(.white)
+    .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
   @ViewBuilder
@@ -853,10 +862,59 @@ private extension ClassBattleFlowView {
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.white)
+    .background(row.isPendingReview ? Color.secondary50 : row.isRejected ? .primary50 : .white)
     .overlay(alignment: .bottom) {
       Rectangle().fill(.beige600).frame(height: 1)
     }
+    .overlay(alignment: .bottomTrailing) {
+      if store.menuTargetPerspectiveID == perspective.id {
+        perspectiveMenu(row)
+          .padding(.bottom, 40)
+          .padding(.trailing, 16)
+      }
+    }
+    .zIndex(store.menuTargetPerspectiveID == perspective.id ? 1 : 0)
+  }
+
+  /// 더보기 메뉴 — Android 순서(내 의견: 삭제·수정, 거절: 수정, 남 의견: 신고).
+  @ViewBuilder
+  func perspectiveMenu(_ row: ClassPerspectiveRow) -> some View {
+    let id = row.perspective.id
+    VStack(alignment: .trailing, spacing: 8) {
+      switch row.menuKind {
+      case .report:
+        perspectiveMenuButton("신고", systemImage: "bell") { send(.perspectiveReportTapped(id)) }
+      case .editOnly:
+        perspectiveMenuButton("수정", systemImage: "pencil") { send(.perspectiveEditTapped(id)) }
+      case .editAndDelete:
+        perspectiveMenuButton("삭제", systemImage: "trash") { send(.perspectiveDeleteTapped(id)) }
+        perspectiveMenuButton("수정", systemImage: "pencil") { send(.perspectiveEditTapped(id)) }
+      case .hidden:
+        EmptyView()
+      }
+    }
+  }
+
+  func perspectiveMenuButton(
+    _ title: String,
+    systemImage: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: 4) {
+        Image(systemName: systemImage)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 13, height: 13)
+        Text(title)
+          .pretendardFont(.medium13)
+      }
+      .foregroundStyle(.beige50)
+      .padding(.horizontal, 14)
+      .padding(.vertical, 7)
+      .background(.primary500, in: Capsule())
+    }
+    .buttonStyle(.plain)
   }
 
   @ViewBuilder
@@ -877,14 +935,25 @@ private extension ClassBattleFlowView {
           .foregroundStyle(.gray300)
       }
       Spacer()
-      Text(perspective.option.title)
-        .pretendardFont(.semiBold12)
-        .foregroundStyle(.badgeFilledText)
-        .lineLimit(1)
-        .frame(height: 16)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .background(.badgeFilledBackground, in: RoundedRectangle(cornerRadius: 2))
+      if let statusTitle = row.statusBadgeTitle {
+        Text(statusTitle)
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.white)
+          .lineLimit(1)
+          .frame(height: 16)
+          .padding(.horizontal, 4)
+          .padding(.vertical, 2)
+          .background(row.isRejected ? Color.primary400 : .secondary500, in: RoundedRectangle(cornerRadius: 2))
+      } else {
+        Text(perspective.option.title)
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.badgeFilledText)
+          .lineLimit(1)
+          .frame(height: 16)
+          .padding(.horizontal, 4)
+          .padding(.vertical, 2)
+          .background(.badgeFilledBackground, in: RoundedRectangle(cornerRadius: 2))
+      }
     }
   }
 
@@ -916,6 +985,18 @@ private extension ClassBattleFlowView {
         .foregroundStyle(.gray300)
       }
       Spacer()
+      if row.menuKind.hasMenu {
+        Button { send(.perspectiveMoreTapped(perspective.id)) } label: {
+          Image(systemName: "ellipsis")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 15, height: 3)
+            .frame(width: 24, height: 24)
+            .contentShape(Rectangle().inset(by: -10))
+        }
+        .foregroundStyle(.gray300)
+        .accessibilityLabel("더보기")
+      }
     }
     .frame(height: 24)
     .buttonStyle(.plain)
@@ -924,6 +1005,9 @@ private extension ClassBattleFlowView {
   @ViewBuilder
   func composerBar() -> some View {
     VStack(alignment: .leading, spacing: 0) {
+      if store.editingPerspectiveID != nil {
+        editingBanner()
+      }
       if let error = store.errorMessage {
         Text(error)
           .pretendardFont(.regular13)
@@ -964,6 +1048,22 @@ private extension ClassBattleFlowView {
     .overlay(alignment: .top) {
       Rectangle().fill(.beige700).frame(height: 1)
     }
+  }
+
+  @ViewBuilder
+  func editingBanner() -> some View {
+    HStack {
+      Text("의견 수정 중")
+        .pretendardFont(.semiBold12)
+        .foregroundStyle(.primary500)
+      Spacer()
+      Button("취소") { send(.cancelEditTapped) }
+        .pretendardFont(.medium13)
+        .foregroundStyle(.gray400)
+        .buttonStyle(.plain)
+    }
+    .padding(.horizontal, 16)
+    .padding(.top, 12)
   }
 
   var plainNavigationBar: some View {
