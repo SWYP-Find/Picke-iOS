@@ -28,7 +28,11 @@ struct ClassCoordinatorFeedbackTests {
     removed.report = MockClassReport.figma
     removed.sourceViewState = .ready
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      ClassDetailFeature.State(room: room)
+    }))
     state.routes.push(.report(first))
     state.routes.push(.report(removed))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
@@ -69,7 +73,11 @@ struct ClassCoordinatorFeedbackTests {
     original.report = MockClassReport.figma
     original.sourceViewState = .ready
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      ClassDetailFeature.State(room: room)
+    }))
     state.routes.push(.report(original))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = generator
@@ -116,7 +124,11 @@ struct ClassCoordinatorFeedbackTests {
     original.dashboard = MockClassOwnerDashboard.figma
     original.sourceViewState = .ready
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(.init(room: room)))
+    state.routes.push(.detail(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      ClassDetailFeature.State(room: room)
+    }))
     state.routes.push(.ownerDashboard(original))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.classResultUseCase = generator
