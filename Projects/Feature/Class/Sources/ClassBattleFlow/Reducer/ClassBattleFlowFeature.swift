@@ -502,7 +502,12 @@ extension ClassBattleFlowFeature {
       guard state.step == .some(.completed), state.hasPublishedPerspective == nil,
             state.myPerspectiveRequestID == nil else { return .none }
       state.perspectiveErrorMessage = nil
-      return loadMyPerspectives(state: &state)
+      // 목록도 실패해 비어 있으면 함께 다시 불러온다. 오류 문구만 지우면 빈 목록처럼 보인다.
+      let reloadsPerspectives = state.perspectives.isEmpty && state.perspectiveRequestID == nil
+      return .merge(
+        reloadsPerspectives ? loadPerspectives(state: &state, cursor: nil) : .none,
+        loadMyPerspectives(state: &state)
+      )
     case .backTapped:
       let instanceID = state.instanceID
       return .concatenate(

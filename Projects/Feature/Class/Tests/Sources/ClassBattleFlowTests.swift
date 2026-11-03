@@ -1621,6 +1621,42 @@ struct ClassBattleFlowTests {
     #expect(store.state.perspectives.map(\.id) == [5])
   }
 
+  @Test
+  func 목록과_내_의견이_모두_실패한_뒤_다시_시도하면_목록도_다시_불러온다() async {
+    var state = completedState(perspectives: [])
+    state.hasPublishedPerspective = nil
+    state.perspectiveErrorMessage = "목록 오류"
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.retryMyPerspectiveTapped))
+
+    #expect(store.state.perspectiveRequestID != nil)
+    #expect(store.state.isLoadingPerspectives)
+    #expect(store.state.myPerspectiveRequestID != nil)
+    #expect(store.state.perspectiveErrorMessage == nil)
+  }
+
+  @Test
+  func 목록이_있으면_다시_시도해도_내_의견만_다시_불러오고_목록은_유지한다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
+    state.hasPublishedPerspective = nil
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.retryMyPerspectiveTapped))
+
+    #expect(store.state.perspectiveRequestID == nil)
+    #expect(store.state.perspectives.map(\.id) == [9])
+    #expect(store.state.myPerspectiveRequestID != nil)
+  }
+
   private func completedState(perspectives: [ClassPerspectiveItem]) -> ClassBattleFlowFeature.State {
     var state = battleState(room: .mocks[0])
     state.session = session(step: .completed, commentRequired: false)
