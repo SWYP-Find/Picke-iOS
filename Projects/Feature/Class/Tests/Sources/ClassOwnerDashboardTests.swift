@@ -258,6 +258,7 @@ struct ClassOwnerDashboardTests {
     let result: Result<ClassResult, ClassError>
     var feedback: ClassAIPersonalFeedback? = nil
     var insight: ClassAIInsight? = nil
+    var myActivity: ClassMyActivity? = nil
 
     func fetchResult(roomID _: Int) async throws -> ClassResult {
       try result.get()
@@ -281,7 +282,8 @@ struct ClassOwnerDashboardTests {
       roomID _: Int,
       cursor _: String?
     ) async throws -> ClassMyActivity {
-      throw ClassAIFeedbackError.temporarilyUnavailable
+      guard let myActivity else { throw ClassAIFeedbackError.temporarilyUnavailable }
+      return myActivity
     }
   }
 
@@ -381,6 +383,85 @@ struct ClassOwnerDashboardTests {
     await store.send(.view(.tabSelected(.report)))
     await store.send(.view(.myOpinionsTapped))
     await store.receive(\.delegate.openMyOpinions)
+  }
+
+  @Test
+  func 참여_운영자의_받은_추천은_내_활동_응답으로_표시한다() async {
+    let room = ClassRoom.mocks[0]
+    let requestID = UUID()
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.requestID = requestID
+    let result = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: serverResult(room).stats,
+      myReportState: "SUCCEEDED",
+      insightState: nil
+    )
+    let activity = ClassMyActivity(
+      classID: room.id,
+      receivedLikeCount: 12,
+      commentCount: 3,
+      comments: [],
+      nextCursor: nil,
+      hasNext: false
+    )
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(result),
+        myActivity: activity
+      )
+    }
+    store.exhaustivity = .off
+    #expect(store.state.personalReceivedLikeCountText == "—")
+
+    await store.send(.inner(.resultResponse(
+      instanceID: state.instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(result)
+    )))
+    await store.receive(\.inner.myActivityResponse)
+
+    #expect(store.state.receivedLikeCount == 12)
+    #expect(store.state.personalReceivedLikeCountText == "12")
+    #expect(store.state.myActivityRequestID == nil)
+  }
+
+  @Test
+  func 내_활동_조회가_실패하면_받은_추천을_대시로_표시한다() async {
+    let room = ClassRoom.mocks[0]
+    let requestID = UUID()
+    var state = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    state.requestID = requestID
+    let result = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: serverResult(room).stats,
+      myReportState: "SUCCEEDED",
+      insightState: nil
+    )
+    let store = TestStore(initialState: state) { ClassOwnerDashboardFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(result: .success(result))
+    }
+    store.exhaustivity = .off
+    #expect(store.state.personalReceivedLikeCountText == "—")
+
+    await store.send(.inner(.resultResponse(
+      instanceID: state.instanceID,
+      requestID: requestID,
+      roomID: room.id,
+      .success(result)
+    )))
+    await store.receive(\.inner.myActivityResponse)
+
+    #expect(store.state.receivedLikeCount == nil)
+    #expect(store.state.personalReceivedLikeCountText == "—")
+    #expect(store.state.myActivityRequestID == nil)
   }
 
   @Test

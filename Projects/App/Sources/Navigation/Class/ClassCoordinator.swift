@@ -510,6 +510,7 @@ private extension ClassCoordinator {
             .cancel(id: ClassOwnerDashboardFeature.CancelID.load(id)),
             .cancel(id: ClassOwnerDashboardFeature.CancelID.generate(id)),
             .cancel(id: ClassOwnerDashboardFeature.CancelID.generatePersonal(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.myActivity(id)),
           ]
         }
     )
