@@ -1387,6 +1387,30 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 스와이프로_내가_남긴_의견_경로를_제거하면_진행중인_조회를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.classID = room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.myOpinions(opinions))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .myOpinions(.async(.fetchReplyPage(cursor: nil))))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
   func 운영자_보고서가_루트로_제거되면_진행중인_로드를_취소한다() async {
     let room = ClassRoom.mocks[0]
     let useCase = SuspendedClassUseCase()
@@ -3019,6 +3043,7 @@ private struct FixedClassResultUseCase: ClassResultInterface {
 private actor SuspendedClassUseCase: ClassResultInterface {
   private var nextRequestID = 0
   private var requests: [Int: CheckedContinuation<ClassResult, Error>] = [:]
+  private var activityRequests: [Int: CheckedContinuation<ClassMyActivity, Error>] = [:]
   private var startedCount = 0
   private var startWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
   private(set) var cancelledRequestIDs: [Int] = []
@@ -3046,6 +3071,12 @@ private actor SuspendedClassUseCase: ClassResultInterface {
     for (_, continuation) in ready {
       continuation.resume()
     }
+  }
+
+  private func cancelActivity(_ id: Int) {
+    guard let continuation = activityRequests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
   }
 
   private func cancelReport(_ id: Int) {
@@ -3082,7 +3113,15 @@ private actor SuspendedClassUseCase: ClassResultInterface {
     roomID _: Int,
     cursor _: String?
   ) async throws -> ClassMyActivity {
-    throw ClassError.network("이 테스트는 내 활동 조회를 사용하지 않습니다.")
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        activityRequests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelActivity(id) }
+    }
   }
 
   private static var fixture: ClassResult {

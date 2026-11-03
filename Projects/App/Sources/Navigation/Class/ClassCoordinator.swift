@@ -190,7 +190,8 @@ public struct ClassCoordinator {
       effect,
       cancelRemovedReportLoads(state: &state),
       cancelRemovedChatObservers(state: &state),
-      cancelRemovedClassEffects(state: &state)
+      cancelRemovedClassEffects(state: &state),
+      cancelRemovedMyOpinionsLoads(state: state)
     )
   }
 }
@@ -480,6 +481,20 @@ private extension ClassCoordinator {
     let removedIDs = state.chatRoomInstanceIDs.subtracting(currentIDs)
     state.chatRoomInstanceIDs = currentIDs
     return .merge(removedIDs.map { .cancel(id: ChatRoomFeature.CancelID.audioObserver($0)) })
+  }
+
+  /// 내 의견 화면은 항상 최상단 하나뿐이고 CancelID가 전역이므로, 라우트에 없으면 남은 조회를 모두 취소한다.
+  func cancelRemovedMyOpinionsLoads(state: State) -> Effect<Action> {
+    let hasMyOpinions = state.routes.contains { route in
+      guard case .myOpinions = route.screen else { return false }
+      return true
+    }
+    guard !hasMyOpinions else { return .none }
+    return .merge(
+      .cancel(id: ClassMyOpinionsFeature.CancelID.fetch),
+      .cancel(id: ClassMyOpinionsFeature.CancelID.replies),
+      .cancel(id: ClassMyOpinionsFeature.CancelID.moreReplies)
+    )
   }
 
   func cancelRemovedReportLoads(state: inout State) -> Effect<Action> {
