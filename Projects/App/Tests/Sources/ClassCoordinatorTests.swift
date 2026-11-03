@@ -1411,6 +1411,50 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 스와이프로_멤버_보고서_경로를_제거하면_진행중인_인사이트_조회를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetchInsight)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_운영자_보고서_경로를_제거하면_진행중인_내_활동_조회를_취소한다() async {
+    let room = ClassRoom.mocks[0]
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.async(.fetchMyActivity)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
   func 운영자_보고서가_루트로_제거되면_진행중인_로드를_취소한다() async {
     let room = ClassRoom.mocks[0]
     let useCase = SuspendedClassUseCase()
@@ -3044,6 +3088,7 @@ private actor SuspendedClassUseCase: ClassResultInterface {
   private var nextRequestID = 0
   private var requests: [Int: CheckedContinuation<ClassResult, Error>] = [:]
   private var activityRequests: [Int: CheckedContinuation<ClassMyActivity, Error>] = [:]
+  private var insightRequests: [Int: CheckedContinuation<ClassAIInsight, Error>] = [:]
   private var startedCount = 0
   private var startWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
   private(set) var cancelledRequestIDs: [Int] = []
@@ -3071,6 +3116,12 @@ private actor SuspendedClassUseCase: ClassResultInterface {
     for (_, continuation) in ready {
       continuation.resume()
     }
+  }
+
+  private func cancelInsight(_ id: Int) {
+    guard let continuation = insightRequests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
   }
 
   private func cancelActivity(_ id: Int) {
@@ -3102,7 +3153,15 @@ private actor SuspendedClassUseCase: ClassResultInterface {
   }
 
   func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
-    throw ClassError.network("이 테스트는 인사이트 조회를 사용하지 않습니다.")
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        insightRequests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelInsight(id) }
+    }
   }
 
   func retryInsight(roomID _: Int) async throws {

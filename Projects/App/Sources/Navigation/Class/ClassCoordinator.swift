@@ -516,7 +516,9 @@ private extension ClassCoordinator {
       cancelledReports.flatMap { id in
         [
           .cancel(id: ClassReportFeature.CancelID.load(id)),
+          .cancel(id: ClassReportFeature.CancelID.voteHistory(id)),
           .cancel(id: ClassReportFeature.CancelID.generate(id)),
+          .cancel(id: ClassReportFeature.CancelID.insight(id)),
           .cancel(id: ClassReportFeature.CancelID.myActivity(id)),
         ]
       }
