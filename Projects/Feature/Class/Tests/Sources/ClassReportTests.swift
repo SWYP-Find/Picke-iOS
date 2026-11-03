@@ -38,13 +38,16 @@ struct ClassReportTests {
   private struct ResultStub: ClassResultInterface {
     let result: Result<ClassResult, ClassError>
     let feedback: ClassAIPersonalFeedback?
+    let myActivity: ClassMyActivity?
 
     init(
       result: Result<ClassResult, ClassError>,
-      feedback: ClassAIPersonalFeedback? = nil
+      feedback: ClassAIPersonalFeedback? = nil,
+      myActivity: ClassMyActivity? = nil
     ) {
       self.result = result
       self.feedback = feedback
+      self.myActivity = myActivity
     }
 
     func fetchResult(roomID _: Int) async throws -> ClassResult {
@@ -68,7 +71,8 @@ struct ClassReportTests {
       roomID _: Int,
       cursor _: String?
     ) async throws -> ClassMyActivity {
-      throw ClassAIFeedbackError.temporarilyUnavailable
+      guard let myActivity else { throw ClassError.network("내 활동을 불러오지 못했습니다.") }
+      return myActivity
     }
   }
 
@@ -399,5 +403,87 @@ struct ClassReportTests {
     await store.receive(\.async.fetch)
     await store.receive(\.inner.resultResponse)
     #expect(store.state.sourceError == .resultExpired)
+  }
+
+  @Test
+  func 참여자_리포트의_받은_추천은_내_활동_응답으로_표시한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let activity = ClassMyActivity(
+      classID: room.id,
+      receivedLikeCount: 12,
+      commentCount: 3,
+      comments: [],
+      nextCursor: nil,
+      hasNext: false
+    )
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(result(room: room, reportState: "SUCCEEDED")),
+        myActivity: activity
+      )
+    }
+    store.exhaustivity = .off
+
+    #expect(store.state.personalReceivedLikeCountText == "—")
+    await store.send(.view(.onAppear))
+    await store.receive(\.async.fetchMyActivity)
+    await store.receive(\.inner.myActivityResponse)
+
+    #expect(store.state.receivedLikeCount == 12)
+    #expect(store.state.personalReceivedLikeCountText == "12")
+    #expect(store.state.myActivityRequestID == nil)
+
+    await store.send(.async(.fetch))
+    #expect(store.state.receivedLikeCount == nil)
+  }
+
+  @Test
+  func 내_활동_조회에_실패하면_받은_추천을_대시로_둔다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(result: .success(result(room: room, reportState: "SUCCEEDED")))
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    await store.receive(\.inner.myActivityResponse)
+
+    #expect(store.state.receivedLikeCount == nil)
+    #expect(store.state.personalReceivedLikeCountText == "—")
+  }
+
+  @Test
+  func 개인_리포트_권한이_없으면_내_활동을_조회하지_않는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(result(room: room, reportState: nil)),
+        myActivity: ClassMyActivity(
+          classID: room.id,
+          receivedLikeCount: 12,
+          commentCount: 0,
+          comments: [],
+          nextCursor: nil,
+          hasNext: false
+        )
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    await store.receive(\.inner.resultResponse)
+    await store.finish()
+
+    // 조회했다면 대역이 돌려주는 12가 들어간다.
+    #expect(store.state.receivedLikeCount == nil)
   }
 }

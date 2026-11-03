@@ -130,9 +130,11 @@ private extension ClassReportView {
       .padding(.vertical, 12)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       HStack(spacing: 0) {
-        activityCount(store.personalPerspectiveCountText, label: "작성한 의견")
+        activityCount(store.personalPerspectiveCountText, label: "댓글")
         Rectangle().fill(.beige600).frame(width: 1, height: 38)
-        activityCount(store.personalCommentCountText, label: "작성한 댓글")
+        activityCount(store.personalCommentCountText, label: "대댓글")
+        Rectangle().fill(.beige600).frame(width: 1, height: 38)
+        activityCount(store.personalReceivedLikeCountText, label: "받은 추천")
       }
     } else if store.voteHistoryRequestID != nil {
       SkeletonView(.round(cornerRadius: 2)).frame(height: 48)

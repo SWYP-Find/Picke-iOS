@@ -501,6 +501,7 @@ private extension ClassCoordinator {
         [
           .cancel(id: ClassReportFeature.CancelID.load(id)),
           .cancel(id: ClassReportFeature.CancelID.generate(id)),
+          .cancel(id: ClassReportFeature.CancelID.myActivity(id)),
         ]
       }
         + cancelledDashboards.flatMap { id in

@@ -33,6 +33,8 @@ public struct ClassReportFeature {
     public var insight: ClassAIInsight?
     public var insightError: ClassAIFeedbackError?
     public var insightRequestID: UUID?
+    public var receivedLikeCount: Int?
+    public var myActivityRequestID: UUID?
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
 
@@ -241,6 +243,11 @@ public struct ClassReportFeature {
       feedback.map { String($0.commentCount) } ?? "—"
     }
 
+    /// Android와 같이 받은 추천 수를 모르면 0 대신 "—"로 표시한다.
+    public var personalReceivedLikeCountText: String {
+      receivedLikeCount.map(String.init) ?? "—"
+    }
+
     public var myOpinionsButtonTitle: String {
       if classResult != nil, feedback == nil { return "내가 남긴 의견 보기" }
       return "내가 남긴 의견 \(myOpinionCount)개 보기"
@@ -285,6 +292,7 @@ public struct ClassReportFeature {
     case fetchVoteHistory
     case generateFeedback
     case fetchInsight
+    case fetchMyActivity
   }
 
   @CasePathable
@@ -300,6 +308,7 @@ public struct ClassReportFeature {
       wasUnknown: Bool
     )
     case insightResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassAIInsight, ClassAIFeedbackError>)
+    case myActivityResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassMyActivity, ClassError>)
   }
 
   @CasePathable
@@ -313,6 +322,7 @@ public struct ClassReportFeature {
     case voteHistory(UUID)
     case generate(UUID)
     case insight(UUID)
+    case myActivity(UUID)
   }
 
   @Dependency(\.classResultUseCase) private var classUseCase
@@ -360,12 +370,14 @@ extension ClassReportFeature {
       state.voteHistoryRequestID = nil
       state.feedbackRequestID = nil
       state.insightRequestID = nil
+      state.myActivityRequestID = nil
       state.isGeneratingFeedback = false
       return .merge(
         .cancel(id: CancelID.load(state.instanceID)),
         .cancel(id: CancelID.voteHistory(state.instanceID)),
         .cancel(id: CancelID.generate(state.instanceID)),
         .cancel(id: CancelID.insight(state.instanceID)),
+        .cancel(id: CancelID.myActivity(state.instanceID)),
         .send(.delegate(.dismiss))
       )
     case let .tabSelected(tab):
@@ -398,6 +410,8 @@ extension ClassReportFeature {
       state.feedbackError = nil
       state.isGeneratingFeedback = false
       state.unknownRetryCount = 0
+      state.receivedLikeCount = nil
+      state.myActivityRequestID = nil
       let requestID = uuid()
       state.requestID = requestID
       state.sourceViewState = .loading
@@ -422,8 +436,25 @@ extension ClassReportFeature {
         .cancel(id: CancelID.voteHistory(state.instanceID)),
         .cancel(id: CancelID.generate(state.instanceID)),
         .cancel(id: CancelID.insight(state.instanceID)),
+        .cancel(id: CancelID.myActivity(state.instanceID)),
         fetch
       )
+    case .fetchMyActivity:
+      let requestID = uuid()
+      state.myActivityRequestID = requestID
+      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        let result = await Result {
+          try await classUseCase.fetchMyActivity(roomID: roomID, cursor: nil)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.myActivityResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result
+        )))
+      }
+      .cancellable(id: CancelID.myActivity(state.instanceID), cancelInFlight: true)
     case .fetchVoteHistory:
       let requestID = uuid()
       state.voteHistoryRequestID = requestID
@@ -513,6 +544,7 @@ extension ClassReportFeature {
         }
         if classResult.myReportState != nil {
           effects.append(.send(.async(.generateFeedback)))
+          effects.append(.send(.async(.fetchMyActivity)))
         }
         if state.room.role != .member,
            (classResult.insightState == "SUCCEEDED" || classResult.insightState == "LIMITED") {
@@ -525,6 +557,14 @@ extension ClassReportFeature {
         state.sourceViewState = .failed
         return .none
       }
+
+    case let .myActivityResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.myActivityRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.myActivityRequestID = nil
+      state.receivedLikeCount = try? result.get().receivedLikeCount
+      return .none
 
     case let .voteHistoryResponse(instanceID, requestID, roomID, result):
       guard state.instanceID == instanceID,

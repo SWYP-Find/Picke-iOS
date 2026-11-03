@@ -83,9 +83,9 @@ struct ClassMyOpinionsTests {
     let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
     await store.send(.inner(.perspectivesResponse(.success([item])))) {
       $0.isLoading = false
-      $0.opinions = [ClassReportOpinion(
+      $0.perspectiveOpinions = [ClassReportOpinion(
         id: "77",
-        kind: .unspecified,
+        kind: .comment,
         body: "내 생각",
         stance: "찬성",
         likeCount: 4,
@@ -93,6 +93,193 @@ struct ClassMyOpinionsTests {
         authorName: "나"
       )]
     }
-    #expect(store.state.unspecified.count == 1)
+    #expect(store.state.comments.count == 1)
+  }
+
+  @Test
+  func 서버_내_의견은_검수_중과_거절만_빼고_알_수_없는_상태는_공개로_본다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.isLoading = true
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.perspectivesResponse(.success([
+      perspective(id: 1, status: "PUBLISHED"),
+      perspective(id: 2, status: "PENDING"),
+      perspective(id: 3, status: "rejected"),
+      perspective(id: 4, status: nil),
+      perspective(id: 5, status: "HIDDEN_BY_ADMIN"),
+    ]))))
+
+    #expect(store.state.perspectiveOpinions.map(\.id) == ["1", "4", "5"])
+  }
+
+  @Test
+  func 내_활동_댓글은_원_의견_제목과_내_이름을_가진_대댓글로_옮긴다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myDisplayNameResponse(.success("민지"))))
+    await store.receive(\.async.fetchReplyPage)
+    await store.send(.inner(.replyPageResponse(cursor: nil, .success(activity(ids: [71], next: "c-2")))))
+
+    #expect(store.state.replyOpinions == [ClassReportOpinion(
+      id: "reply-71",
+      kind: .reply,
+      body: "댓글 71",
+      likeCount: 2,
+      authorName: "민지",
+      parent: ClassReportReplyContext(body: "원 의견 71")
+    )])
+    #expect(store.state.replies.first?.replyAuthorLabel == "민지의 답글")
+    #expect(store.state.replies.first?.parentStanceLabel == nil)
+    #expect(store.state.nextCursor == "c-2")
+    #expect(store.state.canLoadMoreReplies)
+  }
+
+  @Test
+  func 표시_이름이_비면_나로_표시한다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.myDisplayName = ""
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.replyPageResponse(cursor: nil, .success(activity(ids: [71], next: nil)))))
+
+    #expect(store.state.replies.first?.replyAuthorLabel == "나의 답글")
+  }
+
+  @Test
+  func 의견과_대댓글_응답은_도착_순서와_무관하게_서로를_덮어쓰지_않는다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.isLoading = true
+    state.myDisplayName = "민지"
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.replyPageResponse(cursor: nil, .success(activity(ids: [71], next: nil)))))
+    await store.send(.inner(.perspectivesResponse(.success([perspective(id: 1, status: nil)]))))
+
+    #expect(store.state.comments.map(\.opinion.id) == ["1"])
+    #expect(store.state.replies.map(\.opinion.id) == ["reply-71"])
+    #expect(!store.state.isEmpty)
+  }
+
+  @Test
+  func 목록_끝에서_커서로_다음_대댓글을_이어_붙이고_첫_페이지는_교체한다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.myDisplayName = "민지"
+    let store = TestStore(initialState: state) {
+      ClassMyOpinionsFeature()
+    } withDependencies: {
+      $0.classResultUseCase = ActivityStub(pages: ["c-2": activity(ids: [72], next: nil)])
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.replyPageResponse(cursor: nil, .success(activity(ids: [71], next: "c-2")))))
+    await store.send(.view(.repliesEndReached))
+    await store.receive(\.async.fetchReplyPage)
+    #expect(store.state.isLoadingMore)
+    await store.receive(\.inner.replyPageResponse)
+
+    #expect(store.state.replyOpinions.map(\.id) == ["reply-71", "reply-72"])
+    #expect(!store.state.canLoadMoreReplies)
+    #expect(!store.state.isLoadingMore)
+
+    await store.send(.inner(.replyPageResponse(cursor: nil, .success(activity(ids: [71], next: nil)))))
+    #expect(store.state.replyOpinions.map(\.id) == ["reply-71"])
+  }
+
+  @Test
+  func 내_활동_조회에_실패하면_의견은_유지하고_토스트를_띄운다() async {
+    var state = ClassMyOpinionsFeature.State()
+    state.classID = 31
+    state.perspectiveOpinions = [ClassReportOpinion(id: "1", kind: .comment, body: "내 의견")]
+    let store = TestStore(initialState: state) { ClassMyOpinionsFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.replyPageResponse(cursor: nil, .failure(.network("실패")))))
+    #expect(store.state.toastMessage == "정보를 불러오지 못했어요")
+    #expect(store.state.perspectiveOpinions.count == 1)
+
+    await store.send(.view(.toastShown))
+    #expect(store.state.toastMessage == nil)
+
+    await store.send(.inner(.myDisplayNameResponse(.failure(.network("실패")))))
+    #expect(store.state.toastMessage == "정보를 불러오지 못했어요")
+  }
+
+  private func perspective(
+    id: Int,
+    status: String?
+  ) -> ClassPerspectiveItem {
+    ClassPerspectiveItem(
+      id: id,
+      author: .init(userTag: "member", nickname: "나", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "의견 \(id)",
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: true,
+      status: status,
+      createdAt: .now
+    )
+  }
+
+  private func activity(
+    ids: [Int],
+    next: String?
+  ) -> ClassMyActivity {
+    ClassMyActivity(
+      classID: 31,
+      receivedLikeCount: 0,
+      commentCount: ids.count,
+      comments: ids.map {
+        ClassMyActivityComment(
+          id: $0,
+          perspectiveID: $0 + 100,
+          perspectiveTitle: "원 의견 \($0)",
+          stance: "",
+          content: "댓글 \($0)",
+          likeCount: 2,
+          createdAt: nil
+        )
+      },
+      nextCursor: next,
+      hasNext: next != nil
+    )
+  }
+
+  private struct ActivityStub: ClassResultInterface {
+    let pages: [String: ClassMyActivity]
+
+    func fetchResult(roomID _: Int) async throws -> ClassResult {
+      throw ClassError.network("사용하지 않음")
+    }
+
+    func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
+
+    func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
+
+    func retryInsight(roomID _: Int) async throws {}
+
+    func fetchMyActivity(
+      roomID _: Int,
+      cursor: String?
+    ) async throws -> ClassMyActivity {
+      guard let cursor, let page = pages[cursor] else { throw ClassError.network("페이지 없음") }
+      return page
+    }
   }
 }
