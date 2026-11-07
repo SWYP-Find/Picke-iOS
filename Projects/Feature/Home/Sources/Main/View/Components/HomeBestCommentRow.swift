@@ -9,7 +9,7 @@ import SwiftUI
 import UIKit
 
 /// Best 댓글 행 — Android `HomeBestCommentItem` 시안.
-/// 선택지 배지는 본문 첫 줄 앞에 inline 이미지로 붙여 본문과 함께 줄바꿈된다.
+/// 본문 첫 줄 앞에 배지 폭만큼 투명 자리를 두고, 선택지 배지는 첫 줄 기준선에 overlay 로 겹친다(Text 프레임 위로 약 1.5pt 넘침).
 struct HomeBestCommentRow: View {
   let comment: HomeBestComment
   @Environment(\.displayScale) private var displayScale
@@ -59,8 +59,16 @@ extension HomeBestCommentRow {
         .foregroundStyle(.textSubtler)
         .lineLimit(2)
         .truncationMode(.tail)
-        // SwiftUI 는 `.baselineOffset` 으로 내린 이미지도 줄 위쪽을 이미지 높이만큼 잡아 첫 줄 위가 빈다 → 그만큼 당긴다.
-        .padding(.top, -(badge.map(badgeDescent) ?? 0))
+        // 배지를 Text 안에 넣으면 SwiftUI 가 줄 위쪽을 배지 높이만큼 잡는다 → 본문엔 투명 자리만 두고 배지는 첫 줄 기준선에 겹친다.
+        .overlay(alignment: Alignment(horizontal: .leading, vertical: .firstTextBaseline)) {
+          if let badge {
+            Image(uiImage: badge)
+              .renderingMode(.original)
+              .alignmentGuide(.firstTextBaseline) { [descent = badgeDescent(badge)] dimension in
+                dimension.height - descent
+              }
+          }
+        }
         .padding(.horizontal, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -70,9 +78,9 @@ extension HomeBestCommentRow {
     guard let badge else {
       return Text(verbatim: comment.content)
     }
-    let badgeText = Text(Image(uiImage: badge).renderingMode(.original))
-      .baselineOffset(-badgeDescent(badge))
-    return Text("\(badgeText)\(Text(verbatim: comment.content))")
+    let placeholderText = Text(Image(uiImage: OptionBadgeImage.placeholder(for: badge)))
+      .baselineOffset(-badgeLineGrowth(badge))
+    return Text("\(placeholderText)\(Text(verbatim: comment.content))")
   }
 
   /// 배지 세로 중앙을 본문 대문자 높이 중앙에 맞춘다(Android PlaceholderVerticalAlign.TextCenter).
@@ -80,6 +88,14 @@ extension HomeBestCommentRow {
   private func badgeDescent(_ badge: UIImage) -> CGFloat {
     let capHeight = UIFont.pretendardFontFamily(family: .Regular, size: 13).capHeight
     return (badge.size.height - capHeight) / 2
+  }
+
+  /// Android 처럼 배지가 본문 줄(13 × 1.4)의 기준선 아래 몫보다 더 내려간 만큼만 첫 줄 아래를 늘린다.
+  private func badgeLineGrowth(_ badge: UIImage) -> CGFloat {
+    let font = UIFont.pretendardFontFamily(family: .Regular, size: 13)
+    let lineExtra = max(0, 13 * 1.4 - font.lineHeight)
+    let lineDescent = -font.descender * (1 + lineExtra / font.lineHeight)
+    return max(0, badgeDescent(badge) - lineDescent)
   }
 }
 
@@ -137,5 +153,16 @@ private enum OptionBadgeImage {
     }
     cache[key] = image
     return image
+  }
+
+  /// 본문 안에서 배지 폭만 차지하는 투명 자리 — 높이 1이라 줄 위쪽 높이를 바꾸지 않는다.
+  static func placeholder(for badge: UIImage) -> UIImage {
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = badge.scale
+    let renderer = UIGraphicsImageRenderer(
+      size: CGSize(width: badge.size.width, height: 1),
+      format: format
+    )
+    return renderer.image { _ in }
   }
 }
