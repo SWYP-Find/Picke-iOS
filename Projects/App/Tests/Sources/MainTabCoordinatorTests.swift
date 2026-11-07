@@ -53,6 +53,45 @@ struct MainTabCoordinatorTests {
   }
 
   @Test
+  func 클래스_만료_안내의_등록하기는_마이_탭_코드_입력_화면을_연다() async {
+    var state = MainTabCoordinator.State()
+    state.classState.routes.push(.myClasses(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      MyClassFeature.State()
+    }))
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.classroom(.router(.routeAction(id: 0, action: .intro(.delegate(.registerTicket))))))
+
+    #expect(store.state.selectedTab == MainTabCoordinator.Tab.myPage.rawValue)
+    #expect(store.state.classState.routes.count == 1)
+    guard case let .ticket(ticket)? = store.state.myPageState.routes.last?.screen else {
+      Issue.record("마이 탭에 이용권 화면이 열리지 않았습니다")
+      return
+    }
+    #expect(ticket.shouldCheckExistingTicket == false)
+    #expect(ticket.phase == .entry)
+  }
+
+  @Test
+  func 마이_탭_이용권_화면은_안내가_떠_있을_때만_탭바를_숨긴다() {
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.myPage.rawValue)
+    var ticket = ClassTicketFeature.State()
+    state.myPageState.routes.push(.ticket(ticket))
+    #expect(!state.shouldHideTabBar)
+
+    ticket.customAlert = .ticketInvalidCode()
+    state.myPageState.routes[screenAt: 1] = .ticket(ticket)
+    #expect(state.shouldHideTabBar)
+  }
+
+  @Test
   func 탭_변경은_한번만_기록하고_재선택과_잘못된_탭은_기록하지_않는다() async {
     let events = LockIsolated<[AnalyticsButton]>([])
     let store = TestStore(initialState: MainTabCoordinator.State()) {

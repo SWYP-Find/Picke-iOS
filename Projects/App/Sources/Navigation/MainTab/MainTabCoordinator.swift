@@ -73,7 +73,7 @@ public struct MainTabCoordinator {
       case .classroom:
         return !classState.showsTabBar
       case .myPage:
-        if case .ticket? = myPageState.routes.last?.screen { return false }
+        if case let .ticket(ticket)? = myPageState.routes.last?.screen { return ticket.customAlert != nil }
         return myPageState.routes.count > 1
       case .none:
         return false
@@ -179,6 +179,20 @@ public struct MainTabCoordinator {
         state.classState.routes.goBackToRoot()
         state.myPageState.routes.goBackToRoot()
         state.myPageState.routes.push(.ticket(.init()))
+        if state.selectedTab != Tab.myPage.rawValue {
+          state.previousTab = state.selectedTab
+          trackTabSelection(Tab.myPage.rawValue)
+        }
+        state.selectedTab = Tab.myPage.rawValue
+        return .none
+
+      case .classroom(.router(.routeAction(0, action: .intro(.delegate(.registerTicket))))):
+        // 만료 안내의 등록하기: Android와 같이 마이 탭의 코드 입력 화면으로 바로 간다.
+        state.classState.routes.goBackToRoot()
+        state.myPageState.routes.goBackToRoot()
+        var registration = ClassTicketFeature.State()
+        registration.shouldCheckExistingTicket = false
+        state.myPageState.routes.push(.ticket(registration))
         if state.selectedTab != Tab.myPage.rawValue {
           state.previousTab = state.selectedTab
           trackTabSelection(Tab.myPage.rawValue)

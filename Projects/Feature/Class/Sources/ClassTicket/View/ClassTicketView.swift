@@ -6,11 +6,13 @@
 import ComposableArchitecture
 import PickeCoreUtility
 import PickeDesignKit
+import PickeSharedUI
 import SwiftUI
 
 @ViewAction(for: ClassTicketFeature.self)
 public struct ClassTicketView: View {
   @Bindable public var store: StoreOf<ClassTicketFeature>
+  @FocusState private var isCodeFocused: Bool
 
   public init(store: StoreOf<ClassTicketFeature>) {
     self.store = store
@@ -46,6 +48,16 @@ public struct ClassTicketView: View {
     .screenBackground(.surfaceBeigeDefault)
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
+    .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
+    .onChange(of: store.customAlert != nil) { _, isPresented in
+      // 안내가 키보드에 가리지 않게 입력 포커스를 내린다.
+      if isPresented { isCodeFocused = false }
+    }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 }
 
@@ -95,14 +107,8 @@ private extension ClassTicketView {
         .autocorrectionDisabled()
         .keyboardType(.asciiCapable)
         .pickeTextField(height: 44)
+        .focused($isCodeFocused)
         .accessibilityIdentifier("class-ticket-code")
-
-      if let errorMessage = store.errorMessage {
-        Text(errorMessage)
-          .pretendardFont(.bodySmall)
-          .foregroundStyle(.errorDefault)
-          .accessibilityIdentifier("class-ticket-error")
-      }
     }
   }
 
@@ -112,12 +118,12 @@ private extension ClassTicketView {
       faqRow(
         index: 0,
         question: "이용권 코드는 어디서 확인하나요?",
-        answer: "리워드로 받은 이메일에서 이용권 코드를 확인할 수 있어요."
+        answer: "펀딩 리워드 발송 안내에서 확인해 주세요. 코드를 받지 못했다면 해당 펀딩의 문의 경로를 이용해 주세요."
       )
       faqRow(
         index: 1,
         question: "클래스 참여 코드와 다른가요?",
-        answer: "이용권 코드는 클래스를 개설할 때 사용해요. 참여 코드는 다른 사람의 클래스에 들어갈 때 사용해요."
+        answer: "이용권 코드는 모임을 여는 데 사용하는 리워드예요. 모임에 참가하려면 '클래스 탭' - '클래스 참여하기'에서 참여 코드를 입력해 주세요."
       )
     }
   }
@@ -161,28 +167,31 @@ private extension ClassTicketView {
   @ViewBuilder
   func previewContent() -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      Text("이용권 내용을 확인해 주세요")
+      Text("이 이용권을 등록할까요?")
         .pretendardFont(.semiBold24)
         .foregroundStyle(.gray800)
         .padding(.bottom, 8)
 
-      Text("확인 후 등록하면 이용 기간이 바로 시작돼요")
+      Text("이용 조건과 주의사항을 확인해 주세요")
         .pretendardFont(.bodyMedium)
         .foregroundStyle(.gray300)
         .padding(.bottom, 36)
 
       ticketCard()
 
-      if let errorMessage = store.errorMessage {
-        Text(errorMessage)
-          .pretendardFont(.bodySmall)
-          .foregroundStyle(.errorDefault)
-          .padding(.top, 12)
-          .accessibilityIdentifier("class-ticket-error")
-      }
+      Text("등록하는 순간 이용 기간이 시작돼요\n클래스를 만들기 전에도 기간은 흘러가요")
+        .pretendardFont(.bodySmall)
+        .foregroundStyle(.gray300)
+        .padding(.top, 12)
+
+      Text("등록 후 마이페이지에서 이용권을 확인할 수 있어요")
+        .pretendardFont(.bodySmall)
+        .foregroundStyle(.gray300)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
 
       bottomSection()
-        .padding(.top, 40)
+        .padding(.top, 10)
     }
     .padding(.horizontal, 16)
     .padding(.top, 20)
@@ -241,6 +250,9 @@ private extension ClassTicketView {
   @ViewBuilder
   func overviewBottomSection() -> some View {
     VStack(spacing: 10) {
+      Text("등록 후 마이페이지에서 이용권을 확인할 수 있어요")
+        .pretendardFont(.bodySmall)
+        .foregroundStyle(.gray300)
       Button("이용권 추가등록하기") {
         send(.addRegistrationTapped)
       }
