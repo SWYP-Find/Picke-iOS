@@ -21,6 +21,7 @@ public enum ContentActionType: String, Sendable {
 /// 홈 콘텐츠 카드가 속한 섹션.
 public enum ContentSection: String, Sendable {
   case best
+  case bestComment = "best_comment"
   case hot
   case new
   case vote

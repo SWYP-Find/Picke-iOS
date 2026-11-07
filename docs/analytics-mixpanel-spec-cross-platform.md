@@ -33,7 +33,7 @@
 | event | 속성(키: 타입) | 허용값 / 비고 |
 |---|---|---|
 | `screen_view` | screen: string, referrer?: string | screen = §2 화면 enum. 화면당 1회(재진입 시 재발화 OK, 화면 내 중복 금지) |
-| `content_action` | action: string, content_id?: string, section?: string | action ∈ `battle_card_tap` `hero_tap` `new_battle_tap` `vote_card_tap` `vote_result_view` `quick_battle_next` `explore_category_tap` `battle_recommend_close`. section ∈ `best` `hot` `new` `vote` |
+| `content_action` | action: string, content_id?: string, section?: string | action ∈ `battle_card_tap` `hero_tap` `new_battle_tap` `vote_card_tap` `vote_result_view` `quick_battle_next` `explore_category_tap` `battle_recommend_close`. section ∈ `best` `best_comment` `hot` `new` `vote` |
 | `ui_action` | action: string, screen: string | action = 버튼 식별자(§2.1 규약). 카드 탭은 `content_action` 사용 |
 
 ### 마이크로 (Tier 3, **초기 비활성** — 볼륨 큼, 합의 후 켬)
