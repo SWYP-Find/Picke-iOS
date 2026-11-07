@@ -4,8 +4,9 @@ import PickeCoreUtility
 
 extension ClassTicketDTO {
   func toDomain() throws -> ClassTicket {
+    // Android `ClassTicketStatus.from`과 같이 모르는 상태값은 만료로 본다.
+    let status = ClassTicket.Status(rawValue: self.status) ?? .expired
     guard
-      let status = ClassTicket.Status(rawValue: status),
       let activatedAt = ServerDateParser.parse(activatedAt),
       let expiresAt = ServerDateParser.parse(expiresAt),
       let readGraceEndsAt = ServerDateParser.parse(readGraceEndsAt)

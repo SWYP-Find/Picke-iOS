@@ -72,12 +72,12 @@ struct ClassTicketAPITests {
   }
 
   @Test
-  func 알_수_없는_이용권_상태는_잘못된_응답으로_처리한다() throws {
+  func 알_수_없는_이용권_상태는_만료로_처리한다() throws {
     let json = """
     {"ticketId":3,"capacity":15,"status":"REVOKED","activatedAt":"2026-10-01T10:00:00",\
     "expiresAt":"2027-04-01T10:00:00","remainingDays":0,"readGraceEndsAt":"2027-05-01T10:00:00"}
     """
     let payload = try JSONDecoder().decode(ClassTicketDTO.self, from: Data(json.utf8))
-    #expect(throws: ClassTicketError.invalidResponse) { try payload.toDomain() }
+    #expect(try payload.toDomain().status == .expired)
   }
 }
