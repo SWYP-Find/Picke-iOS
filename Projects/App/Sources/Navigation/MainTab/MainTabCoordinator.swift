@@ -206,13 +206,6 @@ public struct MainTabCoordinator {
       case .myPage(.router(.routeAction(_, action: .withdraw(.delegate(.sessionEnded))))):
         return .send(.delegate(.sessionEnded))
 
-      case .home(.router(.routeAction(_, action: .home(.delegate(.moveToExplore))))):
-        if state.selectedTab != Tab.explore.rawValue {
-          state.previousTab = state.selectedTab
-        }
-        state.selectedTab = Tab.explore.rawValue
-        return .none
-
       case .delegate:
         return .none
 
@@ -247,7 +240,14 @@ private extension MainTabCoordinator {
   ) -> Effect<Action> {
     switch Tab(rawValue: tab) {
     case .home:
-      state.homeState.routes.goBackToRoot()
+      guard state.homeState.routes.count == 1 else {
+        state.homeState.routes.goBackToRoot()
+        return .none
+      }
+      return .send(.home(.router(.routeAction(
+        id: 0,
+        action: .home(.view(.homeTabReselected))
+      ))))
     case .explore:
       state.exploreState.routes.goBackToRoot()
     case .quickBattle:

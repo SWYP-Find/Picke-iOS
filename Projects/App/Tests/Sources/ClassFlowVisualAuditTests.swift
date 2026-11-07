@@ -3371,8 +3371,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     home.heroes = homeBundle.heroes
     home.hotBattles = homeBundle.hotBattles
     home.bestBattles = homeBundle.bestBattles
-    home.quizzes = homeBundle.quizzes
-    home.votes = homeBundle.votes
     home.newBattles = homeBundle.newBattles
     home.viewState = .loaded
     home.hasLoadedHome = true

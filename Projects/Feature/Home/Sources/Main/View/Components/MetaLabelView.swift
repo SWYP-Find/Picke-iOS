@@ -26,17 +26,3 @@ struct MetaLabelView: View {
     }
   }
 }
-
-/// 작은 알약형 태그 뱃지 (예: "퀴즈", "투표").
-struct TagBadgeView: View {
-  let text: String
-
-  var body: some View {
-    Text(text)
-      .pretendardFont(.semiBold11)
-      .foregroundStyle(.primary500)
-      .padding(.horizontal, 8)
-      .padding(.vertical, 2)
-      .roundedBackground(.primary50)
-  }
-}

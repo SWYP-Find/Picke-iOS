@@ -117,6 +117,57 @@ struct MainTabCoordinatorTests {
   }
 
   @Test
+  func 홈_루트에서_홈_재선택은_맨_위로_올리고_다시_불러온다() async {
+    var state = MainTabCoordinator.State()
+    state.homeState = .init()
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.tabReselected(MainTabCoordinator.Tab.home.rawValue))
+    await store.receive(\.home.router.routeAction)
+
+    guard case let .home(homeFeature) = store.state.homeState.routes[0].screen else {
+      Issue.record("홈 루트 화면이 HomeFeature 가 아님")
+      return
+    }
+    #expect(homeFeature.scrollToTopRequest == 1)
+
+    // 처음 상태는 hasLoadedHome == false — fetch 가 다시 돌아 성공해야만 true 가 된다.
+    await store.finish()
+    await store.skipReceivedActions()
+    guard case let .home(reloaded) = store.state.homeState.routes[0].screen else {
+      Issue.record("홈 루트 화면이 HomeFeature 가 아님")
+      return
+    }
+    #expect(reloaded.hasLoadedHome)
+  }
+
+  @Test
+  func 홈_하위_화면에서_홈_재선택은_루트로만_돌아간다() async {
+    var state = MainTabCoordinator.State()
+    state.homeState.routes.push(.home(HomeFeature.State()))
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.tabReselected(MainTabCoordinator.Tab.home.rawValue))
+
+    #expect(store.state.homeState.routes.count == 1)
+    guard case let .home(homeFeature) = store.state.homeState.routes[0].screen else {
+      Issue.record("홈 루트 화면이 HomeFeature 가 아님")
+      return
+    }
+    #expect(homeFeature.scrollToTopRequest == 0)
+  }
+
+  @Test
   func 배틀_복귀_후_클래스를_재선택해도_소개에서_홈으로_나갈_수_있다() async {
     var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.quickBattle.rawValue)
     state.previousTab = MainTabCoordinator.Tab.classroom.rawValue

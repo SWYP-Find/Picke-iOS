@@ -63,7 +63,7 @@ private struct HomeHeroSkeletonView: View {
 
 private struct HomeHotBattlesSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 132)
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 16) {
@@ -89,12 +89,12 @@ private struct HomeHotBattlesSkeletonView: View {
 
 private struct HomeBestBattlesSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 88)
       VStack(spacing: 0) {
         ForEach(0 ..< 3, id: \.self) { index in
           HStack(alignment: .top, spacing: 16) {
-            SkeletonBlock(width: 18, height: 28, color: index == 0 ? .primary500.opacity(0.35) : .neutral100)
+            SkeletonBlock(width: 16, height: 28, color: index == 0 ? .primary500.opacity(0.35) : .neutral100)
             VStack(alignment: .leading, spacing: 10) {
               SkeletonBlock(width: 76, height: 18, color: .primary50)
               SkeletonBlock(width: 214, height: 16)
@@ -106,12 +106,10 @@ private struct HomeBestBattlesSkeletonView: View {
               }
             }
           }
+          .padding(.horizontal, 12)
           .padding(.vertical, 16)
 
-          if index < 2 {
-            Divider()
-              .background(.beige600)
-          }
+          PickeDivider(.cardBaseBorderDefault)
         }
       }
       .padding(.horizontal, 16)
@@ -121,7 +119,7 @@ private struct HomeBestBattlesSkeletonView: View {
 
 private struct HomeBestCommentsSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 100)
       VStack(spacing: 0) {
         ForEach(0 ..< 3, id: \.self) { index in
@@ -135,7 +133,7 @@ private struct HomeBestCommentsSkeletonView: View {
           }
           .padding(16)
           if index < 2 {
-            Divider().background(.beige600)
+            PickeDivider(.cardBaseBorderDefault)
           }
         }
       }
@@ -146,7 +144,7 @@ private struct HomeBestCommentsSkeletonView: View {
 
 private struct HomeNewBattlesSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 104)
       VStack(spacing: 12) {
         ForEach(0 ..< 3, id: \.self) { _ in
@@ -196,9 +194,9 @@ private struct SkeletonSectionHeader: View {
     HStack {
       SkeletonBlock(width: width, height: 22, color: .neutral100)
       Spacer()
-      SkeletonBlock(width: 40, height: 14)
     }
     .padding(.horizontal, 16)
+    .padding(.vertical, 12)
   }
 }
 

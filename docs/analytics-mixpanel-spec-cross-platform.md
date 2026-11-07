@@ -51,7 +51,7 @@
 ### 2.1 `ui_action.action` 버튼 식별자 규약
 
 `{screen}_{button}` 형식. 예:
-`home_notification`, `home_more_best`, `battle_vote_submit`, `prevote_start`, `chatroom_play`, `curation_close`, `recap_share`, `settings_logout`, `settings_withdraw`, `point_charge`, `notification_read_all`, `tab_home` `tab_explore` `tab_quick_battle` `tab_mypage`
+`home_notification`, `battle_vote_submit`, `prevote_start`, `chatroom_play`, `curation_close`, `recap_share`, `settings_logout`, `settings_withdraw`, `point_charge`, `notification_read_all`, `tab_home` `tab_explore` `tab_quick_battle` `tab_mypage`
 
 > 새 버튼은 같은 규약으로 추가하고 이 문서에 등재.
 
