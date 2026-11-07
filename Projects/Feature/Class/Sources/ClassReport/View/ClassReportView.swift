@@ -130,9 +130,11 @@ private extension ClassReportView {
       .padding(.vertical, 12)
       .background(.beige300, in: RoundedRectangle(cornerRadius: 2))
       HStack(spacing: 0) {
-        activityCount(store.personalPerspectiveCountText, label: "작성한 의견")
+        activityCount(store.personalPerspectiveCountText, label: "댓글")
         Rectangle().fill(.beige600).frame(width: 1, height: 38)
-        activityCount(store.personalCommentCountText, label: "작성한 댓글")
+        activityCount(store.personalCommentCountText, label: "대댓글")
+        Rectangle().fill(.beige600).frame(width: 1, height: 38)
+        activityCount(store.personalReceivedLikeCountText, label: "받은 추천")
       }
     } else if store.voteHistoryRequestID != nil {
       SkeletonView(.round(cornerRadius: 2)).frame(height: 48)
@@ -149,7 +151,7 @@ private extension ClassReportView {
   func serverResultPages(_ result: ClassResult) -> some View {
     let highlightRows = store.highlightRows
     ScrollView {
-      VStack(alignment: .leading, spacing: 22) {
+      VStack(alignment: .leading, spacing: 24) {
         if let insight = store.insight {
           insightCard(insight)
         } else if result.insightState != nil {
@@ -157,18 +159,20 @@ private extension ClassReportView {
         }
 
         VStack(alignment: .leading, spacing: 12) {
-          sectionHeading("클래스 참여 현황")
-          reportCard {
+          sectionHeading("클래스 참여 현황", textStyle: .headingSmall)
+          reportCard(padding: 17, horizontalPadding: 17, spacing: 16) {
             participationBar(
               title: "배틀 참여율",
               rate: store.serverParticipationRate,
+              caption: "참여한 멤버",
               detail: store.serverParticipationCount,
               progress: store.serverParticipationProgress,
               color: .primary500
             )
             participationBar(
-              title: "댓글 작성률",
+              title: "댓글 작성율",
               rate: store.serverCommentRate,
+              caption: "댓글을 남긴 멤버",
               detail: store.serverCommentCount,
               progress: store.serverCommentProgress,
               color: .secondary500
@@ -177,15 +181,15 @@ private extension ClassReportView {
         }
 
         VStack(alignment: .leading, spacing: 12) {
-          sectionHeading("입장 분포")
-          reportCard {
+          sectionHeading("입장 분포", textStyle: .headingSmall)
+          reportCard(padding: 17, horizontalPadding: 17) {
             stanceDistribution(result.stats.options)
           }
         }
 
         if !highlightRows.isEmpty {
           VStack(alignment: .leading, spacing: 12) {
-            sectionHeading("주요 의견")
+            sectionHeading("주요 의견", textStyle: .headingSmall)
             reportCard(padding: 0, horizontalPadding: 0, spacing: 0) {
               ForEach(highlightRows) { row in
                 highlightRow(row)
@@ -199,7 +203,7 @@ private extension ClassReportView {
 
         if result.myReportState != nil {
           VStack(alignment: .leading, spacing: 12) {
-            sectionHeading("내 AI 피드백")
+            sectionHeading("내 AI 피드백", textStyle: .headingSmall)
             reportCard {
               if case let .ready(feedback) = store.feedbackViewState {
                 Text(feedback.summaryTitle)
@@ -234,23 +238,23 @@ private extension ClassReportView {
 
   @ViewBuilder
   func insightCard(_ insight: ClassAIInsight) -> some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 6) {
       ClassAIInsightHeading(
         title: "AI 인사이트",
-        titleFont: .semiBold12,
-        titleLineHeight: 17,
+        titleFont: .bold11,
+        titleLineHeight: 15,
         iconSize: 20,
         spacing: 6
       )
       Text(insight.text)
-        .pretendardFont(.regular13)
+        .pretendardFont(.bodySmall, lineHeightMultiple: 1.4)
         .foregroundStyle(.primary500)
         .fixedSize(horizontal: false, vertical: true)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(12)
-    .background(.secondary50)
-    .overlay(Rectangle().stroke(.primary100, lineWidth: 1))
+    .padding(13)
+    .background(.secondary50, in: RoundedRectangle(cornerRadius: 2))
+    .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(.primary100, lineWidth: 1))
   }
 
   @ViewBuilder
@@ -283,70 +287,84 @@ private extension ClassReportView {
   func participationBar(
     title: String,
     rate: String,
+    caption: String,
     detail: String,
     progress: Double,
     color: Color
   ) -> some View {
-    VStack(alignment: .leading, spacing: 5) {
+    VStack(alignment: .leading, spacing: 0) {
       HStack {
         Text(title)
           .pretendardFont(.semiBold12)
         Spacer()
         Text(rate)
-          .pretendardFont(.semiBold12)
+          .pretendardFont(.headingSmall)
       }
+      .frame(height: 20)
       .foregroundStyle(.gray800)
-      Text(detail)
-        .pretendardFont(.medium10)
-        .foregroundStyle(.gray300)
+      HStack {
+        Text(caption)
+        Spacer()
+        Text(detail)
+      }
+      .pretendardFont(.regular11)
+      .foregroundStyle(.gray300)
+      .frame(height: 15)
+      .padding(.top, 6)
       GeometryReader { geometry in
         ZStack(alignment: .leading) {
           Capsule().fill(.beige500)
           Capsule().fill(color).frame(width: geometry.size.width * progress)
         }
       }
-      .frame(height: 5)
+      .frame(height: 6)
+      .padding(.top, 4)
     }
-    .padding(.vertical, 2)
   }
 
   @ViewBuilder
   func stanceDistribution(_ options: [ClassResultOption]) -> some View {
     HStack(spacing: 24) {
       ZStack {
-        Circle().stroke(.secondary500, lineWidth: 12)
         Circle()
+          .inset(by: 6)
+          .stroke(
+            store.serverDistributionTotalCount == 0 ? Color.beige500 : Color.secondary500,
+            lineWidth: 12
+          )
+        Circle()
+          .inset(by: 6)
           .trim(from: 0, to: store.serverDistributionProgress)
           .stroke(.primary500, style: StrokeStyle(lineWidth: 12, lineCap: .butt))
           .rotationEffect(.degrees(-90))
-        VStack(spacing: 1) {
+        VStack(spacing: 0) {
           Text(store.serverDistributionTotalText)
-            .pretendardFont(.semiBold15)
+            .pretendardFont(.labelLarge, lineHeightMultiple: 1.5)
             .foregroundStyle(.gray800)
           Text("총 참여")
-            .pretendardFont(.medium10)
+            .pretendardFont(.medium10, lineHeightMultiple: 1.4)
             .foregroundStyle(.gray300)
         }
       }
       .frame(width: 100, height: 100)
-      VStack(alignment: .leading, spacing: 10) {
+      VStack(alignment: .leading, spacing: 12) {
         ForEach(Array(options.prefix(2).enumerated()), id: \.element.id) { index, option in
-          HStack(spacing: 6) {
+          HStack(spacing: 8) {
             Circle()
               .fill(index == 0 ? Color.primary500 : Color.secondary500)
-              .frame(width: 7, height: 7)
-            VStack(alignment: .leading, spacing: 2) {
+              .frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 0) {
               Text(option.title)
-                .pretendardFont(.semiBold11)
+                .pretendardFont(.semiBold12, lineHeightMultiple: 1.4)
                 .foregroundStyle(.gray800)
                 .lineLimit(1)
               Text(store.serverDistributionOptionCountTexts[option.id] ?? "")
-                .pretendardFont(.medium10)
+                .pretendardFont(.medium11, lineHeightMultiple: 1.4)
                 .foregroundStyle(.gray300)
             }
             Spacer(minLength: 2)
             Text(store.serverDistributionOptionRatioTexts[option.id] ?? "")
-              .pretendardFont(.semiBold11)
+              .pretendardFont(family: .Bold, size: 12)
               .foregroundStyle(.gray800)
           }
         }
@@ -357,17 +375,22 @@ private extension ClassReportView {
 
   @ViewBuilder
   func highlightRow(_ row: ClassReportHighlightRow) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: 8) {
       Text(row.title)
-        .pretendardFont(.semiBold11)
-        .foregroundStyle(.primary500)
-      Text(row.text)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray700)
+        .pretendardFont(.semiBold12)
+        .foregroundStyle(.badgeFilledText)
+        .frame(height: 16)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .background(.badgeFilledBackground, in: RoundedRectangle(cornerRadius: 2))
+      Text(row.quotedText)
+        .pretendardFont(.regular13, lineHeightMultiple: 1.4)
+        .foregroundStyle(.gray400)
         .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 2)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(12)
+    .padding(16)
   }
 
   @ViewBuilder
@@ -747,11 +770,14 @@ private extension ClassReportView {
     }
   }
 
-  func sectionHeading(_ title: String) -> some View {
+  func sectionHeading(
+    _ title: String,
+    textStyle: CustomSizeFont = .semiBold13
+  ) -> some View {
     Text(title)
-      .pretendardFont(.semiBold13)
+      .pretendardFont(textStyle)
       .foregroundStyle(.gray800)
-      .frame(minHeight: 18)
+      .frame(minHeight: (textStyle.size * 1.4).rounded())
       .frame(maxWidth: .infinity, alignment: .leading)
   }
 

@@ -15,6 +15,8 @@ public enum PerspectiveError: LocalizedError, Equatable {
   case backendError(String)
   case serverError(Int)
   case unknown(String)
+  /// 서버 `REPORT_409`: 이미 신고한 의견.
+  case alreadyReported
 
   public var errorDescription: String? {
     switch self {
@@ -25,6 +27,7 @@ public enum PerspectiveError: LocalizedError, Equatable {
     case let .backendError(message): return "perspective 처리 실패: \(message)"
     case let .serverError(code): return "서버 오류 (코드: \(code))"
     case let .unknown(message): return "알 수 없는 오류: \(message)"
+    case .alreadyReported: return "이미 신고한 사용자입니다."
     }
   }
 }

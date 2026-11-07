@@ -20,6 +20,8 @@
     #status { min-height: 44px; margin-top: 14px; font-size: 12px; white-space: pre-wrap; }
     .error { color: #c33; }
     .compare { margin-top: 20px; padding: 12px; border: 1px solid var(--figma-color-border, #ddd); border-radius: 6px; }
+    .search { margin-top: 20px; padding: 12px; border: 1px solid var(--figma-color-border, #ddd); border-radius: 6px; }
+    .search input { box-sizing: border-box; width: 100%; margin: 8px 0; padding: 8px; }
     .compare label { display: block; margin: 8px 0; font-size: 12px; }
     .compare select, .compare input { max-width: 100%; margin-top: 5px; }
     #diff { display: none; width: 100%; margin-top: 10px; image-rendering: auto; }
@@ -27,9 +29,16 @@
 </head>
 <body>
   <h1>클래스 확정 시안 내보내기</h1>
-  <p>열린 Figma 파일: <span id="file">확인 중…</span><br>지정한 5개 노드만 읽습니다. 파일을 수정하거나 외부로 전송하지 않습니다.</p>
+  <p>열린 Figma 파일: <span id="file">확인 중…</span><br>지정된 6개 노드와 검색한 화면을 읽습니다. 파일을 수정하거나 외부로 전송하지 않습니다.</p>
   <div id="rows"></div>
   <button id="all" disabled>전체 ZIP 내려받기</button>
+  <section class="search">
+    <strong>업데이트된 화면 찾기</strong>
+    <p id="source">링크의 2027:2 노드에서 이름을 검색합니다.</p>
+    <input id="query" type="search" value="클래스" aria-label="프레임 이름 검색">
+    <button id="search-button" disabled>프레임 검색</button>
+    <div id="matches"></div>
+  </section>
   <section class="compare">
     <strong>앱 화면 대조</strong>
     <p>Device Hub에서 화면 부분만 잘라낸 PNG를 선택하세요. 상태 표시줄과 기기 테두리는 제외해야 합니다. 픽셀 차이는 화면 상태와 글꼴 렌더링의 영향도 받습니다.</p>
@@ -47,6 +56,9 @@
     const status = document.getElementById('status');
     const encoder = new TextEncoder();
     const compareNode = document.getElementById('compare-node');
+    const searchButton = document.getElementById('search-button');
+    const query = document.getElementById('query');
+    const matches = document.getElementById('matches');
     const compareFile = document.getElementById('compare-file');
     const compareButton = document.getElementById('compare-button');
     const compareResult = document.getElementById('compare-result');
@@ -208,7 +220,33 @@
           compareNode.appendChild(option);
         }
         allButton.disabled = false;
+        searchButton.disabled = false;
         compareButton.disabled = false;
+        document.getElementById('source').textContent = '링크의 ' + message.sourceNodeId + ' 노드에서 이름을 검색합니다.';
+      } else if (message.type === 'matches') {
+        setBusy(false);
+        matches.replaceChildren();
+        if (!message.matches.length) matches.textContent = '일치하는 프레임이 없습니다.';
+        for (const match of message.matches) {
+          const row = document.createElement('div');
+          row.className = 'row';
+          const description = document.createElement('div');
+          description.className = 'node';
+          const title = document.createElement('strong');
+          title.textContent = match.name;
+          const detail = document.createElement('small');
+          detail.textContent = `${match.id} · ${match.type} · ${match.width}×${match.height}`;
+          if (match.ancestors && match.ancestors.length) {
+            detail.textContent += ` · ${match.ancestors.join(' / ')}`;
+          }
+          description.append(title, detail);
+          const button = document.createElement('button');
+          button.textContent = 'PNG + JSON';
+          button.onclick = () => parent.postMessage({ pluginMessage: { type: 'export-one', id: match.id, label: match.name } }, '*');
+          row.append(description, button);
+          matches.appendChild(row);
+        }
+        status.textContent = message.matches.length + '개 프레임을 찾았습니다.';
       } else if (message.type === 'busy') {
         setBusy(true);
         status.className = '';
@@ -228,12 +266,11 @@
           return;
         }
         const entries = asEntries(message.results);
-        if (message.bundle && entries.length) {
-          download(zip(entries), 'picke-class-figma-audit.zip', 'application/zip');
-        } else {
-          for (const entry of entries) {
-            download(entry.data, entry.name, entry.name.endsWith('.png') ? 'image/png' : 'application/json');
-          }
+        if (entries.length) {
+          const name = message.bundle
+            ? 'picke-class-figma-audit.zip'
+            : fileStem(message.results[0]) + '.zip';
+          download(zip(entries), name, 'application/zip');
         }
         status.className = message.errors.length ? 'error' : '';
         status.textContent = message.results.length + '개 내보냄' + (message.errors.length
@@ -249,6 +286,12 @@
     };
 
     allButton.onclick = () => parent.postMessage({ pluginMessage: { type: 'export-all' } }, '*');
+    searchButton.onclick = () => {
+      setBusy(true);
+      status.textContent = '프레임을 찾고 있습니다…';
+      parent.postMessage({ pluginMessage: { type: 'search', query: query.value } }, '*');
+    };
+    query.onkeydown = event => { if (event.key === 'Enter') searchButton.click(); };
     compareButton.onclick = () => {
       if (!compareFile.files.length) {
         compareResult.textContent = '앱 캡처 PNG를 먼저 선택하세요.';

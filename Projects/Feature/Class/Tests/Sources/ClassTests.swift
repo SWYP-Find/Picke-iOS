@@ -8,6 +8,7 @@
 @testable import Class
 import ClassDomainInterface
 import ComposableArchitecture
+import Foundation
 import Testing
 
 @MainActor
@@ -43,13 +44,111 @@ struct ClassTests {
   }
 
   @Test
-  func 새_클래스_만들기_탭하면_생성_델리게이트를_보낸다() async {
+  func 새_클래스_만들기는_사용_중인_이용권이면_생성_델리게이트를_보낸다() async {
     let store = TestStore(initialState: ClassIntroFeature.State()) {
       ClassIntroFeature()
+    } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .success(introTicket(.active)))
     }
 
-    await store.send(.view(.createTapped))
+    await store.send(.view(.createTapped)) { $0.isCheckingTicket = true }
+    await store.receive(\.inner.ticketResponse) { $0.isCheckingTicket = false }
     await store.receive(\.delegate.create)
+  }
+
+  @Test
+  func 새_클래스_만들기는_이용권이_만료되면_등록_안내를_띄우고_등록하기로_이동한다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .success(introTicket(.expired)))
+    }
+
+    await store.send(.view(.createTapped)) { $0.isCheckingTicket = true }
+    await store.receive(\.inner.ticketResponse) {
+      $0.isCheckingTicket = false
+      $0.ticketNotice = .expired
+      $0.customAlert = .classTicketExpired()
+    }
+    await store.send(.customAlert(.presented(.confirmTapped))) {
+      $0.ticketNotice = nil
+      $0.customAlert = nil
+    }
+    await store.receive(\.delegate.registerTicket)
+  }
+
+  @Test
+  func 새_클래스_만들기는_만료_안내에서_뒤로가기를_누르면_머문다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .success(introTicket(.expired)))
+    }
+
+    await store.send(.view(.createTapped)) { $0.isCheckingTicket = true }
+    await store.receive(\.inner.ticketResponse) {
+      $0.isCheckingTicket = false
+      $0.ticketNotice = .expired
+      $0.customAlert = .classTicketExpired()
+    }
+    await store.send(.customAlert(.presented(.cancelTapped))) {
+      $0.ticketNotice = nil
+      $0.customAlert = nil
+    }
+  }
+
+  @Test
+  func 새_클래스_만들기는_이용권이_없으면_안내만_띄운다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .failure(.notFound))
+    }
+
+    await store.send(.view(.createTapped)) { $0.isCheckingTicket = true }
+    await store.receive(\.inner.ticketResponse) {
+      $0.isCheckingTicket = false
+      $0.ticketNotice = .required
+      $0.customAlert = .classTicketRequired()
+    }
+    await store.send(.customAlert(.presented(.confirmTapped))) {
+      $0.ticketNotice = nil
+      $0.customAlert = nil
+    }
+  }
+
+  @Test
+  func 새_클래스_만들기에서_이용권_조회가_실패하면_토스트를_띄운다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicket: .failure(.network("연결 실패")))
+    }
+
+    await store.send(.view(.createTapped)) { $0.isCheckingTicket = true }
+    await store.receive(\.inner.ticketResponse) {
+      $0.isCheckingTicket = false
+      $0.toastMessage = "정보를 불러오지 못했어요"
+    }
+    await store.send(.view(.toastShown)) { $0.toastMessage = nil }
+  }
+
+  @Test
+  func 이용권_확인_중_다시_누르면_무시하고_뒤로_가면_확인을_취소한다() async {
+    let store = TestStore(initialState: ClassIntroFeature.State()) {
+      ClassIntroFeature()
+    } withDependencies: {
+      $0.classTicketUseCase = TicketStub(myTicketFetch: {
+        try await Task.sleep(for: .seconds(60))
+        throw ClassTicketError.notFound
+      })
+    }
+
+    await store.send(.view(.createTapped)) { $0.isCheckingTicket = true }
+    await store.send(.view(.createTapped))
+    await store.send(.view(.backTapped)) { $0.isCheckingTicket = false }
+    await store.receive(\.delegate.backToHome)
+    await store.finish(timeout: .seconds(1))
   }
 
   @Test
@@ -117,4 +216,16 @@ struct ClassTests {
       categories: [.society, .philosophy]
     ))
   }
+}
+
+private func introTicket(_ status: ClassTicket.Status) -> ClassTicket {
+  ClassTicket(
+    id: 3,
+    capacity: 15,
+    status: status,
+    activatedAt: Date(timeIntervalSince1970: 1_780_000_000),
+    expiresAt: Date(timeIntervalSince1970: 1_795_000_000),
+    remainingDays: 0,
+    readGraceEndsAt: Date(timeIntervalSince1970: 1_797_592_000)
+  )
 }

@@ -15,7 +15,7 @@ struct HomeSkeletonView: View {
       HomeHeroSkeletonView()
       HomeHotBattlesSkeletonView()
       HomeBestBattlesSkeletonView()
-      HomeTodayPickeSkeletonView()
+      HomeBestCommentsSkeletonView()
       HomeNewBattlesSkeletonView()
     }
     .padding(.bottom, 24)
@@ -63,7 +63,7 @@ private struct HomeHeroSkeletonView: View {
 
 private struct HomeHotBattlesSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 132)
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: 16) {
@@ -89,12 +89,12 @@ private struct HomeHotBattlesSkeletonView: View {
 
 private struct HomeBestBattlesSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 12) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 88)
       VStack(spacing: 0) {
         ForEach(0 ..< 3, id: \.self) { index in
           HStack(alignment: .top, spacing: 16) {
-            SkeletonBlock(width: 18, height: 28, color: index == 0 ? .primary500.opacity(0.35) : .neutral100)
+            SkeletonBlock(width: 16, height: 28, color: index == 0 ? .primary500.opacity(0.35) : .neutral100)
             VStack(alignment: .leading, spacing: 10) {
               SkeletonBlock(width: 76, height: 18, color: .primary50)
               SkeletonBlock(width: 214, height: 16)
@@ -106,11 +106,34 @@ private struct HomeBestBattlesSkeletonView: View {
               }
             }
           }
+          .padding(.horizontal, 12)
           .padding(.vertical, 16)
 
+          PickeDivider(.cardBaseBorderDefault)
+        }
+      }
+      .padding(.horizontal, 16)
+    }
+  }
+}
+
+private struct HomeBestCommentsSkeletonView: View {
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      SkeletonSectionHeader(width: 100)
+      VStack(spacing: 0) {
+        ForEach(0 ..< 3, id: \.self) { index in
+          VStack(alignment: .leading, spacing: 8) {
+            SkeletonBlock(width: 220, height: 12)
+            HStack(spacing: 4) {
+              SkeletonBlock(width: 16, height: 16)
+              SkeletonBlock(width: 48, height: 16, color: .beige600)
+              SkeletonBlock(width: 210, height: 12)
+            }
+          }
+          .padding(16)
           if index < 2 {
-            Divider()
-              .background(.beige600)
+            PickeDivider(.cardBaseBorderDefault)
           }
         }
       }
@@ -119,76 +142,9 @@ private struct HomeBestBattlesSkeletonView: View {
   }
 }
 
-private struct HomeTodayPickeSkeletonView: View {
-  var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      SkeletonSectionHeader(width: 104)
-      VStack(spacing: 16) {
-        todayQuizCard()
-        todayVoteCard()
-      }
-      .padding(.horizontal, 16)
-    }
-  }
-
-  @ViewBuilder
-  private func todayQuizCard() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      HStack {
-        SkeletonBlock(width: 42, height: 20, color: .primary50)
-        Spacer()
-        SkeletonBlock(width: 76, height: 12)
-      }
-      VStack(spacing: 8) {
-        SkeletonBlock(width: 220, height: 16)
-        SkeletonBlock(width: 260, height: 12)
-        SkeletonBlock(width: 180, height: 12)
-      }
-      .frame(maxWidth: .infinity)
-
-      HStack(spacing: 8) {
-        SkeletonBlock(height: 74, color: .beige50)
-        SkeletonBlock(height: 74, color: .beige50)
-      }
-    }
-    .padding(.vertical, 20)
-    .padding(.horizontal, 16)
-    .pickeCard(.beige400, border: .beige700)
-  }
-
-  @ViewBuilder
-  private func todayVoteCard() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      HStack {
-        SkeletonBlock(width: 42, height: 20, color: .primary50)
-        Spacer()
-        SkeletonBlock(width: 76, height: 12)
-      }
-      VStack(spacing: 8) {
-        HStack(spacing: 8) {
-          SkeletonBlock(width: 78, height: 16)
-          SkeletonBlock(width: 44, height: 24, color: .beige50)
-          SkeletonBlock(width: 24, height: 16)
-        }
-        SkeletonBlock(width: 230, height: 12)
-      }
-      .frame(maxWidth: .infinity)
-
-      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-        ForEach(0 ..< 4, id: \.self) { _ in
-          SkeletonBlock(height: 44, color: .beige50)
-        }
-      }
-    }
-    .padding(.vertical, 20)
-    .padding(.horizontal, 16)
-    .pickeCard(.beige50, border: .beige700)
-  }
-}
-
 private struct HomeNewBattlesSkeletonView: View {
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: 0) {
       SkeletonSectionHeader(width: 104)
       VStack(spacing: 12) {
         ForEach(0 ..< 3, id: \.self) { _ in
@@ -238,9 +194,9 @@ private struct SkeletonSectionHeader: View {
     HStack {
       SkeletonBlock(width: width, height: 22, color: .neutral100)
       Spacer()
-      SkeletonBlock(width: 40, height: 14)
     }
     .padding(.horizontal, 16)
+    .padding(.vertical, 12)
   }
 }
 

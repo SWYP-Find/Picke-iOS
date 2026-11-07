@@ -10,6 +10,11 @@ import Testing
 
 struct BattleScenarioTimelineTests {
   @Test
+  func 추천_오디오_경로의_분기_키를_인식한다() {
+    #expect(RecommendedPathKey(rawValue: "PATH_A") == .pathA)
+    #expect(RecommendedPathKey(rawValue: "PATH_B") == .pathB)
+  }
+  @Test
   func linearContentReachesClosingWithoutExplicitLink() {
     let scenario = makeScenario()
     #expect(scenario.nextNodeId(for: scenario.nodes[0]) == 12)

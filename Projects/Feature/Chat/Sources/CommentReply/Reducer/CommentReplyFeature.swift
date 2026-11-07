@@ -147,6 +147,7 @@ public struct CommentReplyFeature {
     case createResponse(Result<PerspectiveCommentMutationResult, CommentError>)
     case updateResponse(Result<PerspectiveCommentMutationResult, CommentError>, commentId: Int)
     case deleteResponse(Result<Int, CommentError>)
+    case parentDeleteResponse(Result<Int, PerspectiveError>)
     case parentLikeResponse(Result<CommentLikeResult, CommentError>)
     case replyLikeResponse(Result<CommentLikeResult, CommentError>)
     case parentLikesResponse(Result<CommentLikeResult, CommentError>)
@@ -491,9 +492,14 @@ extension CommentReplyFeature {
     case .deleteParent:
       let perspectiveId = state.perspectiveId
       return .run { [repository = perspectiveUseCase] send in
-        try? await repository.deletePerspective(perspectiveId: perspectiveId)
-        await send(.delegate(.dismiss))
+        let result = await Result {
+          try await repository.deletePerspective(perspectiveId: perspectiveId)
+          return perspectiveId
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.parentDeleteResponse(result)))
       }
+      .cancellable(id: CancelID.mutate, cancelInFlight: false)
 
     case .reportParent:
       let perspectiveId = state.perspectiveId
@@ -565,6 +571,19 @@ extension CommentReplyFeature {
         PickeLogger.error("[CommentReplyFeature] deleteReply failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
+
+    case let .parentDeleteResponse(result):
+      switch result {
+      case .success:
+        return .send(.delegate(.dismiss))
+      case let .failure(error):
+        PickeLogger.error("[CommentReplyFeature] deleteParent failed: \(error.localizedDescription)", category: .ui)
+        state.customAlert = .alert(
+          title: "의견을 삭제할 수 없어요",
+          message: "클래스 설정이나 진행 상태를 확인해 주세요."
+        )
+        return .none
+      }
 
     case let .parentLikeResponse(result):
       switch result {

@@ -28,6 +28,11 @@ public struct ClassMyOpinionsView: View {
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
+    .onChange(of: store.toastMessage) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 }
 
@@ -77,12 +82,15 @@ private extension ClassMyOpinionsView {
       } else if store.isEmpty {
         emptyState
       } else {
-        VStack(alignment: .leading, spacing: 20) {
+        LazyVStack(alignment: .leading, spacing: 20) {
           if !store.comments.isEmpty {
             opinionSection("남긴 댓글", rows: store.comments, headingGap: 16)
           }
           if !store.replies.isEmpty {
             opinionSection("남긴 대댓글", rows: store.replies, headingGap: 12)
+          }
+          if store.canLoadMoreReplies {
+            loadMoreRepliesIndicator
           }
           if !store.unspecified.isEmpty {
             opinionSection("남긴 의견", rows: store.unspecified, headingGap: 12)
@@ -94,6 +102,13 @@ private extension ClassMyOpinionsView {
       }
     }
     .scrollIndicators(.hidden)
+  }
+
+  /// 목록 끝에 닿으면 다음 대댓글 페이지를 불러온다(Android `CommentsEndReach`).
+  var loadMoreRepliesIndicator: some View {
+    ProgressView()
+      .frame(maxWidth: .infinity)
+      .onAppear { send(.repliesEndReached) }
   }
 
   var emptyState: some View {

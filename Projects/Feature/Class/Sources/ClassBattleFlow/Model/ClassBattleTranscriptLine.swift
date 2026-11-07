@@ -28,7 +28,10 @@ public struct ClassBattleTranscriptLine: Equatable, Identifiable, Sendable {
 }
 
 public extension ClassBattleTranscriptLine {
-  static func from(scenario: BattleScenario) -> [ClassBattleTranscriptLine] {
+  static func from(
+    scenario: BattleScenario,
+    selectedPaths: [Int: Int] = [:]
+  ) -> [ClassBattleTranscriptLine] {
     var transcript: [ClassBattleTranscriptLine] = []
     var visibleNodeID = scenario.startNodeId
     var visitedNodeIDs = Set<Int>()
@@ -81,7 +84,15 @@ public extension ClassBattleTranscriptLine {
           ))
         }
       }
-      guard let nextNodeID = scenario.nextNodeId(for: node) else { break }
+      let nextNodeID: Int?
+      if !node.interactiveOptions.isEmpty {
+        nextNodeID = node.interactiveOptions.first {
+          $0.nextNodeId == selectedPaths[node.nodeId]
+        }?.nextNodeId
+      } else {
+        nextNodeID = scenario.nextNodeId(for: node)
+      }
+      guard let nextNodeID else { break }
       visibleNodeID = nextNodeID
     }
     return transcript.sorted {

@@ -13,6 +13,10 @@ public protocol ClassResultInterface: Sendable {
   func fetchPersonalResult(roomID: Int) async throws -> ClassAIPersonalFeedback
   func fetchInsight(roomID: Int) async throws -> ClassAIInsight
   func retryInsight(roomID: Int) async throws
+  func fetchMyActivity(
+    roomID: Int,
+    cursor: String?
+  ) async throws -> ClassMyActivity
 }
 
 public enum ClassResultRepositoryDependency: TestDependencyKey {

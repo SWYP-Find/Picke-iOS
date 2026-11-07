@@ -42,6 +42,11 @@ public struct ClassIntroView: View {
     .background(backgroundImage())
     .toolbar(.hidden, for: .navigationBar)
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 }
 

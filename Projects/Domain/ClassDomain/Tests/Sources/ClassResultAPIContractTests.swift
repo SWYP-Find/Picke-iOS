@@ -44,6 +44,11 @@ struct ClassResultAPIContractTests {
       "stats": {
         "activeMemberCount": 12, "completedCount": 10, "participationRate": 83.3,
         "commentWriterCount": 9, "commentRate": 75.0, "postVoteCount": 11,
+        "midVoteEnabled": true, "midVoteCount": 10,
+        "midVoteCheckpoints": [{
+          "checkpointId": 801, "voteCount": 10,
+          "options": [{"optionId": 9002, "label": "무죄", "voteCount": 6, "ratio": 60.0}]
+        }],
         "options": [
           { "optionId": 31, "title": "창작이다", "preVoteCount": 8,
             "postVoteCount": 6, "postVoteRatio": 54.5 }
@@ -59,6 +64,11 @@ struct ClassResultAPIContractTests {
     #expect(result.stats.completedCount == 10)
     #expect(result.stats.participationRate == 83.3)
     #expect(result.stats.options.first?.id == 31)
+    #expect(result.stats.midVoteEnabled)
+    #expect(result.stats.midVoteCount == 10)
+    #expect(result.stats.midVoteCheckpoints.first?.id == 801)
+    #expect(result.stats.midVoteCheckpoints.first?.options.first?.id == 9002)
+    #expect(result.stats.midVoteCheckpoints.first?.options.first?.ratio == 60.0)
     #expect(result.myReportState == nil)
     #expect(result.insightState == "SUCCEEDED")
   }
@@ -84,6 +94,7 @@ struct ClassResultAPIContractTests {
     {
       "state": "SUCCEEDED",
       "preOption": { "optionId": 31, "title": "창작이다", "stance": "처음 의견" },
+      "midVotes": [{"checkpointId":801,"optionId":9002,"label":"무죄"}],
       "postOption": { "optionId": 32, "title": "창작이 아니다", "stance": "바뀐 의견" },
       "perspectiveCount": 1,
       "commentCount": 2,
@@ -106,9 +117,33 @@ struct ClassResultAPIContractTests {
     #expect(feedback.evidence.first?.content == "삭제되지 않은 원문")
     #expect(feedback.evidence.first?.quote == "짧은 인용")
     #expect(feedback.preOption?.id == 31)
+    #expect(feedback.midVotes == [ClassMidVoteChoice(checkpointID: 801, optionID: 9002, label: "무죄")])
     #expect(feedback.postOption?.title == "창작이 아니다")
     #expect(feedback.perspectiveCount == 1)
     #expect(feedback.commentCount == 2)
+  }
+
+  @Test
+  func 투표_이력의_중간_선택을_보존한다() throws {
+    let json = """
+    {"battleTitle":"Picke(TTS) 배틀","preVote":{"optionId":31,"label":"A","title":"창작이다"},
+    "midVotes":[{"checkpointId":801,"optionId":9002,"label":"무죄"}],
+    "postVote":null,"status":"PRE_VOTE","opinionChanged":null}
+    """
+
+    let history = try JSONDecoder().decode(ClassVoteHistoryDTO.self, from: Data(json.utf8)).toDomain()
+    #expect(history.midVotes == [ClassMidVoteChoice(checkpointID: 801, optionID: 9002, label: "무죄")])
+  }
+
+  @Test
+  func 중간_투표가_없는_이전_응답도_빈_선택으로_읽는다() throws {
+    let json = """
+    {"battleTitle":"일반 배틀","preVote":{"optionId":31,"label":"A","title":"창작이다"},
+    "postVote":null,"status":"PRE_VOTE","opinionChanged":null}
+    """
+
+    let history = try JSONDecoder().decode(ClassVoteHistoryDTO.self, from: Data(json.utf8)).toDomain()
+    #expect(history.midVotes.isEmpty)
   }
 
   @Test
@@ -127,5 +162,65 @@ struct ClassResultAPIContractTests {
     #expect(insight.coverage == "full")
     #expect(insight.evidence.first?.sourceID == 50)
     #expect(insight.highlights.first?.content == "대표 의견")
+  }
+
+  @Test
+  func 내_활동_경로와_커서_쿼리가_Android와_일치한다() throws {
+    let first = ClassResultService.myActivity(5, cursor: nil)
+    let next = ClassResultService.myActivity(5, cursor: "c-2")
+    #expect(first.path == "classes/5/result/my-activity")
+    #expect(try first.url().path == "/api/v1/classes/5/result/my-activity")
+    #expect(first.method == .get)
+
+    let encoder = JSONEncoder()
+    guard let firstParameters = first.parameters, let nextParameters = next.parameters else {
+      Issue.record("내 활동 요청 파라미터가 없습니다.")
+      return
+    }
+    let firstJSON = try JSONSerialization.jsonObject(with: encoder.encode(firstParameters)) as? [String: Any]
+    let nextJSON = try JSONSerialization.jsonObject(with: encoder.encode(nextParameters)) as? [String: Any]
+    #expect(firstJSON?.isEmpty == true)
+    #expect(nextJSON?["cursor"] as? String == "c-2")
+  }
+
+  @Test
+  func 내_활동_응답을_매핑하고_ID_없는_댓글은_버린다() throws {
+    let json = """
+    {
+      "classId": 5, "receivedLikeCount": 12, "commentCount": 3,
+      "comments": [
+        { "commentId": 71, "perspectiveId": 9, "perspectiveTitle": "처벌을 강화해야 한다",
+          "stance": "찬성", "content": "동의해요", "likeCount": 2,
+          "createdAt": "2026-11-02T10:00:00.000Z" },
+        { "commentId": null, "perspectiveId": 9, "content": "버려질 댓글" },
+        { "commentId": 72, "perspectiveId": 10 }
+      ],
+      "nextCursor": "c-2", "hasNext": true
+    }
+    """
+    let activity = try JSONDecoder().decode(ClassMyActivityDTO.self, from: Data(json.utf8))
+      .toDomain(fallbackClassID: 99)
+    #expect(activity.classID == 5)
+    #expect(activity.receivedLikeCount == 12)
+    #expect(activity.commentCount == 3)
+    #expect(activity.comments.map(\.id) == [71, 72])
+    #expect(activity.comments.first?.perspectiveTitle == "처벌을 강화해야 한다")
+    #expect(activity.comments.first?.createdAt == ServerDateParser.parse("2026-11-02T10:00:00.000Z"))
+    #expect(activity.comments.last?.perspectiveTitle == "")
+    #expect(activity.comments.last?.likeCount == 0)
+    #expect(activity.comments.last?.createdAt == nil)
+    #expect(activity.nextCursor == "c-2")
+    #expect(activity.hasNext)
+
+    let empty = try JSONDecoder().decode(ClassMyActivityDTO.self, from: Data("{}".utf8))
+      .toDomain(fallbackClassID: 99)
+    #expect(empty == ClassMyActivity(
+      classID: 99,
+      receivedLikeCount: 0,
+      commentCount: 0,
+      comments: [],
+      nextCursor: nil,
+      hasNext: false
+    ))
   }
 }

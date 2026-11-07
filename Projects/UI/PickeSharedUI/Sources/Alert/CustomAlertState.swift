@@ -45,6 +45,10 @@ public enum CustomAlertStyle: Equatable {
   case logout
   case withdraw
   case suggestTopic
+  /// 본문 + 취소(왼쪽 밝은)·확인(오른쪽 primary), 취소 문구가 비면 확인 1개.
+  case notice
+  /// 본문 + 확인(왼쪽 밝은)·취소(오른쪽 primary). 배경 탭(취소)이 "안내만 닫기"여야 할 때 쓴다.
+  case noticeReversed
 }
 
 @CasePathable
@@ -160,6 +164,62 @@ public extension CustomAlertState where Action == CustomAlertAction {
       confirmTitle: "제안하기",
       cancelTitle: "뒤로가기",
       style: .suggestTopic
+    )
+  }
+
+  // MARK: - 클래스 이용권 안내 (Android 문구)
+
+  static func classTicketRequired() -> CustomAlertState<CustomAlertAction> {
+    notice(
+      "클래스를 열려면 이용권이 필요해요\n클래스 기능을 먼저 알아보세요!",
+      confirmTitle: "뒤로가기"
+    )
+  }
+
+  static func classTicketExpired() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "사용 중이던 이용권이 종료되었습니다\n새로운 이용권을 등록해주세요!",
+      confirmTitle: "등록하기",
+      cancelTitle: "뒤로가기",
+      style: .notice
+    )
+  }
+
+  /// 뒤로가기=확인(화면 닫기), 등록하기=취소(안내만 닫기). 배경 탭도 안내만 닫는다.
+  static func ticketAlreadyRegistered() -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: "이미 등록된 이용권입니다\n다른 이용권을 등록해주세요!",
+      confirmTitle: "뒤로가기",
+      cancelTitle: "등록하기",
+      style: .noticeReversed
+    )
+  }
+
+  static func ticketInvalidCode() -> CustomAlertState<CustomAlertAction> {
+    notice("코드 번호를 다시 확인해주세요!")
+  }
+
+  static func ticketRegistrationExpired() -> CustomAlertState<CustomAlertAction> {
+    notice("해당 이용권은 등록기간이 만료되었습니다")
+  }
+
+  static func ticketRegisterFailed() -> CustomAlertState<CustomAlertAction> {
+    notice("코드 등록이 완료되지 않았습니다\n네트워크 확인 후 한 번 더 시도해주세요")
+  }
+
+  static func ticketAlreadyActive() -> CustomAlertState<CustomAlertAction> {
+    notice("이미 사용 중인 이용권이 있어요\n만료 후 등록할 수 있어요")
+  }
+
+  private static func notice(
+    _ title: String,
+    confirmTitle: String = "확인"
+  ) -> CustomAlertState<CustomAlertAction> {
+    CustomAlertState(
+      title: title,
+      confirmTitle: confirmTitle,
+      cancelTitle: "",
+      style: .notice
     )
   }
 }

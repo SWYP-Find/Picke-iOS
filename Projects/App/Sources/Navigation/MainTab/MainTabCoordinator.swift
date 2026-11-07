@@ -73,7 +73,7 @@ public struct MainTabCoordinator {
       case .classroom:
         return !classState.showsTabBar
       case .myPage:
-        if case .ticket? = myPageState.routes.last?.screen { return false }
+        if case let .ticket(ticket)? = myPageState.routes.last?.screen { return ticket.customAlert != nil }
         return myPageState.routes.count > 1
       case .none:
         return false
@@ -186,18 +186,25 @@ public struct MainTabCoordinator {
         state.selectedTab = Tab.myPage.rawValue
         return .none
 
+      case .classroom(.router(.routeAction(0, action: .intro(.delegate(.registerTicket))))):
+        // 만료 안내의 등록하기: Android와 같이 마이 탭의 코드 입력 화면으로 바로 간다.
+        state.classState.routes.goBackToRoot()
+        state.myPageState.routes.goBackToRoot()
+        var registration = ClassTicketFeature.State()
+        registration.shouldCheckExistingTicket = false
+        state.myPageState.routes.push(.ticket(registration))
+        if state.selectedTab != Tab.myPage.rawValue {
+          state.previousTab = state.selectedTab
+          trackTabSelection(Tab.myPage.rawValue)
+        }
+        state.selectedTab = Tab.myPage.rawValue
+        return .none
+
       case .myPage(.router(.routeAction(_, action: .settings(.delegate(.sessionEnded))))):
         return .send(.delegate(.sessionEnded))
 
       case .myPage(.router(.routeAction(_, action: .withdraw(.delegate(.sessionEnded))))):
         return .send(.delegate(.sessionEnded))
-
-      case .home(.router(.routeAction(_, action: .home(.delegate(.moveToExplore))))):
-        if state.selectedTab != Tab.explore.rawValue {
-          state.previousTab = state.selectedTab
-        }
-        state.selectedTab = Tab.explore.rawValue
-        return .none
 
       case .delegate:
         return .none
@@ -233,7 +240,14 @@ private extension MainTabCoordinator {
   ) -> Effect<Action> {
     switch Tab(rawValue: tab) {
     case .home:
-      state.homeState.routes.goBackToRoot()
+      guard state.homeState.routes.count == 1 else {
+        state.homeState.routes.goBackToRoot()
+        return .none
+      }
+      return .send(.home(.router(.routeAction(
+        id: 0,
+        action: .home(.view(.homeTabReselected))
+      ))))
     case .explore:
       state.exploreState.routes.goBackToRoot()
     case .quickBattle:

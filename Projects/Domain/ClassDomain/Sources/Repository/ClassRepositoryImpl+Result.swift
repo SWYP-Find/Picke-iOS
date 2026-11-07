@@ -52,6 +52,26 @@ extension ClassRepositoryImpl {
     }
   }
 
+  public func fetchMyActivity(
+    roomID: Int,
+    cursor: String?
+  ) async throws -> ClassMyActivity {
+    do {
+      let payload = try await client.send(
+        ClassResultService.myActivity(roomID, cursor: cursor),
+        as: ClassMyActivityDTO.self
+      )
+      return payload.toDomain(fallbackClassID: roomID)
+    } catch let error as PickeNetworkError {
+      if case let .response(response) = error {
+        throw Self.resultError(code: response.code, message: response.message)
+      }
+      throw ClassError.from(error)
+    } catch {
+      throw ClassError.from(error)
+    }
+  }
+
   static func resultError(
     code: String?,
     message: String?

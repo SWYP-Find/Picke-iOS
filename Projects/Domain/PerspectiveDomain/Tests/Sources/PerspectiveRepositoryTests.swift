@@ -104,6 +104,52 @@ struct PerspectiveRepositoryTests {
     }
   }
 
+  // MARK: - reportPerspective
+
+  @Test
+  func reportPerspective_duplicateCode_throwsAlreadyReported() async throws {
+    let json = """
+    {
+      "statusCode": 409,
+      "data": null,
+      "error": { "code": "REPORT_409", "message": "이미 신고한 관점입니다" }
+    }
+    """
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
+
+    await #expect(throws: PerspectiveError.alreadyReported) {
+      try await repo.reportPerspective(perspectiveId: 42)
+    }
+  }
+
+  @Test
+  func reportPerspective_otherErrorCode_keepsNetworkResponseError() async throws {
+    let json = """
+    {
+      "statusCode": 404,
+      "data": null,
+      "error": { "code": "PERSPECTIVE_404", "message": "존재하지 않는 관점입니다" }
+    }
+    """
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      PerspectiveRepositoryImpl()
+    }
+
+    await expectNetworkResponseError(
+      statusCode: 404,
+      code: "PERSPECTIVE_404",
+      message: "존재하지 않는 관점입니다"
+    ) {
+      try await repo.reportPerspective(perspectiveId: 42)
+    }
+  }
+
   // MARK: - fetchLabeledComments
 
   @Test

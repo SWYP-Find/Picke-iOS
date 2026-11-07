@@ -7,6 +7,7 @@ import Foundation
 import HomeDomainInterface
 import PickeCoreUtility
 import PerspectiveDomainInterface
+import PickeSharedUI
 
 @Reducer
 public struct ClassBattleFlowFeature {
@@ -43,6 +44,7 @@ public struct ClassBattleFlowFeature {
     public var hasMorePerspectives = false
     public var isLoadingPerspectives = false
     public var refreshAfterPerspectiveDetail = false
+    public var refreshAfterOwnPerspectiveDetail = false
     public var perspectiveErrorMessage: String?
     public var errorMessage: String?
     public var loadRequestID: UUID?
@@ -52,6 +54,15 @@ public struct ClassBattleFlowFeature {
     public var voteStatsRequestID: UUID?
     public var perspectiveLikeRequestID: UUID?
     public var myPerspectiveRequestID: UUID?
+    /// 내 의견 API의 첫 항목. 공개되지 않았으면 목록 위 상태 카드로 보여 준다.
+    public var myPerspective: ClassPerspectiveItem?
+    public var menuTargetPerspectiveID: Int?
+    public var editingPerspectiveID: Int?
+    public var deleteTargetPerspectiveID: Int?
+    public var reportTargetPerspectiveID: Int?
+    public var mutationRequestID: UUID?
+    public var toastMessage: String?
+    @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var isAudioReady = false
     public var isPlaying = false
     public var hasListened = false
@@ -59,6 +70,16 @@ public struct ClassBattleFlowFeature {
     public var audioDuration: TimeInterval = 0
     public var playbackRate: Float = 1
     public var transcript: [ClassBattleTranscriptLine] = []
+    public var scenario: BattleScenario?
+    public var currentNodeID: Int?
+    public var pendingCheckpointID: Int?
+    public var selectedMidOptionID: Int?
+    public var selectedPaths: [Int: Int] = [:]
+    public var loadedAudioURL: URL?
+    public var midVoteRequestID: UUID?
+    public var pendingSeekTime: TimeInterval?
+    public var needsMidVoteRecovery = false
+    public var midVoteDisabledLocally = false
     public var selectedPerspectiveOptionID: Int?
     public var perspectiveSort: String = "popular"
 
@@ -69,14 +90,23 @@ public struct ClassBattleFlowFeature {
     public var canParticipate: Bool { session?.canParticipate == true }
 
     public var canSubmit: Bool {
+      // 의견 수정은 이미 게시한 의견이 대상이라 게시 조건과 별도로 판단하고, 마감 여부는 서버에 맡긴다.
+      if editingPerspectiveID != nil {
+        return mutationRequestID == nil && submitRequestID == nil
+          && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      }
       guard viewState == .loaded, canParticipate, submitRequestID == nil else { return false }
       guard let step else { return false }
       switch step {
-      case .none, .postVote: return selectedOptionID != nil
+      case .none: return selectedOptionID != nil
+      case .postVote:
+        return selectedOptionID != nil
+          && (!needsMidVoteRecovery || (hasListened && pendingCheckpointID == nil))
       case .preVote:
         guard selectedOptionID != nil else { return false }
-        return selectedOptionID != voteHistory?.preVote.optionID || hasListened
-      case .ttsListening: return hasListened
+        return (!isPreVoteLocked && selectedOptionID != voteHistory?.preVote.optionID) || hasListened
+      case .ttsListening:
+        return hasListened && pendingCheckpointID == nil && hasAnsweredCurrentPath
       case .completed:
         return !hasSubmittedInCurrentSession
           && hasPublishedPerspective == false
@@ -84,12 +114,18 @@ public struct ClassBattleFlowFeature {
       }
     }
 
+    public var isPreVoteLocked: Bool {
+      session?.midVoteEnabled == true
+        && (!(voteHistory?.midVotes.isEmpty ?? true) || !selectedPaths.isEmpty)
+    }
+
     public var buttonTitle: String {
       guard let step else { return "불러오는 중" }
       switch step {
       case .none: return "사전 투표하기"
       case .preVote:
-        return selectedOptionID != voteHistory?.preVote.optionID ? "사전투표 변경하기" : "청취 완료"
+        return !isPreVoteLocked && selectedOptionID != voteHistory?.preVote.optionID
+          ? "사전투표 변경하기" : "청취 완료"
       case .ttsListening: return "청취 완료"
       case .postVote: return "최종 투표하기"
       case .completed:
@@ -144,12 +180,42 @@ public struct ClassBattleFlowFeature {
     }
 
     public var shouldShowComposer: Bool {
-      step == .some(.completed) && canParticipate
+      if editingPerspectiveID != nil { return true }
+      return step == .some(.completed) && canParticipate
         && hasPublishedPerspective == false && !hasSubmittedInCurrentSession
+    }
+
+    /// 공개되지 않은 내 의견(검수중·거절됨)이 목록에 없을 때 목록 맨 위에 보여 줄 행.
+    public var hiddenMyPerspectiveRow: ClassPerspectiveRow? {
+      guard let myPerspective,
+            ["PENDING", "REJECTED"].contains(myPerspective.status?.uppercased() ?? ""),
+            !perspectives.contains(where: { $0.id == myPerspective.id }) else { return nil }
+      return ClassPerspectiveRow(
+        id: -1,
+        perspective: myPerspective,
+        likeCountLabel: myPerspective.likeCount.decimalFormatted,
+        commentCountLabel: myPerspective.commentCount.decimalFormatted,
+        menuKind: ClassPerspectiveMenuKind(myStatus: myPerspective.status)
+      )
+    }
+
+    func perspectiveItem(id: Int) -> ClassPerspectiveItem? {
+      perspectives.first { $0.id == id } ?? (myPerspective?.id == id ? myPerspective : nil)
+    }
+
+    func perspectiveMenuKind(id: Int) -> ClassPerspectiveMenuKind {
+      if let item = perspectives.first(where: { $0.id == id }) {
+        return ClassPerspectiveMenuKind(listItem: item)
+      }
+      if let myPerspective, myPerspective.id == id {
+        return ClassPerspectiveMenuKind(myStatus: myPerspective.status)
+      }
+      return .hidden
     }
 
     public var isAudioStep: Bool {
       step == .some(.preVote) || step == .some(.ttsListening)
+        || (step == .some(.postVote) && needsMidVoteRecovery)
     }
 
     public var audioProgress: Double {
@@ -167,6 +233,38 @@ public struct ClassBattleFlowFeature {
 
     public var visibleTranscript: [ClassBattleTranscriptLine] {
       transcript.filter { $0.startTime <= currentTime }
+    }
+
+    public var midVoteOptions: [ScenarioInteractiveOption] {
+      guard let pendingCheckpointID else { return [] }
+      return scenario?.nodes.first { $0.nodeId == pendingCheckpointID }?.interactiveOptions ?? []
+    }
+
+    public var currentNode: ScenarioNode? {
+      guard let scenario else { return nil }
+      return scenario.nodes.first { $0.nodeId == (currentNodeID ?? scenario.startNodeId) }
+    }
+
+    public var canConfirmMidVote: Bool {
+      pendingCheckpointID != nil && selectedMidOptionID != nil && midVoteRequestID == nil
+    }
+
+    public var hasAnsweredCurrentPath: Bool {
+      guard session?.midVoteEnabled == true, let scenario else { return true }
+      var nodeID: Int? = scenario.startNodeId
+      var visited = Set<Int>()
+      while let id = nodeID, visited.insert(id).inserted,
+            let node = scenario.nodes.first(where: { $0.nodeId == id }) {
+        if !node.interactiveOptions.isEmpty {
+          guard let chosenNextID = selectedPaths[id],
+                node.interactiveOptions.contains(where: { $0.nextNodeId == chosenNextID })
+          else { return false }
+          nodeID = chosenNextID
+        } else {
+          nodeID = scenario.nextNodeId(for: node)
+        }
+      }
+      return true
     }
 
     public var visibleTranscriptRows: [ClassBattleTranscriptRow] {
@@ -202,7 +300,7 @@ public struct ClassBattleFlowFeature {
         ?? voteHistory.postVote.map({ $0.optionID != voteHistory.preVote.optionID }) else {
         return nil
       }
-      return changed ? "생각이 바뀌었어요" : "처음 생각을 유지했어요"
+      return changed ? "생각이 바뀌었어요" : "생각이 동일해요"
     }
 
     public var displayArtworkURL: URL? {
@@ -226,7 +324,13 @@ public struct ClassBattleFlowFeature {
   public enum Action: ViewAction {
     case view(View)
     case inner(InnerAction)
+    case scope(ScopeAction)
     case delegate(DelegateAction)
+  }
+
+  @CasePathable
+  public enum ScopeAction: Equatable {
+    case customAlert(PresentationAction<CustomAlertAction>)
   }
 
   @CasePathable
@@ -248,23 +352,35 @@ public struct ClassBattleFlowFeature {
     case scrub(TimeInterval)
     case replayTapped
     case playbackRateSelected(Float)
+    case midVoteOptionTapped(Int)
+    case confirmMidVoteTapped
     case perspectiveOptionTapped(Int?)
     case perspectiveSortTapped(String)
     case perspectiveTapped(Int)
     case perspectiveLikeTapped(Int)
+    case perspectiveMoreTapped(Int)
+    case perspectiveEditTapped(Int)
+    case perspectiveDeleteTapped(Int)
+    case perspectiveReportTapped(Int)
+    case cancelEditTapped
+    case toastShown
   }
 
   public enum InnerAction: Equatable {
     case progressResponse(UUID, Result<ClassBattleProgress, ClassBattleError>)
     case submissionResponse(UUID, ClassBattleStep, Result<Bool, ClassBattleError>)
     case audioURLResponse(UUID, Result<URL, ClassBattleError>)
-    case transcriptLoaded(UUID, [ClassBattleTranscriptLine])
+    case scenarioLoaded(UUID, BattleScenario)
+    case midVoteResponse(UUID, Int, Int, Result<Bool, ClassBattleError>)
     case audioLoaded(UUID, Bool, TimeInterval)
     case playerTimeUpdated(UUID, TimeInterval)
     case perspectivePageResponse(UUID, Result<ClassPerspectivePage, ClassBattleError>)
     case voteStatsResponse(UUID, Result<ClassVoteStats, ClassBattleError>)
     case perspectiveLikeResponse(UUID, Int, Result<CommentLikeResult, ClassBattleError>)
     case myPerspectiveResponse(UUID, Result<[ClassPerspectiveItem], ClassBattleError>)
+    case updatePerspectiveResponse(UUID, Result<Bool, PerspectiveError>)
+    case deletePerspectiveResponse(UUID, Int, Result<Bool, PerspectiveError>)
+    case reportPerspectiveResponse(UUID, Result<Bool, PerspectiveError>)
   }
 
   @CasePathable
@@ -284,6 +400,9 @@ public struct ClassBattleFlowFeature {
     case voteStats(UUID)
     case perspectiveLike(UUID)
     case myPerspective(UUID)
+    case midVote(UUID)
+    /// 의견 수정·삭제·신고. 상세 화면 이동(onDisappear)에서는 취소하지 않고 라우트 제거 시에만 취소한다.
+    case perspectiveMutation(UUID)
   }
 
   @Dependency(\.uuid) private var uuid
@@ -297,8 +416,12 @@ public struct ClassBattleFlowFeature {
       switch action {
       case let .view(viewAction): return handleView(state: &state, action: viewAction)
       case let .inner(innerAction): return handleInner(state: &state, action: innerAction)
+      case let .scope(scopeAction): return handleScope(state: &state, action: scopeAction)
       case .delegate: return .none
       }
+    }
+    .ifLet(\.$customAlert, action: \.scope.customAlert) {
+      CustomConfirmAlert()
     }
   }
 }
@@ -324,8 +447,12 @@ extension ClassBattleFlowFeature {
       if state.step == .some(.completed), state.perspectiveRequestID == nil
       {
         let shouldRefresh = state.refreshAfterPerspectiveDetail
+        let returnedFromOwnPerspective = shouldRefresh && state.refreshAfterOwnPerspectiveDetail
         state.refreshAfterPerspectiveDetail = false
+        state.refreshAfterOwnPerspectiveDetail = false
         if shouldRefresh { state.hasSubmittedInCurrentSession = false }
+        // 내 의견 상세에서 삭제 후 돌아왔을 수 있으므로 /me 결과로 다시 판정한다.
+        if returnedFromOwnPerspective { state.hasPublishedPerspective = nil }
         return .merge(
           state.perspectives.isEmpty || shouldRefresh
             ? loadPerspectives(state: &state, cursor: nil, preserveExisting: shouldRefresh) : .none,
@@ -354,6 +481,8 @@ extension ClassBattleFlowFeature {
       state.pendingPerspectiveLikeResults = [:]
       state.voteStatsRequestID = nil
       state.myPerspectiveRequestID = nil
+      state.midVoteRequestID = nil
+      state.menuTargetPerspectiveID = nil
       state.isLoadingPerspectives = false
       state.isPlaying = false
       return stopAudio(instanceID: state.instanceID)
@@ -373,7 +502,12 @@ extension ClassBattleFlowFeature {
       guard state.step == .some(.completed), state.hasPublishedPerspective == nil,
             state.myPerspectiveRequestID == nil else { return .none }
       state.perspectiveErrorMessage = nil
-      return loadMyPerspectives(state: &state)
+      // 목록도 실패해 비어 있으면 함께 다시 불러온다. 오류 문구만 지우면 빈 목록처럼 보인다.
+      let reloadsPerspectives = state.perspectives.isEmpty && state.perspectiveRequestID == nil
+      return .merge(
+        reloadsPerspectives ? loadPerspectives(state: &state, cursor: nil) : .none,
+        loadMyPerspectives(state: &state)
+      )
     case .backTapped:
       let instanceID = state.instanceID
       return .concatenate(
@@ -384,6 +518,7 @@ extension ClassBattleFlowFeature {
       guard state.canParticipate,
             let step = state.step,
             [.none, .preVote, .postVote].contains(step),
+            !(step == .preVote && state.isPreVoteLocked),
             state.options.contains(where: { $0.id == optionID }),
             state.submitRequestID == nil
       else { return .none }
@@ -404,6 +539,9 @@ extension ClassBattleFlowFeature {
       return .none
     case .submitTapped:
       guard state.canSubmit else { return .none }
+      if let editingID = state.editingPerspectiveID {
+        return updatePerspective(state: &state, id: editingID)
+      }
       guard let step = state.step else { return .none }
       let requestID = uuid()
       state.submitRequestID = requestID
@@ -411,6 +549,7 @@ extension ClassBattleFlowFeature {
       guard let classID = state.room?.id else { return .none }
       let optionID = state.selectedOptionID
       let preVoteOptionID = state.voteHistory?.preVote.optionID
+      let isPreVoteLocked = state.isPreVoteLocked
       let draft = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
       return .run { [useCase = classUseCase] send in
         let result = await Result {
@@ -419,7 +558,7 @@ extension ClassBattleFlowFeature {
             guard let optionID else { throw ClassBattleError.invalidOption }
             _ = try await useCase.submitPreVote(classID: classID, optionID: optionID)
           case .preVote:
-            if optionID != preVoteOptionID {
+            if !isPreVoteLocked && optionID != preVoteOptionID {
               guard let optionID else { throw ClassBattleError.invalidOption }
               _ = try await useCase.submitPreVote(classID: classID, optionID: optionID)
             } else {
@@ -439,26 +578,78 @@ extension ClassBattleFlowFeature {
         await send(.inner(.submissionResponse(requestID, step, result)))
       }
       .cancellable(id: CancelID.submit(state.instanceID), cancelInFlight: true)
+    case let .midVoteOptionTapped(nextNodeID):
+      guard state.pendingCheckpointID != nil,
+            state.midVoteOptions.contains(where: { $0.nextNodeId == nextNodeID }),
+            state.midVoteRequestID == nil else { return .none }
+      state.selectedMidOptionID = nextNodeID
+      state.errorMessage = nil
+      return .none
+    case .confirmMidVoteTapped:
+      guard state.canConfirmMidVote,
+            let checkpointID = state.pendingCheckpointID,
+            let nextNodeID = state.selectedMidOptionID,
+            let option = state.midVoteOptions.first(where: { $0.nextNodeId == nextNodeID }),
+            let classID = state.room?.id else { return .none }
+      guard let session = state.session else { return .none }
+      if !session.midVoteEnabled || state.midVoteDisabledLocally {
+        return advanceAfterChoice(state: &state, checkpointID: checkpointID, option: option)
+      }
+      guard let optionID = option.optionID else {
+        state.errorMessage = ClassBattleError.invalidResponse.message
+        return .none
+      }
+      let requestID = uuid()
+      state.midVoteRequestID = requestID
+      state.errorMessage = nil
+      return .run { [useCase = classUseCase] send in
+        let result = await Result {
+          _ = try await useCase.submitMidVote(
+            classID: classID,
+            checkpointID: checkpointID,
+            optionID: optionID
+          )
+          return true
+        }.mapError(Self.mapError)
+        guard !Task.isCancelled else { return }
+        await send(.inner(.midVoteResponse(requestID, checkpointID, optionID, result)))
+      }
+      .cancellable(id: CancelID.midVote(state.instanceID), cancelInFlight: true)
     case .playbackTapped:
-      guard state.isAudioStep, state.isAudioReady else { return .none }
+      guard state.isAudioStep, state.isAudioReady,
+            state.pendingCheckpointID == nil else { return .none }
       state.isPlaying.toggle()
       return .run { [player = audioPlayer, shouldPlay = state.isPlaying] _ in
         if shouldPlay { await player.play() } else { await player.pause() }
       }
       .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .seekBy(delta):
-      guard state.isAudioStep, state.isAudioReady else { return .none }
-      let target = min(state.audioDuration, max(0, state.currentTime + delta))
+      guard state.isAudioStep, state.isAudioReady,
+            state.pendingCheckpointID == nil else { return .none }
+      let checkpointBoundary = state.currentNode.flatMap { node in
+        node.interactiveOptions.isEmpty ? nil : state.scenario?.nodeEndTime(for: node)
+      }
+      let target = min(
+        state.audioDuration,
+        min(checkpointBoundary ?? .infinity, max(0, state.currentTime + delta))
+      )
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in await player.seek(to: target) }
     case let .scrub(time):
-      guard state.isAudioStep, state.isAudioReady, state.hasListened else { return .none }
+      guard state.isAudioStep, state.isAudioReady, state.hasListened,
+            state.pendingCheckpointID == nil else { return .none }
       let target = min(state.audioDuration, max(0, time))
       state.currentTime = target
+      state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in await player.seek(to: target) }
     case .replayTapped:
       guard state.isAudioStep, state.isAudioReady, state.hasListened else { return .none }
       state.currentTime = 0
+      state.currentNodeID = state.scenario?.startNodeId
+      state.pendingCheckpointID = nil
+      state.selectedMidOptionID = nil
+      state.pendingSeekTime = 0
       state.isPlaying = true
       return .run { [player = audioPlayer] _ in
         await player.seek(to: 0)
@@ -482,6 +673,8 @@ extension ClassBattleFlowFeature {
       guard state.step == .some(.completed), state.submitRequestID == nil,
             state.perspectives.contains(where: { $0.id == id }) else { return .none }
       state.refreshAfterPerspectiveDetail = true
+      state.refreshAfterOwnPerspectiveDetail =
+        state.perspectives.first(where: { $0.id == id })?.isMyPerspective == true
       return .send(.delegate(.openPerspective(id)))
     case let .perspectiveLikeTapped(id):
       guard state.step == .some(.completed), state.canParticipate,
@@ -500,7 +693,122 @@ extension ClassBattleFlowFeature {
         await send(.inner(.perspectiveLikeResponse(requestID, id, result)))
       }
       .cancellable(id: CancelID.perspectiveLike(state.instanceID), cancelInFlight: true)
+    case let .perspectiveMoreTapped(id):
+      // 진행 중인 수정·삭제·신고가 같은 CancelID로 취소되지 않게 한 번에 하나만 허용한다.
+      guard state.mutationRequestID == nil, state.perspectiveMenuKind(id: id).hasMenu else { return .none }
+      state.menuTargetPerspectiveID = state.menuTargetPerspectiveID == id ? nil : id
+      return .none
+    case let .perspectiveEditTapped(id):
+      state.menuTargetPerspectiveID = nil
+      guard state.mutationRequestID == nil,
+            [.editOnly, .editAndDelete].contains(state.perspectiveMenuKind(id: id)),
+            let item = state.perspectiveItem(id: id) else { return .none }
+      if state.editingPerspectiveID != id {
+        state.draft = item.content
+      }
+      state.editingPerspectiveID = id
+      state.errorMessage = nil
+      return .none
+    case let .perspectiveDeleteTapped(id):
+      state.menuTargetPerspectiveID = nil
+      guard state.mutationRequestID == nil, state.perspectiveMenuKind(id: id) == .editAndDelete else { return .none }
+      state.deleteTargetPerspectiveID = id
+      state.reportTargetPerspectiveID = nil
+      state.customAlert = .deletePerspective()
+      return .none
+    case let .perspectiveReportTapped(id):
+      state.menuTargetPerspectiveID = nil
+      guard state.mutationRequestID == nil, state.perspectiveMenuKind(id: id) == .report else { return .none }
+      state.reportTargetPerspectiveID = id
+      state.deleteTargetPerspectiveID = nil
+      state.customAlert = .report()
+      return .none
+    case .cancelEditTapped:
+      state.editingPerspectiveID = nil
+      state.draft = ""
+      return .none
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
     }
+  }
+
+  private func handleScope(
+    state: inout State,
+    action: ScopeAction
+  ) -> Effect<Action> {
+    switch action {
+    case .customAlert(.presented(.confirmTapped)):
+      state.customAlert = nil
+      guard state.mutationRequestID == nil else {
+        state.deleteTargetPerspectiveID = nil
+        state.reportTargetPerspectiveID = nil
+        return .none
+      }
+      if let id = state.deleteTargetPerspectiveID {
+        state.deleteTargetPerspectiveID = nil
+        return deletePerspective(state: &state, id: id)
+      }
+      if let id = state.reportTargetPerspectiveID {
+        state.reportTargetPerspectiveID = nil
+        return reportPerspective(state: &state, id: id)
+      }
+      return .none
+    case .customAlert(.presented(.cancelTapped)), .customAlert(.dismiss):
+      state.customAlert = nil
+      state.deleteTargetPerspectiveID = nil
+      state.reportTargetPerspectiveID = nil
+      return .none
+    }
+  }
+
+  private func updatePerspective(
+    state: inout State,
+    id: Int
+  ) -> Effect<Action> {
+    let requestID = uuid()
+    state.mutationRequestID = requestID
+    let content = state.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    return .run { [useCase = perspectiveUseCase] send in
+      let result = await Result {
+        try await useCase.updatePerspective(perspectiveId: id, content: content)
+        return true
+      }.mapError(PerspectiveError.from)
+      await send(.inner(.updatePerspectiveResponse(requestID, result)))
+    }
+    .cancellable(id: CancelID.perspectiveMutation(state.instanceID), cancelInFlight: true)
+  }
+
+  private func deletePerspective(
+    state: inout State,
+    id: Int
+  ) -> Effect<Action> {
+    let requestID = uuid()
+    state.mutationRequestID = requestID
+    return .run { [useCase = perspectiveUseCase] send in
+      let result = await Result {
+        try await useCase.deletePerspective(perspectiveId: id)
+        return true
+      }.mapError(PerspectiveError.from)
+      await send(.inner(.deletePerspectiveResponse(requestID, id, result)))
+    }
+    .cancellable(id: CancelID.perspectiveMutation(state.instanceID), cancelInFlight: true)
+  }
+
+  private func reportPerspective(
+    state: inout State,
+    id: Int
+  ) -> Effect<Action> {
+    let requestID = uuid()
+    state.mutationRequestID = requestID
+    return .run { [useCase = perspectiveUseCase] send in
+      let result = await Result {
+        try await useCase.reportPerspective(perspectiveId: id)
+        return true
+      }.mapError(PerspectiveError.from)
+      await send(.inner(.reportPerspectiveResponse(requestID, result)))
+    }
+    .cancellable(id: CancelID.perspectiveMutation(state.instanceID), cancelInFlight: true)
   }
 
   private func loadProgress(state: inout State) -> Effect<Action> {
@@ -536,6 +844,17 @@ extension ClassBattleFlowFeature {
         state.viewState = .loaded
         state.session = progress.session
         state.voteHistory = progress.voteHistory
+        if progress.session.midVoteEnabled {
+          state.selectedPaths = state.scenario.map {
+            Self.selectedPaths(from: progress.voteHistory, scenario: $0)
+          } ?? [:]
+          if let scenario = state.scenario {
+            state.transcript = ClassBattleTranscriptLine.from(
+              scenario: scenario,
+              selectedPaths: state.selectedPaths
+            )
+          }
+        }
         if progress.session.battle.currentStep == .completed {
           if state.hasSubmittedInCurrentSession
             || (progress.session.commentRequired && progress.session.participationCompleted) {
@@ -561,7 +880,8 @@ extension ClassBattleFlowFeature {
             stopPlayback(instanceID: state.instanceID),
             loadPerspectives(state: &state, cursor: nil),
             loadVoteStats(state: &state),
-            state.hasPublishedPerspective == nil ? loadMyPerspectives(state: &state) : .none
+            // 공개되지 않은 내 의견 카드·거절 의견 수정을 위해 완료 단계마다 내 의견을 다시 받는다(Android 제출 후 fetchMyPerspective).
+            loadMyPerspectives(state: &state)
           )
         }
         return stopPlayback(instanceID: state.instanceID)
@@ -577,6 +897,7 @@ extension ClassBattleFlowFeature {
       case .success:
         state.draft = ""
         state.hasAdvancedInCurrentSession = true
+        if submittedStep == .postVote { state.needsMidVoteRecovery = false }
         if submittedStep == .completed {
           state.hasSubmittedInCurrentSession = true
           state.hasPublishedPerspective = true
@@ -584,12 +905,35 @@ extension ClassBattleFlowFeature {
         return loadProgress(state: &state)
       case let .failure(error):
         state.errorMessage = error.message
+        if submittedStep == .postVote, error == .midVoteRequired {
+          state.needsMidVoteRecovery = true
+          state.hasListened = false
+          state.currentNodeID = state.scenario?.startNodeId
+          state.pendingCheckpointID = nil
+          state.selectedMidOptionID = nil
+          state.currentTime = 0
+          state.pendingSeekTime = 0
+          if state.isAudioReady {
+            state.isPlaying = true
+            return .merge(
+              .run { [player = audioPlayer] _ in
+                await player.seek(to: 0)
+                await player.play()
+              },
+              observePlayerTime(instanceID: state.instanceID)
+            )
+          }
+          if let battleID = state.session?.battle.id {
+            return loadAudio(state: &state, battleID: battleID)
+          }
+        }
         return .none
       }
     case let .audioURLResponse(requestID, result):
       guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
       switch result {
       case let .success(url):
+        state.loadedAudioURL = url
         return .run { [player = audioPlayer] send in
           let loaded = await player.load(url: url)
           let duration = loaded ? await player.duration() : 0
@@ -602,6 +946,47 @@ extension ClassBattleFlowFeature {
         state.audioRequestID = nil
         return .none
       }
+    case let .scenarioLoaded(requestID, scenario):
+      guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
+      state.scenario = scenario
+      state.currentNodeID = scenario.startNodeId
+      state.pendingCheckpointID = nil
+      state.selectedMidOptionID = nil
+      if state.session?.midVoteEnabled == true {
+        state.selectedPaths = Self.selectedPaths(from: state.voteHistory, scenario: scenario)
+      }
+      state.transcript = ClassBattleTranscriptLine.from(
+        scenario: scenario,
+        selectedPaths: state.selectedPaths
+      )
+      return .none
+    case let .midVoteResponse(requestID, checkpointID, optionID, result):
+      guard state.midVoteRequestID == requestID,
+            state.pendingCheckpointID == checkpointID,
+            let option = state.midVoteOptions.first(where: { $0.optionID == optionID })
+      else { return .none }
+      state.midVoteRequestID = nil
+      switch result {
+      case .success:
+        if state.step == .some(.preVote) {
+          state.selectedOptionID = state.voteHistory?.preVote.optionID
+        }
+        return advanceAfterChoice(state: &state, checkpointID: checkpointID, option: option)
+      case let .failure(error):
+        state.errorMessage = error.message
+        if error == .midVoteUnavailable {
+          let effect = advanceAfterChoice(state: &state, checkpointID: checkpointID, option: option)
+          state.midVoteDisabledLocally = true
+          state.errorMessage = error.message
+          return effect
+        }
+        if error == .midVoteLocked || error == .invalidMidVoteOption || error == .voteNotFound {
+          state.pendingCheckpointID = nil
+          state.isAudioReady = false
+          return .merge(stopPlayback(instanceID: state.instanceID), loadProgress(state: &state))
+        }
+        return .none
+      }
     case let .audioLoaded(requestID, loaded, duration):
       guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
       state.audioRequestID = nil
@@ -612,20 +997,28 @@ extension ClassBattleFlowFeature {
       state.isAudioReady = true
       state.audioDuration = duration
       state.isPlaying = true
+      let seekTime = state.pendingSeekTime
       return .merge(
-        .run { [player = audioPlayer] _ in await player.play() }
+        .run { [player = audioPlayer] _ in
+          if let seekTime { await player.seek(to: seekTime) }
+          await player.play()
+        }
           .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true),
         observePlayerTime(instanceID: state.instanceID)
       )
-    case let .transcriptLoaded(requestID, transcript):
-      guard state.audioRequestID == requestID, state.isAudioStep else { return .none }
-      state.transcript = transcript
-      return .none
     case let .playerTimeUpdated(instanceID, time):
       guard state.instanceID == instanceID, state.isAudioStep,
-            state.isAudioReady else { return .none }
+            state.isAudioReady, state.pendingCheckpointID == nil else { return .none }
+      if let pendingSeekTime = state.pendingSeekTime {
+        guard abs(time - pendingSeekTime) < 1 else { return .none }
+        state.pendingSeekTime = nil
+      }
       state.currentTime = min(state.audioDuration, max(0, time))
-      guard time >= max(0, state.audioDuration - 0.3) else { return .none }
+      if let effect = advanceNodeIfNeeded(state: &state, time: time) {
+        return effect
+      }
+      guard state.pendingCheckpointID == nil,
+            time >= max(0, state.audioDuration - 0.3) else { return .none }
       state.hasListened = true
       guard state.isPlaying else { return .none }
       state.isPlaying = false
@@ -687,9 +1080,64 @@ extension ClassBattleFlowFeature {
       state.myPerspectiveRequestID = nil
       switch result {
       case let .success(items):
-        state.hasPublishedPerspective = !items.isEmpty || state.hasSubmittedInCurrentSession
+        state.myPerspective = items.first
+        // 서버가 참여 완료로 판정한 뒤에는 /me가 비어도 입력창을 다시 열지 않는다(중복 의견 방지).
+        state.hasPublishedPerspective = state.hasPublishedPerspective == true
+          || !items.isEmpty
+          || state.hasSubmittedInCurrentSession
       case let .failure(error):
-        state.perspectiveErrorMessage = error.message
+        // 판정 전 실패만 재시도 문구를 띄운다. 이미 판정됐으면 목록 오류 문구를 덮지 않는다.
+        if state.hasPublishedPerspective == nil {
+          state.perspectiveErrorMessage = error.message
+        }
+      }
+      return .none
+    case let .updatePerspectiveResponse(requestID, result):
+      guard state.mutationRequestID == requestID else { return .none }
+      state.mutationRequestID = nil
+      switch result {
+      case .success:
+        state.editingPerspectiveID = nil
+        state.draft = ""
+        return .merge(
+          loadPerspectives(state: &state, cursor: nil, preserveExisting: true),
+          loadMyPerspectives(state: &state)
+        )
+      case .failure:
+        state.toastMessage = "의견을 수정하지 못했어요"
+        return .none
+      }
+    case let .deletePerspectiveResponse(requestID, id, result):
+      guard state.mutationRequestID == requestID else { return .none }
+      state.mutationRequestID = nil
+      switch result {
+      case .success:
+        // Android와 같이 삭제한 내 의견을 바로 빼고 새 의견을 다시 쓸 수 있게 한다.
+        state.perspectives.removeAll { $0.id == id }
+        if state.myPerspective?.id == id { state.myPerspective = nil }
+        if state.editingPerspectiveID == id {
+          state.editingPerspectiveID = nil
+          state.draft = ""
+        }
+        state.hasPublishedPerspective = false
+        state.hasSubmittedInCurrentSession = false
+      case .failure:
+        state.toastMessage = "의견을 삭제하지 못했어요"
+      }
+      return .merge(
+        loadPerspectives(state: &state, cursor: nil, preserveExisting: true),
+        loadMyPerspectives(state: &state)
+      )
+    case let .reportPerspectiveResponse(requestID, result):
+      guard state.mutationRequestID == requestID else { return .none }
+      state.mutationRequestID = nil
+      switch result {
+      case .success:
+        state.toastMessage = "신고가 정상 접수되었습니다."
+      case .failure(.alreadyReported):
+        state.toastMessage = "이미 신고한 사용자입니다."
+      case .failure:
+        state.toastMessage = "신고하지 못했어요"
       }
       return .none
     }
@@ -764,28 +1212,141 @@ extension ClassBattleFlowFeature {
     let requestID = uuid()
     state.audioRequestID = requestID
     state.errorMessage = nil
-    return .run { [useCase = battleUseCase] send in
+    return .run { [
+      useCase = battleUseCase,
+      history = state.voteHistory,
+      priorPaths = state.selectedPaths
+    ] send in
       let result = await Result {
         let scenario = try await useCase.fetchScenario(battleId: battleID)
-        guard let rawURL = scenario.audios[scenario.recommendedPathKey.rawValue]
+        let paths = Self.selectedPaths(from: history, scenario: scenario)
+        let chosenNodeID = (paths.isEmpty ? priorPaths : paths).values.first
+        let pathKey = chosenNodeID.flatMap { Self.branchPathKey(from: $0, scenario: scenario) }
+        guard let rawURL = pathKey.flatMap({ scenario.audios[$0] })
+          ?? scenario.audios[scenario.recommendedPathKey.rawValue]
           ?? scenario.audios.values.first,
           let url = URL(string: rawURL),
           ["http", "https"].contains(url.scheme?.lowercased() ?? "")
         else { throw ClassBattleError.invalidResponse }
-        return (url, ClassBattleTranscriptLine.from(scenario: scenario))
+        return (url, scenario)
       }.mapError(Self.mapError)
       guard !Task.isCancelled else { return }
       switch result {
-      case let .success((url, transcript)):
-        if !transcript.isEmpty {
-          await send(.inner(.transcriptLoaded(requestID, transcript)))
-        }
+      case let .success((url, scenario)):
+        await send(.inner(.scenarioLoaded(requestID, scenario)))
         await send(.inner(.audioURLResponse(requestID, .success(url))))
       case let .failure(error):
         await send(.inner(.audioURLResponse(requestID, .failure(error))))
       }
     }
     .cancellable(id: CancelID.audio(state.instanceID), cancelInFlight: true)
+  }
+
+  private func advanceNodeIfNeeded(
+    state: inout State,
+    time: TimeInterval
+  ) -> Effect<Action>? {
+    guard let scenario = state.scenario, state.pendingCheckpointID == nil else { return nil }
+    var visited = Set<Int>()
+    while let node = state.currentNode, visited.insert(node.nodeId).inserted,
+          time >= scenario.nodeEndTime(for: node) {
+      if !node.interactiveOptions.isEmpty {
+        if let selectedNextID = state.selectedPaths[node.nodeId],
+           let selectedOption = node.interactiveOptions.first(where: { $0.nextNodeId == selectedNextID }) {
+          return advanceAfterChoice(state: &state, checkpointID: node.nodeId, option: selectedOption)
+        }
+        state.pendingCheckpointID = node.nodeId
+        state.selectedMidOptionID = state.selectedPaths[node.nodeId]
+        state.currentTime = scenario.nodeEndTime(for: node)
+        state.isPlaying = false
+        return .run { [player = audioPlayer] _ in await player.pause() }
+      }
+      guard let nextNodeID = scenario.nextNodeId(for: node),
+            scenario.nodes.contains(where: { $0.nodeId == nextNodeID })
+      else { return nil }
+      state.currentNodeID = nextNodeID
+    }
+    return nil
+  }
+
+  private func advanceAfterChoice(
+    state: inout State,
+    checkpointID: Int,
+    option: ScenarioInteractiveOption
+  ) -> Effect<Action> {
+    guard let scenario = state.scenario else { return .none }
+    let pathKey = Self.branchPathKey(from: option.nextNodeId, scenario: scenario)
+    let branchURL: URL?
+    if let pathKey, let rawURL = scenario.audios[pathKey] {
+      branchURL = URL(string: rawURL)
+    } else if pathKey != nil,
+              scenario.audios["PATH_A"] != nil || scenario.audios["PATH_B"] != nil {
+      state.errorMessage = ClassBattleError.invalidResponse.message
+      return .none
+    } else {
+      branchURL = state.loadedAudioURL
+    }
+    state.selectedPaths[checkpointID] = option.nextNodeId
+    state.transcript = ClassBattleTranscriptLine.from(
+      scenario: scenario,
+      selectedPaths: state.selectedPaths
+    )
+    state.currentNodeID = option.nextNodeId
+    state.pendingCheckpointID = nil
+    state.selectedMidOptionID = nil
+    state.errorMessage = nil
+    let targetTime = scenario.nodeStartTime(for: option.nextNodeId)
+    state.currentTime = targetTime
+    state.pendingSeekTime = targetTime
+    state.isPlaying = true
+    if let branchURL, branchURL != state.loadedAudioURL {
+      let requestID = uuid()
+      state.audioRequestID = requestID
+      state.loadedAudioURL = branchURL
+      state.isAudioReady = false
+      state.isPlaying = false
+      return .run { [player = audioPlayer] send in
+        let loaded = await player.load(url: branchURL)
+        let duration = loaded ? await player.duration() : 0
+        guard !Task.isCancelled else { return }
+        await send(.inner(.audioLoaded(requestID, loaded, duration)))
+      }
+      .cancellable(id: CancelID.audio(state.instanceID), cancelInFlight: true)
+    }
+    return .run { [player = audioPlayer] _ in
+      await player.seek(to: targetTime)
+      await player.play()
+    }
+  }
+
+  private static func selectedPaths(
+    from history: ClassVoteHistory?,
+    scenario: BattleScenario
+  ) -> [Int: Int] {
+    Dictionary(
+      history?.midVotes.compactMap { choice in
+        scenario.nodes.first(where: { $0.nodeId == choice.checkpointID })?
+          .interactiveOptions.first(where: { $0.optionID == choice.optionID })
+          .map { (choice.checkpointID, $0.nextNodeId) }
+      } ?? [],
+      uniquingKeysWith: { _, newest in newest }
+    )
+  }
+
+  private static func branchPathKey(
+    from firstNodeID: Int,
+    scenario: BattleScenario
+  ) -> String? {
+    var nodeID: Int? = firstNodeID
+    var visited = Set<Int>()
+    while let id = nodeID, visited.insert(id).inserted,
+          let node = scenario.nodes.first(where: { $0.nodeId == id }) {
+      let name = node.nodeName.uppercased()
+      if name.contains("_A") { return "PATH_A" }
+      if name.contains("_B") { return "PATH_B" }
+      nodeID = node.autoNextNodeId
+    }
+    return nil
   }
 
   private func observePlayerTime(instanceID: UUID) -> Effect<Action> {
@@ -802,6 +1363,7 @@ extension ClassBattleFlowFeature {
     .merge(
       .cancel(id: CancelID.load(instanceID)),
       .cancel(id: CancelID.submit(instanceID)),
+      .cancel(id: CancelID.midVote(instanceID)),
       .cancel(id: CancelID.perspectives(instanceID)),
       .cancel(id: CancelID.perspectiveLike(instanceID)),
       .cancel(id: CancelID.myPerspective(instanceID)),

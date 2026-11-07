@@ -25,6 +25,8 @@ public struct HomeFeature {
     public enum ViewState: Equatable {
       case loading
       case loaded
+      /// 로딩이 실패한 상태(받아 둔 데이터는 유지) — 데이터가 없으면 스켈레톤이 아니라 빈 상태를 보여준다(Android와 동일).
+      case failed
     }
 
     public var viewState: ViewState = .loaded
@@ -34,8 +36,7 @@ public struct HomeFeature {
     public var heroIndex: Int = 0
     public var hotBattles: [HotBattle] = []
     public var bestBattles: [BestBattle] = []
-    public var quizzes: [QuizQuestion] = []
-    public var votes: [VoteQuestion] = []
+    public var bestComments: [HomeBestComment] = []
     public var newBattles: [NewBattle] = []
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
@@ -46,16 +47,26 @@ public struct HomeFeature {
     /// 출석 체크는 앱 세션당 1회만 시도한다(하루 1회 제한이라 재진입마다 때릴 이유가 없다).
     public var hasTriedAttendance: Bool = false
 
-    public var currentQuiz: QuizQuestion? { quizzes.first }
-    public var currentVote: VoteQuestion? { votes.first }
+    /// 홈 탭 재선택 시 맨 위로 올리라는 요청 토큰(값이 바뀔 때마다 View 가 스크롤).
+    public var scrollToTopRequest: Int = 0
+
+    /// Best 배틀은 최대 3개만 노출한다(Android `take(3)`).
+    public var visibleBestBattles: [BestBattle] {
+      Array(bestBattles.prefix(3))
+    }
+
+    public var hasVisibleHomeContent: Bool {
+      !heroes.isEmpty || !hotBattles.isEmpty || !bestBattles.isEmpty ||
+        !bestComments.isEmpty || !newBattles.isEmpty
+    }
 
     public var shouldShowSkeleton: Bool {
-      (viewState == .loading || !hasLoadedHome) &&
+      viewState != .failed &&
+        (viewState == .loading || !hasLoadedHome) &&
         heroes.isEmpty &&
         hotBattles.isEmpty &&
         bestBattles.isEmpty &&
-        quizzes.isEmpty &&
-        votes.isEmpty &&
+        bestComments.isEmpty &&
         newBattles.isEmpty
     }
 
@@ -75,22 +86,16 @@ public struct HomeFeature {
   public enum View {
     case onAppear
     case pullToRefresh
-    case seeMoreTapped(Section)
-    case voteTapped(VoteQuestion)
     case heroTapped(HeroBattle)
     case hotBattleTapped(HotBattle)
     case bestBattleTapped(BestBattle)
+    case bestCommentTapped(HomeBestComment)
     case newBattleTapped(NewBattle)
     case notificationTapped
     /// 홈 피드 네이티브 광고 클릭
     case adNativeClicked
-  }
-
-  public enum Section: Equatable {
-    case hotBattles
-    case bestBattles
-    case todayPicke
-    case newBattles
+    /// 홈 루트에서 홈 탭을 다시 눌렀을 때 — 맨 위로 이동 + 다시 불러오기.
+    case homeTabReselected
   }
 
   public enum AsyncAction: Equatable {
@@ -173,18 +178,6 @@ extension HomeFeature {
       guard state.viewState != .loading else { return .none }
       return .send(.async(.fetchHome))
 
-    case .seeMoreTapped:
-      analyticsUseCase.track(.uiAction(action: .homeMore, screen: .home))
-      return .send(.delegate(.moveToExplore))
-
-    case let .voteTapped(question):
-      analyticsUseCase.track(.contentAction(ContentActionData(
-        action: .voteCardTap,
-        contentID: "\(question.battleId)",
-        section: .vote
-      )))
-      return .send(.delegate(.presentPreVote(battleId: question.battleId)))
-
     case let .heroTapped(battle):
       analyticsUseCase.track(.contentAction(ContentActionData(action: .heroTap, contentID: "\(battle.battleId)")))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
@@ -205,6 +198,14 @@ extension HomeFeature {
       )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
+    case let .bestCommentTapped(comment):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .battleCardTap,
+        contentID: "\(comment.battleId)",
+        section: .bestComment
+      )))
+      return .send(.delegate(.presentPreVote(battleId: comment.battleId)))
+
     case let .newBattleTapped(battle):
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .newBattleTap,
@@ -220,6 +221,11 @@ extension HomeFeature {
     case .adNativeClicked:
       analyticsUseCase.track(.adClick(AdClickData(placement: .home, format: .native, unit: "ADFIT_NATIVE_2_1")))
       return .none
+
+    case .homeTabReselected:
+      state.scrollToTopRequest += 1
+      guard state.viewState != .loading else { return .none }
+      return .send(.async(.fetchHome))
     }
   }
 
@@ -268,9 +274,9 @@ extension HomeFeature {
   ) -> Effect<Action> {
     switch action {
     case let .homeResponse(result):
-      state.viewState = .loaded
       switch result {
       case let .success(bundle):
+        state.viewState = .loaded
         state.hasLoadedHome = true
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
@@ -278,10 +284,10 @@ extension HomeFeature {
         state.heroIndex = 0
         state.hotBattles = home.hotBattles
         state.bestBattles = home.bestBattles
-        state.quizzes = home.quizzes
-        state.votes = home.votes
+        state.bestComments = home.bestComments
         state.newBattles = home.newBattles
       case let .failure(error):
+        state.viewState = .failed
         PickeLogger.error("[HomeFeature] fetchHome failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
@@ -319,7 +325,7 @@ extension HomeFeature {
     action: HomeDelegate
   ) -> Effect<Action> {
     switch action {
-    case .presentPreVote, .moveToExplore, .openNotification:
+    case .presentPreVote, .openNotification:
       return .none
     }
   }

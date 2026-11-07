@@ -21,6 +21,7 @@ extension ClassPersonalReportDTO.Feedback.Evidence {
 extension ClassPersonalReportDTO.Feedback {
   func toDomain(
     preOption: ClassPersonalReportDTO.VoteOption?,
+    midVotes: [ClassMidVoteDTO],
     postOption: ClassPersonalReportDTO.VoteOption?,
     perspectiveCount: Int,
     commentCount: Int
@@ -38,6 +39,7 @@ extension ClassPersonalReportDTO.Feedback {
       coverage: coverage,
       excludedCount: excludedCount ?? 0,
       preOption: preOption?.toDomain(),
+      midVotes: midVotes.map { $0.toDomain() },
       postOption: postOption?.toDomain(),
       perspectiveCount: perspectiveCount,
       commentCount: commentCount
@@ -52,6 +54,7 @@ extension ClassPersonalReportDTO {
       guard let feedback else { throw ClassAIFeedbackError.generationFailed }
       return feedback.toDomain(
         preOption: preOption,
+        midVotes: midVotes ?? [],
         postOption: postOption,
         perspectiveCount: perspectiveCount ?? 0,
         commentCount: commentCount ?? 0

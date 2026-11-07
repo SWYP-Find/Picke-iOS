@@ -11,6 +11,7 @@ import Foundation
 public protocol ClassBattleInterface: Sendable {
   func fetchBattle(classID: Int) async throws -> ClassBattleSession
   func submitPreVote(classID: Int, optionID: Int) async throws -> ClassVoteReceipt
+  func submitMidVote(classID: Int, checkpointID: Int, optionID: Int) async throws -> ClassVoteReceipt
   func completeTTS(classID: Int) async throws
   func submitPostVote(classID: Int, optionID: Int) async throws -> ClassVoteReceipt
   func fetchMyVotes(classID: Int) async throws -> ClassVoteHistory

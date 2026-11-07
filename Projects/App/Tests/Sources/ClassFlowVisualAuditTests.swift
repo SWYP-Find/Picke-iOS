@@ -436,6 +436,68 @@ final class ClassFlowVisualAuditTests: XCTestCase {
   }
 
   @MainActor
+  func testCaptureServerResultParticipationAndStance() async throws {
+    guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
+      throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture the server result")
+    }
+    let source = ClassRoom.mockClosedSociety
+    let room = ClassRoom(
+      id: source.id,
+      name: source.name,
+      joinCode: source.joinCode,
+      battle: source.battle,
+      deadline: source.deadline,
+      memberCount: source.memberCount,
+      role: .owner,
+      status: .closed,
+      allowsAnonymousOpinion: source.allowsAnonymousOpinion,
+      requiresComment: source.requiresComment,
+      ownerParticipates: source.ownerParticipates,
+      memberCapacity: source.memberCapacity
+    )
+    var state = ClassReportFeature.State(room: room, instanceID: UUID())
+    state.sourceViewState = .ready
+    state.insight = ClassAIInsight(text: "처음에는 민로스의 태도를 비난할 수 있다는 의견이 많았지만, 대화 후에는 형평과 감정을 분리해 봐야 한다는 의견이 늘어났어요.")
+    state.classResult = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 32,
+        completedCount: 28,
+        participationRate: 87.5,
+        commentWriterCount: 24,
+        commentRate: 75,
+        postVoteCount: 28,
+        options: [
+          .init(id: 1, title: "낮춰야한다", preVoteCount: 18, postVoteCount: 18, postVoteRatio: 64),
+          .init(id: 2, title: "교정이 우선이다", preVoteCount: 10, postVoteCount: 10, postVoteRatio: 36)
+        ]
+      ),
+      myReportState: nil,
+      insightState: "SUCCEEDED"
+    )
+    let store = Store(initialState: state) { ClassReportFeature() }
+    let (top, bottom) = try await capture(
+      AnyView(ClassReportView(store: store)),
+      ready: nil,
+      includeScrollBottom: true,
+      viewport: CGSize(width: 402, height: 874)
+    )
+    for (name, image) in [("top", top), ("bottom", try XCTUnwrap(bottom))] {
+      let attachment = XCTAttachment(image: image)
+      attachment.name = "class-server-result-402-\(name)"
+      attachment.lifetime = .keepAlways
+      add(attachment)
+    }
+    let topText = try recognizedAuditText(in: top, name: "class-server-result-402-top")
+    let bottomText = try recognizedAuditText(in: XCTUnwrap(bottom), name: "class-server-result-402-bottom")
+    XCTAssertTrue(topText.contains("클래스참여현황"), "Participation card missing: \(topText)")
+    XCTAssertTrue(topText.contains("참여한멤버"), "Participation caption missing: \(topText)")
+    XCTAssertTrue(bottomText.contains("입장분포"), "Stance card missing: \(bottomText)")
+  }
+
+  @MainActor
   func testClassReportLayoutFooters() async throws {
     guard ProcessInfo.processInfo.environment["PICKE_CLASS_VISUAL_AUDIT"] == "1" else {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to verify report layout footers")
@@ -3091,6 +3153,13 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     }
 
     func retryInsight(roomID _: Int) async throws {}
+
+    func fetchMyActivity(
+      roomID _: Int,
+      cursor _: String?
+    ) async throws -> ClassMyActivity {
+      throw ClassAIFeedbackError.temporarilyUnavailable
+    }
   }
 
   private static func visualResultUseCase() -> VisualResultUseCase { VisualResultUseCase() }
@@ -3302,8 +3371,6 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     home.heroes = homeBundle.heroes
     home.hotBattles = homeBundle.hotBattles
     home.bestBattles = homeBundle.bestBattles
-    home.quizzes = homeBundle.quizzes
-    home.votes = homeBundle.votes
     home.newBattles = homeBundle.newBattles
     home.viewState = .loaded
     home.hasLoadedHome = true

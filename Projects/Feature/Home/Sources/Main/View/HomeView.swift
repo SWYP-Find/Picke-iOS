@@ -5,18 +5,18 @@
 //  Created by Picke on 5/15/26.
 //
 
-import SwiftUI
-
+import ComposableArchitecture
+import FeatureSharedUI
 import HomeDomainInterface
 import PickeDesignKit
 import PickeSharedUI
-
-import ComposableArchitecture
-import FeatureSharedUI
+import SwiftUI
 
 @ViewAction(for: HomeFeature.self)
 public struct HomeView: View {
   @Bindable public var store: StoreOf<HomeFeature>
+
+  private static let topAnchorID = "homeTop"
 
   public init(store: StoreOf<HomeFeature>) {
     self.store = store
@@ -29,39 +29,7 @@ public struct HomeView: View {
         onNotificationTapped: { send(.notificationTapped) }
       ) // sticky — 스크롤 영향 없음
 
-      ScrollView(showsIndicators: false) {
-        if store.shouldShowSkeleton {
-          HomeSkeletonView()
-        } else {
-          VStack(spacing: 32) {
-            if !store.heroes.isEmpty {
-              HeroCarouselView(
-                heroes: store.heroes,
-                currentIndex: $store.heroIndex,
-                onTap: { send(.heroTapped($0)) }
-              )
-            }
-
-            if !store.hotBattles.isEmpty {
-              hotBattlesSection()
-              adSection()
-            }
-            if !store.bestBattles.isEmpty {
-              bestBattlesSection()
-              if store.hotBattles.isEmpty {
-                adSection()
-              }
-            }
-            if !store.quizzes.isEmpty || !store.votes.isEmpty {
-              todayPickeSection()
-            }
-            if !store.newBattles.isEmpty {
-              newBattlesSection()
-            }
-          }
-          .padding(.bottom, 24)
-        }
-      }
+      scrollContent
     }
     .screenBackground()
     .pickeModal(
@@ -82,6 +50,83 @@ public struct HomeView: View {
 // MARK: - Sections
 
 extension HomeView {
+  /// 홈 탭 재선택 시 맨 위 앵커로 스크롤한다.
+  private var scrollContent: some View {
+    ScrollViewReader { proxy in
+      ScrollView(showsIndicators: false) {
+        VStack(spacing: 0) {
+          Color.clear
+            .frame(height: 0)
+            .id(Self.topAnchorID)
+          contentSection()
+        }
+      }
+      .onChange(of: store.scrollToTopRequest) {
+        withAnimation {
+          proxy.scrollTo(Self.topAnchorID, anchor: .top)
+        }
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func contentSection() -> some View {
+    if store.shouldShowSkeleton {
+      HomeSkeletonView()
+    } else if !store.hasVisibleHomeContent {
+      emptyHomeSection()
+    } else {
+      loadedSection()
+    }
+  }
+
+  /// 섹션 간격은 Android `HomeScreen` 의 Spacer 값(24/40/24/32/32/40)을 그대로 따른다.
+  @ViewBuilder
+  private func loadedSection() -> some View {
+    VStack(spacing: 0) {
+      if !store.heroes.isEmpty {
+        HeroCarouselView(
+          heroes: store.heroes,
+          currentIndex: $store.heroIndex,
+          onTap: { send(.heroTapped($0)) }
+        )
+        .padding(.bottom, 24)
+      }
+
+      hotBattlesSection()
+        .padding(.bottom, 40)
+      adSection()
+        .padding(.bottom, 24)
+      if !store.bestBattles.isEmpty {
+        bestBattlesSection()
+          .padding(.bottom, 32)
+      }
+      if !store.bestComments.isEmpty {
+        bestCommentsSection()
+          .padding(.bottom, 32)
+      }
+      if !store.newBattles.isEmpty {
+        newBattlesSection()
+      }
+    }
+    .padding(.bottom, 40)
+  }
+
+  @ViewBuilder
+  private func emptyHomeSection() -> some View {
+    VStack(spacing: 16) {
+      Image(asset: .noDataLogo)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 160, height: 120)
+      Text("아직 준비된 배틀이 없어요!")
+        .pretendardFont(.bodyMedium)
+        .foregroundStyle(.beige800)
+    }
+    .frame(maxWidth: .infinity)
+    .frame(minHeight: 500)
+  }
+
   /// 배틀 섹션 아래 네이티브 광고 — AdFit 은 한 화면에 같은 단위 1개만 허용해 호출부에서 하나만 그린다.
   @ViewBuilder
   private func adSection() -> some View {
@@ -94,57 +139,60 @@ extension HomeView {
 
   @ViewBuilder
   private func hotBattlesSection() -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HomeSectionHeader(title: "지금 뜨는 배틀") {
-        send(.seeMoreTapped(.hotBattles))
+    VStack(alignment: .leading, spacing: 0) {
+      HomeSectionHeader(title: "지금 뜨는 배틀")
+      if store.hotBattles.isEmpty {
+        Text("지금 뜨는 배틀이 아직 없어요")
+          .pretendardFont(.bodyMedium)
+          .foregroundStyle(.textMuted)
+          .multilineTextAlignment(.center)
+          .frame(width: 220, height: 274)
+          .background(.surfaceBeigeSubtle)
+          .roundedBorder(.borderBeigeDefault, lineWidth: 1)
+          .padding(.horizontal, 16)
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 12) {
+            ForEach(store.hotBattles) { battle in
+              HotBattleCardView(battle: battle)
+                .contentShape(Rectangle())
+                .onTapGesture { send(.hotBattleTapped(battle)) }
+            }
+          }
+          .padding(.horizontal, 16)
+        }
       }
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 16) {
-          ForEach(store.hotBattles) { battle in
-            HotBattleCardView(battle: battle)
-              .contentShape(Rectangle())
-              .onTapGesture { send(.hotBattleTapped(battle)) }
+    }
+  }
+
+  @ViewBuilder
+  private func bestCommentsSection() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HomeSectionHeader(title: "Best 댓글")
+      VStack(spacing: 0) {
+        ForEach(Array(store.bestComments.enumerated()), id: \.offset) { index, comment in
+          HomeBestCommentRow(comment: comment)
+            .contentShape(Rectangle())
+            .onTapGesture { send(.bestCommentTapped(comment)) }
+          if index < store.bestComments.count - 1 {
+            PickeDivider(.cardBaseBorderDefault)
+              .padding(.horizontal, 16)
           }
         }
-        .padding(.horizontal, 16)
       }
     }
   }
 
   @ViewBuilder
   private func bestBattlesSection() -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      HomeSectionHeader(title: "Best 배틀") {
-        send(.seeMoreTapped(.bestBattles))
-      }
+    VStack(alignment: .leading, spacing: 0) {
+      HomeSectionHeader(title: "Best 배틀")
       VStack(spacing: 0) {
-        ForEach(Array(store.bestBattles.enumerated()), id: \.element.id) { index, battle in
+        ForEach(store.visibleBestBattles) { battle in
           BestBattleCardView(battle: battle)
             .contentShape(Rectangle())
             .onTapGesture { send(.bestBattleTapped(battle)) }
-          if index < store.bestBattles.count - 1 {
-            PickeDivider(.beige600)
-          }
-        }
-      }
-      .padding(.horizontal, 16)
-    }
-  }
-
-  @ViewBuilder
-  private func todayPickeSection() -> some View {
-    VStack(alignment: .leading, spacing: 16) {
-      HomeSectionHeader(title: "오늘의 Pické") {
-        send(.seeMoreTapped(.todayPicke))
-      }
-      VStack(spacing: 16) {
-        if let quiz = store.currentQuiz {
-          QuizCardView(question: quiz)
-        }
-        if let vote = store.currentVote {
-          VoteCardView(question: vote)
-            .contentShape(Rectangle())
-            .onTapGesture {}
+          PickeDivider(.cardBaseBorderDefault)
         }
       }
       .padding(.horizontal, 16)
@@ -153,10 +201,8 @@ extension HomeView {
 
   @ViewBuilder
   private func newBattlesSection() -> some View {
-    VStack(alignment: .leading, spacing: 16) {
-      HomeSectionHeader(title: "새로운 배틀") {
-        send(.seeMoreTapped(.newBattles))
-      }
+    VStack(alignment: .leading, spacing: 0) {
+      HomeSectionHeader(title: "새로운 배틀")
       VStack(spacing: 12) {
         ForEach(store.newBattles) { battle in
           NewBattleCardView(battle: battle)
@@ -165,6 +211,7 @@ extension HomeView {
         }
       }
       .padding(.horizontal, 16)
+      .padding(.bottom, 12)
     }
   }
 }

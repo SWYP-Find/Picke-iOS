@@ -489,6 +489,14 @@ private struct ClassVoteUseCaseStub: ClassBattleInterface {
     return .init(voteID: 5, status: .preVote)
   }
 
+  func submitMidVote(
+    classID _: Int,
+    checkpointID _: Int,
+    optionID _: Int
+  ) async throws -> ClassVoteReceipt {
+    throw ClassBattleError.midVoteUnavailable
+  }
+
   func completeTTS(classID _: Int) async throws {
     throw ClassBattleError.invalidResponse
   }

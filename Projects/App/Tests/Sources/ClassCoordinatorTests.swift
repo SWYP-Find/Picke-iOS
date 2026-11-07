@@ -1365,6 +1365,22 @@ struct ClassCoordinatorTests {
   }
 
   @Test
+  func 소개_화면이_맨_위가_아니면_늦게_온_만들기_요청을_무시한다() async {
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      MyClassFeature.State()
+    }))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.create)))))
+
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
   func 스와이프로_멤버_보고서_경로를_제거하면_진행중인_로드를_취소한다() async {
     let room = ClassRoom.mockClosedSociety
     let useCase = SuspendedClassUseCase()
@@ -1378,6 +1394,74 @@ struct ClassCoordinatorTests {
     store.exhaustivity = .off
 
     await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_내가_남긴_의견_경로를_제거하면_진행중인_조회를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.classID = room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.myOpinions(opinions))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .myOpinions(.async(.fetchReplyPage(cursor: nil))))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_멤버_보고서_경로를_제거하면_진행중인_인사이트_조회를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetchInsight)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_운영자_보고서_경로를_제거하면_진행중인_내_활동_조회를_취소한다() async {
+    let room = ClassRoom.mocks[0]
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.async(.fetchMyActivity)))))
     await useCase.waitForStarts(1)
     await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
     await store.finish(timeout: .seconds(1))
@@ -1669,6 +1753,16 @@ struct ClassParticipantPushTests {
     let secondEnd = try #require("2027.04.30".date(as: .yearMonthDayDotted))
     let clock = TestClock()
     let originalID = UUID(400)
+    let preview = ClassTicketPreview(capacity: 30, registerBy: secondEnd, usageMonths: 6, registeredByMe: false)
+    let secondTicket = ClassTicket(
+      id: 5,
+      capacity: 30,
+      status: .active,
+      activatedAt: secondStart,
+      expiresAt: secondEnd,
+      remainingDays: 180,
+      readGraceEndsAt: secondEnd
+    )
     var registration = ClassTicketFeature.State(instanceID: originalID)
     registration.phase = .registered
     registration.registrationStartDate = firstStart
@@ -1680,6 +1774,7 @@ struct ClassParticipantPushTests {
       $0.uuid = .incrementing
       $0.continuousClock = clock
       $0.date = .constant(secondStart)
+      $0.classTicketUseCase = ClockTicketUseCase(clock: clock, preview: preview, ticket: secondTicket)
     }
 
     await store.send(.router(.routeAction(
@@ -1700,7 +1795,9 @@ struct ClassParticipantPushTests {
       id: 2,
       action: .ticket(.delegate(.addRegistrationRequested))
     ))) {
-      $0.routes.push(.ticket(.init(instanceID: UUID(1))))
+      var registration = ClassTicketFeature.State(instanceID: UUID(1))
+      registration.shouldCheckExistingTicket = false
+      $0.routes.push(.ticket(registration))
       $0.ticketInstanceIDs = [originalID, UUID(0), UUID(1)]
     }
     await store.send(.router(.routeAction(
@@ -1719,10 +1816,28 @@ struct ClassParticipantPushTests {
       ticket.isChecking = true
       $0.routes[screenAt: 3] = .ticket(ticket)
     }
+    // 현재 계약: 코드 확인은 미리보기만 보여 주고, 등록하기에서 등록한다.
     await clock.advance(by: .milliseconds(350))
     await store.receive(\.router.routeAction) {
       guard case var .ticket(ticket) = $0.routes[3].screen else { return }
       ticket.isChecking = false
+      ticket.preview = preview
+      ticket.phase = .preview
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.view(.confirmTapped))
+    ))) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = true
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.receive(\.router.routeAction) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = false
+      ticket.ticket = secondTicket
       ticket.phase = .registered
       ticket.registrationStartDate = secondStart
       ticket.expirationDate = secondEnd
@@ -1734,8 +1849,10 @@ struct ClassParticipantPushTests {
       else { return }
       overview.registrationStartDate = secondStart
       overview.expirationDate = secondEnd
+      overview.ticket = secondTicket
       original.registrationStartDate = secondStart
       original.expirationDate = secondEnd
+      original.ticket = secondTicket
       $0.routes[screenAt: 2] = .ticket(overview)
       $0.routes[screenAt: 1] = .ticket(original)
     }
@@ -1770,6 +1887,76 @@ struct ClassParticipantPushTests {
   }
 
   @Test
+  func 개요_위_등록_화면에서_사용_중인_내_이용권을_다시_입력하면_개요로_돌아간다() async {
+    let ticket = ClassTicket(
+      id: 9,
+      capacity: 30,
+      status: .active,
+      activatedAt: Date(timeIntervalSince1970: 1_800_000_000),
+      expiresAt: Date(timeIntervalSince1970: 1_815_000_000),
+      remainingDays: 170,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_817_592_000)
+    )
+    var overview = ClassTicketFeature.State(instanceID: UUID(310))
+    overview.phase = .overview
+    var registration = ClassTicketFeature.State(instanceID: UUID(311))
+    registration.shouldCheckExistingTicket = false
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [UUID(310), UUID(311)]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ticket(.delegate(.existingTicketFound(ticket))))))
+
+    #expect(store.state.routes.count == 2)
+    guard case let .ticket(current)? = store.state.routes.last?.screen else {
+      Issue.record("기존 이용권 개요로 돌아가지 않았습니다")
+      return
+    }
+    #expect(current.instanceID == UUID(310))
+    #expect(current.ticket == ticket)
+  }
+
+  @Test
+  func 바로_연_이용권_화면에서_사용_중인_내_이용권을_다시_입력하면_개요로_바꾸고_안내_중에는_탭바를_숨긴다() async {
+    let ticket = ClassTicket(
+      id: 9,
+      capacity: 30,
+      status: .active,
+      activatedAt: Date(timeIntervalSince1970: 1_800_000_000),
+      expiresAt: Date(timeIntervalSince1970: 1_815_000_000),
+      remainingDays: 170,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_817_592_000)
+    )
+    var registration = ClassTicketFeature.State(instanceID: UUID(312))
+    registration.code = "PICKE30"
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [UUID(312)]
+    #expect(state.showsTabBar)
+    var alerted = registration
+    alerted.customAlert = .ticketInvalidCode()
+    var alertedState = state
+    alertedState.routes[screenAt: 1] = .ticket(alerted)
+    #expect(!alertedState.showsTabBar)
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.delegate(.existingTicketFound(ticket))))))
+
+    #expect(store.state.routes.count == 2)
+    guard case let .ticket(current)? = store.state.routes.last?.screen else {
+      Issue.record("이용권 화면이 사라졌습니다")
+      return
+    }
+    #expect(current.instanceID == UUID(312))
+    #expect(current.phase == .overview)
+    #expect(current.ticket == ticket)
+  }
+
+  @Test
   func 이용권_확인_중_스와이프로_경로가_제거되면_응답도_취소된다() async {
     let clock = TestClock()
     let ticketID = UUID(302)
@@ -1781,6 +1968,7 @@ struct ClassParticipantPushTests {
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.continuousClock = clock
       $0.date = .constant(Date(timeIntervalSince1970: 0))
+      $0.classTicketUseCase = ClockTicketUseCase(clock: clock)
     }
 
     await store.send(.router(.routeAction(id: 1, action: .ticket(.view(.checkTapped))))) {
@@ -1869,6 +2057,7 @@ struct ClassParticipantPushTests {
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.continuousClock = clock
       $0.date = .constant(start)
+      $0.classTicketUseCase = ClockTicketUseCase(clock: clock)
     }
 
     await store.send(.router(.routeAction(id: 3, action: .ticket(.view(.checkTapped))))) {
@@ -2762,6 +2951,33 @@ struct ChatPlayerLifecycleTests {
   }
 }
 
+/// 코드 확인·등록이 테스트 시계 350ms 뒤에 끝나는 이용권 대역.
+private struct ClockTicketUseCase: ClassTicketInterface {
+  let clock: TestClock<Duration>
+  var preview = ClassTicketPreview(
+    capacity: 30,
+    registerBy: Date(timeIntervalSince1970: 1_800_000_000),
+    usageMonths: 6,
+    registeredByMe: false
+  )
+  var ticket: ClassTicket?
+
+  func previewTicket(code _: String) async throws -> ClassTicketPreview {
+    try await clock.sleep(for: .milliseconds(350))
+    return preview
+  }
+
+  func registerTicket(code _: String) async throws -> ClassTicket {
+    try await clock.sleep(for: .milliseconds(350))
+    guard let ticket else { throw ClassTicketError.invalidCode }
+    return ticket
+  }
+
+  func fetchMyTicket() async throws -> ClassTicket {
+    throw ClassTicketError.notFound
+  }
+}
+
 private struct SlowBattleUseCase: ClassBattleInterface {
   let tracker: SlowBattleRequestTracker
   private let fallback = MockClassRepository()
@@ -2775,6 +2991,14 @@ private struct SlowBattleUseCase: ClassBattleInterface {
     optionID: Int
   ) async throws -> ClassVoteReceipt {
     try await fallback.submitPreVote(classID: classID, optionID: optionID)
+  }
+
+  func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitMidVote(classID: classID, checkpointID: checkpointID, optionID: optionID)
   }
 
   func completeTTS(classID _: Int) async throws {
@@ -2999,11 +3223,20 @@ private struct FixedClassResultUseCase: ClassResultInterface {
   func retryInsight(roomID _: Int) async throws {
     throw ClassError.unknown("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
   }
+
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    throw ClassError.unknown("이 테스트는 내 활동 조회를 사용하지 않습니다.")
+  }
 }
 
 private actor SuspendedClassUseCase: ClassResultInterface {
   private var nextRequestID = 0
   private var requests: [Int: CheckedContinuation<ClassResult, Error>] = [:]
+  private var activityRequests: [Int: CheckedContinuation<ClassMyActivity, Error>] = [:]
+  private var insightRequests: [Int: CheckedContinuation<ClassAIInsight, Error>] = [:]
   private var startedCount = 0
   private var startWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
   private(set) var cancelledRequestIDs: [Int] = []
@@ -3033,6 +3266,18 @@ private actor SuspendedClassUseCase: ClassResultInterface {
     }
   }
 
+  private func cancelInsight(_ id: Int) {
+    guard let continuation = insightRequests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
+  }
+
+  private func cancelActivity(_ id: Int) {
+    guard let continuation = activityRequests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
+  }
+
   private func cancelReport(_ id: Int) {
     guard let continuation = requests.removeValue(forKey: id) else { return }
     cancelledRequestIDs.append(id)
@@ -3056,11 +3301,34 @@ private actor SuspendedClassUseCase: ClassResultInterface {
   }
 
   func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
-    throw ClassError.network("이 테스트는 인사이트 조회를 사용하지 않습니다.")
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        insightRequests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelInsight(id) }
+    }
   }
 
   func retryInsight(roomID _: Int) async throws {
     throw ClassError.network("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
+  }
+
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        activityRequests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelActivity(id) }
+    }
   }
 
   private static var fixture: ClassResult {

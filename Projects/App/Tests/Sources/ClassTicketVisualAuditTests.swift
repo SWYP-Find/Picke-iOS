@@ -15,7 +15,9 @@ final class ClassTicketVisualAuditTests: XCTestCase {
       throw XCTSkip("Set PICKE_CLASS_VISUAL_AUDIT=1 to capture ticket screens")
     }
 
-    let entry = ClassTicketFeature.State()
+    var entry = ClassTicketFeature.State()
+    // 진입 조회가 실패하면 토스트 후 닫히므로 입력 화면 캡처에서는 조회하지 않는다.
+    entry.shouldCheckExistingTicket = false
 
     var registered = ClassTicketFeature.State()
     registered.phase = .registered
