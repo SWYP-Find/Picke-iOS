@@ -43,6 +43,7 @@ struct HomeTests {
 
     // 재진입 시 fetchHome 이 다시 시작돼 Mock 응답으로 로드가 끝난다(받는 순서가 보장되지 않아 최종 상태만 확인).
     await store.send(.view(.onAppear))
+    await store.finish()
     await store.skipReceivedActions()
     #expect(store.state.hasLoadedHome)
   }
