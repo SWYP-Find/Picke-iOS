@@ -65,6 +65,16 @@ extension CustomConfirmationPopup {
     }
   }
 
+  /// primary 버튼 1개 행.
+  func pickeSingleButtonRow(
+    title: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    pickePrimaryButton(title: title, action: action)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 16)
+  }
+
   @ViewBuilder
   private func pickeSecondaryButton(
     title: String,
