@@ -9,7 +9,8 @@ import SwiftUI
 import UIKit
 
 /// Best 댓글 행 — Android `HomeBestCommentItem` 시안.
-/// 본문 첫 줄 앞에 배지 폭만큼 투명 자리를 두고, 선택지 배지는 첫 줄 기준선에 overlay 로 겹친다(Text 프레임 위로 약 1.5pt 넘침).
+/// 본문 첫 줄 앞에 배지 폭만큼 투명 자리를 두고, 선택지 배지는 첫 줄 기준선에 overlay 로 겹친다.
+/// Android 처럼 배지가 글꼴보다 위·아래로 튀어나온 만큼만 본문 위·아래를 늘리고 줄 간격(13 × 1.4)은 그대로 둔다.
 struct HomeBestCommentRow: View {
   let comment: HomeBestComment
   @Environment(\.displayScale) private var displayScale
@@ -28,16 +29,22 @@ struct HomeBestCommentRow: View {
 }
 
 extension HomeBestCommentRow {
+  /// 본문 글꼴(Android bodyXsRegular) — 배지 위치 계산과 한 곳에서 맞춘다.
+  private static let contentFont: CustomSizeFont = .regular13
+  private static let contentLineHeightMultiple: CGFloat = 1.4
+
   private var accessibilityText: String {
-    let body = [comment.optionTitle, comment.content]
+    let commentText = [comment.optionTitle, comment.content]
       .filter { !$0.isEmpty }
       .joined(separator: " ")
-    return "\(comment.battleTitle), \(body)"
+    return [comment.battleTitle, commentText]
+      .filter { !$0.isEmpty }
+      .joined(separator: ", ")
   }
 
   private var battleTitleText: some View {
     Text(comment.battleTitle)
-      .pretendardFont(.semiBold13, lineHeightMultiple: 1.4)
+      .pretendardFont(.semiBold13)
       .foregroundStyle(.textMuted)
       .lineLimit(1)
       .truncationMode(.tail)
@@ -55,7 +62,7 @@ extension HomeBestCommentRow {
         .frame(width: 16, height: 16)
         .foregroundStyle(.primary500)
       contentText(badge: badge)
-        .pretendardFont(.regular13, lineHeightMultiple: 1.4)
+        .pretendardFont(Self.contentFont, lineSpacingMultiple: Self.contentLineHeightMultiple)
         .foregroundStyle(.textSubtler)
         .lineLimit(2)
         .truncationMode(.tail)
@@ -69,6 +76,8 @@ extension HomeBestCommentRow {
               }
           }
         }
+        .padding(.top, badge.map(badgeTopOverflow) ?? 0)
+        .padding(.bottom, badge.map(badgeBottomOverflow) ?? 0)
         .padding(.horizontal, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -79,27 +88,37 @@ extension HomeBestCommentRow {
       return Text(verbatim: comment.content)
     }
     let placeholderText = Text(Image(uiImage: OptionBadgeImage.placeholder(for: badge)))
-      .baselineOffset(-badgeLineGrowth(badge))
     return Text("\(placeholderText)\(Text(verbatim: comment.content))")
   }
 
-  /// 배지 세로 중앙을 본문 대문자 높이 중앙에 맞춘다(Android PlaceholderVerticalAlign.TextCenter).
-  /// 반환값은 기준선 아래로 내려가는 배지 높이.
-  private func badgeDescent(_ badge: UIImage) -> CGFloat {
-    let capHeight = UIFont.pretendardFontFamily(family: .Regular, size: 13).capHeight
-    return (badge.size.height - capHeight) / 2
+  private static var contentUIFont: UIFont {
+    UIFont.pretendardFontFamily(
+      family: contentFont.fontFamily,
+      size: contentFont.size
+    )
   }
 
-  /// Android 처럼 배지가 본문 줄(13 × 1.4)의 기준선 아래 몫보다 더 내려간 만큼만 첫 줄 아래를 늘린다.
-  private func badgeLineGrowth(_ badge: UIImage) -> CGFloat {
-    let font = UIFont.pretendardFontFamily(family: .Regular, size: 13)
-    let lineExtra = max(0, 13 * 1.4 - font.lineHeight)
-    let lineDescent = -font.descender * (1 + lineExtra / font.lineHeight)
-    return max(0, badgeDescent(badge) - lineDescent)
+  /// 배지 세로 중앙을 본문 글꼴 (ascent − descent) / 2 에 맞춘다(Android PlaceholderVerticalAlign.TextCenter).
+  /// 반환값은 기준선 아래로 내려가는 배지 높이.
+  private func badgeDescent(_ badge: UIImage) -> CGFloat {
+    let font = Self.contentUIFont
+    let textCenter = (font.ascender + font.descender) / 2
+    return badge.size.height / 2 - textCenter
+  }
+
+  /// 배지 위가 글꼴 ascent 보다 높은 만큼 — Android 는 첫 줄 위쪽이 이만큼 늘어난다(Trim.Both 는 글꼴 수치 기준).
+  private func badgeTopOverflow(_ badge: UIImage) -> CGFloat {
+    let badgeTop = badge.size.height - badgeDescent(badge)
+    return max(0, badgeTop - Self.contentUIFont.ascender)
+  }
+
+  /// 배지 아래가 글꼴 descent 보다 낮은 만큼 — Android 는 첫 줄 글꼴 수치를 마지막 줄에도 써서 본문 아래가 이만큼 늘어난다.
+  private func badgeBottomOverflow(_ badge: UIImage) -> CGFloat {
+    max(0, badgeDescent(badge) + Self.contentUIFont.descender)
   }
 }
 
-/// 선택지 배지 이미지 — 배경 radius 2, Medium 12, 가로 4·세로 2, 뒤쪽 투명 간격 4 포함.
+/// 선택지 배지 이미지 — 배경 radius 2, Medium 12(Android bodyXxsMedium, 한 줄이라 자연 높이), 가로 4·세로 2, 뒤쪽 투명 간격 4 포함.
 @MainActor
 private enum OptionBadgeImage {
   private static var cache: [String: UIImage] = [:]
@@ -110,8 +129,7 @@ private enum OptionBadgeImage {
   private static let verticalPadding: CGFloat = 2
   private static let trailingSpacing: CGFloat = 4
   private static let cornerRadius: CGFloat = 2
-  /// Android bodyXxsMedium 줄높이 1.4배.
-  private static let lineHeight: CGFloat = 12 * 1.4
+  private static let badgeFont: CustomSizeFont = .labelSmall
 
   static func make(
     title: String,
@@ -123,14 +141,17 @@ private enum OptionBadgeImage {
       return cached
     }
 
-    let font = UIFont.pretendardFontFamily(family: .Medium, size: 12)
+    let font = UIFont.pretendardFontFamily(
+      family: badgeFont.fontFamily,
+      size: badgeFont.size
+    )
     let attributes: [NSAttributedString.Key: Any] = [
       .font: font,
       .foregroundColor: UIColor(Color.badgeFilledText),
     ]
     let textWidth = ceil((title as NSString).size(withAttributes: attributes).width)
     let badgeWidth = textWidth + horizontalPadding * 2
-    let badgeHeight = lineHeight + verticalPadding * 2
+    let badgeHeight = font.lineHeight + verticalPadding * 2
 
     let format = UIGraphicsImageRendererFormat()
     format.scale = scale
@@ -144,7 +165,7 @@ private enum OptionBadgeImage {
       UIBezierPath(roundedRect: badgeRect, cornerRadius: cornerRadius).fill()
       let textOrigin = CGPoint(
         x: horizontalPadding,
-        y: verticalPadding + (lineHeight - font.lineHeight) / 2
+        y: verticalPadding
       )
       (title as NSString).draw(at: textOrigin, withAttributes: attributes)
     }

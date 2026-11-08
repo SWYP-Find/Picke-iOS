@@ -48,7 +48,7 @@ extension BestBattleCardView {
       Text(battle.pair)
         .pickeBadge(.filled, size: .tag)
       Text(battle.title)
-        .pretendardFont(.headingSmall, lineHeightMultiple: 1.3)
+        .pretendardFont(.headingSmall)
         .foregroundStyle(.cardBaseTextTitle)
         .lineLimit(1)
         .truncationMode(.tail)
@@ -61,36 +61,38 @@ extension BestBattleCardView {
       HStack(spacing: 4) {
         ForEach(battle.tags) { tag in
           Text("#\(tag.name)")
-            .pretendardFont(.labelSmall, lineHeightMultiple: 1.4)
+            .pretendardFont(.labelSmall)
             .foregroundStyle(.cardBaseTextDecription)
         }
       }
       Spacer(minLength: 8)
       HStack(spacing: 6) {
         metaLabel(
-          systemImage: "clock",
+          asset: .clock,
           text: "\(battle.durationMinutes)분"
         )
         metaLabel(
-          systemImage: "eye",
+          asset: .eye,
           text: "\(battle.viewCount.formatted())"
         )
       }
     }
   }
 
+  /// Android `ic_clock`/`ic_eye` 16pt + 12 Medium(한 줄이라 자연 높이).
   @ViewBuilder
   private func metaLabel(
-    systemImage: String,
+    asset: ImageAsset,
     text: String
   ) -> some View {
     HStack(spacing: 2) {
-      Image(systemName: systemImage)
+      Image(asset: asset)
         .resizable()
         .scaledToFit()
         .frame(width: 16, height: 16)
+        .accessibilityHidden(true)
       Text(text)
-        .pretendardFont(.labelSmall, lineHeightMultiple: 1.4)
+        .pretendardFont(.labelSmall)
     }
     .foregroundStyle(.cardBaseTextDecription)
   }
