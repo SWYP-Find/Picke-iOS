@@ -60,7 +60,7 @@ extension HotBattleCardView {
   }
 
   private var tagBadge: some View {
-    Text("#\(battle.tags.first?.name ?? "이슈")")
+    Text(battle.tagLabel)
       .pretendardFont(.labelXSmall)
       .foregroundStyle(.primary500)
       .padding(.horizontal, 6)

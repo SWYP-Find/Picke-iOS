@@ -23,7 +23,7 @@ struct HeroCarouselView: View {
   var body: some View {
     VStack(spacing: 0) {
       controlRow()
-      pager
+      pager()
     }
     .background(.black)
     .onReceive(timer) { _ in advance() }
@@ -63,10 +63,10 @@ extension HeroCarouselView {
   /// 현재 쪽은 흰색 Bold, "/전체"는 베이지 60% — 10pt, 배경 textSubtler 80% radius 12.
   private var pageCounter: some View {
     let current = Text("\(min(currentIndex, heroes.count - 1) + 1)")
-      .font(.pretendardFontFamily(family: .Bold, size: 10))
+      .font(.pretendardFontFamily(family: .Bold, fixedSize: 10))
       .foregroundStyle(.white)
     let total = Text("/\(heroes.count)")
-      .font(.pretendardFontFamily(family: .SemiBold, size: 10))
+      .font(.pretendardFontFamily(family: .SemiBold, fixedSize: 10))
       .foregroundStyle(.surfaceBeigeDefault.opacity(0.6))
     return Text("\(current)\(total)")
       .padding(.horizontal, 8)
@@ -75,7 +75,8 @@ extension HeroCarouselView {
   }
 
   /// 높이는 투명 기준 레이아웃(폭 ÷ 1.8 이미지 + 빈 설명)에서 정하고 그 위에 페이지를 겹친다.
-  private var pager: some View {
+  @ViewBuilder
+  private func pager() -> some View {
     VStack(spacing: 0) {
       Color.clear
         .aspectRatio(1.8, contentMode: .fit)

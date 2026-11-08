@@ -162,7 +162,11 @@ extension HomeView {
           .multilineTextAlignment(.center)
           .frame(width: 220, height: 274)
           .background(.surfaceBeigeSubtle)
-          .roundedBorder(.borderBeigeDefault, lineWidth: 1)
+          .roundedBorder(
+            .borderBeigeDefault,
+            lineWidth: 1,
+            insideBorder: true
+          )
           .padding(.horizontal, 16)
       } else {
         ScrollView(.horizontal, showsIndicators: false) {

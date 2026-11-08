@@ -57,6 +57,56 @@ struct HomeTests {
 
   @Test
   @MainActor
+  func firstOnAppearFetchesHomeOnce() async {
+    var state = HomeFeature.State()
+    state.hasTriedAttendance = true
+    let fetchCount = LockIsolated(0)
+    let store = TestStore(initialState: state) {
+      HomeFeature()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+      $0.homeUseCase = StubHomeUseCase {
+        fetchCount.withValue { $0 += 1 }
+        return .badgeStaleMock
+      }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    await store.receive(\.async.fetchHome) {
+      $0.viewState = .loading
+    }
+    await store.receive(\.inner.homeResponse) {
+      $0.viewState = .loaded
+      $0.hasLoadedHome = true
+    }
+    await store.finish()
+
+    // 로드가 끝난 뒤 재진입해도 다시 부르지 않는다.
+    await store.send(.view(.onAppear))
+    await store.finish()
+    await store.skipReceivedActions()
+    #expect(fetchCount.value == 1)
+  }
+
+  @Test
+  @MainActor
+  func unreadBadgeSuccessStopsBellLoadingAndShowsBadge() async {
+    var state = HomeFeature.State()
+    state.hasLoadedHome = true
+    let store = TestStore(initialState: state) {
+      HomeFeature()
+    }
+
+    await store.send(.inner(.unreadBadgeResponse(.success(true)))) {
+      $0.isUnreadBadgeLoading = false
+      $0.hasUnreadNotification = true
+    }
+    #expect(store.state.shouldShowBellSkeleton == false)
+  }
+
+  @Test
+  @MainActor
   func pullToRefreshReloadsWithoutSkeleton() async {
     let comment = HomeBestComment(
       battleId: 21,
@@ -75,9 +125,9 @@ struct HomeTests {
     }
 
     await store.send(.view(.pullToRefresh))
-    await store.receive(\.async)
+    await store.receive(\.async.refreshHome)
     #expect(store.state.shouldShowSkeleton == false)
-    await store.receive(\.inner) {
+    await store.receive(\.inner.homeResponse) {
       $0.newNotice = true
       $0.bestComments = []
     }
@@ -103,8 +153,8 @@ struct HomeTests {
     }
 
     await store.send(.view(.pullToRefresh))
-    await store.receive(\.async)
-    await store.receive(\.inner) {
+    await store.receive(\.async.refreshHome)
+    await store.receive(\.inner.homeResponse) {
       $0.viewState = .failed
       $0.toastMessage = "정보를 불러오지 못했어요"
     }

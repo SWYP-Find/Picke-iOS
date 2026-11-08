@@ -91,6 +91,15 @@ public extension Font {
     family: PretendardFontFamily,
     size: CGFloat
   ) -> Font {
-    return Font.custom("PretendardVariable-\(family)", size: size)
+    let font = Font.custom("PretendardVariable-\(family)", size: size)
+    return font
+  }
+
+  /// Dynamic Type 에 커지지 않는 고정 크기 — `pretendardFont(_:)` 와 같은 `fixedSize`.
+  static func pretendardFontFamily(
+    family: PretendardFontFamily,
+    fixedSize: CGFloat
+  ) -> Font {
+    return Font.custom("PretendardVariable-\(family)", fixedSize: fixedSize)
   }
 }

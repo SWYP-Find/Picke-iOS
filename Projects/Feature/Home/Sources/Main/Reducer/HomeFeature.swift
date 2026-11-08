@@ -110,6 +110,7 @@ public struct HomeFeature {
     case toastShown
   }
 
+  @CasePathable
   public enum AsyncAction: Equatable {
     case fetchHome
     /// 당겨서 새로고침 — 스켈레톤 없이 받아 둔 화면 위에서 다시 조회한다.
@@ -120,6 +121,7 @@ public struct HomeFeature {
     case checkAttendance
   }
 
+  @CasePathable
   public enum InnerAction: Equatable {
     case homeResponse(Result<HomeBundle, AuthError>)
     case unreadBadgeResponse(Result<Bool, AuthError>)
