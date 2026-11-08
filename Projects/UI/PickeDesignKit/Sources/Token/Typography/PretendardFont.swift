@@ -60,6 +60,20 @@ public extension View {
       .lineSpacing(extra)
       .padding(.vertical, extra / 2)
   }
+
+  /// Android Compose 기본 줄높이(`LineHeightStyle.Default` = Trim.Both)와 같게 줄 사이만 벌린다.
+  /// 첫 줄 위·마지막 줄 아래는 늘리지 않으므로 한 줄이면 글꼴 자연 높이, n줄이면 자연 높이 + (n−1) × 글자 크기 × 배수다.
+  func pretendardFont(
+    _ textStyle: CustomSizeFont,
+    lineSpacingMultiple: CGFloat
+  ) -> some View {
+    let naturalLineHeight = UIFont.pretendardFontFamily(
+      family: textStyle.fontFamily,
+      size: textStyle.size
+    ).lineHeight
+    return pretendardFont(textStyle)
+      .lineSpacing(max(0, textStyle.size * lineSpacingMultiple - naturalLineHeight))
+  }
 }
 
 public extension UIFont {
@@ -77,7 +91,6 @@ public extension Font {
     family: PretendardFontFamily,
     size: CGFloat
   ) -> Font {
-    let font = Font.custom("PretendardVariable-\(family)", size: size)
-    return font
+    return Font.custom("PretendardVariable-\(family)", size: size)
   }
 }
