@@ -26,6 +26,7 @@ public struct HomeView: View {
     VStack(spacing: 0) {
       HomeHeaderView(
         hasUnread: store.hasUnreadNotification,
+        isLoading: store.shouldShowBellSkeleton,
         onNotificationTapped: { send(.notificationTapped) }
       ) // sticky — 스크롤 영향 없음
 
@@ -121,19 +122,23 @@ extension HomeView {
     .padding(.bottom, 40)
   }
 
+  /// Android 빈 상태 — 로고(borderBeigeDefault 색) + 문구를 스크롤 영역 가운데에 둔다.
   @ViewBuilder
   private func emptyHomeSection() -> some View {
     VStack(spacing: 16) {
-      Image(asset: .noDataLogo)
+      Image(asset: .appLogo)
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
         .frame(width: 160, height: 120)
+        .foregroundStyle(.borderBeigeDefault)
+        .accessibilityLabel("빈 화면 로고")
       Text("아직 준비된 배틀이 없어요!")
         .pretendardFont(.bodyMedium)
         .foregroundStyle(.beige800)
     }
     .frame(maxWidth: .infinity)
-    .frame(minHeight: 500)
+    .containerRelativeFrame(.vertical)
   }
 
   /// 배틀 섹션 아래 네이티브 광고 — AdFit 은 한 화면에 같은 단위 1개만 허용해 호출부에서 하나만 그린다.
