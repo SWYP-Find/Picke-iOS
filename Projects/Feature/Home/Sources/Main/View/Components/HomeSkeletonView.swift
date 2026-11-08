@@ -5,222 +5,174 @@
 //  Created by Picke on 5/16/26.
 //
 
+import PickeDesignKit
 import SwiftUI
 
-import PickeDesignKit
-
+/// 첫 로딩 스켈레톤 — Android `HomeSkeleton` 구성.
+/// 줄은 radius 4, 색은 surfaceBeigeStrong → surfaceBeigeDefault, 섹션 간격 24 / 40 / 16 / 16.
 struct HomeSkeletonView: View {
   var body: some View {
-    VStack(spacing: 32) {
-      HomeHeroSkeletonView()
-      HomeHotBattlesSkeletonView()
-      HomeBestBattlesSkeletonView()
-      HomeBestCommentsSkeletonView()
-      HomeNewBattlesSkeletonView()
+    VStack(alignment: .leading, spacing: 0) {
+      editorPickSkeleton()
+      hotBattlesSkeleton()
+        .padding(.top, 24)
+      bestBattlesSkeleton()
+        .padding(.top, 40)
+      bestCommentsSkeleton()
+        .padding(.top, 16)
+      newBattlesSkeleton()
+        .padding(.top, 16)
     }
-    .padding(.bottom, 24)
+    .frame(maxWidth: .infinity, alignment: .leading)
     .allowsHitTesting(false)
   }
 }
 
-private struct HomeHeroSkeletonView: View {
-  var body: some View {
-    VStack(spacing: 0) {
-      HStack {
-        SkeletonBlock(width: 82, height: 18, cornerRadius: .radiusDefault, color: .primary500.opacity(0.45))
-        Spacer()
-        SkeletonBlock(width: 36, height: 18, cornerRadius: 9, color: .neutral500.opacity(0.5))
+// MARK: - Sections
+
+extension HomeSkeletonView {
+  @ViewBuilder
+  private func editorPickSkeleton() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: 0) {
+        line(width: 70, height: 16)
+        Spacer(minLength: 0)
+        line(width: 32, height: 16)
       }
       .padding(16)
-
-      ZStack {
-        Rectangle()
-          .fill(.neutral700.opacity(0.8))
-        HStack(spacing: 24) {
-          SkeletonBlock(width: 58, height: 14, color: .beige100.opacity(0.24))
-          SkeletonBlock(width: 32, height: 32, cornerRadius: 16, color: .beige100.opacity(0.18))
-          SkeletonBlock(width: 58, height: 14, color: .beige100.opacity(0.24))
-        }
-      }
-      .frame(height: 167)
-
-      VStack(alignment: .leading, spacing: 8) {
-        SkeletonBlock(width: 210, height: 18, color: .beige100.opacity(0.22))
-        SkeletonBlock(width: 260, height: 12, color: .neutral200.opacity(0.2))
-        HStack {
-          SkeletonBlock(width: 92, height: 12, color: .neutral200.opacity(0.18))
-          Spacer()
-          SkeletonBlock(width: 48, height: 12, color: .neutral200.opacity(0.18))
-        }
-      }
-      .padding(20)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      block(.rect)
+        .aspectRatio(1.8, contentMode: .fit)
+      editorPickSubjectSkeleton()
+        .padding(16)
     }
-    .frame(height: 341)
-    .background(.neutral800)
   }
-}
 
-private struct HomeHotBattlesSkeletonView: View {
-  var body: some View {
+  @ViewBuilder
+  private func editorPickSubjectSkeleton() -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      SkeletonSectionHeader(width: 132)
-      ScrollView(.horizontal, showsIndicators: false) {
-        HStack(spacing: 16) {
-          ForEach(0 ..< 2, id: \.self) { _ in
-            VStack(alignment: .leading, spacing: 12) {
-              SkeletonBlock(width: 196, height: 124)
-              VStack(alignment: .leading, spacing: 8) {
-                SkeletonBlock(width: 42, height: 20, color: .primary50)
-                SkeletonBlock(width: 150, height: 16)
-                SkeletonBlock(width: 104, height: 12)
-              }
-            }
-            .padding(12)
-            .frame(width: 220, alignment: .leading)
-            .pickeCard(.beige50, border: .beige600)
-          }
-        }
-        .padding(.horizontal, 16)
+      line(width: 160, height: 20)
+      line(width: 240, height: 16)
+        .padding(.top, 4)
+      line(width: 200, height: 16)
+        .padding(.top, 4)
+      HStack(spacing: 0) {
+        line(width: 100, height: 14)
+        Spacer(minLength: 0)
+        line(width: 40, height: 14)
       }
+      .padding(.top, 8)
     }
   }
-}
 
-private struct HomeBestBattlesSkeletonView: View {
-  var body: some View {
+  /// Android Row 는 두 번째 카드를 남은 폭(358 − 232 = 126)으로 줄인다 → 첫 카드만 220 고정.
+  @ViewBuilder
+  private func hotBattlesSkeleton() -> some View {
     VStack(alignment: .leading, spacing: 0) {
-      SkeletonSectionHeader(width: 88)
-      VStack(spacing: 0) {
-        ForEach(0 ..< 3, id: \.self) { index in
-          HStack(alignment: .top, spacing: 16) {
-            SkeletonBlock(width: 16, height: 28, color: index == 0 ? .primary500.opacity(0.35) : .neutral100)
-            VStack(alignment: .leading, spacing: 10) {
-              SkeletonBlock(width: 76, height: 18, color: .primary50)
-              SkeletonBlock(width: 214, height: 16)
-              HStack(spacing: 8) {
-                SkeletonBlock(width: 40, height: 12)
-                SkeletonBlock(width: 44, height: 12)
-                Spacer()
-                SkeletonBlock(width: 96, height: 12)
-              }
-            }
-          }
-          .padding(.horizontal, 12)
-          .padding(.vertical, 16)
-
-          PickeDivider(.cardBaseBorderDefault)
-        }
+      line(width: 120, height: 20)
+      HStack(alignment: .top, spacing: 12) {
+        trendingCardSkeleton()
+          .frame(width: 220)
+        trendingCardSkeleton()
+          .frame(maxWidth: 220)
       }
-      .padding(.horizontal, 16)
-    }
-  }
-}
-
-private struct HomeBestCommentsSkeletonView: View {
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      SkeletonSectionHeader(width: 100)
-      VStack(spacing: 0) {
-        ForEach(0 ..< 3, id: \.self) { index in
-          VStack(alignment: .leading, spacing: 8) {
-            SkeletonBlock(width: 220, height: 12)
-            HStack(spacing: 4) {
-              SkeletonBlock(width: 16, height: 16)
-              SkeletonBlock(width: 48, height: 16, color: .beige600)
-              SkeletonBlock(width: 210, height: 12)
-            }
-          }
-          .padding(16)
-          if index < 2 {
-            PickeDivider(.cardBaseBorderDefault)
-          }
-        }
-      }
-      .padding(.horizontal, 16)
-    }
-  }
-}
-
-private struct HomeNewBattlesSkeletonView: View {
-  var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      SkeletonSectionHeader(width: 104)
-      VStack(spacing: 12) {
-        ForEach(0 ..< 3, id: \.self) { _ in
-          VStack(alignment: .leading, spacing: 12) {
-            HStack {
-              SkeletonBlock(width: 42, height: 20, color: .primary50)
-              Spacer()
-              SkeletonBlock(width: 92, height: 12)
-            }
-            SkeletonBlock(width: 240, height: 16)
-            SkeletonBlock(width: 300, height: 12)
-            HStack(spacing: 8) {
-              SkeletonBattleOption()
-              SkeletonBlock(width: 32, height: 32, cornerRadius: 16, color: .secondary100)
-              SkeletonBattleOption()
-            }
-          }
-          .padding(12)
-          .pickeCard(.beige50, border: .beige600)
-        }
-      }
-      .padding(.horizontal, 16)
-    }
-  }
-}
-
-private struct SkeletonBattleOption: View {
-  var body: some View {
-    HStack(spacing: 8) {
-      SkeletonBlock(width: 28, height: 28, cornerRadius: 14, color: .beige500)
-      VStack(alignment: .leading, spacing: 4) {
-        SkeletonBlock(width: 46, height: 12)
-        SkeletonBlock(width: 28, height: 10)
-      }
-      Spacer(minLength: 0)
-    }
-    .padding(8)
-    .frame(maxWidth: .infinity)
-    .pickeCard(.beige300, border: .beige600)
-  }
-}
-
-private struct SkeletonSectionHeader: View {
-  let width: CGFloat
-
-  var body: some View {
-    HStack {
-      SkeletonBlock(width: width, height: 22, color: .neutral100)
-      Spacer()
+      .padding(.top, 12)
     }
     .padding(.horizontal, 16)
-    .padding(.vertical, 12)
+  }
+
+  @ViewBuilder
+  private func trendingCardSkeleton() -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      block(.round(cornerRadius: 4))
+        .aspectRatio(1.2, contentMode: .fit)
+      line(width: 160, height: 16)
+    }
+  }
+
+  @ViewBuilder
+  private func bestBattlesSkeleton() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      line(width: 80, height: 20)
+      VStack(alignment: .leading, spacing: 16) {
+        ForEach(0 ..< 3, id: \.self) { _ in
+          bestBattleRowSkeleton()
+        }
+      }
+      .padding(.vertical, 16)
+    }
+    .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  private func bestBattleRowSkeleton() -> some View {
+    HStack(alignment: .top, spacing: 16) {
+      block(.round(cornerRadius: 4))
+        .frame(width: 24, height: 24)
+      VStack(alignment: .leading, spacing: 8) {
+        line(width: 200, height: 18)
+        line(width: 100, height: 14)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func bestCommentsSkeleton() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      line(width: 80, height: 20)
+      VStack(alignment: .leading, spacing: 16) {
+        ForEach(0 ..< 3, id: \.self) { _ in
+          bestCommentRowSkeleton()
+        }
+      }
+      .padding(.vertical, 16)
+    }
+    .padding(.horizontal, 16)
+  }
+
+  @ViewBuilder
+  private func bestCommentRowSkeleton() -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      line(width: 160, height: 14)
+      line(width: 280, height: 14)
+      line(width: 200, height: 14)
+    }
+  }
+
+  @ViewBuilder
+  private func newBattlesSkeleton() -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      line(width: 100, height: 20)
+      VStack(spacing: 12) {
+        ForEach(0 ..< 2, id: \.self) { _ in
+          block(.round(cornerRadius: .radiusDefault))
+            .frame(height: 120)
+        }
+      }
+      .padding(.vertical, 12)
+    }
+    .padding(.horizontal, 16)
   }
 }
 
-private struct SkeletonBlock: View {
-  var width: CGFloat?
-  var height: CGFloat
-  var cornerRadius: CGFloat
-  var color: Color
+// MARK: - Parts
 
-  init(
-    width: CGFloat? = nil,
-    height: CGFloat,
-    cornerRadius: CGFloat = 2,
-    color: Color = .beige600.opacity(0.55)
-  ) {
-    self.width = width
-    self.height = height
-    self.cornerRadius = cornerRadius
-    self.color = color
+extension HomeSkeletonView {
+  /// Android `PickeSkeletonLine` — 폭은 최대값(좁은 자리에서는 줄어듦), radius 4.
+  private func line(
+    width: CGFloat,
+    height: CGFloat
+  ) -> some View {
+    block(.round(cornerRadius: 4))
+      .frame(maxWidth: width)
+      .frame(height: height)
   }
 
-  var body: some View {
-    SkeletonView(.round(cornerRadius: cornerRadius), base: color)
-      .frame(width: width, height: height)
-      .frame(maxWidth: width == nil ? .infinity : nil)
+  /// Android `Modifier.shimmer()` 기본 색.
+  private func block(_ shape: SkeletonShape) -> some View {
+    SkeletonView(
+      shape,
+      base: .surfaceBeigeStrong,
+      highlight: .surfaceBeigeDefault
+    )
   }
 }
