@@ -3375,6 +3375,7 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     home.viewState = .loaded
     home.hasLoadedHome = true
     home.hasTriedAttendance = true
+    home.isUnreadBadgeLoading = false
     home.attendanceModal = nil
     homeState.homeState.routes[screenAt: 0] = .home(home)
     let expectedHome = home

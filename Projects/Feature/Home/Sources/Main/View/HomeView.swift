@@ -41,16 +41,22 @@ public struct HomeView: View {
       AttendanceModalView(store: modalStore)
     }
     .onAppear { send(.onAppear) }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
     .navigationBarHidden(true)
     .scrollIndicators(.hidden)
-    .scrollBounceBehavior(.basedOnSize)
+    // 세로는 항상 튕겨야 내용이 짧은 빈 화면에서도 당겨서 새로고침이 된다.
+    .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
   }
 }
 
 // MARK: - Sections
 
 extension HomeView {
-  /// 홈 탭 재선택 시 맨 위 앵커로 스크롤한다.
+  /// 홈 탭 재선택 시 맨 위 앵커로 스크롤하고, 당기면 새로고침한다(Android PullToRefreshBox).
   private var scrollContent: some View {
     ScrollViewReader { proxy in
       ScrollView(showsIndicators: false) {
@@ -60,6 +66,9 @@ extension HomeView {
             .id(Self.topAnchorID)
           contentSection()
         }
+      }
+      .refreshable {
+        await send(.pullToRefresh).finish()
       }
       .onChange(of: store.scrollToTopRequest) {
         withAnimation {

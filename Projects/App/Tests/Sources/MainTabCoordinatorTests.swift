@@ -117,7 +117,7 @@ struct MainTabCoordinatorTests {
   }
 
   @Test
-  func 홈_루트에서_홈_재선택은_맨_위로_올리고_다시_불러온다() async {
+  func 홈_루트에서_홈_재선택은_맨_위로만_올리고_다시_부르지_않는다() async {
     var state = MainTabCoordinator.State()
     state.homeState = .init()
     let store = TestStore(initialState: state) {
@@ -136,14 +136,14 @@ struct MainTabCoordinatorTests {
     }
     #expect(homeFeature.scrollToTopRequest == 1)
 
-    // 처음 상태는 hasLoadedHome == false — fetch 가 다시 돌아 성공해야만 true 가 된다.
+    // Android 처럼 다시 부르지 않는다 — 이어지는 액션이 없고 처음 상태(미로드)가 그대로 남는다.
     await store.finish()
-    await store.skipReceivedActions()
-    guard case let .home(reloaded) = store.state.homeState.routes[0].screen else {
+    guard case let .home(afterReselect) = store.state.homeState.routes[0].screen else {
       Issue.record("홈 루트 화면이 HomeFeature 가 아님")
       return
     }
-    #expect(reloaded.hasLoadedHome)
+    #expect(afterReselect.hasLoadedHome == false)
+    #expect(afterReselect.viewState == .loaded)
   }
 
   @Test

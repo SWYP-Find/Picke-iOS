@@ -22,30 +22,127 @@ struct HomeTests {
 
   @Test
   @MainActor
-  func failedHomeResponseShowsEmptyStateAndRetriesOnReentry() async {
+  func failedHomeResponseShowsEmptyStateAndToastWithoutRefetchOnReentry() async {
     var state = HomeFeature.State()
     state.viewState = .loading
     state.hasTriedAttendance = true
+    let fetchCount = LockIsolated(0)
     let store = TestStore(initialState: state) {
       HomeFeature()
     } withDependencies: {
       $0.analyticsUseCase.track = { _ in }
+      $0.homeUseCase = StubHomeUseCase {
+        fetchCount.withValue { $0 += 1 }
+        return .badgeStaleMock
+      }
     }
-    store.exhaustivity = .off
 
     await store.send(.inner(.homeResponse(.failure(.networkError("offline"))))) {
       $0.viewState = .failed
+      $0.toastMessage = "정보를 불러오지 못했어요"
     }
 
     #expect(store.state.hasLoadedHome == false)
     #expect(store.state.shouldShowSkeleton == false)
     #expect(store.state.hasVisibleHomeContent == false)
 
-    // 재진입 시 fetchHome 이 다시 시작돼 Mock 응답으로 로드가 끝난다(받는 순서가 보장되지 않아 최종 상태만 확인).
+    // Android 처럼 재진입해도 다시 부르지 않는다(새로고침으로만 다시 부름).
+    store.exhaustivity = .off
     await store.send(.view(.onAppear))
     await store.finish()
     await store.skipReceivedActions()
-    #expect(store.state.hasLoadedHome)
+    #expect(fetchCount.value == 0)
+    #expect(store.state.viewState == .failed)
+  }
+
+  @Test
+  @MainActor
+  func pullToRefreshReloadsWithoutSkeleton() async {
+    let comment = HomeBestComment(
+      battleId: 21,
+      battleTitle: "인간은 본래 선한가",
+      optionTitle: "선하다",
+      content: "선하게 태어나요"
+    )
+    var state = HomeFeature.State()
+    state.viewState = .loaded
+    state.hasLoadedHome = true
+    state.bestComments = [comment]
+    let store = TestStore(initialState: state) {
+      HomeFeature()
+    } withDependencies: {
+      $0.homeUseCase = StubHomeUseCase { .badgeStaleMock }
+    }
+
+    await store.send(.view(.pullToRefresh))
+    await store.receive(\.async)
+    #expect(store.state.shouldShowSkeleton == false)
+    await store.receive(\.inner) {
+      $0.newNotice = true
+      $0.bestComments = []
+    }
+  }
+
+  @Test
+  @MainActor
+  func pullToRefreshFailureKeepsContentAndShowsToast() async {
+    let comment = HomeBestComment(
+      battleId: 21,
+      battleTitle: "인간은 본래 선한가",
+      optionTitle: "선하다",
+      content: "선하게 태어나요"
+    )
+    var state = HomeFeature.State()
+    state.viewState = .loaded
+    state.hasLoadedHome = true
+    state.bestComments = [comment]
+    let store = TestStore(initialState: state) {
+      HomeFeature()
+    } withDependencies: {
+      $0.homeUseCase = StubHomeUseCase { throw URLError(.notConnectedToInternet) }
+    }
+
+    await store.send(.view(.pullToRefresh))
+    await store.receive(\.async)
+    await store.receive(\.inner) {
+      $0.viewState = .failed
+      $0.toastMessage = "정보를 불러오지 못했어요"
+    }
+    #expect(store.state.bestComments == [comment])
+
+    await store.send(.view(.toastShown)) {
+      $0.toastMessage = nil
+    }
+  }
+
+  @Test
+  @MainActor
+  func pullToRefreshIsIgnoredWhileFirstLoading() async {
+    var state = HomeFeature.State()
+    state.viewState = .loading
+    let store = TestStore(initialState: state) {
+      HomeFeature()
+    }
+
+    await store.send(.view(.pullToRefresh))
+  }
+
+  @Test
+  @MainActor
+  func unreadBadgeFailureStopsBellLoadingAndKeepsBadge() async {
+    var state = HomeFeature.State()
+    state.hasUnreadNotification = true
+    state.hasLoadedHome = true
+    let store = TestStore(initialState: state) {
+      HomeFeature()
+    }
+    #expect(store.state.shouldShowBellSkeleton)
+
+    await store.send(.inner(.unreadBadgeResponse(.failure(.networkError("offline"))))) {
+      $0.isUnreadBadgeLoading = false
+    }
+    #expect(store.state.hasUnreadNotification)
+    #expect(store.state.shouldShowBellSkeleton == false)
   }
 
   @Test
@@ -93,37 +190,22 @@ struct HomeTests {
     #expect(tracked.value.first?.contentID == "21")
   }
 
+  /// Android 처럼 홈 탭 재선택은 어떤 상태에서든 맨 위로만 올리고 다시 부르지 않는다.
   @Test
   @MainActor
-  func homeTabReselectedScrollsToTopAndRefetches() async {
-    var state = HomeFeature.State()
-    state.viewState = .loaded
-    state.hasLoadedHome = true
-    let store = TestStore(initialState: state) {
-      HomeFeature()
-    }
-    store.exhaustivity = .off
+  func homeTabReselectedOnlyScrollsToTop() async {
+    let viewStates: [HomeFeature.State.ViewState] = [.loaded, .loading, .failed]
+    for viewState in viewStates {
+      var state = HomeFeature.State()
+      state.viewState = viewState
+      state.hasLoadedHome = viewState == .loaded
+      let store = TestStore(initialState: state) {
+        HomeFeature()
+      }
 
-    await store.send(.view(.homeTabReselected))
-    await store.receive(\.async) {
-      $0.viewState = .loading
-    }
-
-    #expect(store.state.scrollToTopRequest == 1)
-    await store.skipReceivedActions()
-  }
-
-  @Test
-  @MainActor
-  func homeTabReselectedWhileLoadingOnlyScrollsToTop() async {
-    var state = HomeFeature.State()
-    state.viewState = .loading
-    let store = TestStore(initialState: state) {
-      HomeFeature()
-    }
-
-    await store.send(.view(.homeTabReselected)) {
-      $0.scrollToTopRequest = 1
+      await store.send(.view(.homeTabReselected)) {
+        $0.scrollToTopRequest = 1
+      }
     }
   }
 
@@ -174,6 +256,19 @@ struct HomeTests {
 
     #expect(state.shouldShowSkeleton == false)
     #expect(state.hasVisibleHomeContent == false)
+  }
+}
+
+/// 홈 조회 결과를 테스트마다 정하는 가짜 UseCase.
+private struct StubHomeUseCase: HomeInterface {
+  let fetch: @Sendable () async throws -> HomeBundle
+
+  init(_ fetch: @escaping @Sendable () async throws -> HomeBundle) {
+    self.fetch = fetch
+  }
+
+  func fetchHome() async throws -> HomeBundle {
+    try await fetch()
   }
 }
 
