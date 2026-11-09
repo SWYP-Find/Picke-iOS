@@ -39,14 +39,14 @@ public enum PickeBadgeStyle: Sendable {
 
 /// 뱃지 크기. 코드베이스에 실제로 쓰이던 두 가지 형태를 그대로 옮겼다.
 public enum PickeBadgeSize: Sendable {
-  /// 카드 헤더용 — Medium 12 / px4.
+  /// 카드 헤더용 — Android `PickeBadge` SemiBold 12 / px4.
   case compact
   /// 태그(#카테고리)용 — SemiBold 12 / px6.
   case tag
 
   var font: CustomSizeFont {
     switch self {
-    case .compact: .labelSmall
+    case .compact: .semiBold12
     case .tag: .semiBold12
     }
   }

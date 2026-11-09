@@ -51,6 +51,13 @@ public enum ImageAsset: String {
 
   // MARK: - 공용 아이콘
   case close
+  case arrowRight
+  case think
+  case more
+  case edit
+  case trash
+  case report
+  case warning
 
   // MARK: - 철학자 아바타
 
