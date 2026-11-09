@@ -58,6 +58,7 @@ public enum ImageAsset: String {
   case trash
   case report
   case warning
+  case send
 
   // MARK: - 철학자 아바타
 
