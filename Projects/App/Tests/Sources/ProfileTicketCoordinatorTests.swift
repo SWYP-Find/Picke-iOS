@@ -1,3 +1,4 @@
+import ClassDomainInterface
 import ComposableArchitecture
 import FeatureAssembly
 import Foundation
@@ -114,5 +115,104 @@ struct ProfileTicketCoordinatorTests {
     }
     #expect(updated.expirationDate == laterEnd)
     await store.finish()
+  }
+
+  @Test
+  func 개요_위에서_사용_중인_내_이용권을_다시_입력하면_기존_개요로_돌아간다() async {
+    let ticket = profileActiveTicket()
+    var overview = ClassTicketFeature.State(instanceID: UUID(10))
+    overview.phase = .overview
+    var registration = ClassTicketFeature.State(instanceID: UUID(11))
+    registration.shouldCheckExistingTicket = false
+    var state = Picke.ProfileCoordinator.State()
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    let store = TestStore(initialState: state) { Picke.ProfileCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ticket(.delegate(.existingTicketFound(ticket))))))
+
+    #expect(store.state.routes.count == 2)
+    guard case let .ticket(current)? = store.state.routes.last?.screen else {
+      Issue.record("기존 이용권 개요로 돌아가지 않았습니다")
+      return
+    }
+    #expect(current.instanceID == UUID(10))
+    #expect(current.phase == .overview)
+    #expect(current.ticket == ticket)
+  }
+
+  @Test
+  func 바로_연_등록_화면에서_사용_중인_내_이용권을_다시_입력하면_그_화면을_개요로_바꾼다() async {
+    let ticket = profileActiveTicket()
+    var registration = ClassTicketFeature.State(instanceID: UUID(12))
+    registration.code = "PICKE30"
+    var state = Picke.ProfileCoordinator.State()
+    state.routes.push(.ticket(registration))
+    let store = TestStore(initialState: state) { Picke.ProfileCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.delegate(.existingTicketFound(ticket))))))
+
+    #expect(store.state.routes.count == 2)
+    guard case let .ticket(current)? = store.state.routes.last?.screen else {
+      Issue.record("이용권 화면이 사라졌습니다")
+      return
+    }
+    #expect(current.instanceID == UUID(12))
+    #expect(current.phase == .overview)
+    #expect(current.ticket == ticket)
+    #expect(current.preview == nil)
+  }
+
+  @Test
+  func 이용권_화면을_닫으면_진입_조회도_취소한다() async {
+    let ticketID = UUID(13)
+    var state = Picke.ProfileCoordinator.State()
+    state.routes.push(.ticket(ClassTicketFeature.State(instanceID: ticketID)))
+    state.ticketInstanceIDs = [ticketID]
+    let store = TestStore(initialState: state) { Picke.ProfileCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classTicketUseCase = NeverEndingTicketUseCase()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.view(.onAppear)))))
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(store.state.routes.count == 1)
+  }
+}
+
+private func profileActiveTicket() -> ClassTicket {
+  ClassTicket(
+    id: 7,
+    capacity: 30,
+    status: .active,
+    activatedAt: Date(timeIntervalSince1970: 1_800_000_000),
+    expiresAt: Date(timeIntervalSince1970: 1_815_000_000),
+    remainingDays: 170,
+    readGraceEndsAt: Date(timeIntervalSince1970: 1_817_592_000)
+  )
+}
+
+/// 내 이용권 조회가 취소될 때까지 끝나지 않는 대역.
+private struct NeverEndingTicketUseCase: ClassTicketInterface {
+  func previewTicket(code _: String) async throws -> ClassTicketPreview {
+    throw ClassTicketError.invalidCode
+  }
+
+  func registerTicket(code _: String) async throws -> ClassTicket {
+    throw ClassTicketError.invalidCode
+  }
+
+  func fetchMyTicket() async throws -> ClassTicket {
+    try await Task.sleep(for: .seconds(60))
+    throw ClassTicketError.notFound
   }
 }

@@ -8,6 +8,11 @@ public enum ClassBattleError: LocalizedError, Equatable, Sendable {
   case preVoteLocked
   case invalidOption
   case ttsUnavailable
+  case ttsIncomplete
+  case midVoteUnavailable
+  case invalidMidVoteOption
+  case midVoteLocked
+  case midVoteRequired
   case voteNotFound
   case preVoteRequired
   case alreadySubmitted
@@ -26,6 +31,11 @@ public enum ClassBattleError: LocalizedError, Equatable, Sendable {
     case .preVoteLocked: return "청취 또는 토론을 시작한 뒤에는 사전투표를 바꿀 수 없어요."
     case .invalidOption: return "이 배틀의 선택지가 아니에요."
     case .ttsUnavailable: return "이 클래스에서는 TTS 청취를 사용할 수 없어요."
+    case .ttsIncomplete: return "TTS 청취를 완료한 뒤 투표해 주세요."
+    case .midVoteUnavailable: return "이 배틀에서는 중간투표를 사용할 수 없어요."
+    case .invalidMidVoteOption: return "이 선택 지점의 선택지가 아니에요."
+    case .midVoteLocked: return "사후투표를 마친 뒤에는 중간투표를 바꿀 수 없어요."
+    case .midVoteRequired: return "선택 지점의 투표를 완료해 주세요."
     case .voteNotFound: return "투표 내역을 찾을 수 없어요."
     case .preVoteRequired: return "먼저 사전투표를 완료해 주세요."
     case .alreadySubmitted: return "사후투표는 다시 제출할 수 없어요."

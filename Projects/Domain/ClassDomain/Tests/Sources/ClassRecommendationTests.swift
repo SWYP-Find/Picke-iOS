@@ -102,7 +102,8 @@ struct ClassRecommendationTests {
       battleId: 12,
       allowsAnonymousOpinion: false,
       requiresComment: true,
-      ownerParticipates: false
+      ownerParticipates: false,
+      requestKey: "3f2b8c1e-7d4a-4f6b-9a0e-2c5d8e1f4a7b"
     )
     let request = ClassroomService.create(creation)
     guard let body = request.parameters else {
@@ -120,6 +121,7 @@ struct ClassRecommendationTests {
     #expect(fields["deadline"] as? String == "2026-12-31T23:59:59")
     #expect((fields["commentRequired"] as? Bool) == true)
     #expect((fields["ownerParticipates"] as? Bool) == false)
+    #expect(fields["requestKey"] as? String == "3f2b8c1e-7d4a-4f6b-9a0e-2c5d8e1f4a7b")
     #expect(fields["allowsAnonymousOpinion"] == nil)
   }
 

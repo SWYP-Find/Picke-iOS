@@ -31,6 +31,7 @@ enum ClassErrorMapper {
     case "CLASS_404": return .notFound
     case "CLASS_409_FULL": return .full
     case "CLASS_409_DELETED": return .deleted
+    case "CLASS_409_REQUEST_KEY": return .requestKeyConflict
     case "CLASS_409_OWNER": return .ownClass
     case "CLASS_403_REMOVED": return .removed
     case "CLASS_403_TICKET": return .ticketRequired

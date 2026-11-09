@@ -553,9 +553,11 @@ private extension ClassOwnerDashboardView {
         reportChoice("사후 선택", value: feedback.postOption?.title ?? "선택 없음")
       }
       HStack(spacing: 0) {
-        reportActivity("\(feedback.perspectiveCount)", label: "의견")
+        reportActivity("\(feedback.perspectiveCount)", label: "댓글")
         Rectangle().fill(.beige600).frame(width: 1, height: 36)
-        reportActivity("\(feedback.commentCount)", label: "댓글")
+        reportActivity("\(feedback.commentCount)", label: "대댓글")
+        Rectangle().fill(.beige600).frame(width: 1, height: 36)
+        reportActivity(store.personalReceivedLikeCountText, label: "받은 추천")
       }
     }
     .padding(16)

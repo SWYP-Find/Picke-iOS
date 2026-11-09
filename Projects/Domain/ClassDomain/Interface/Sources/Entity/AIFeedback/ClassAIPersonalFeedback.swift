@@ -15,6 +15,7 @@ public struct ClassAIPersonalFeedback: Equatable, Sendable {
   public let coverage: String?
   public let excludedCount: Int
   public let preOption: ClassAIFeedbackVoteChoice?
+  public let midVotes: [ClassMidVoteChoice]
   public let postOption: ClassAIFeedbackVoteChoice?
   public let perspectiveCount: Int
   public let commentCount: Int
@@ -37,6 +38,7 @@ public struct ClassAIPersonalFeedback: Equatable, Sendable {
     coverage: String? = nil,
     excludedCount: Int = 0,
     preOption: ClassAIFeedbackVoteChoice? = nil,
+    midVotes: [ClassMidVoteChoice] = [],
     postOption: ClassAIFeedbackVoteChoice? = nil,
     perspectiveCount: Int = 0,
     commentCount: Int = 0
@@ -50,6 +52,7 @@ public struct ClassAIPersonalFeedback: Equatable, Sendable {
     self.coverage = coverage
     self.excludedCount = excludedCount
     self.preOption = preOption
+    self.midVotes = midVotes
     self.postOption = postOption
     self.perspectiveCount = perspectiveCount
     self.commentCount = commentCount

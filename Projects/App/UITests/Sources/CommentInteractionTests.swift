@@ -41,7 +41,7 @@ private extension CommentInteractionTests {
     if scenario == "class" {
       XCTAssertTrue(app.buttons["리포트"].exists, "Class comment root must show its report action")
     }
-    let placeholder = scenario == "class" ? "내 생각을 입력해보세요" : "내용을 입력하세요"
+    let placeholder = scenario == "class" ? "내 생각을 입력해보세요" : "의견을 남겨보세요..."
     let emptyComposer = try composer(in: app, placeholder: placeholder, empty: true)
     let emptySend = try sendButton(in: app, scenario: scenario, composer: emptyComposer)
     XCTAssertFalse(emptySend.isEnabled, "Empty send must be disabled")

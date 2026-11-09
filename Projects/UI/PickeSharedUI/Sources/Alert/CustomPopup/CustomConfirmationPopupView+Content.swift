@@ -18,7 +18,7 @@ extension CustomConfirmationPopup {
     switch style {
     case .confirmation:
       return 20
-    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic:
+    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic, .notice, .noticeReversed:
       return 0
     }
   }
@@ -40,12 +40,49 @@ extension CustomConfirmationPopup {
       logoutWithdrawContent
     case .suggestTopic:
       suggestTopicContent
+    case .notice:
+      noticeContent
+    case .noticeReversed:
+      noticeReversedContent
     }
   }
 
   /// 로그아웃/탈퇴 — 공통 팝업 스타일(무료 충전/다시 시청 팝업과 동일).
   /// 본문 + 라운드 2버튼(확정=왼쪽 밝은 secondary50 / 취소=오른쪽 primary500).
   var logoutWithdrawContent: some View {
+    pickeAlertCard {
+      VStack(spacing: 16) {
+        pickeBodyText(title)
+
+        pickeTwoButtonRow(
+          leftTitle: confirmTitle, leftAction: onConfirm,
+          rightTitle: cancelTitle, rightAction: onCancel
+        )
+      }
+    }
+  }
+
+  /// 안내 — 본문 + 취소(왼쪽 밝은)·확인(오른쪽 primary). 취소 문구가 비면 확인 버튼 1개.
+  @ViewBuilder
+  var noticeContent: some View {
+    pickeAlertCard {
+      VStack(spacing: 16) {
+        pickeBodyText(title)
+
+        if cancelTitle.isEmpty {
+          pickeSingleButtonRow(title: confirmTitle, action: onConfirm)
+        } else {
+          pickeTwoButtonRow(
+            leftTitle: cancelTitle, leftAction: onCancel,
+            rightTitle: confirmTitle, rightAction: onConfirm
+          )
+        }
+      }
+    }
+  }
+
+  /// 안내(반대 배치) — 확인(왼쪽 밝은)·취소(오른쪽 primary). 배경 탭(취소)이 "안내만 닫기"가 되게 한다.
+  var noticeReversedContent: some View {
     pickeAlertCard {
       VStack(spacing: 16) {
         pickeBodyText(title)

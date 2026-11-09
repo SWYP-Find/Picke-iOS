@@ -377,10 +377,10 @@ extension ClassRecommendFeature {
       current = try await useCase.fetchTopicDraft(id: draft.id)
     }
     guard current.suggestStatus != "GENERATING" else {
-      throw ClassError.unknown("AI 주제 생성 시간이 초과됐어요. 다시 확인해 주세요.")
+      throw ClassError.userMessage("AI 주제 생성 시간이 초과됐어요. 다시 확인해 주세요.")
     }
     guard current.suggestStatus == "SUCCEEDED" else {
-      throw ClassError.unknown(current.clarificationMessage ?? "AI 주제를 만들지 못했어요. 조건을 확인해 주세요.")
+      throw ClassError.userMessage(current.clarificationMessage ?? "AI 주제를 만들지 못했어요. 조건을 확인해 주세요.")
     }
     return current
   }

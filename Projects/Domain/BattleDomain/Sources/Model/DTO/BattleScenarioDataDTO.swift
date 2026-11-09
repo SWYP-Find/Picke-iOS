@@ -78,6 +78,8 @@ public struct ScenarioScriptDTO: Decodable {
 }
 
 public struct ScenarioInteractiveOptionDTO: Decodable {
-  public let label: String
-  public let nextNodeId: Int
+  public let optionId: Int?
+  public let label: String?
+  public let title: String?
+  public let nextNodeId: Int?
 }

@@ -16,24 +16,28 @@ public struct PickeEmptyStateView: View {
 
   public init(
     message: String,
-    imageAsset: ImageAsset = .noDataLogo,
-    imageSize: CGSize = CGSize(width: 135, height: 90)
+    imageAsset: ImageAsset = .appLogo,
+    imageSize: CGSize = CGSize(width: 160, height: 120)
   ) {
     self.message = message
     self.imageAsset = imageAsset
     self.imageSize = imageSize
   }
 
+  /// Android `PickeEmptyState` — 로고 160×120(`borderBeigeDefault` 색), 간격 16, 14 Regular `beige800`, 가운데 정렬.
   public var body: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: 16) {
       Image(asset: imageAsset)
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
+        .foregroundStyle(.borderBeigeDefault)
         .frame(width: imageSize.width, height: imageSize.height)
+        .accessibilityLabel("빈 화면 로고")
 
       Text(message)
         .pretendardFont(.bodyMedium)
-        .foregroundStyle(.gray300)
+        .foregroundStyle(.beige800)
         .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

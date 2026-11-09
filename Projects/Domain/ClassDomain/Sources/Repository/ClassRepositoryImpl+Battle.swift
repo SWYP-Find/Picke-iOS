@@ -40,6 +40,20 @@ extension ClassRepositoryImpl {
     } catch { throw Self.battleError(error) }
   }
 
+  public func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    do {
+      let payload = try await client.send(
+        ClassBattleService.midVote(classID: classID, checkpointID: checkpointID, optionID: optionID),
+        as: ClassVoteReceiptDTO.self
+      )
+      return try payload.toDomain()
+    } catch { throw Self.battleError(error) }
+  }
+
   public func submitPostVote(
     classID: Int,
     optionID: Int
@@ -125,6 +139,11 @@ extension ClassRepositoryImpl {
       case "CLASS_409_PRE_VOTE_LOCKED": return .preVoteLocked
       case "BATTLE_OPT_404": return .invalidOption
       case "CLASS_409_TTS": return .ttsUnavailable
+      case "CLASS_409_TTS_INCOMPLETE": return .ttsIncomplete
+      case "CLASS_409_MID_VOTE": return .midVoteUnavailable
+      case "CLASS_404_MID_VOTE_OPTION": return .invalidMidVoteOption
+      case "CLASS_409_MID_VOTE_LOCKED": return .midVoteLocked
+      case "CLASS_409_MID_VOTE_REQUIRED": return .midVoteRequired
       case "VOTE_404": return .voteNotFound
       case "VOTE_409_PRE": return .preVoteRequired
       case "VOTE_409_SUB": return .alreadySubmitted

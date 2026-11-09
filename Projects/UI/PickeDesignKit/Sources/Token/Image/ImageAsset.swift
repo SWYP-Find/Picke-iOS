@@ -44,6 +44,21 @@ public enum ImageAsset: String {
 
   case appLogo
   case bell
+  case alarm
+  case clock
+  case eye
+  case replyCorner
+
+  // MARK: - 공용 아이콘
+  case close
+  case arrowRight
+  case think
+  case more
+  case edit
+  case trash
+  case report
+  case warning
+  case send
 
   // MARK: - 철학자 아바타
 

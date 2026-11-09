@@ -9,7 +9,6 @@ import Foundation
 
 public enum AnalyticsButton: String, Sendable {
   // 홈
-  case homeMore = "home_more"
   case homeNotification = "home_notification"
   // 마이페이지
   case mypageNotification = "mypage_notification"

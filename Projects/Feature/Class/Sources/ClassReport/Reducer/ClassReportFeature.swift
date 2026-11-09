@@ -33,6 +33,8 @@ public struct ClassReportFeature {
     public var insight: ClassAIInsight?
     public var insightError: ClassAIFeedbackError?
     public var insightRequestID: UUID?
+    public var receivedLikeCount: Int?
+    public var myActivityRequestID: UUID?
     public var isGeneratingFeedback = false
     public var unknownRetryCount = 0
 
@@ -90,13 +92,17 @@ public struct ClassReportFeature {
     }
 
     public var serverParticipationRate: String {
-      guard let rate = classResult?.stats.participationRate else { return "" }
-      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      guard let stats = classResult?.stats else { return "" }
+      guard stats.activeMemberCount > 0 else { return "아직 참여 없음" }
+      return (Double(stats.completedCount) / Double(stats.activeMemberCount) * 100)
+        .formatted(.number.precision(.fractionLength(0...1))) + "%"
     }
 
     public var serverCommentRate: String {
-      guard let rate = classResult?.stats.commentRate else { return "" }
-      return rate.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      guard let stats = classResult?.stats else { return "" }
+      guard stats.activeMemberCount > 0 else { return "아직 참여 없음" }
+      return (Double(stats.commentWriterCount) / Double(stats.activeMemberCount) * 100)
+        .formatted(.number.precision(.fractionLength(0...1))) + "%"
     }
 
     public var serverParticipationCount: String {
@@ -110,11 +116,13 @@ public struct ClassReportFeature {
     }
 
     public var serverParticipationProgress: Double {
-      min(max((classResult?.stats.participationRate ?? 0) / 100, 0), 1)
+      guard let stats = classResult?.stats, stats.activeMemberCount > 0 else { return 0 }
+      return min(max(Double(stats.completedCount) / Double(stats.activeMemberCount), 0), 1)
     }
 
     public var serverCommentProgress: Double {
-      min(max((classResult?.stats.commentRate ?? 0) / 100, 0), 1)
+      guard let stats = classResult?.stats, stats.activeMemberCount > 0 else { return 0 }
+      return min(max(Double(stats.commentWriterCount) / Double(stats.activeMemberCount), 0), 1)
     }
 
     public var serverOptionCounts: [Int: String] {
@@ -124,12 +132,18 @@ public struct ClassReportFeature {
       }
     }
 
+    public var serverDistributionTotalCount: Int {
+      classResult?.stats.options.reduce(0) { $0 + max($1.postVoteCount, 0) } ?? 0
+    }
+
     public var serverDistributionTotalText: String {
-      "\(classResult?.stats.postVoteCount ?? 0)명"
+      "\(serverDistributionTotalCount)명"
     }
 
     public var serverDistributionProgress: Double {
-      min(max((classResult?.stats.options.first?.postVoteRatio ?? 0) / 100, 0), 1)
+      guard serverDistributionTotalCount > 0 else { return 0 }
+      return Double(max(classResult?.stats.options.first?.postVoteCount ?? 0, 0))
+        / Double(serverDistributionTotalCount)
     }
 
     public var serverDistributionOptionCountTexts: [Int: String] {
@@ -141,8 +155,19 @@ public struct ClassReportFeature {
 
     public var serverDistributionOptionRatioTexts: [Int: String] {
       guard let options = classResult?.stats.options else { return [:] }
-      return options.reduce(into: [:]) { values, option in
-        values[option.id] = option.postVoteRatio.formatted(.number.precision(.fractionLength(0...1))) + "%"
+      guard serverDistributionTotalCount > 0 else {
+        return options.reduce(into: [:]) { $0[$1.id] = "아직 참여 없음" }
+      }
+      var remainingTenths = 1000
+      return options.enumerated().reduce(into: [:]) { values, pair in
+        let (index, option) = pair
+        let tenths = index == options.count - 1
+          ? remainingTenths
+          : Int((Double(max(option.postVoteCount, 0)) * 1000
+            / Double(serverDistributionTotalCount)).rounded())
+        remainingTenths -= tenths
+        values[option.id] = (Double(tenths) / 10)
+          .formatted(.number.precision(.fractionLength(0...1))) + "%"
       }
     }
 
@@ -218,6 +243,11 @@ public struct ClassReportFeature {
       feedback.map { String($0.commentCount) } ?? "—"
     }
 
+    /// Android와 같이 받은 추천 수를 모르면 0 대신 "—"로 표시한다.
+    public var personalReceivedLikeCountText: String {
+      receivedLikeCount.map(String.init) ?? "—"
+    }
+
     public var myOpinionsButtonTitle: String {
       if classResult != nil, feedback == nil { return "내가 남긴 의견 보기" }
       return "내가 남긴 의견 \(myOpinionCount)개 보기"
@@ -262,6 +292,7 @@ public struct ClassReportFeature {
     case fetchVoteHistory
     case generateFeedback
     case fetchInsight
+    case fetchMyActivity
   }
 
   @CasePathable
@@ -277,6 +308,7 @@ public struct ClassReportFeature {
       wasUnknown: Bool
     )
     case insightResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassAIInsight, ClassAIFeedbackError>)
+    case myActivityResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassMyActivity, ClassError>)
   }
 
   @CasePathable
@@ -290,6 +322,7 @@ public struct ClassReportFeature {
     case voteHistory(UUID)
     case generate(UUID)
     case insight(UUID)
+    case myActivity(UUID)
   }
 
   @Dependency(\.classResultUseCase) private var classUseCase
@@ -337,12 +370,14 @@ extension ClassReportFeature {
       state.voteHistoryRequestID = nil
       state.feedbackRequestID = nil
       state.insightRequestID = nil
+      state.myActivityRequestID = nil
       state.isGeneratingFeedback = false
       return .merge(
         .cancel(id: CancelID.load(state.instanceID)),
         .cancel(id: CancelID.voteHistory(state.instanceID)),
         .cancel(id: CancelID.generate(state.instanceID)),
         .cancel(id: CancelID.insight(state.instanceID)),
+        .cancel(id: CancelID.myActivity(state.instanceID)),
         .send(.delegate(.dismiss))
       )
     case let .tabSelected(tab):
@@ -375,6 +410,8 @@ extension ClassReportFeature {
       state.feedbackError = nil
       state.isGeneratingFeedback = false
       state.unknownRetryCount = 0
+      state.receivedLikeCount = nil
+      state.myActivityRequestID = nil
       let requestID = uuid()
       state.requestID = requestID
       state.sourceViewState = .loading
@@ -399,8 +436,25 @@ extension ClassReportFeature {
         .cancel(id: CancelID.voteHistory(state.instanceID)),
         .cancel(id: CancelID.generate(state.instanceID)),
         .cancel(id: CancelID.insight(state.instanceID)),
+        .cancel(id: CancelID.myActivity(state.instanceID)),
         fetch
       )
+    case .fetchMyActivity:
+      let requestID = uuid()
+      state.myActivityRequestID = requestID
+      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        let result = await Result {
+          try await classUseCase.fetchMyActivity(roomID: roomID, cursor: nil)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.myActivityResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result
+        )))
+      }
+      .cancellable(id: CancelID.myActivity(state.instanceID), cancelInFlight: true)
     case .fetchVoteHistory:
       let requestID = uuid()
       state.voteHistoryRequestID = requestID
@@ -490,6 +544,7 @@ extension ClassReportFeature {
         }
         if classResult.myReportState != nil {
           effects.append(.send(.async(.generateFeedback)))
+          effects.append(.send(.async(.fetchMyActivity)))
         }
         if state.room.role != .member,
            (classResult.insightState == "SUCCEEDED" || classResult.insightState == "LIMITED") {
@@ -502,6 +557,14 @@ extension ClassReportFeature {
         state.sourceViewState = .failed
         return .none
       }
+
+    case let .myActivityResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.myActivityRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.myActivityRequestID = nil
+      state.receivedLikeCount = try? result.get().receivedLikeCount
+      return .none
 
     case let .voteHistoryResponse(instanceID, requestID, roomID, result):
       guard state.instanceID == instanceID,

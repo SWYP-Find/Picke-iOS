@@ -57,6 +57,61 @@ struct ClassSettingTests {
   }
 
   @Test
+  func 생성_요청_키는_같은_내용의_재시도에_유지되고_내용을_바꾸면_바뀐다() throws {
+    let instanceID = try #require(UUID(uuidString: "3F2B8C1E-7D4A-4F6B-9A0E-2C5D8E1F4A7B"))
+    var state = ClassSettingFeature.State(
+      battle: battle,
+      deadline: deadline,
+      instanceID: instanceID
+    )
+    state.name = "토론 클래스"
+    let firstKey = state.creation?.requestKey
+    state.name = "토론 클래스 "
+
+    #expect(firstKey?.count == 64)
+    #expect(state.creation?.requestKey == firstKey)
+
+    state.name = "다른 토론 클래스"
+    #expect(state.creation?.requestKey != firstKey)
+    state.name = "토론 클래스"
+    #expect(state.creation?.requestKey == firstKey)
+
+    state.deadline = deadline.addingTimeInterval(60)
+    #expect(state.creation?.requestKey != firstKey)
+    state.deadline = deadline
+    state.isDeadlineEnabled = false
+    #expect(state.creation?.requestKey != firstKey)
+    state.isDeadlineEnabled = true
+
+    state.requiresComment = true
+    #expect(state.creation?.requestKey != firstKey)
+    state.requiresComment = false
+    state.ownerParticipates = true
+    #expect(state.creation?.requestKey != firstKey)
+    state.ownerParticipates = false
+    #expect(state.creation?.requestKey == firstKey)
+
+    var other = ClassSettingFeature.State(battle: battle, deadline: deadline)
+    other.name = state.name
+    #expect(other.creation?.requestKey != firstKey)
+
+    state.aiQuestion = ClassAIQuestion(version: topicVersion)
+    state.topicVersionID = topicVersion.id
+    #expect(state.aiCreation?.requestKey != firstKey)
+    #expect(state.creation?.requestKey == firstKey)
+
+    state.battle = nil
+    let aiKey = state.creation?.requestKey
+    #expect(aiKey == state.aiCreation?.requestKey)
+    #expect(aiKey != firstKey)
+    state.topicVersionID = topicVersion.id + 1
+    #expect(state.creation?.requestKey != aiKey)
+
+    state.battle = ClassBattleSummary.mocks[1]
+    #expect(state.creation?.requestKey != firstKey)
+  }
+
+  @Test
   func 클래스를_만들면_생성_델리게이트를_보낸다() async throws {
     var state = ClassSettingFeature.State(battle: battle, deadline: deadline)
     state.name = "2학년 3반"

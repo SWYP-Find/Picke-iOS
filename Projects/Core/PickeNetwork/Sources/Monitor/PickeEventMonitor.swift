@@ -29,10 +29,14 @@ struct PickeEventMonitor: EventMonitor {
   ) {
     let urlRequest = response.request
     let method = urlRequest?.httpMethod ?? "?"
-    let url = urlRequest?.url?.absoluteString ?? "?"
+    // Query values can contain invite or ticket codes; keep only the route in logs.
+    let url = urlRequest?.url?.path ?? "?"
     let status = response.response?.statusCode ?? -1
     let milliseconds = Int((response.metrics?.taskInterval.duration ?? 0) * 1000)
     let isFailure = response.error != nil
+    let isSensitiveRoute = url.hasPrefix("/api/v1/auth/") ||
+      url.hasPrefix("/api/v1/classes") ||
+      url.hasPrefix("/api/v1/class-tickets")
 
     var lines = ["\(isFailure ? "❌" : "✅") \(method) \(url) → \(status) (\(milliseconds)ms)"]
 
@@ -41,7 +45,7 @@ struct PickeEventMonitor: EventMonitor {
       lines.append("  · Request Headers\n\(format(headers))")
     }
     if let body = urlRequest?.httpBody, !body.isEmpty {
-      lines.append("  · Request Body\n\(indent(prettyBody(body)))")
+      lines.append("  · Request Body\n\(isSensitiveRoute ? "       <redacted>" : indent(prettyBody(body)))")
     }
 
     // ── 응답 ──
@@ -58,7 +62,7 @@ struct PickeEventMonitor: EventMonitor {
       }
     }
     if let data = response.data, !data.isEmpty {
-      lines.append("  · Response Body\n\(indent(prettyBody(data)))")
+      lines.append("  · Response Body\n\(isSensitiveRoute ? "       <redacted>" : indent(prettyBody(data)))")
     }
 
     let message = lines.joined(separator: "\n")
@@ -118,7 +122,11 @@ private extension PickeEventMonitor {
   func format(_ headers: [String: String]) -> String {
     headers
       .sorted { $0.key < $1.key }
-      .map { "       \($0.key): \($0.value)" }
+      .map { key, value in
+        let shouldRedact = ["authorization", "cookie", "set-cookie"]
+          .contains(key.lowercased()) || key.lowercased().contains("token")
+        return "       \(key): \(shouldRedact ? "<redacted>" : value)"
+      }
       .joined(separator: "\n")
   }
 

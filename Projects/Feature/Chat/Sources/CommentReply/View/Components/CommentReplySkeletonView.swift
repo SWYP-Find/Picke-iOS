@@ -9,60 +9,52 @@ import SwiftUI
 
 import PickeDesignKit
 
+/// Android `CommentSkeleton` — 원본 카드(본문 2줄) → "답글" 헤더 → 카드 4개(각각 아래 구분선).
 struct CommentReplySkeletonView: View {
-  var replyCount: Int = 3
-
   var body: some View {
     VStack(spacing: 0) {
-      parentCard()
-        .padding(12)
-        .background(.beige50)
-        .bottomDivider(.beige600)
-
-      VStack(alignment: .leading, spacing: 8) {
-        SkeletonView(.round(cornerRadius: 4))
-          .frame(width: 64, height: 14)
-          .padding(.horizontal, 12)
-          .padding(.top, 12)
-
-        ForEach(0 ..< replyCount, id: \.self) { _ in
-          card()
-            .padding(.horizontal, 12)
-        }
+      card(showsSecondLine: true)
+      SkeletonView.line(width: 70, height: 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.surfaceBeigeSubtle)
+      ForEach(0 ..< 4, id: \.self) { _ in
+        card(showsSecondLine: false)
+          .overlay(alignment: .bottom) {
+            PickeDivider(.borderBeigeDefault)
+          }
       }
-      .padding(.bottom, 24)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .background(.beige50)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .allowsHitTesting(false)
   }
 
   @ViewBuilder
-  private func parentCard() -> some View {
-    card()
-  }
-
-  @ViewBuilder
-  private func card() -> some View {
-    VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .top, spacing: 8) {
-        SkeletonView(.round(cornerRadius: 18))
-          .frame(width: 36, height: 36)
+  private func card(showsSecondLine: Bool) -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: 8) {
+        SkeletonView.beige(.circle)
+          .frame(width: 32, height: 32)
         VStack(alignment: .leading, spacing: 4) {
-          SkeletonView(.round(cornerRadius: 4)).frame(width: 90, height: 14)
-          SkeletonView(.round(cornerRadius: 4)).frame(width: 56, height: 16)
+          SkeletonView.line(width: 48, height: 16)
+          SkeletonView.line(width: 40, height: 12)
         }
-        Spacer()
+        Spacer(minLength: 0)
       }
-      SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 12)
-      SkeletonView(.round(cornerRadius: 4)).frame(width: 220, height: 12)
-      HStack {
-        Spacer()
-        SkeletonView(.round(cornerRadius: 4)).frame(width: 44, height: 14)
+      SkeletonView.line(width: 70, height: 20)
+        .padding(.top, 8)
+      SkeletonView.line(width: 260, height: 16)
+        .padding(.top, 12)
+      if showsSecondLine {
+        SkeletonView.line(width: 180, height: 16)
+          .padding(.top, 4)
       }
+      SkeletonView.line(width: 36, height: 16)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.top, 12)
     }
-    .padding(12)
+    .padding(16)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .pickeCard(.beige50, border: .beige600)
+    .background(.surfaceBeigeDefault)
   }
 }

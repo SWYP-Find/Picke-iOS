@@ -7,6 +7,12 @@ struct ClassVoteReceiptDTO: Decodable, Sendable {
   let status: String
 }
 
+struct ClassMidVoteDTO: Decodable, Sendable {
+  let checkpointId: Int
+  let optionId: Int
+  let label: String
+}
+
 struct ClassVoteHistoryDTO: Decodable, Sendable {
   struct Choice: Decodable, Sendable {
     let optionId: Int
@@ -17,6 +23,7 @@ struct ClassVoteHistoryDTO: Decodable, Sendable {
 
   let battleTitle: String
   let preVote: Choice
+  let midVotes: [ClassMidVoteDTO]?
   let postVote: Choice?
   let status: String
   let opinionChanged: Bool?

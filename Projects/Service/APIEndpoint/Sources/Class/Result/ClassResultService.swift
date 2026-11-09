@@ -7,6 +7,7 @@ public enum ClassResultService {
   case myReport(Int)
   case insight(Int)
   case retryInsight(Int)
+  case myActivity(Int, cursor: String?)
 }
 
 extension ClassResultService: PickeDataRequest {
@@ -20,17 +21,21 @@ extension ClassResultService: PickeDataRequest {
     case let .myReport(id): return ClassResultAPI.myReport(classID: id).description
     case let .insight(id): return ClassResultAPI.insight(classID: id).description
     case let .retryInsight(id): return ClassResultAPI.retryInsight(classID: id).description
+    case let .myActivity(id, _): return ClassResultAPI.myActivity(classID: id).description
     }
   }
 
   public var method: HTTPMethod {
     switch self {
-    case .result, .myReport, .insight: return .get
+    case .result, .myReport, .insight, .myActivity: return .get
     case .retryInsight: return .post
     }
   }
 
   public var parameters: (any Encodable & Sendable)? {
-    nil
+    switch self {
+    case let .myActivity(_, cursor): return MyActivityQuery(cursor: cursor)
+    case .result, .myReport, .insight, .retryInsight: return nil
+    }
   }
 }

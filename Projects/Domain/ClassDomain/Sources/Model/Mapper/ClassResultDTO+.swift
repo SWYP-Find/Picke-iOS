@@ -14,6 +14,27 @@ extension ClassResultDTO.Stats.Option {
   }
 }
 
+extension ClassResultDTO.Stats.MidVoteCheckpoint.Option {
+  func toDomain() -> ClassResultMidVoteOption {
+    ClassResultMidVoteOption(
+      id: optionId,
+      label: label,
+      voteCount: voteCount,
+      ratio: ratio
+    )
+  }
+}
+
+extension ClassResultDTO.Stats.MidVoteCheckpoint {
+  func toDomain() -> ClassResultMidVoteCheckpoint {
+    ClassResultMidVoteCheckpoint(
+      id: checkpointId,
+      voteCount: voteCount,
+      options: options.map { $0.toDomain() }
+    )
+  }
+}
+
 extension ClassResultDTO.Stats {
   func toDomain() -> ClassResultStats {
     ClassResultStats(
@@ -23,6 +44,9 @@ extension ClassResultDTO.Stats {
       commentWriterCount: commentWriterCount,
       commentRate: commentRate,
       postVoteCount: postVoteCount,
+      midVoteEnabled: midVoteEnabled ?? false,
+      midVoteCount: midVoteCount ?? 0,
+      midVoteCheckpoints: midVoteCheckpoints?.map { $0.toDomain() } ?? [],
       options: options.map { $0.toDomain() }
     )
   }

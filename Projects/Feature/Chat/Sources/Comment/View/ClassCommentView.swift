@@ -50,6 +50,11 @@ public struct ClassCommentView: View {
       isCommentFocused = editingId != nil
     }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 
   @ViewBuilder

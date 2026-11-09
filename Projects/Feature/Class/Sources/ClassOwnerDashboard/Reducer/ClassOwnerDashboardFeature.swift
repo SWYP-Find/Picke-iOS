@@ -59,6 +59,8 @@ public struct ClassOwnerDashboardFeature {
     public var feedbackError: ClassAIFeedbackError?
     public var insightRequestID: UUID?
     public var feedbackRequestID: UUID?
+    public var receivedLikeCount: Int?
+    public var myActivityRequestID: UUID?
     public var isGeneratingInsight = false
     public var isGeneratingFeedback = false
     public var insightUnknownRetryCount = 0
@@ -183,6 +185,10 @@ public struct ClassOwnerDashboardFeature {
       return .unavailable
     }
 
+    public var personalReceivedLikeCountText: String {
+      receivedLikeCount.map(String.init) ?? "—"
+    }
+
     public var myOpinionCount: Int {
       if classResult != nil { return generatedFeedback?.perspectiveCount ?? 0 }
       return myOpinions.count
@@ -193,7 +199,9 @@ public struct ClassOwnerDashboardFeature {
     }
 
     public var myOpinionsTitle: String {
-      "내가 남긴 의견 \(myOpinionCount)개 보기"
+      // 리포트 화면과 같이 개인 피드백을 받지 못하면 개수를 모르므로 표시하지 않는다.
+      if classResult != nil, generatedFeedback == nil { return "내가 남긴 의견 보기" }
+      return "내가 남긴 의견 \(myOpinionCount)개 보기"
     }
 
     public var canOpenMyOpinions: Bool {
@@ -337,6 +345,7 @@ public struct ClassOwnerDashboardFeature {
     case fetchDashboard
     case generateInsight
     case generatePersonal
+    case fetchMyActivity
   }
 
   @CasePathable
@@ -357,12 +366,14 @@ public struct ClassOwnerDashboardFeature {
       Result<ClassAIFeedbackResult, ClassAIFeedbackError>,
       wasUnknown: Bool
     )
+    case myActivityResponse(instanceID: UUID, requestID: UUID, roomID: Int, Result<ClassMyActivity, ClassError>)
   }
 
   public enum CancelID: Hashable, Sendable {
     case load(UUID)
     case generate(UUID)
     case generatePersonal(UUID)
+    case myActivity(UUID)
   }
 
   @CasePathable
@@ -423,12 +434,14 @@ extension ClassOwnerDashboardFeature {
       state.requestID = nil
       state.insightRequestID = nil
       state.feedbackRequestID = nil
+      state.myActivityRequestID = nil
       state.isGeneratingInsight = false
       state.isGeneratingFeedback = false
       return .merge(
         .cancel(id: CancelID.load(state.instanceID)),
         .cancel(id: CancelID.generate(state.instanceID)),
         .cancel(id: CancelID.generatePersonal(state.instanceID)),
+        .cancel(id: CancelID.myActivity(state.instanceID)),
         .send(.delegate(.dismiss))
       )
     case .managementTapped:
@@ -491,6 +504,8 @@ extension ClassOwnerDashboardFeature {
       state.isGeneratingFeedback = false
       state.insightUnknownRetryCount = 0
       state.feedbackUnknownRetryCount = 0
+      state.receivedLikeCount = nil
+      state.myActivityRequestID = nil
       let requestID = uuid()
       state.requestID = requestID
       state.sourceViewState = .loading
@@ -514,8 +529,25 @@ extension ClassOwnerDashboardFeature {
       return .concatenate(
         .cancel(id: CancelID.generate(state.instanceID)),
         .cancel(id: CancelID.generatePersonal(state.instanceID)),
+        .cancel(id: CancelID.myActivity(state.instanceID)),
         fetch
       )
+    case .fetchMyActivity:
+      let requestID = uuid()
+      state.myActivityRequestID = requestID
+      return .run { [classUseCase, instanceID = state.instanceID, roomID = state.room.id] send in
+        let result = await Result {
+          try await classUseCase.fetchMyActivity(roomID: roomID, cursor: nil)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.myActivityResponse(
+          instanceID: instanceID,
+          requestID: requestID,
+          roomID: roomID,
+          result
+        )))
+      }
+      .cancellable(id: CancelID.myActivity(state.instanceID), cancelInFlight: true)
     case .generateInsight:
       let retryServerGeneration = state.insightError == .serverRetryAvailable
       let requestID = uuid()
@@ -594,12 +626,16 @@ extension ClassOwnerDashboardFeature {
         case (true, true):
           return .merge(
             .send(.async(.generateInsight)),
-            .send(.async(.generatePersonal))
+            .send(.async(.generatePersonal)),
+            .send(.async(.fetchMyActivity))
           )
         case (true, false):
           return .send(.async(.generateInsight))
         case (false, true):
-          return .send(.async(.generatePersonal))
+          return .merge(
+            .send(.async(.generatePersonal)),
+            .send(.async(.fetchMyActivity))
+          )
         case (false, false):
           return .none
         }
@@ -608,6 +644,13 @@ extension ClassOwnerDashboardFeature {
         state.sourceError = error
         state.sourceViewState = .failed
       }
+      return .none
+    case let .myActivityResponse(instanceID, requestID, roomID, result):
+      guard state.instanceID == instanceID,
+            state.myActivityRequestID == requestID,
+            state.room.id == roomID else { return .none }
+      state.myActivityRequestID = nil
+      state.receivedLikeCount = try? result.get().receivedLikeCount
       return .none
     case let .dashboardResponse(instanceID, requestID, roomID, result):
       guard state.instanceID == instanceID,

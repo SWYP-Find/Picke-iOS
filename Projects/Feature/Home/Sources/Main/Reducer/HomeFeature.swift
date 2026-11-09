@@ -25,6 +25,8 @@ public struct HomeFeature {
     public enum ViewState: Equatable {
       case loading
       case loaded
+      /// 로딩이 실패한 상태(받아 둔 데이터는 유지) — 데이터가 없으면 스켈레톤이 아니라 빈 상태를 보여준다(Android와 동일).
+      case failed
     }
 
     public var viewState: ViewState = .loaded
@@ -34,28 +36,47 @@ public struct HomeFeature {
     public var heroIndex: Int = 0
     public var hotBattles: [HotBattle] = []
     public var bestBattles: [BestBattle] = []
-    public var quizzes: [QuizQuestion] = []
-    public var votes: [VoteQuestion] = []
+    public var bestComments: [HomeBestComment] = []
     public var newBattles: [NewBattle] = []
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
     public var hasUnreadNotification: Bool = false
+    /// 첫 /unread 결과가 오기 전까지 true — 그동안 종 자리에 shimmer 원을 그린다(Android isAlarmStatusLoading).
+    public var isUnreadBadgeLoading: Bool = true
+
+    /// 홈 조회 실패 안내 — View 가 토스트로 띄운 뒤 `.toastShown` 으로 비운다.
+    public var toastMessage: String?
 
     /// 출석체크 커스텀 모달 — 오늘 첫 출석에 성공했을 때만 값이 찬다.
     @Presents public var attendanceModal: AttendanceModalFeature.State?
     /// 출석 체크는 앱 세션당 1회만 시도한다(하루 1회 제한이라 재진입마다 때릴 이유가 없다).
     public var hasTriedAttendance: Bool = false
 
-    public var currentQuiz: QuizQuestion? { quizzes.first }
-    public var currentVote: VoteQuestion? { votes.first }
+    /// 홈 탭 재선택 시 맨 위로 올리라는 요청 토큰(값이 바뀔 때마다 View 가 스크롤).
+    public var scrollToTopRequest: Int = 0
+
+    /// Android 상단 바: 첫 로딩 중이거나 미읽음 조회 전이면 종 대신 shimmer 원(`isLoading || isAlarmStatusLoading`).
+    public var shouldShowBellSkeleton: Bool {
+      shouldShowSkeleton || isUnreadBadgeLoading
+    }
+
+    /// Best 배틀은 최대 3개만 노출한다(Android `take(3)`).
+    public var visibleBestBattles: [BestBattle] {
+      Array(bestBattles.prefix(3))
+    }
+
+    public var hasVisibleHomeContent: Bool {
+      !heroes.isEmpty || !hotBattles.isEmpty || !bestBattles.isEmpty ||
+        !bestComments.isEmpty || !newBattles.isEmpty
+    }
 
     public var shouldShowSkeleton: Bool {
-      (viewState == .loading || !hasLoadedHome) &&
+      viewState != .failed &&
+        (viewState == .loading || !hasLoadedHome) &&
         heroes.isEmpty &&
         hotBattles.isEmpty &&
         bestBattles.isEmpty &&
-        quizzes.isEmpty &&
-        votes.isEmpty &&
+        bestComments.isEmpty &&
         newBattles.isEmpty
     }
 
@@ -75,35 +96,35 @@ public struct HomeFeature {
   public enum View {
     case onAppear
     case pullToRefresh
-    case seeMoreTapped(Section)
-    case voteTapped(VoteQuestion)
     case heroTapped(HeroBattle)
     case hotBattleTapped(HotBattle)
     case bestBattleTapped(BestBattle)
+    case bestCommentTapped(HomeBestComment)
     case newBattleTapped(NewBattle)
     case notificationTapped
     /// 홈 피드 네이티브 광고 클릭
     case adNativeClicked
+    /// 홈 루트에서 홈 탭을 다시 눌렀을 때 — 맨 위로만 이동한다(Android 와 동일, 다시 불러오지 않음).
+    case homeTabReselected
+    /// 실패 토스트를 띄운 뒤 메시지를 비운다.
+    case toastShown
   }
 
-  public enum Section: Equatable {
-    case hotBattles
-    case bestBattles
-    case todayPicke
-    case newBattles
-  }
-
+  @CasePathable
   public enum AsyncAction: Equatable {
     case fetchHome
+    /// 당겨서 새로고침 — 스켈레톤 없이 받아 둔 화면 위에서 다시 조회한다.
+    case refreshHome
     /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
     case syncUnreadBadge
     /// 오늘의 출석 체크 (POST /attendance/check) — 성공 시 주간 현황까지 이어 조회한다.
     case checkAttendance
   }
 
+  @CasePathable
   public enum InnerAction: Equatable {
     case homeResponse(Result<HomeBundle, AuthError>)
-    case unreadBadgeResponse(Bool)
+    case unreadBadgeResponse(Result<Bool, AuthError>)
     /// 출석 체크 성공 + 주간 현황 조회까지 끝난 결과.
     case attendanceResponse(weekly: WeeklyAttendance, pointsEarned: Int)
   }
@@ -164,26 +185,16 @@ extension HomeFeature {
         ? .none
         : .send(.async(.checkAttendance))
       state.hasTriedAttendance = true
-      guard !state.hasLoadedHome, state.viewState != .loading else {
+      // 홈 조회는 첫 진입 한 번만(Android ViewModel init) — 실패·로딩 중·로드 완료면 다시 부르지 않고 새로고침으로만 다시 부른다.
+      // 초기값 `.loaded` + 미로드 = 한 번도 요청하지 않은 상태.
+      guard !state.hasLoadedHome, state.viewState == .loaded else {
         return .merge(syncBadge, attendance)
       }
       return .merge(syncBadge, attendance, .send(.async(.fetchHome)))
 
     case .pullToRefresh:
       guard state.viewState != .loading else { return .none }
-      return .send(.async(.fetchHome))
-
-    case .seeMoreTapped:
-      analyticsUseCase.track(.uiAction(action: .homeMore, screen: .home))
-      return .send(.delegate(.moveToExplore))
-
-    case let .voteTapped(question):
-      analyticsUseCase.track(.contentAction(ContentActionData(
-        action: .voteCardTap,
-        contentID: "\(question.battleId)",
-        section: .vote
-      )))
-      return .send(.delegate(.presentPreVote(battleId: question.battleId)))
+      return .send(.async(.refreshHome))
 
     case let .heroTapped(battle):
       analyticsUseCase.track(.contentAction(ContentActionData(action: .heroTap, contentID: "\(battle.battleId)")))
@@ -205,6 +216,14 @@ extension HomeFeature {
       )))
       return .send(.delegate(.presentPreVote(battleId: battle.battleId)))
 
+    case let .bestCommentTapped(comment):
+      analyticsUseCase.track(.contentAction(ContentActionData(
+        action: .battleCardTap,
+        contentID: "\(comment.battleId)",
+        section: .bestComment
+      )))
+      return .send(.delegate(.presentPreVote(battleId: comment.battleId)))
+
     case let .newBattleTapped(battle):
       analyticsUseCase.track(.contentAction(ContentActionData(
         action: .newBattleTap,
@@ -220,6 +239,14 @@ extension HomeFeature {
     case .adNativeClicked:
       analyticsUseCase.track(.adClick(AdClickData(placement: .home, format: .native, unit: "ADFIT_NATIVE_2_1")))
       return .none
+
+    case .homeTabReselected:
+      state.scrollToTopRequest += 1
+      return .none
+
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
     }
   }
 
@@ -230,19 +257,18 @@ extension HomeFeature {
     switch action {
     case .fetchHome:
       state.viewState = .loading
-      return .run { [repository = homeUseCase] send in
-        let result = await Result {
-          try await repository.fetchHome()
-        }
-        .mapError(AuthError.from)
-        return await send(.inner(.homeResponse(result)))
-      }
-      .cancellable(id: CancelID.fetchHome, cancelInFlight: true)
+      return requestHome()
+
+    case .refreshHome:
+      return requestHome()
 
     case .syncUnreadBadge:
       return .run { [useCase = notificationUseCase] send in
-        guard let hasUnread = try? await useCase.hasUnreadNotifications() else { return }
-        await send(.inner(.unreadBadgeResponse(hasUnread)))
+        let result = await Result {
+          try await useCase.hasUnreadNotifications()
+        }
+        .mapError(AuthError.from)
+        await send(.inner(.unreadBadgeResponse(result)))
       }
       .cancellable(id: CancelID.syncUnreadBadge, cancelInFlight: true)
 
@@ -262,15 +288,27 @@ extension HomeFeature {
     }
   }
 
+  /// 홈 조회 요청 — 첫 조회와 새로고침이 같은 요청을 쓰고, 새 요청이 진행 중인 요청을 취소한다.
+  private func requestHome() -> Effect<Action> {
+    .run { [repository = homeUseCase] send in
+      let result = await Result {
+        try await repository.fetchHome()
+      }
+      .mapError(AuthError.from)
+      return await send(.inner(.homeResponse(result)))
+    }
+    .cancellable(id: CancelID.fetchHome, cancelInFlight: true)
+  }
+
   private func handleInnerAction(
     state: inout State,
     action: InnerAction
   ) -> Effect<Action> {
     switch action {
     case let .homeResponse(result):
-      state.viewState = .loaded
       switch result {
       case let .success(bundle):
+        state.viewState = .loaded
         state.hasLoadedHome = true
         let home = bundle.replacingEmptySectionsWithMocks
         state.newNotice = home.newNotice
@@ -278,17 +316,21 @@ extension HomeFeature {
         state.heroIndex = 0
         state.hotBattles = home.hotBattles
         state.bestBattles = home.bestBattles
-        state.quizzes = home.quizzes
-        state.votes = home.votes
+        state.bestComments = home.bestComments
         state.newBattles = home.newBattles
       case let .failure(error):
+        state.viewState = .failed
+        state.toastMessage = "정보를 불러오지 못했어요"
         PickeLogger.error("[HomeFeature] fetchHome failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
 
-    case let .unreadBadgeResponse(hasUnread):
-      // 서버(/unread) 값을 그대로 반영 — 별도 저장/가드 없이 진입 시점 진실값만 사용.
-      state.hasUnreadNotification = hasUnread
+    case let .unreadBadgeResponse(result):
+      state.isUnreadBadgeLoading = false
+      // 서버(/unread) 값을 그대로 반영 — 실패하면 기존 배지를 그대로 둔다(Android 와 동일).
+      if case let .success(hasUnread) = result {
+        state.hasUnreadNotification = hasUnread
+      }
       return .none
 
     case let .attendanceResponse(weekly, pointsEarned):
@@ -319,7 +361,7 @@ extension HomeFeature {
     action: HomeDelegate
   ) -> Effect<Action> {
     switch action {
-    case .presentPreVote, .moveToExplore, .openNotification:
+    case .presentPreVote, .openNotification:
       return .none
     }
   }

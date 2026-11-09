@@ -13,7 +13,7 @@ import PickeNetwork
 extension ClassRepositoryImpl {
   public func fetchRecommendedBattles(filter: ClassTopicFilter) async throws -> [ClassBattleSummary] {
     guard (1 ... 3).contains(filter.categories.count), filter.keyword.count <= 50 else {
-      throw ClassError.unknown("추천 조건을 확인해 주세요.")
+      throw ClassError.userMessage("추천 조건을 확인해 주세요.")
     }
     do {
       let data = try await client.send(

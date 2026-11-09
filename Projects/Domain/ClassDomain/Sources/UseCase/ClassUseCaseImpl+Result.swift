@@ -24,4 +24,11 @@ extension ClassUseCaseImpl {
   public func retryInsight(roomID: Int) async throws {
     try await repository.retryInsight(roomID: roomID)
   }
+
+  public func fetchMyActivity(
+    roomID: Int,
+    cursor: String?
+  ) async throws -> ClassMyActivity {
+    try await repository.fetchMyActivity(roomID: roomID, cursor: cursor)
+  }
 }

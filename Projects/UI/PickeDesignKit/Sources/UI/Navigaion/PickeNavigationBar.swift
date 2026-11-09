@@ -82,9 +82,13 @@ public struct PickeNavigationBar<Trailing: View>: View {
   @ViewBuilder
   private var centerArea: some View {
     if leadingTitle == nil, let centerTitle {
+      // Android `PickeTopAppBarTitle` — 한 줄 말줄임, 양옆 버튼(24 + 간격) 자리를 비운다.
       Text(centerTitle)
         .pretendardFont(.headingMedium)
         .kerning(-0.4)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .padding(.horizontal, 32)
     } else if let centerIcon {
       centerIcon
         .font(.system(size: 16, weight: .semibold))

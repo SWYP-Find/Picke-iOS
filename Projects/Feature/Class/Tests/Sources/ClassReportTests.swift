@@ -28,16 +28,26 @@ struct ClassReportTests {
     ])
   }
 
+  @Test
+  func 주요_의견_본문은_따옴표로_감싸_표시한다() {
+    let row = ClassReportHighlightRow(id: 0, title: "주요 의견 1", text: "첫 인용", isLast: true)
+
+    #expect(row.quotedText == "“첫 인용”")
+  }
+
   private struct ResultStub: ClassResultInterface {
     let result: Result<ClassResult, ClassError>
     let feedback: ClassAIPersonalFeedback?
+    let myActivity: ClassMyActivity?
 
     init(
       result: Result<ClassResult, ClassError>,
-      feedback: ClassAIPersonalFeedback? = nil
+      feedback: ClassAIPersonalFeedback? = nil,
+      myActivity: ClassMyActivity? = nil
     ) {
       self.result = result
       self.feedback = feedback
+      self.myActivity = myActivity
     }
 
     func fetchResult(roomID _: Int) async throws -> ClassResult {
@@ -56,25 +66,39 @@ struct ClassReportTests {
     func retryInsight(roomID _: Int) async throws {
       throw ClassAIFeedbackError.temporarilyUnavailable
     }
+
+    func fetchMyActivity(
+      roomID _: Int,
+      cursor _: String?
+    ) async throws -> ClassMyActivity {
+      guard let myActivity else { throw ClassError.network("내 활동을 불러오지 못했습니다.") }
+      return myActivity
+    }
   }
 
   private func result(
     room: ClassRoom,
     reportState: String?,
-    postVoteRatio: Double = 54.5
+    postVoteRatio: Double = 54.5,
+    activeMemberCount: Int = 12,
+    firstCount: Int = 6,
+    secondCount: Int = 5
   ) -> ClassResult {
     ClassResult(
       classID: room.id,
       closed: true,
       closeAt: room.deadline,
       stats: .init(
-        activeMemberCount: 12,
-        completedCount: 10,
+        activeMemberCount: activeMemberCount,
+        completedCount: min(10, activeMemberCount),
         participationRate: 83.3,
-        commentWriterCount: 9,
+        commentWriterCount: min(9, activeMemberCount),
         commentRate: 75,
-        postVoteCount: 11,
-        options: [.init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: 6, postVoteRatio: postVoteRatio)]
+        postVoteCount: firstCount + secondCount,
+        options: [
+          .init(id: 31, title: "창작이다", preVoteCount: 8, postVoteCount: firstCount, postVoteRatio: postVoteRatio),
+          .init(id: 32, title: "아니다", preVoteCount: 4, postVoteCount: secondCount, postVoteRatio: 100 - postVoteRatio)
+        ]
       ),
       myReportState: reportState,
       insightState: nil
@@ -93,27 +117,49 @@ struct ClassReportTests {
     #expect(state.serverCommentRate == "75%")
     #expect(state.serverParticipationCount == "10 / 12명")
     #expect(state.serverCommentCount == "9 / 12명")
-    #expect(abs(state.serverParticipationProgress - 0.833) < 0.0001)
+    #expect(abs(state.serverParticipationProgress - 0.833) < 0.001)
     #expect(abs(state.serverCommentProgress - 0.75) < 0.0001)
     let option = try #require(state.classResult?.stats.options.first)
     #expect(state.serverOptionCounts[option.id] == "사전 8 · 사후 6")
     #expect(state.serverDistributionTotalText == "11명")
-    #expect(abs(state.serverDistributionProgress - 0.545) < 0.0001)
+    #expect(abs(state.serverDistributionProgress - (6.0 / 11.0)) < 0.0001)
     #expect(state.serverDistributionOptionCountTexts[option.id] == "6명")
     #expect(state.serverDistributionOptionRatioTexts[option.id] == "54.5%")
+    #expect(state.serverDistributionOptionRatioTexts[32] == "45.5%")
 
     state.classResult = result(
       room: .mockClosedSociety,
       reportState: "SUCCEEDED",
       postVoteRatio: -10
     )
-    #expect(state.serverDistributionProgress == 0)
+    #expect(abs(state.serverDistributionProgress - (6.0 / 11.0)) < 0.0001)
     state.classResult = result(
       room: .mockClosedSociety,
       reportState: "SUCCEEDED",
       postVoteRatio: 110
     )
-    #expect(state.serverDistributionProgress == 1)
+    #expect(abs(state.serverDistributionProgress - 0.545) < 0.001)
+  }
+
+  @Test
+  func 참여_대상과_사후_투표가_없으면_미참여_상태를_표시한다() {
+    var state = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    state.classResult = result(
+      room: .mockClosedSociety,
+      reportState: "SUCCEEDED",
+      activeMemberCount: 0,
+      firstCount: 0,
+      secondCount: 0
+    )
+    #expect(state.serverParticipationRate == "아직 참여 없음")
+    #expect(state.serverCommentRate == "아직 참여 없음")
+    #expect(state.serverParticipationProgress == 0)
+    #expect(state.serverCommentProgress == 0)
+    #expect(state.serverDistributionTotalCount == 0)
+    #expect(state.serverDistributionTotalText == "0명")
+    #expect(state.serverDistributionProgress == 0)
+    #expect(state.serverDistributionOptionRatioTexts[31] == "아직 참여 없음")
+    #expect(state.serverDistributionOptionRatioTexts[32] == "아직 참여 없음")
   }
 
   @Test
@@ -357,5 +403,87 @@ struct ClassReportTests {
     await store.receive(\.async.fetch)
     await store.receive(\.inner.resultResponse)
     #expect(store.state.sourceError == .resultExpired)
+  }
+
+  @Test
+  func 참여자_리포트의_받은_추천은_내_활동_응답으로_표시한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let activity = ClassMyActivity(
+      classID: room.id,
+      receivedLikeCount: 12,
+      commentCount: 3,
+      comments: [],
+      nextCursor: nil,
+      hasNext: false
+    )
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(result(room: room, reportState: "SUCCEEDED")),
+        myActivity: activity
+      )
+    }
+    store.exhaustivity = .off
+
+    #expect(store.state.personalReceivedLikeCountText == "—")
+    await store.send(.view(.onAppear))
+    await store.receive(\.async.fetchMyActivity)
+    await store.receive(\.inner.myActivityResponse)
+
+    #expect(store.state.receivedLikeCount == 12)
+    #expect(store.state.personalReceivedLikeCountText == "12")
+    #expect(store.state.myActivityRequestID == nil)
+
+    await store.send(.async(.fetch))
+    #expect(store.state.receivedLikeCount == nil)
+  }
+
+  @Test
+  func 내_활동_조회에_실패하면_받은_추천을_대시로_둔다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(result: .success(result(room: room, reportState: "SUCCEEDED")))
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    await store.receive(\.inner.myActivityResponse)
+
+    #expect(store.state.receivedLikeCount == nil)
+    #expect(store.state.personalReceivedLikeCountText == "—")
+  }
+
+  @Test
+  func 개인_리포트_권한이_없으면_내_활동을_조회하지_않는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: ClassReportFeature.State(room: room, instanceID: UUID())) {
+      ClassReportFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classResultUseCase = ResultStub(
+        result: .success(result(room: room, reportState: nil)),
+        myActivity: ClassMyActivity(
+          classID: room.id,
+          receivedLikeCount: 12,
+          commentCount: 0,
+          comments: [],
+          nextCursor: nil,
+          hasNext: false
+        )
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.onAppear))
+    await store.receive(\.inner.resultResponse)
+    await store.finish()
+
+    // 조회했다면 대역이 돌려주는 12가 들어간다.
+    #expect(store.state.receivedLikeCount == nil)
   }
 }

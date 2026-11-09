@@ -49,7 +49,7 @@ struct ClassMemberAPITests {
     [{"memberId":10,"displayName":"운영자","role":"OWNER","characterUrl":null,"me":false}]
     """
     let payload = try JSONDecoder().decode([ClassMemberDTO].self, from: Data(json.utf8))
-    #expect(throws: ClassError.unknown("내 멤버 정보를 찾을 수 없어요.")) {
+    #expect(throws: ClassError.userMessage("내 멤버 정보를 찾을 수 없어요.")) {
       try ClassMemberDTO.toMemberList(payload)
     }
   }

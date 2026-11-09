@@ -13,6 +13,7 @@ public struct HomeBundle: Equatable {
   public let heroes: [HeroBattle]
   public let hotBattles: [HotBattle]
   public let bestBattles: [BestBattle]
+  public let bestComments: [HomeBestComment]
   public let quizzes: [QuizQuestion]
   public let votes: [VoteQuestion]
   public let newBattles: [NewBattle]
@@ -22,6 +23,7 @@ public struct HomeBundle: Equatable {
     heroes: [HeroBattle],
     hotBattles: [HotBattle],
     bestBattles: [BestBattle],
+    bestComments: [HomeBestComment] = [],
     quizzes: [QuizQuestion],
     votes: [VoteQuestion],
     newBattles: [NewBattle]
@@ -30,6 +32,7 @@ public struct HomeBundle: Equatable {
     self.heroes = heroes
     self.hotBattles = hotBattles
     self.bestBattles = bestBattles
+    self.bestComments = bestComments
     self.quizzes = quizzes
     self.votes = votes
     self.newBattles = newBattles

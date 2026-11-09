@@ -75,7 +75,12 @@ private extension ProfileCoordinator {
     })
     let removedIDs = state.ticketInstanceIDs.subtracting(currentIDs)
     state.ticketInstanceIDs = currentIDs
-    return .merge(removedIDs.map { .cancel(id: ClassTicketFeature.CancelID.check($0)) })
+    return .merge(removedIDs.flatMap { id in
+      [
+        .cancel(id: ClassTicketFeature.CancelID.check(id)),
+        .cancel(id: ClassTicketFeature.CancelID.existingTicket(id)),
+      ]
+    })
   }
 
   func routerAction(
@@ -213,6 +218,30 @@ private extension ProfileCoordinator {
       overview.registrationStartDate = startDate
       overview.expirationDate = endDate
       state.routes.push(.ticket(overview))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.existingTicketFound(ticket)))):
+      // 내가 등록한 사용 중 이용권을 다시 입력함: 바로 아래가 개요면 그리로 돌아가고, 아니면 이 화면을 개요로 바꾼다.
+      guard routeID == state.routes.count - 1,
+            case var .ticket(current)? = state.routes.last?.screen
+      else { return .none }
+      if routeID >= 1,
+         case var .ticket(previous) = state.routes[routeID - 1].screen,
+         previous.phase == .overview
+      {
+        state.routes.goBack()
+        previous.ticket = ticket
+        previous.registrationStartDate = ticket.activatedAt
+        previous.expirationDate = ticket.expiresAt
+        state.routes[screenAt: routeID - 1] = .ticket(previous)
+        return .none
+      }
+      current.preview = nil
+      current.ticket = ticket
+      current.registrationStartDate = ticket.activatedAt
+      current.expirationDate = ticket.expiresAt
+      current.phase = .overview
+      state.routes[screenAt: routeID] = .ticket(current)
       return .none
 
     case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):

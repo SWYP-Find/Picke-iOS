@@ -14,6 +14,8 @@ public struct CommentReplyItem: Equatable, Identifiable {
   public var authorImageURL: String?
   public var timeAgo: String
   public var option: CommentOption
+  /// 서버 `stance` — Android 댓글 카드 배지 글자.
+  public var stance: String
   public var content: String
   public var likeCount: Int
   public var isLiked: Bool
@@ -27,6 +29,7 @@ public struct CommentReplyItem: Equatable, Identifiable {
     authorImageURL: String? = nil,
     timeAgo: String,
     option: CommentOption,
+    stance: String = "",
     content: String,
     likeCount: Int,
     isLiked: Bool = false,
@@ -39,6 +42,7 @@ public struct CommentReplyItem: Equatable, Identifiable {
     self.authorImageURL = authorImageURL
     self.timeAgo = timeAgo
     self.option = option
+    self.stance = stance
     self.content = content
     self.likeCount = likeCount
     self.isLiked = isLiked
@@ -60,6 +64,7 @@ public struct CommentReplyItem: Equatable, Identifiable {
       authorImageURL: item.user.characterImageUrl,
       timeAgo: Self.relativeTimeString(from: item.createdAt),
       option: parentOption,
+      stance: item.stance,
       content: item.content,
       likeCount: item.likeCount,
       isLiked: item.isLiked,

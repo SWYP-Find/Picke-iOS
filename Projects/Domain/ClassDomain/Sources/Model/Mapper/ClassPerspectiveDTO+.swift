@@ -14,7 +14,7 @@ extension ClassPerspectiveReceiptDTO {
 extension ClassPerspectiveItemDTO.User {
   func toDomain() -> ClassPerspectiveAuthor {
     ClassPerspectiveAuthor(
-      userTag: userTag,
+      userTag: userTag ?? "",
       nickname: nickname,
       characterType: characterType,
       characterImageURL: characterImageUrl.flatMap(URL.init(string:))

@@ -39,3 +39,14 @@ public struct RecommendedBattle: Equatable, Identifiable, Hashable {
     self.options = options
   }
 }
+
+public extension RecommendedBattle {
+  /// Android `RecommendItemCard` 태그 칩 — 첫 태그, 없으면 "#이슈".
+  var tagLabel: String { "#\(tags.first?.name ?? "이슈")" }
+
+  /// Android `RecommendUiModel.audioDuration` — 1~59초는 1분, 그 밖은 초 ÷ 60 내림.
+  var durationLabel: String {
+    let minutes = (1 ..< 60).contains(audioDuration) ? 1 : audioDuration / 60
+    return "\(minutes)분"
+  }
+}

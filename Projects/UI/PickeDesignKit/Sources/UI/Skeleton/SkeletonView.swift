@@ -76,3 +76,24 @@ private extension SkeletonView {
     date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
   }
 }
+
+public extension SkeletonView {
+  /// Android `Modifier.shimmer()` 기본 색(surfaceBeigeStrong → surfaceBeigeDefault).
+  static func beige(_ shape: SkeletonShape) -> SkeletonView {
+    SkeletonView(
+      shape,
+      base: .surfaceBeigeStrong,
+      highlight: .surfaceBeigeDefault
+    )
+  }
+
+  /// Android `PickeSkeletonLine` — radius 4, 폭은 최대값(좁은 자리에서는 줄어든다).
+  static func line(
+    width: CGFloat,
+    height: CGFloat
+  ) -> some View {
+    beige(.round(cornerRadius: 4))
+      .frame(maxWidth: width)
+      .frame(height: height)
+  }
+}

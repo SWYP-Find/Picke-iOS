@@ -59,6 +59,7 @@ struct MainTabAuditView: View {
     if case var .home(home) = state.homeState.routes[0].screen {
       home.hasLoadedHome = true
       home.hasTriedAttendance = true
+      home.isUnreadBadgeLoading = false
       home.viewState = .loaded
       state.homeState.routes[screenAt: 0] = .home(home)
     }

@@ -61,8 +61,8 @@ public struct ClassCoordinator {
       case let .members(members)?:
         return members.filter == nil && members.editName == nil
           && members.customAlert == nil && !members.isSaving
-      case .ticket?:
-        return true
+      case let .ticket(ticket)?:
+        return ticket.customAlert == nil
       default:
         return false
       }
@@ -190,7 +190,8 @@ public struct ClassCoordinator {
       effect,
       cancelRemovedReportLoads(state: &state),
       cancelRemovedChatObservers(state: &state),
-      cancelRemovedClassEffects(state: &state)
+      cancelRemovedClassEffects(state: &state),
+      cancelRemovedMyOpinionsLoads(state: state)
     )
   }
 }
@@ -450,7 +451,12 @@ private extension ClassCoordinator {
             .cancel(id: ClassAIVoteFeature.CancelID.submit(id)),
           ]
         }
-        + removedTickets.map { .cancel(id: ClassTicketFeature.CancelID.check($0)) }
+        + removedTickets.flatMap { id in
+          [
+            .cancel(id: ClassTicketFeature.CancelID.check(id)),
+            .cancel(id: ClassTicketFeature.CancelID.existingTicket(id)),
+          ]
+        }
         + removedBattleFlows.flatMap { id in
           [
             .cancel(id: ClassBattleFlowFeature.CancelID.load(id)),
@@ -462,6 +468,7 @@ private extension ClassCoordinator {
             .cancel(id: ClassBattleFlowFeature.CancelID.voteStats(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveLike(id)),
             .cancel(id: ClassBattleFlowFeature.CancelID.myPerspective(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveMutation(id)),
           ]
         }
     guard !removedBattleFlows.isEmpty else { return .merge(effects) }
@@ -479,6 +486,20 @@ private extension ClassCoordinator {
     let removedIDs = state.chatRoomInstanceIDs.subtracting(currentIDs)
     state.chatRoomInstanceIDs = currentIDs
     return .merge(removedIDs.map { .cancel(id: ChatRoomFeature.CancelID.audioObserver($0)) })
+  }
+
+  /// 내 의견 화면은 항상 최상단 하나뿐이고 CancelID가 전역이므로, 라우트에 없으면 남은 조회를 모두 취소한다.
+  func cancelRemovedMyOpinionsLoads(state: State) -> Effect<Action> {
+    let hasMyOpinions = state.routes.contains { route in
+      guard case .myOpinions = route.screen else { return false }
+      return true
+    }
+    guard !hasMyOpinions else { return .none }
+    return .merge(
+      .cancel(id: ClassMyOpinionsFeature.CancelID.fetch),
+      .cancel(id: ClassMyOpinionsFeature.CancelID.replies),
+      .cancel(id: ClassMyOpinionsFeature.CancelID.moreReplies)
+    )
   }
 
   func cancelRemovedReportLoads(state: inout State) -> Effect<Action> {
@@ -500,7 +521,10 @@ private extension ClassCoordinator {
       cancelledReports.flatMap { id in
         [
           .cancel(id: ClassReportFeature.CancelID.load(id)),
+          .cancel(id: ClassReportFeature.CancelID.voteHistory(id)),
           .cancel(id: ClassReportFeature.CancelID.generate(id)),
+          .cancel(id: ClassReportFeature.CancelID.insight(id)),
+          .cancel(id: ClassReportFeature.CancelID.myActivity(id)),
         ]
       }
         + cancelledDashboards.flatMap { id in
@@ -508,6 +532,7 @@ private extension ClassCoordinator {
             .cancel(id: ClassOwnerDashboardFeature.CancelID.load(id)),
             .cancel(id: ClassOwnerDashboardFeature.CancelID.generate(id)),
             .cancel(id: ClassOwnerDashboardFeature.CancelID.generatePersonal(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.myActivity(id)),
           ]
         }
     )
@@ -585,6 +610,30 @@ private extension ClassCoordinator {
       var registration = ClassTicketFeature.State(instanceID: uuid())
       registration.shouldCheckExistingTicket = false
       state.routes.push(.ticket(registration))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.existingTicketFound(ticket)))):
+      // 내가 등록한 사용 중 이용권을 다시 입력함: 바로 아래가 개요면 그리로 돌아가고, 아니면 이 화면을 개요로 바꾼다.
+      guard routeID == state.routes.count - 1,
+            case var .ticket(current)? = state.routes.last?.screen
+      else { return .none }
+      if routeID >= 1,
+         case var .ticket(previous) = state.routes[routeID - 1].screen,
+         previous.phase == .overview
+      {
+        state.routes.goBack()
+        previous.ticket = ticket
+        previous.registrationStartDate = ticket.activatedAt
+        previous.expirationDate = ticket.expiresAt
+        state.routes[screenAt: routeID - 1] = .ticket(previous)
+        return .none
+      }
+      current.preview = nil
+      current.ticket = ticket
+      current.registrationStartDate = ticket.activatedAt
+      current.expirationDate = ticket.expiresAt
+      current.phase = .overview
+      state.routes[screenAt: routeID] = .ticket(current)
       return .none
 
     case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):
@@ -669,7 +718,11 @@ private extension ClassCoordinator {
       state.routes.push(.myClasses(.init()))
       return .none
 
-    case .routeAction(_, action: .intro(.delegate(.create))):
+    case let .routeAction(routeID, action: .intro(.delegate(.create))):
+      // 이용권 확인 응답이 늦게 와도 소개 화면이 맨 위일 때만 만들기 흐름을 연다.
+      guard routeID == 0, state.routes.count == 1,
+            case .intro = state.routes[0].screen
+      else { return .none }
       invalidateCompletingJoin(state: &state)
       state.routes.push(.startMethod(.init()))
       return .none

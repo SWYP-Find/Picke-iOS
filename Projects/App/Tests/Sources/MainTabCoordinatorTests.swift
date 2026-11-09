@@ -53,6 +53,45 @@ struct MainTabCoordinatorTests {
   }
 
   @Test
+  func 클래스_만료_안내의_등록하기는_마이_탭_코드_입력_화면을_연다() async {
+    var state = MainTabCoordinator.State()
+    state.classState.routes.push(.myClasses(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      MyClassFeature.State()
+    }))
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.classroom(.router(.routeAction(id: 0, action: .intro(.delegate(.registerTicket))))))
+
+    #expect(store.state.selectedTab == MainTabCoordinator.Tab.myPage.rawValue)
+    #expect(store.state.classState.routes.count == 1)
+    guard case let .ticket(ticket)? = store.state.myPageState.routes.last?.screen else {
+      Issue.record("마이 탭에 이용권 화면이 열리지 않았습니다")
+      return
+    }
+    #expect(ticket.shouldCheckExistingTicket == false)
+    #expect(ticket.phase == .entry)
+  }
+
+  @Test
+  func 마이_탭_이용권_화면은_안내가_떠_있을_때만_탭바를_숨긴다() {
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.myPage.rawValue)
+    var ticket = ClassTicketFeature.State()
+    state.myPageState.routes.push(.ticket(ticket))
+    #expect(!state.shouldHideTabBar)
+
+    ticket.customAlert = .ticketInvalidCode()
+    state.myPageState.routes[screenAt: 1] = .ticket(ticket)
+    #expect(state.shouldHideTabBar)
+  }
+
+  @Test
   func 탭_변경은_한번만_기록하고_재선택과_잘못된_탭은_기록하지_않는다() async {
     let events = LockIsolated<[AnalyticsButton]>([])
     let store = TestStore(initialState: MainTabCoordinator.State()) {
@@ -75,6 +114,57 @@ struct MainTabCoordinatorTests {
     await store.send(.tabTapped(-1))
     await store.finish()
     #expect(events.value == [.tabExplore])
+  }
+
+  @Test
+  func 홈_루트에서_홈_재선택은_맨_위로만_올리고_다시_부르지_않는다() async {
+    var state = MainTabCoordinator.State()
+    state.homeState = .init()
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.tabReselected(MainTabCoordinator.Tab.home.rawValue))
+    await store.receive(\.home.router.routeAction)
+
+    guard case let .home(homeFeature) = store.state.homeState.routes[0].screen else {
+      Issue.record("홈 루트 화면이 HomeFeature 가 아님")
+      return
+    }
+    #expect(homeFeature.scrollToTopRequest == 1)
+
+    // Android 처럼 다시 부르지 않는다 — 이어지는 액션이 없고 처음 상태(미로드)가 그대로 남는다.
+    await store.finish()
+    guard case let .home(afterReselect) = store.state.homeState.routes[0].screen else {
+      Issue.record("홈 루트 화면이 HomeFeature 가 아님")
+      return
+    }
+    #expect(afterReselect.hasLoadedHome == false)
+    #expect(afterReselect.viewState == .loaded)
+  }
+
+  @Test
+  func 홈_하위_화면에서_홈_재선택은_루트로만_돌아간다() async {
+    var state = MainTabCoordinator.State()
+    state.homeState.routes.push(.home(HomeFeature.State()))
+    let store = TestStore(initialState: state) {
+      MainTabCoordinator()
+    } withDependencies: {
+      $0.analyticsUseCase.track = { _ in }
+    }
+    store.exhaustivity = .off
+
+    await store.send(.tabReselected(MainTabCoordinator.Tab.home.rawValue))
+
+    #expect(store.state.homeState.routes.count == 1)
+    guard case let .home(homeFeature) = store.state.homeState.routes[0].screen else {
+      Issue.record("홈 루트 화면이 HomeFeature 가 아님")
+      return
+    }
+    #expect(homeFeature.scrollToTopRequest == 0)
   }
 
   @Test

@@ -37,6 +37,7 @@ struct ClassPersonalReportDTO: Decodable, Sendable {
   let state: ClassAIGenerationState
   let feedback: Feedback?
   let preOption: VoteOption?
+  let midVotes: [ClassMidVoteDTO]?
   let postOption: VoteOption?
   let perspectiveCount: Int?
   let commentCount: Int?

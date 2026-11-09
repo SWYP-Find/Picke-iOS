@@ -35,6 +35,8 @@ public struct HotBattle: Equatable, Identifiable {
   }
 
   public var durationMinutes: Int { max(1, audioDuration / 60) }
+  /// 카드 태그 배지 문구 — 첫 태그, 없으면 "#이슈"(Android 와 동일).
+  public var tagLabel: String { "#\(tags.first?.name ?? "이슈")" }
 }
 
 public extension HotBattle {
