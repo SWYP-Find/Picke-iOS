@@ -49,6 +49,15 @@ public struct CommentReplyFeature {
     public var deleteParentPending: Bool = false
     public var reportParentPending: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
+    /// Android `CommentUiEvent` 토스트 — 뷰가 띄운 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
+    /// 원본 관점·첫 답글 조회 실패 — Android 처럼 내용 대신 `PickeLoadFailedSection` 을 그린다.
+    public var loadFailed: Bool = false
+
+    /// Android `comment_input_hint_reply` / `comment_input_hint_edit`.
+    public var inputPlaceholder: String {
+      editingParent || editingCommentId != nil ? "수정할 내용을 입력해주세요..." : "댓글을 남겨보세요..."
+    }
 
     public var menuTargetReply: CommentReplyItem? {
       guard let id = menuTargetReplyId else { return nil }
@@ -112,6 +121,7 @@ public struct CommentReplyFeature {
     case menuDismissed
     case replyMenu(id: UUID, action: MenuAction)
     case parentMenu(MenuAction)
+    case toastShown
   }
 
   public enum MenuAction: Equatable {
@@ -151,6 +161,8 @@ public struct CommentReplyFeature {
     case parentLikeResponse(Result<CommentLikeResult, CommentError>)
     case replyLikeResponse(Result<CommentLikeResult, CommentError>)
     case parentLikesResponse(Result<CommentLikeResult, CommentError>)
+    case parentUpdateResponse(Result<Bool, PerspectiveError>)
+    case reportResponse(Result<Bool, PerspectiveError>)
   }
 
   public enum DelegateAction: Equatable {
@@ -263,21 +275,28 @@ extension CommentReplyFeature {
       return .send(.delegate(.dismiss))
 
     case .parentLikeTapped:
+      // Android: 본인 관점은 안내 토스트만, 좋아요 수·상태는 응답을 받은 뒤 반영한다.
+      if state.parentComment.isMine {
+        state.toastMessage = "본인이 쓴 관점에는 좋아요를 누를 수 없습니다."
+        return .none
+      }
       analyticsUseCase.track(.uiAction(action: .commentLike, screen: .commentReply))
-      let wasLiked = state.parentComment.isLiked
-      state.parentComment.isLiked.toggle()
-      state.parentComment.likeCount += state.parentComment.isLiked ? 1 : -1
-      return .send(.async(.toggleParentLike(currentlyLiked: wasLiked)))
+      return .send(.async(.toggleParentLike(currentlyLiked: state.parentComment.isLiked)))
 
     case let .replyLikeTapped(id):
-      analyticsUseCase.track(.uiAction(action: .commentLike, screen: .commentReply))
       guard let index = state.replies.firstIndex(where: { $0.id == id }),
             let commentId = state.replies[index].commentId
       else { return .none }
-      let wasLiked = state.replies[index].isLiked
-      state.replies[index].isLiked.toggle()
-      state.replies[index].likeCount += state.replies[index].isLiked ? 1 : -1
-      return .send(.async(.toggleReplyLike(commentId: commentId, currentlyLiked: wasLiked)))
+      if state.replies[index].isMine {
+        state.toastMessage = "본인이 쓴 댓글에는 좋아요를 누를 수 없습니다."
+        return .none
+      }
+      analyticsUseCase.track(.uiAction(action: .commentLike, screen: .commentReply))
+      return .send(.async(.toggleReplyLike(commentId: commentId, currentlyLiked: state.replies[index].isLiked)))
+
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
 
     case .sendTapped:
       let text = state.replyText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -395,7 +414,7 @@ extension CommentReplyFeature {
       let cursor = reset ? nil : state.nextCursor
       return .run { [repository = perspectiveUseCase] send in
         let result = await Result {
-          try await repository.fetchLabeledComments(perspectiveId: pid, cursor: cursor, size: 20)
+          try await repository.fetchLabeledComments(perspectiveId: pid, cursor: cursor, size: 10)
         }
         .mapError(CommentError.from)
         return await send(.inner(.repliesResponse(result, reset: reset)))
@@ -478,15 +497,24 @@ extension CommentReplyFeature {
 
     case let .reportComment(commentId):
       let perspectiveId = state.perspectiveId
-      return .run { [repository = perspectiveUseCase] _ in
-        try? await repository.reportComment(perspectiveId: perspectiveId, commentId: commentId)
+      return .run { [repository = perspectiveUseCase] send in
+        let result = await Result {
+          try await repository.reportComment(perspectiveId: perspectiveId, commentId: commentId)
+          return true
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.reportResponse(result)))
       }
 
     case let .updateParent(content):
       let perspectiveId = state.perspectiveId
       return .run { [repository = perspectiveUseCase] send in
-        try? await repository.updatePerspective(perspectiveId: perspectiveId, content: content)
-        await send(.async(.fetchParent))
+        let result = await Result {
+          try await repository.updatePerspective(perspectiveId: perspectiveId, content: content)
+          return true
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.parentUpdateResponse(result)))
       }
 
     case .deleteParent:
@@ -503,8 +531,13 @@ extension CommentReplyFeature {
 
     case .reportParent:
       let perspectiveId = state.perspectiveId
-      return .run { [repository = perspectiveUseCase] _ in
-        try? await repository.reportPerspective(perspectiveId: perspectiveId)
+      return .run { [repository = perspectiveUseCase] send in
+        let result = await Result {
+          try await repository.reportPerspective(perspectiveId: perspectiveId)
+          return true
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.reportResponse(result)))
       }
     }
   }
@@ -525,6 +558,8 @@ extension CommentReplyFeature {
         state.parentComment = CommentItem(item: perspective, order: 0)
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] fetchParent failed: \(error.localizedDescription)", category: .ui)
+        state.loadFailed = true
+        state.toastMessage = Self.loadFailedMessage
       }
       return .none
 
@@ -540,6 +575,10 @@ extension CommentReplyFeature {
         state.hasNext = page.hasNext
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] fetchReplies failed: \(error.localizedDescription)", category: .ui)
+        if reset, state.replies.isEmpty {
+          state.loadFailed = true
+        }
+        state.toastMessage = Self.loadFailedMessage
       }
       return .none
 
@@ -549,6 +588,7 @@ extension CommentReplyFeature {
         return .send(.async(.fetchReplies(reset: true)))
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] createReply failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
         return .none
       }
 
@@ -559,6 +599,7 @@ extension CommentReplyFeature {
         return .send(.async(.fetchReplies(reset: true)))
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] updateReply failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
         return .none
       }
 
@@ -569,6 +610,7 @@ extension CommentReplyFeature {
         if state.parentComment.replyCount > 0 { state.parentComment.replyCount -= 1 }
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] deleteReply failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
       }
       return .none
 
@@ -578,10 +620,7 @@ extension CommentReplyFeature {
         return .send(.delegate(.dismiss))
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] deleteParent failed: \(error.localizedDescription)", category: .ui)
-        state.customAlert = .alert(
-          title: "의견을 삭제할 수 없어요",
-          message: "클래스 설정이나 진행 상태를 확인해 주세요."
-        )
+        state.toastMessage = Self.actionFailedMessage
         return .none
       }
 
@@ -592,6 +631,7 @@ extension CommentReplyFeature {
         state.parentComment.isLiked = payload.isLiked
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] toggleParentLike failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
       }
       return .none
 
@@ -604,6 +644,7 @@ extension CommentReplyFeature {
         }
       case let .failure(error):
         PickeLogger.error("[CommentReplyFeature] toggleReplyLike failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
       }
       return .none
 
@@ -615,6 +656,29 @@ extension CommentReplyFeature {
         PickeLogger.error("[CommentReplyFeature] fetchParentLikes failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
+
+    case let .parentUpdateResponse(result):
+      if case let .failure(error) = result {
+        PickeLogger.error("[CommentReplyFeature] updateParent failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
+        return .none
+      }
+      return .send(.async(.fetchParent))
+
+    case let .reportResponse(result):
+      switch result {
+      case .success:
+        state.toastMessage = "신고가 정상 접수되었습니다."
+      case .failure(.alreadyReported):
+        state.toastMessage = "이미 신고한 사용자입니다."
+      case let .failure(error):
+        PickeLogger.error("[CommentReplyFeature] report failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
+      }
+      return .none
     }
   }
+
+  static let loadFailedMessage = "정보를 불러오지 못했어요"
+  static let actionFailedMessage = "요청을 처리하지 못했어요"
 }

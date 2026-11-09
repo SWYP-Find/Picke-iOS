@@ -50,10 +50,10 @@ public struct CommentReplyView: View {
   public var body: some View {
     VStack(spacing: 0) {
       navigationBar()
-      replyScroll
+      content()
       inputBar
     }
-    .screenBackground()
+    .background(.bgBeige)
     .contentShape(Rectangle())
     .onTapGesture {
       isReplyFocused = false
@@ -64,22 +64,114 @@ public struct CommentReplyView: View {
     .onChange(of: editingTarget) { _, target in
       isReplyFocused = target != nil
     }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
     .animation(.easeInOut(duration: 0.18), value: store.menuTargetReplyId)
+    .animation(.easeInOut(duration: 0.18), value: store.parentMenuOpen)
   }
 }
 
+// MARK: - Navigation
+
 private extension CommentReplyView {
+  /// Android PickeTopAppBar — "댓글" 가운데, 16 SemiBold textDefault, 배경 backgroundBeige.
+  func navigationBar() -> some View {
+    PickeNavigationBar(
+      onBack: { send(.backButtonTapped) },
+      centerTitle: "댓글"
+    )
+    .foregroundStyle(.textDefault)
+    .background(.bgBeige)
+  }
+}
+
+// MARK: - Content
+
+private extension CommentReplyView {
+  /// Android CommentScreen — 로딩 중 스켈레톤, 실패 시 PickeLoadFailedSection,
+  /// 그 밖에는 원본 관점과 "답글 N개" 헤더를 고정하고 아래 답글 목록만 스크롤한다.
+  @ViewBuilder
+  func content() -> some View {
+    if store.loadFailed {
+      PickeLoadFailedSection()
+        .padding(16)
+        .frame(maxHeight: .infinity, alignment: .top)
+    } else if store.isLoadingReplies, store.replies.isEmpty {
+      ScrollView {
+        CommentReplySkeletonView()
+      }
+      .scrollIndicators(.hidden)
+      .frame(maxHeight: .infinity)
+    } else {
+      VStack(spacing: 0) {
+        parentCard
+        replyCountHeader
+        replyScroll
+      }
+    }
+  }
+
+  var parentCard: some View {
+    commentCard(
+      CommentCardContent(
+        author: store.parentComment.isMine ? "나" : store.parentComment.author,
+        imageURL: store.parentComment.authorImageURL,
+        timeAgo: store.parentComment.timeAgo,
+        stance: store.parentComment.optionLabel ?? store.parentComment.option.label,
+        content: store.parentComment.content,
+        likeCount: store.parentComment.likeCount,
+        isLiked: store.parentComment.isLiked,
+        replyCount: store.parentComment.replyCount
+      ),
+      menuItems: parentMenuItems,
+      isMenuOpen: store.parentMenuOpen,
+      opensUpward: false,
+      onMore: { send(.parentMenu(.more)) },
+      onLike: { send(.parentLikeTapped) }
+    )
+    .zIndex(1)
+  }
+
+  /// Android CommentHeaderSection — 가로 16·세로 12, 13 SemiBold gray600.
+  /// 배경 F9F8F6 은 토큰이 없어 가장 가까운 surfaceBeigeSubtle(F9F7F2)을 쓴다.
+  var replyCountHeader: some View {
+    Text("답글 \(store.replies.count)개")
+      .pretendardFont(.semiBold13)
+      .foregroundStyle(.gray600)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+      .background(.surfaceBeigeSubtle)
+  }
+
   var replyScroll: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        if store.isLoadingReplies, store.replies.isEmpty {
-          CommentReplySkeletonView()
-        } else {
-          VStack(spacing: 0) {
-            parentCommentSection()
-            replyCountHeader()
-            replySection()
+        LazyVStack(spacing: 0) {
+          ForEach(store.replies) { reply in
+            commentCard(
+              CommentCardContent(
+                author: reply.isMine ? "나" : reply.author,
+                imageURL: reply.authorImageURL,
+                timeAgo: reply.timeAgo,
+                stance: reply.stance.isEmpty ? reply.option.label : reply.stance,
+                content: reply.content,
+                likeCount: reply.likeCount,
+                isLiked: reply.isLiked,
+                replyCount: nil
+              ),
+              menuItems: replyMenuItems(for: reply),
+              isMenuOpen: store.menuTargetReplyId == reply.id,
+              opensUpward: reply.id == store.replies.last?.id && store.replies.count > 1,
+              onMore: { send(.replyMenu(id: reply.id, action: .more)) },
+              onLike: { send(.replyLikeTapped(reply.id)) }
+            )
+            .zIndex(store.menuTargetReplyId == reply.id ? 1 : 0)
+            .id(reply.id)
           }
         }
       }
@@ -88,286 +180,185 @@ private extension CommentReplyView {
       .onChange(of: store.replies.count) { _, _ in
         scrollToTargetReply(using: proxy)
       }
-      .onChange(of: store.menuTargetReplyId) { _, id in
-        guard let id else { return }
-        withAnimation(.easeInOut(duration: 0.18)) {
-          proxy.scrollTo("reply-menu-\(id)", anchor: nil)
-        }
-      }
-      .onChange(of: store.parentMenuOpen) { _, isOpen in
-        guard isOpen else { return }
-        withAnimation(.easeInOut(duration: 0.18)) {
-          proxy.scrollTo("parent-menu", anchor: nil)
-        }
-      }
-    }
-  }
-
-  /// 답글 "…" 메뉴 (내 글: 수정/삭제, 남 글: 신고) — pill 형태.
-  @ViewBuilder
-  func replyMenu(for reply: CommentReplyItem) -> some View {
-    VStack(alignment: .trailing, spacing: 8) {
-      if reply.isMine {
-        PickeActionPill(title: "수정", systemImage: "pencil") {
-          guard reply.commentId != nil else { return }
-          send(.replyMenu(id: reply.id, action: .edit))
-          isReplyFocused = true
-        }
-        PickeActionPill(title: "삭제", systemImage: "trash") { send(.replyMenu(id: reply.id, action: .delete)) }
-      } else {
-        PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.replyMenu(
-          id: reply.id,
-          action: .report
-        )) }
-      }
-    }
-  }
-
-  /// 부모(관점) "…" 메뉴 (내 글: 수정/삭제, 남 글: 신고).
-  @ViewBuilder
-  func parentMenuView() -> some View {
-    VStack(alignment: .trailing, spacing: 8) {
-      if store.parentComment.isMine {
-        PickeActionPill(title: "수정", systemImage: "pencil") {
-          send(.parentMenu(.edit))
-          isReplyFocused = true
-        }
-        PickeActionPill(title: "삭제", systemImage: "trash") { send(.parentMenu(.delete)) }
-      } else {
-        PickeActionPill(title: "신고", systemImage: "light.beacon.max.fill") { send(.parentMenu(.report)) }
-      }
     }
   }
 }
 
-// MARK: - Navigation
+// MARK: - Card
 
-private extension CommentReplyView {
-  @ViewBuilder
-  func navigationBar() -> some View {
-    PickeNavigationBar(
-      onBack: { send(.backButtonTapped) },
-      leadingTitle: "댓글"
-    )
-    .foregroundStyle(.gray500)
-    // Figma: 앱바는 beige200 위에 투명 배치, 하단 구분선 없음
-    .background(.beige200)
-  }
+/// Android PickeCommentCard 에 넘기는 값 묶음.
+private struct CommentCardContent {
+  let author: String
+  let imageURL: String?
+  let timeAgo: String
+  let stance: String
+  let content: String
+  let likeCount: Int
+  let isLiked: Bool
+  let replyCount: Int?
 }
 
-// MARK: - Content
-
 private extension CommentReplyView {
-  @ViewBuilder
-  func parentCommentSection() -> some View {
-    // Figma: 원본 댓글은 beige50 풀폭 행, 상·하단 구분선(beige600)
-    VStack(spacing: 0) {
-      commentCard(
-        author: store.parentComment.isMine ? "나" : store.parentComment.author,
-        imageURL: store.parentComment.authorImageURL,
-        timeAgo: store.parentComment.timeAgo,
-        option: store.parentComment.option,
-        content: store.parentComment.content,
-        replyCount: store.parentComment.replyCount,
-        likeCount: store.parentComment.likeCount,
-        isLiked: store.parentComment.isLiked,
-        showsReplyCount: true,
-        moreAction: { send(.parentMenu(.more)) },
-        likeAction: { send(.parentLikeTapped) }
-      )
-      .topDivider(.beige600)
-
-      if store.parentMenuOpen {
-        parentMenuView()
-          .padding(.trailing, 16)
-          .padding(.vertical, 12)
-          .frame(maxWidth: .infinity, alignment: .trailing)
-          .background(.beige50)
-          .bottomDivider(.beige600)
-          .id("parent-menu")
-      }
-    }
-  }
-
-  @ViewBuilder
-  func replyCountHeader() -> some View {
-    // Figma: "답글 N개" 헤더 — beige200 배경, 하단 구분선, gray800 SemiBold 13
-    Text("답글 \(store.replies.count)개")
-      .pretendardFont(.semiBold13)
-      .foregroundStyle(.gray800)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(.horizontal, 18)
-      .frame(height: 42)
-      .background(.beige200)
-      .bottomDivider(.beige600)
-  }
-
-  @ViewBuilder
-  func replySection() -> some View {
-    VStack(alignment: .leading, spacing: 0) {
-      ForEach(store.replies) { reply in
-        VStack(spacing: 0) {
-          commentCard(
-            author: reply.isMine ? "나" : reply.author,
-            imageURL: reply.authorImageURL,
-            timeAgo: reply.timeAgo,
-            option: reply.option,
-            content: reply.content,
-            replyCount: nil,
-            likeCount: reply.likeCount,
-            isLiked: reply.isLiked,
-            showsReplyCount: false,
-            moreAction: { send(.replyMenu(id: reply.id, action: .more)) },
-            likeAction: { send(.replyLikeTapped(reply.id)) }
-          )
-
-          if store.menuTargetReplyId == reply.id {
-            replyMenu(for: reply)
-              .padding(.trailing, 16)
-              .padding(.vertical, 12)
-              .frame(maxWidth: .infinity, alignment: .trailing)
-              .background(.beige50)
-              .bottomDivider(.beige600)
-              .id("reply-menu-\(reply.id)")
-          }
-        }
-        .id(reply.id)
-      }
-    }
-  }
-
-  @ViewBuilder
+  /// Android PickeCommentCard(CommentItemCard) — surfaceBeigeDefault, 가로 16·세로 12, 간격 8, 아래 1 borderBeigeDefault.
+  /// 헤더 [아바타 36][닉네임 12 SemiBold / 시간 10 SemiBold][배지], 본문 13 Regular textBody 전체,
+  /// 액션 [좋아요][답글 수(원본만)] … [ic_more 24]. "…" 메뉴는 버튼 위로 펼친다.
   func commentCard(
-    author: String,
-    imageURL: String?,
-    timeAgo: String,
-    option: CommentOption,
-    content: String,
-    replyCount: Int?,
-    likeCount: Int,
-    isLiked: Bool,
-    showsReplyCount: Bool,
-    moreAction: (() -> Void)? = nil,
-    likeAction: @escaping () -> Void
+    _ card: CommentCardContent,
+    menuItems: [PickeMoreMenuItem],
+    isMenuOpen: Bool,
+    opensUpward: Bool,
+    onMore: @escaping () -> Void,
+    onLike: @escaping () -> Void
   ) -> some View {
-    // Figma: 댓글/답글은 beige50 풀폭 행 + 하단 구분선(beige600), 내부 카드 박스 없음
     VStack(alignment: .leading, spacing: 8) {
-      commentHeader(
-        author: author,
-        imageURL: imageURL,
-        timeAgo: timeAgo,
-        option: option,
-        moreAction: moreAction
-      )
-
-      Text(content)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray400)
-        .lineSpacing(13 * 0.4)
+      cardHeader(card)
+      Text(card.content)
+        .pretendardFont(.regular13, lineSpacingMultiple: 1.4)
+        .foregroundStyle(.textBody)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
-
-      HStack(spacing: 11) {
-        Spacer()
-
-        if showsReplyCount, let replyCount {
-          actionLabel(systemName: "message", text: "\(replyCount)")
-        }
-
-        Button(action: likeAction) {
-          HStack(spacing: 2) {
-            Image(asset: .heartPlus)
-              .resizable()
-              .scaledToFit()
-              .frame(width: 16, height: 16)
-            Text(likeCount.decimalFormatted)
-              .pretendardFont(.labelSmall)
-          }
-          .foregroundStyle(isLiked ? .primary500 : .gray300)
-        }
-        .buttonStyle(.plain)
-      }
-      .foregroundStyle(.gray300)
+      cardActions(
+        card,
+        menuItems: isMenuOpen ? menuItems : [],
+        opensUpward: opensUpward,
+        onMore: onMore,
+        onLike: onLike
+      )
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.beige50)
-    .bottomDivider(.beige600)
+    // 구분선은 내용 아래에 그려 펼친 메뉴를 가리지 않게 한다.
+    .background(alignment: .bottom) {
+      ZStack(alignment: .bottom) {
+        Color.surfaceBeigeDefault
+        PickeDivider(.borderBeigeDefault)
+      }
+    }
   }
 
   @ViewBuilder
-  func commentHeader(
-    author: String,
-    imageURL: String?,
-    timeAgo: String,
-    option: CommentOption,
-    moreAction: (() -> Void)?
-  ) -> some View {
+  func cardHeader(_ card: CommentCardContent) -> some View {
     HStack(spacing: 8) {
       PickeAvatarView(
-        imageURL: imageURL,
-        fallback: author,
+        imageURL: card.imageURL,
+        fallback: card.author,
         size: 36
       )
-
-      VStack(alignment: .leading, spacing: 2) {
-        HStack(spacing: 6) {
-          Text(author)
-            .pretendardFont(.semiBold12)
-            .foregroundStyle(.gray500)
-            .lineLimit(1)
-
-          optionBadge(label: option.label, option: option)
-        }
-
-        // 시간 — caption/sm/semibold Pretendard SemiBold 10, gray300
-        Text(timeAgo)
+      VStack(alignment: .leading, spacing: 0) {
+        Text(card.author)
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.textDefault)
+          .lineLimit(1)
+          .truncationMode(.tail)
+        Text(card.timeAgo)
           .pretendardFont(.labelXSmall)
-          .foregroundStyle(.gray300)
+          .foregroundStyle(.textMuted)
+          .lineLimit(1)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      Text(card.stance)
+        .pickeBadge()
+    }
+  }
+
+  @ViewBuilder
+  func cardActions(
+    _ card: CommentCardContent,
+    menuItems: [PickeMoreMenuItem],
+    opensUpward: Bool,
+    onMore: @escaping () -> Void,
+    onLike: @escaping () -> Void
+  ) -> some View {
+    HStack(spacing: 8) {
+      Button(action: onLike) {
+        iconCount(
+          .heartPlus,
+          count: card.likeCount
+        )
+        .foregroundStyle(card.isLiked ? .primary500 : .textMuted)
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("좋아요")
+
+      if let replyCount = card.replyCount {
+        iconCount(
+          .commentMessage,
+          count: replyCount
+        )
+        .foregroundStyle(.textMuted)
+        .accessibilityLabel("답글")
       }
 
-      Spacer()
+      Spacer(minLength: 0)
 
-      if let moreAction {
-        Button(action: moreAction) {
-          Image(systemName: "ellipsis")
-            .pretendardFont(family: .Regular, size: 18)
-            .foregroundStyle(.gray300)
-            .frame(width: 24, height: 24)
-            .contentShape(Rectangle())
+      Button(action: onMore) {
+        Image(asset: .more)
+          .renderingMode(.template)
+          .resizable()
+          .frame(width: 24, height: 24)
+          .foregroundStyle(.textMuted)
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("더보기")
+      .overlay(alignment: opensUpward ? .bottomTrailing : .topTrailing) {
+        // Android DropdownMenu — "…" 버튼 바로 밑에서 펼치고, 아래 자리가 없으면(마지막 항목) 위로 펼친다.
+        if !menuItems.isEmpty {
+          PickeMoreMenuView(items: menuItems)
+            .fixedSize()
+            .offset(y: opensUpward ? -24 : 24)
+            .transition(.opacity)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("더보기")
       }
     }
   }
 
-  func optionBadge(
-    label: String,
-    option: CommentOption
+  /// Android PickeIconCount — 아이콘 16 + 12 Medium, 간격 2.
+  func iconCount(
+    _ icon: ImageAsset,
+    count: Int
   ) -> some View {
-    Text(label)
-      .pretendardFont(.labelSmall)
-      .foregroundStyle(option == .a ? .primary500 : .beige50)
-      .padding(.horizontal, option == .a ? 4 : 6)
-      .padding(.vertical, 2)
-      .roundedBackground(option == .a ? .beige600 : .primary500)
-  }
-
-  func actionLabel(
-    systemName: String,
-    text: String
-  ) -> some View {
-    // Figma like/more 칩: 아이콘 16 + 텍스트(Medium 12, gray300), 내부 gap 2, padding px6/py4
     HStack(spacing: 2) {
-      Image(systemName: systemName)
-        .font(.system(size: 14, weight: .medium))
+      Image(asset: icon)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
         .frame(width: 16, height: 16)
-
-      Text(text)
+      Text(count.decimalFormatted)
         .pretendardFont(.labelSmall)
     }
+  }
+}
+
+// MARK: - Menu
+
+private extension CommentReplyView {
+  /// Android commentMenuItems — 내 글 [삭제, 수정], 남의 글 [신고].
+  var parentMenuItems: [PickeMoreMenuItem] {
+    if store.parentComment.isMine {
+      return [
+        .delete { send(.parentMenu(.delete)) },
+        .edit {
+          send(.parentMenu(.edit))
+          isReplyFocused = true
+        },
+      ]
+    }
+    return [.report { send(.parentMenu(.report)) }]
+  }
+
+  func replyMenuItems(for reply: CommentReplyItem) -> [PickeMoreMenuItem] {
+    if reply.isMine {
+      return [
+        .delete { send(.replyMenu(id: reply.id, action: .delete)) },
+        .edit {
+          guard reply.commentId != nil else { return }
+          send(.replyMenu(id: reply.id, action: .edit))
+          isReplyFocused = true
+        },
+      ]
+    }
+    return [.report { send(.replyMenu(id: reply.id, action: .report)) }]
   }
 }
 
@@ -378,9 +369,8 @@ private extension CommentReplyView {
     PickeCommentInputBar(
       text: $store.replyText,
       focus: $isReplyFocused,
-      placeholder: "자유롭게 의견을 써주세요.",
+      placeholder: store.inputPlaceholder,
       isSendEnabled: store.isSendEnabled,
-      characterLimit: store.replyCharacterLimit,
       onSend: {
         isReplyFocused = false
         send(.sendTapped)

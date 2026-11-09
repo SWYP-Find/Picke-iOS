@@ -135,9 +135,17 @@ public final class PerspectiveRepositoryImpl: PerspectiveInterface, @unchecked S
   }
 
   public func reportComment(perspectiveId: Int, commentId: Int) async throws {
-    _ = try await client.send(
-      PerspectiveService.reportComment(perspectiveId: perspectiveId, commentId: commentId),
-      as: PickeEmptyResponse.self
-    )
+    do {
+      _ = try await client.send(
+        PerspectiveService.reportComment(perspectiveId: perspectiveId, commentId: commentId),
+        as: PickeEmptyResponse.self
+      )
+    } catch let error as PickeNetworkError {
+      // Android ReportCommentUseCase 도 중복 신고를 REPORT_409 로 구분한다.
+      if case let .response(response) = error, response.code == "REPORT_409" {
+        throw PerspectiveError.alreadyReported
+      }
+      throw error
+    }
   }
 }

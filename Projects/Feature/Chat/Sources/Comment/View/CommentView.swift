@@ -97,54 +97,24 @@ private extension CommentView {
     )
   }
 
-  /// 행 안쪽에서 위로 열리는 댓글 메뉴.
-  @ViewBuilder
+  func opensMenuUpward(_ comment: CommentItem) -> Bool {
+    comment.id == store.comments.last?.id && store.comments.count > 1
+  }
+
+  /// "…" 버튼에서 펼치는 댓글 메뉴 — Android PickeMoreMenu.
   func inlineMenu(for comment: CommentItem) -> some View {
-    VStack(alignment: .trailing, spacing: 4) {
-      ForEach(menuItems(for: comment)) { item in
-        Button { item.action() } label: {
-          HStack(spacing: 4) {
-            Image(asset: menuIcon(item.title))
-              .renderingMode(.template)
-            Text(item.title)
-              .pretendardFont(.medium13)
-          }
-          .foregroundStyle(.beige50)
-          .padding(.horizontal, 6)
-          .frame(minWidth: 70, minHeight: 34)
-          .background(.primary500, in: RoundedRectangle(cornerRadius: 24))
-        }
-        .buttonStyle(.plain)
-      }
-    }
+    PickeMoreMenuView(items: menuItems(for: comment))
   }
 
   /// "…" 메뉴 항목 — Android 순서: 내 글 삭제·수정, 남 글 신고.
-  func menuItems(for comment: CommentItem) -> [BottomActionItem] {
+  func menuItems(for comment: CommentItem) -> [PickeMoreMenuItem] {
     if comment.isMine {
       return [
-        BottomActionItem(title: "삭제", systemImage: "trash", isDestructive: true) { send(.commentMenu(
-          id: comment.id,
-          action: .delete
-        )) },
-        BottomActionItem(title: "수정", systemImage: "pencil") { send(.commentMenu(id: comment.id, action: .edit)) },
-      ]
-    } else {
-      return [
-        BottomActionItem(title: "신고", systemImage: "light.beacon.max.fill", isDestructive: true) {
-          send(.commentMenu(id: comment.id, action: .report))
-        },
+        .delete { send(.commentMenu(id: comment.id, action: .delete)) },
+        .edit { send(.commentMenu(id: comment.id, action: .edit)) },
       ]
     }
-  }
-
-  /// Android `ic_trash` / `ic_edit` / `ic_bell`.
-  func menuIcon(_ title: String) -> ImageAsset {
-    switch title {
-    case "삭제": return .trash
-    case "수정": return .edit
-    default: return .report
-    }
+    return [.report { send(.commentMenu(id: comment.id, action: .report)) }]
   }
 }
 
@@ -347,14 +317,6 @@ private extension CommentView {
       } else {
         ForEach(store.comments) { comment in
           commentCard(comment)
-            .overlay(alignment: .bottomTrailing) {
-              if store.menuTargetCommentID == comment.id {
-                inlineMenu(for: comment)
-                  .padding(.bottom, 28)
-                  .padding(.trailing, 16)
-                  .zIndex(1)
-              }
-            }
             .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
             .onAppear {
               // Android: 마지막 항목이 보이면 다음 페이지(hasNext)를 부른다.
@@ -398,9 +360,12 @@ private extension CommentView {
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.surfaceBeigeDefault)
-    .overlay(alignment: .bottom) {
-      PickeDivider(.borderBeigeDefault)
+    // 구분선은 내용 아래에 그려 펼친 메뉴를 가리지 않게 한다.
+    .background(alignment: .bottom) {
+      ZStack(alignment: .bottom) {
+        Color.surfaceBeigeDefault
+        PickeDivider(.borderBeigeDefault)
+      }
     }
   }
 
@@ -470,6 +435,15 @@ private extension CommentView {
       replyCountButton(comment)
       Spacer(minLength: 0)
       moreButton(commentId: comment.id)
+        .overlay(alignment: opensMenuUpward(comment) ? .bottomTrailing : .topTrailing) {
+          // Android DropdownMenu — "…" 버튼 바로 밑에서 펼치고, 아래 자리가 없으면(마지막 항목) 위로 펼친다.
+          if store.menuTargetCommentID == comment.id {
+            inlineMenu(for: comment)
+              .fixedSize()
+              .offset(y: opensMenuUpward(comment) ? -24 : 24)
+              .transition(.opacity)
+          }
+        }
     }
   }
 
