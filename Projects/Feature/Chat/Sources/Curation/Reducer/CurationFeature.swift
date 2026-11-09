@@ -27,6 +27,8 @@ public struct CurationFeature {
 
     public var viewState: ViewState = .loaded
     public var battles: [RecommendedBattle] = []
+    /// Android `RecommendViewModel` 조회 실패 토스트 — 뷰가 띄운 뒤 `toastShown`으로 비운다.
+    public var toastMessage: String?
 
     public init(battleId: Int = 0) {
       self.battleId = battleId
@@ -48,6 +50,7 @@ public struct CurationFeature {
     case battleTapped(battleId: Int)
     case adNativeClicked
     case serverAdClicked(network: String)
+    case toastShown
   }
 
   public enum AsyncAction: Equatable {
@@ -92,10 +95,14 @@ public struct CurationFeature {
 
 extension CurationFeature {
   private func handleViewAction(
-    state _: inout State,
+    state: inout State,
     action: View
   ) -> Effect<Action> {
     switch action {
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
+
     case .onAppear:
       analyticsUseCase.track(.screenView(screen: .curation, referrer: nil))
       return .send(.async(.fetchRecommendations))
@@ -157,6 +164,7 @@ extension CurationFeature {
       case let .failure(error):
         PickeLogger.error("[CurationFeature] recommendations failed: \(error.localizedDescription)", category: .ui)
         state.battles = []
+        state.toastMessage = "정보를 불러오지 못했어요"
       }
       return .none
     }
