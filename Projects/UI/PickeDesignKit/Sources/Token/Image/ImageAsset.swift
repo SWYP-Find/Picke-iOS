@@ -49,6 +49,9 @@ public enum ImageAsset: String {
   case eye
   case replyCorner
 
+  // MARK: - 공용 아이콘
+  case close
+
   // MARK: - 철학자 아바타
 
   case avatarPlato
