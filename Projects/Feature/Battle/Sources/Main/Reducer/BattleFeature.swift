@@ -34,6 +34,8 @@ public struct BattleFeature {
     public var votedBattleIds: Set<Int> = []
     /// 시스템 공유 시트 트리거.
     public var shareItem: ShareItem?
+    /// Android 불러오기 실패 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
 
     public init() {}
 
@@ -58,6 +60,7 @@ public struct BattleFeature {
     case optionTapped(battleId: Int, optionId: Int)
     case enterBattleTapped(battleId: Int)
     case pagingTapped(index: Int)
+    case toastShown
   }
 
   public enum AsyncAction: Equatable {
@@ -143,12 +146,12 @@ extension BattleFeature {
 
     case let .optionTapped(battleId, optionId):
       analyticsUseCase.track(.uiAction(action: .quickBattleOption, screen: .quickBattle))
-      // 같은 옵션 재탭 시 해제, 아니면 선택.
-      if state.selectedOptionByBattle[battleId] == optionId {
-        state.selectedOptionByBattle[battleId] = nil
-      } else {
-        state.selectedOptionByBattle[battleId] = optionId
-      }
+      // Android 는 같은 카드를 다시 눌러도 선택을 유지한다.
+      state.selectedOptionByBattle[battleId] = optionId
+      return .none
+
+    case .toastShown:
+      state.toastMessage = nil
       return .none
 
     case let .enterBattleTapped(battleId):
@@ -192,9 +195,11 @@ extension BattleFeature {
       state.viewState = .loaded
       switch result {
       case let .success(page):
-        state.battles = page.items.map(DailyBattle.from)
+        // Android `items.take(1)` — 첫 배틀 하나만 보인다.
+        state.battles = page.items.prefix(1).map(DailyBattle.from)
       case let .failure(error):
         state.battles = []
+        state.toastMessage = "정보를 불러오지 못했어요"
         PickeLogger.error("[BattleFeature] fetchTodayBattles failed: \(error.localizedDescription)", category: .ui)
       }
       return .none
