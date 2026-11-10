@@ -32,6 +32,8 @@ public struct ChatRoomRoute: Equatable, Sendable {
 public enum ChatDelegate: Equatable, Sendable {
   case dismiss
   case popToRoot
+  /// 포인트 부족 안내에서 탐색 탭으로 이동. 받는 쪽이 이 Chat 플로우를 닫고 탭을 바꾼다.
+  case openExplore
 }
 
 /// ChatRoomFeature 가 상위 coordinator 로 올려보내는 delegate 계약.

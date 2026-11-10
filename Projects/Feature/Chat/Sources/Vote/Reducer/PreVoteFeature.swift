@@ -143,6 +143,8 @@ public struct PreVoteFeature {
     case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult, isMindChanged: Bool)
     /// 이미 최종 투표(POST_VOTE)까지 마친 상태 — 댓글 화면으로 바로 이동.
     case alreadyFinalVoted(battleId: Int)
+    /// 포인트 부족 안내의 "배틀 주제 구경하러 가기" — 탐색 탭으로 이동.
+    case openExplore
   }
 
   nonisolated enum CancelID: Hashable {
@@ -435,7 +437,11 @@ extension PreVoteFeature {
         )))
       case let .failure(error):
         PickeLogger.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)", category: .ui)
-        state.toastMessage = "요청을 처리하지 못했어요"
+        if error == .insufficientPoints {
+          state.customAlert = .pointShortage()
+        } else {
+          state.toastMessage = "요청을 처리하지 못했어요"
+        }
         return .none
       }
 
@@ -461,6 +467,9 @@ extension PreVoteFeature {
           result: voteResult,
           isMindChanged: mindChanged
         )))
+      case let .failure(error) where error == .insufficientPoints:
+        state.customAlert = .pointShortage()
+        return .none
       case let .failure(error):
         // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.
         // 재투표가 불가하므로 결과(댓글) 화면으로 이동한다.
@@ -524,7 +533,7 @@ extension PreVoteFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .dismiss, .voteSubmitted, .alreadyFinalVoted:
+    case .dismiss, .voteSubmitted, .alreadyFinalVoted, .openExplore:
       return .none
     }
   }
@@ -538,11 +547,19 @@ extension PreVoteFeature {
       switch alertAction {
       case let .presented(customAlertAction):
         switch customAlertAction {
+        case .confirmTapped where state.customAlert == .pointShortage():
+          state.customAlert = nil
+          return .send(.delegate(.openExplore))
+
         case .confirmTapped:
           let perspectiveId = state.myPerspective?.perspectiveId
           state.customAlert = nil
           guard let perspectiveId else { return .none }
           return .send(.async(.deleteMyPerspective(perspectiveId: perspectiveId)))
+
+        case .cancelTapped where state.customAlert == .pointShortage():
+          state.customAlert = nil
+          return .none
 
         case .cancelTapped:
           state.customAlert = nil
