@@ -24,7 +24,6 @@ public struct ChatRoomFeature {
   @ObservableState
   public struct State: Equatable {
     public let instanceID = UUID()
-    public var bundle: ChatRoomBundle = .mock
     public var scenario: BattleScenario?
     public var isPlaying: Bool = false
     public var playbackRate: Float = 1
@@ -39,6 +38,8 @@ public struct ChatRoomFeature {
     /// 한 번 끝까지 재생된 콘텐츠는 이후 재진입 시 시킹/건너뛰기를 허용한다.
     public var hasFinishedListening: Bool = false
     public var hasPresentedFinalVoteAlert: Bool = false
+    /// Android `ScenarioUiEvent` 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
 
     /// 현재 재생 중인 시나리오 노드 id (없으면 startNodeId 폴백)
@@ -61,34 +62,35 @@ public struct ChatRoomFeature {
     /// 흘리므로, 목표 시간 근처에 도달하기 전까지 옵저버 tick 을 무시해 오디오-텍스트 불일치를 막는다.
     public var pendingSeekTime: TimeInterval?
 
-    public static let supportedPlaybackRates: [Float] = [1, 1.25, 1.5, 2]
+    /// Android `AudioPlayerDefaults.PLAYBACK_SPEEDS` — 탭할 때마다 이 순서로 돈다.
+    public static let supportedPlaybackRates: [Float] = [1, 1.5, 2, 3]
 
     public var playbackRateTitle: String {
-      switch playbackRate {
-      case 1: return "1.0"
-      case 1.25: return "1.25"
-      case 1.5: return "1.5"
-      case 2: return "2.0"
-      default: return "1.0"
-      }
+      String(format: "%.1f", playbackRate)
+    }
+
+    public var nextPlaybackRate: Float {
+      let rates = Self.supportedPlaybackRates
+      let index = rates.firstIndex(of: playbackRate) ?? 0
+      return rates[(index + 1) % rates.count]
     }
 
     public var totalDuration: TimeInterval {
       if playerDuration > 0 {
         return playerDuration
       }
-      guard let scenario else { return bundle.totalDuration }
+      // Android 는 불러오기 전 제목·시간을 비워 둔다(0:00). 목업 값을 보이지 않는다.
+      guard let scenario else { return 0 }
       let nodesTotal = scenario.nodes.reduce(0) { $0 + $1.audioDuration }
-      return nodesTotal > 0 ? TimeInterval(nodesTotal) : bundle.totalDuration
+      return TimeInterval(nodesTotal)
     }
 
     public var battleTitle: String {
-      scenario?.title ?? bundle.battleTitle
+      scenario?.title ?? ""
     }
 
     public var messages: [ChatMessage] {
-      // scenario 가 nil(미로드/로드 실패)이면 목업을 노출하지 않는다.
-      // 과거엔 bundle.messages(목업 전체)를 반환해 "재생 안 됨 + 전체 내용 노출" 버그가 있었다.
+      // scenario 가 nil(미로드/로드 실패)이면 빈 목록이다.
       guard let scenario else { return [] }
       return ChatRoomTimelineUseCase().messages(
         scenario: scenario,
@@ -184,8 +186,7 @@ public struct ChatRoomFeature {
     case onAppear
     case onDisappear
     case backButtonTapped
-    case refreshTapped
-    case retryTapped
+    case toastShown
     case togglePlayTapped
     case playbackRateSelected(Float)
     case seekBackwardTapped
@@ -280,23 +281,9 @@ extension ChatRoomFeature {
         }
       )
 
-    case .refreshTapped:
-      state.currentTime = 0
-      state.isPlaying = false
-      state.currentNodeId = state.scenario?.startNodeId
-      state.visibleNodeIds = state.scenario.map { [$0.startNodeId] } ?? []
-      state.isWaitingForNodeSelection = false
-      state.selectedOptionLabel = nil
-      state.confirmedSelection = nil
-      // 처음부터 다시 들을 때도 최종투표 팝업이 다시 뜨도록 1회성 플래그를 리셋한다.
-      state.hasPresentedFinalVoteAlert = false
-      return .run { [player = audioPlayer] _ in
-        await player.pause()
-        await player.seek(to: 0)
-      }
-
-    case .retryTapped:
-      return .send(.async(.fetchScenario))
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
 
     case .togglePlayTapped:
       analyticsUseCase.track(.uiAction(action: .chatroomPlay, screen: .chatroom))
@@ -338,8 +325,7 @@ extension ChatRoomFeature {
       }
 
     case .replayTapped:
-      // 다시듣기는 끝까지 들은 적이 있는 경우(canScrub)에만 동작한다.
-      guard state.canScrub else { return .none }
+      // Android `replayFromStart` — 다시듣기는 항상 동작한다.
       state.currentTime = 0
       state.isPlaying = true
       state.currentNodeId = state.scenario?.startNodeId
@@ -469,7 +455,9 @@ extension ChatRoomFeature {
         }
         return .none
       case let .failure(error):
+        // Android `ShowLoadFailedToast` — 토스트만 띄우고 빈 목록을 유지한다(다시 시도 없음).
         state.scenarioLoadFailed = true
+        state.toastMessage = "정보를 불러오지 못했어요"
         PickeLogger.error(
           "[ChatRoomFeature] fetchScenario failed: \(error) — \(error.localizedDescription)",
           category: .ui

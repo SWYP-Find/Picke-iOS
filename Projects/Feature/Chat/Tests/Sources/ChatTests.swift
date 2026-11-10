@@ -104,15 +104,16 @@ struct ChatTests {
       $0.audioPlayer = player
     }
 
-    #expect(ChatRoomFeature.State.supportedPlaybackRates == [1, 1.25, 1.5, 2])
+    #expect(ChatRoomFeature.State.supportedPlaybackRates == [1, 1.5, 2, 3])
     #expect(store.state.playbackRateTitle == "1.0")
-    await store.send(.view(.playbackRateSelected(1.25))) {
-      $0.playbackRate = 1.25
+    #expect(store.state.nextPlaybackRate == 1.5)
+    await store.send(.view(.playbackRateSelected(1.5))) {
+      $0.playbackRate = 1.5
     }
     await store.finish()
-    #expect(store.state.playbackRateTitle == "1.25")
+    #expect(store.state.playbackRateTitle == "1.5")
     #expect(store.state.isPlaying == false)
-    #expect(await player.events == [.rate(1.25)])
+    #expect(await player.events == [.rate(1.5)])
   }
 
   @Test @MainActor
@@ -124,7 +125,7 @@ struct ChatTests {
       $0.audioPlayer = player
     }
 
-    for rate in [Float(0), 1.75, .nan, .infinity, -.infinity] {
+    for rate in [Float(0), 1.25, 1.75, .nan, .infinity, -.infinity] {
       await store.send(.view(.playbackRateSelected(rate)))
     }
     await store.finish()

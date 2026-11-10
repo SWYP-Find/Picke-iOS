@@ -15,76 +15,58 @@ import SwiftUI
 public struct ChatRoomView: View {
   @Bindable public var store: StoreOf<ChatRoomFeature>
 
-  /// [고정 36 슬롯][8][말풍선 고정폭][8][고정 36 슬롯] — 재생 상태와 무관하게 말풍선 크기 고정.
+  /// Android `ChatBubble` · `ScenarioScreen` 치수.
   private enum Metric {
-    static let sideSlotWidth: CGFloat = 36
-    static let slotSpacing: CGFloat = 8
-    static let equalizerSize: CGFloat = 24
-    static let avatarSize: CGFloat = 32
-    static let avatarImageWidth: CGFloat = 24
-    static let avatarImageHeight: CGFloat = 28
-    static let bubblePadding: CGFloat = 12
+    static let avatarSize: CGFloat = 40
+    /// `ProfileImageKind.PHILOSOPHER` — 안쪽 이미지 40 × 28/40.
+    static let avatarImageSize: CGFloat = 28
+    static let bubbleMaxWidth: CGFloat = 272
     static let rowSpacing: CGFloat = 6
-    static let speakerChangeSpacing: CGFloat = 16
-    static let bodyLineSpacing: CGFloat = 4.8
+    static let speakerGroupSpacing: CGFloat = 14
+    static let dimmedOpacity: CGFloat = 0.8
   }
+
+  private static let optionsAnchorID = "scenarioOptions"
 
   public init(store: StoreOf<ChatRoomFeature>) {
     self.store = store
   }
 
   public var body: some View {
-    Group {
-      if shouldShowSkeleton {
-        ChatRoomSkeletonView()
-      } else if shouldShowLoadError {
-        scenarioErrorView()
-      } else {
-        VStack(spacing: 0) {
-          navigationBar()
-          messageList()
-          if store.shouldShowOptions {
-            interactiveOptionsSection()
+    VStack(spacing: 0) {
+      navigationBar()
+      content
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .top) {
+          if store.hasAudioError {
+            FloatingErrorView(message: "오디오를 불러오는 중 문제가 발생했어요")
+              .padding(.top, 16)
+              .transition(.move(edge: .top).combined(with: .opacity))
           }
-          playerBar()
-            // 마지막 말풍선이 플레이어 바에 딱 붙어 보이지 않도록 위 여백.
-            .padding(.top, 16)
         }
-      }
+      playerBar
     }
     .screenBackground()
-    .overlay(alignment: .top) {
-      if store.hasAudioError {
-        FloatingErrorView(message: "오디오를 불러오는 중 문제가 발생했어요")
-          .padding(.top, 64)
-          .transition(.move(edge: .top).combined(with: .opacity))
-          .zIndex(1)
-      }
-    }
     .animation(.easeInOut(duration: 0.25), value: store.hasAudioError)
     .navigationBarHidden(true)
     .hidesSystemBars()
     .onAppear { send(.onAppear) }
     .onDisappear { send(.onDisappear) }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
-  private var shouldShowSkeleton: Bool {
-    store.isLoadingScenario && store.scenario == nil
-  }
-
-  /// 시나리오 로드 실패 & 아직 로드된 시나리오가 없을 때 오류+재시도 노출.
-  private var shouldShowLoadError: Bool {
-    store.scenarioLoadFailed && store.scenario == nil
-  }
-
   @ViewBuilder
-  private func scenarioErrorView() -> some View {
-    VStack(spacing: 0) {
-      navigationBar()
-      PickeRetryErrorView(message: "대화를 불러오지 못했어요") { send(.retryTapped) }
+  private var content: some View {
+    if store.isLoadingScenario, store.scenario == nil {
+      ChatRoomSkeletonView()
+    } else {
+      messageList()
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 
@@ -93,26 +75,13 @@ public struct ChatRoomView: View {
 extension ChatRoomView {
   @ViewBuilder
   private func navigationBar() -> some View {
+    // Android `PickeTopAppBar` — 가운데 제목만, 배경 `backgroundBeige`, 구분선 없음.
+    // Android 는 시스템 뒤로 가기를 쓰지만 iOS 는 시스템 버튼이 없어 뒤로 버튼은 남긴다.
     PickeNavigationBar(
-      onBack: { send(.backButtonTapped) }
-    ) {
-      Button { send(.refreshTapped) } label: {
-        Image(systemName: "arrow.clockwise")
-          .font(.system(size: 18, weight: .semibold))
-          .frame(width: 24, height: 24)
-      }
-      .buttonStyle(.plain)
-    }
-    .overlay(alignment: .center) {
-      Text(store.battleTitle)
-        .pretendardFont(.headingMedium)
-        .foregroundStyle(.neutral800)
-        .lineLimit(1)
-        .padding(.horizontal, 56)
-    }
-    .foregroundStyle(.neutral800)
-    .background(.beige50)
-    .bottomDivider(.beige600)
+      onBack: { send(.backButtonTapped) },
+      centerTitle: store.battleTitle
+    )
+    .foregroundStyle(.textDefault)
   }
 }
 
@@ -130,26 +99,38 @@ extension ChatRoomView {
             selectionHistorySection()
           }
           ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-            messageRow(row)
-              .padding(.top, index > 0 && row.showsHeader ? Metric.speakerChangeSpacing : 0)
-              .transition(.opacity)
-            // 중간(분기) 선택 확정 내역 — 선택 지점 뒤에 유지 노출. (안드로이드 파리티)
+            // Android `isNewSpeaker || isNewNode` — 화자가 바뀌거나 선택 지점 바로 뒤면 이름·아바타를 다시 보인다.
+            let showsHeader = row.showsHeader || index == (insertAfter ?? -2) + 1
+            messageRow(
+              row.message,
+              showsHeader: showsHeader
+            )
+            .padding(.top, index > 0 && showsHeader ? Metric.speakerGroupSpacing : 0)
+            .transition(.opacity)
             if index == insertAfter {
               selectionHistorySection()
             }
           }
+          if store.shouldShowOptions {
+            interactiveOptionsSection()
+              .id(Self.optionsAnchorID)
+          }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 16)
         .padding(.top, 24)
         .padding(.bottom, 40)
-        // 대사가 한 줄씩 추가될 때 슬라이드/페이드인.
         .animation(.easeInOut(duration: 0.25), value: store.messages)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
       .onChange(of: store.activeMessageId) { _, activeMessageId in
-        guard let activeMessageId else { return }
+        guard let activeMessageId, !store.shouldShowOptions else { return }
         withAnimation(.easeInOut(duration: 0.25)) {
-          proxy.scrollTo(activeMessageId, anchor: .bottom)
+          proxy.scrollTo(activeMessageId, anchor: .top)
+        }
+      }
+      .onChange(of: store.shouldShowOptions) { _, isShown in
+        guard isShown else { return }
+        withAnimation(.easeInOut(duration: 0.25)) {
+          proxy.scrollTo(Self.optionsAnchorID, anchor: .bottom)
         }
       }
     }
@@ -162,42 +143,6 @@ extension ChatRoomView {
     return firstAfter - 1
   }
 
-  @ViewBuilder
-  private func selectionHistorySection() -> some View {
-    if let selection = store.confirmedSelection {
-      VStack(spacing: 24) {
-        HStack(spacing: 16) {
-          PickeDivider(.gray200)
-          Text("아래가 당신의 선택입니다.")
-            .pretendardFont(.labelMedium)
-            .italic()
-            .foregroundStyle(.gray500)
-            .fixedSize()
-          PickeDivider(.gray200)
-        }
-
-        VStack(spacing: 12) {
-          ForEach(selection.options, id: \.label) { option in
-            historyOptionCard(option, isChosen: option.nextNodeId == selection.selectedNodeId)
-          }
-        }
-      }
-      .padding(.vertical, 16)
-    }
-  }
-
-  @ViewBuilder
-  private func historyOptionCard(_ option: ScenarioInteractiveOption, isChosen: Bool) -> some View {
-    Text(option.label)
-      .pretendardFont(.labelSmall)
-      .foregroundStyle(isChosen ? .gray900 : .gray500)
-      .multilineTextAlignment(.center)
-      .frame(maxWidth: .infinity, alignment: .center)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 20)
-      .pickeCard(.beige400, border: isChosen ? .secondary500 : .beige700)
-  }
-
   private var messageRows: [MessageRow] {
     var rows: [MessageRow] = []
     for message in store.messages {
@@ -207,120 +152,125 @@ extension ChatRoomView {
     return rows
   }
 
+  /// Android `ScenarioChatBubble` — 재생 중인 대사만 활성. 멈추면 모든 대사가 흐려진다.
   @ViewBuilder
-  private func messageRow(_ row: MessageRow) -> some View {
-    let message = row.message
-    let speaker = message.speaker
-    let isActive = message.id == store.activeMessageId
-
-    switch speaker.side {
+  private func messageRow(
+    _ message: ChatMessage,
+    showsHeader: Bool
+  ) -> some View {
+    let isActive = store.isPlaying && message.id == store.activeMessageId
+    switch message.speaker.side {
     case .center:
-      narratorBubble(text: message.text, isActive: isActive)
-        .opacity(isActive ? 1 : 0.8)
-        .id(message.id)
-
+      narratorBubble(
+        text: message.text,
+        isActive: isActive
+      )
+      .id(message.id)
     case .left, .right:
-      HStack(alignment: .top, spacing: 8) {
-        sideSlot(showsAvatar: speaker.side == .left && row.showsHeader, speaker: speaker)
-
-        VStack(alignment: speaker.side == .left ? .leading : .trailing, spacing: 6) {
-          if row.showsHeader {
-            Text(speaker.name)
-              .pretendardFont(.headingSmall)
-              .foregroundStyle(.gray400)
-          }
-          withEqualizer(
-            bubble(text: message.text, side: speaker.side, isActive: isActive),
-            side: speaker.side,
-            isVisible: isActive && store.isPlaying
-          )
-        }
-        .frame(maxWidth: .infinity)
-
-        sideSlot(showsAvatar: speaker.side == .right && row.showsHeader, speaker: speaker)
-      }
-      .opacity(isActive ? 1 : 0.8)
+      chatBubble(
+        message,
+        showsHeader: showsHeader,
+        isActive: isActive
+      )
       .id(message.id)
     }
   }
 
-  /// 재생 중 이퀄라이저를 말풍선 반대편 슬롯 중앙에 얹는다.
-  ///
-  /// 말풍선의 overlay 라 레이아웃 폭을 차지하지 않아 "재생 상태와 무관하게 말풍선 크기 고정"
-  /// 불변식이 유지되고, 헤더(이름) 유무와 무관하게 항상 말풍선 세로 중앙에 온다.
   @ViewBuilder
-  private func withEqualizer(
-    _ content: some View,
-    side: ChatSpeakerSide,
+  private func chatBubble(
+    _ message: ChatMessage,
+    showsHeader: Bool,
+    isActive: Bool
+  ) -> some View {
+    let isLeft = message.speaker.side == .left
+    HStack(alignment: .top, spacing: 6) {
+      if isLeft {
+        avatarSlot(message.speaker, isVisible: showsHeader)
+      }
+      VStack(alignment: isLeft ? .leading : .trailing, spacing: 6) {
+        if showsHeader {
+          Text(message.speaker.name)
+            .pretendardFont(.headingSmall)
+            .foregroundStyle(.textDefault)
+        }
+        HStack(spacing: 6) {
+          if !isLeft, isActive {
+            AudioEqualizerView()
+          }
+          bubble(
+            text: message.text,
+            isLeft: isLeft
+          )
+          if isLeft, isActive {
+            AudioEqualizerView()
+          }
+        }
+      }
+      if !isLeft {
+        avatarSlot(message.speaker, isVisible: showsHeader)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: isLeft ? .leading : .trailing)
+    .opacity(isActive ? 1 : Metric.dimmedOpacity)
+  }
+
+  /// Android `ChatBubbleAvatar` — 안 보일 때도 40 자리를 비워 둔다.
+  @ViewBuilder
+  private func avatarSlot(
+    _ speaker: ChatSpeaker,
     isVisible: Bool
   ) -> some View {
-    // 아이콘 중심을 말풍선 바깥 슬롯 중앙에 맞춘다: 간격 + 슬롯 절반 + 아이콘 절반.
-    let shift = Metric.slotSpacing + Metric.sideSlotWidth / 2 + Metric.equalizerSize / 2
-    content.overlay(alignment: side == .left ? .trailing : .leading) {
-      if isVisible {
-        waveformIcon()
-          .offset(x: side == .left ? shift : -shift)
-      }
+    if isVisible {
+      Circle()
+        .fill(.borderBeigeDefault)
+        .overlay {
+          PickeRemoteImage(url: speaker.imageURL) {
+            Color.clear
+          }
+          .content(.fit)
+          .frame(width: Metric.avatarImageSize, height: Metric.avatarImageSize)
+        }
+        .frame(width: Metric.avatarSize, height: Metric.avatarSize)
+    } else {
+      Color.clear
+        .frame(width: Metric.avatarSize, height: Metric.avatarSize)
     }
   }
 
-  @ViewBuilder
-  private func sideSlot(showsAvatar: Bool, speaker: ChatSpeaker) -> some View {
-    ZStack {
-      if showsAvatar {
-        avatar(speaker)
-      }
-    }
-    .frame(width: Metric.sideSlotWidth)
-  }
-
-  @ViewBuilder
-  private func avatar(_ speaker: ChatSpeaker) -> some View {
-    PickeRemoteImage(
-      url: speaker.imageURL ?? "",
-      shape: .round(cornerRadius: Metric.avatarSize / 2)
-    )
-    .content(.fit)
-    .frame(width: Metric.avatarImageWidth, height: Metric.avatarImageHeight)
-    .frame(width: Metric.avatarSize, height: Metric.avatarSize)
-    .background(.beige600, in: Circle())
-  }
-
-  @ViewBuilder
-  private func waveformIcon() -> some View {
-    AudioEqualizerView(isPlaying: store.isPlaying)
-      .frame(width: 24, height: 24)
-  }
-
+  /// 말풍선 폭은 최대 272 까지 채운다(Android `widthIn(max = 272).fillMaxWidth()`).
   @ViewBuilder
   private func bubble(
     text: String,
-    side: ChatSpeakerSide,
-    isActive: Bool
+    isLeft: Bool
   ) -> some View {
-    let background: Color = side == .left ? .white : .beige500
-    let border: Color = side == .left ? .beige500 : .beige700
     Text(text)
-      .pretendardFont(.labelSmall)
-      .foregroundStyle(isActive ? .gray700 : .gray300)
-      .lineSpacing(Metric.bodyLineSpacing)
+      .pretendardFont(.regular13, lineSpacingMultiple: 1.4)
+      .foregroundStyle(.textBody)
       .multilineTextAlignment(.leading)
       .fixedSize(horizontal: false, vertical: true)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(Metric.bubblePadding)
-      .pickeCard(background, border: border)
+      .padding(.horizontal, 8)
+      .padding(.vertical, isLeft ? 6 : 8)
+      .pickeCard(
+        isLeft ? .surfaceBeigeDefault : .surfaceBeigeStrong,
+        border: .borderBeigeDefault
+      )
+      .frame(maxWidth: Metric.bubbleMaxWidth)
   }
 
   @ViewBuilder
-  private func narratorBubble(text: String, isActive: Bool) -> some View {
+  private func narratorBubble(
+    text: String,
+    isActive: Bool
+  ) -> some View {
     Text(text.replacingOccurrences(of: ", ", with: ",\n"))
-      .pretendardFont(.labelSmall)
+      .pretendardFont(.labelSmall, lineSpacingMultiple: 1.4)
       .italic()
-      .foregroundStyle(isActive ? .gray700 : .gray300)
-      .lineSpacing(Metric.bodyLineSpacing)
+      .foregroundStyle(isActive ? .textSubtle : .textMuted)
       .multilineTextAlignment(.center)
       .padding(.vertical, 6)
       .frame(maxWidth: .infinity)
+      .opacity(isActive ? 1 : Metric.dimmedOpacity)
   }
 
   private struct MessageRow: Equatable, Identifiable {
@@ -336,138 +286,123 @@ extension ChatRoomView {
 // MARK: - Interactive Options
 
 extension ChatRoomView {
+  /// Android `InteractiveOptionsUI`(확정 전) — 리스트 맨 끝에 안내선 + 카드 + "입장 선택하기".
   @ViewBuilder
   private func interactiveOptionsSection() -> some View {
-    VStack(spacing: 12) {
-      optionsHeader()
-      optionsList()
-      confirmButton()
+    VStack(spacing: 0) {
+      optionsGuide("이제 당신의 입장을 선택해주세요")
+      VStack(spacing: 12) {
+        ForEach(store.visibleOptions, id: \.label) { option in
+          Button {
+            send(.optionTapped(option.label))
+          } label: {
+            optionCard(
+              option.label,
+              isSelected: store.selectedOptionLabel == option.label
+            )
+          }
+          .buttonStyle(.plain)
+        }
+        confirmButton
+      }
+      .padding(.top, 24)
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
-    .frame(maxWidth: .infinity)
-    .background(.beige200)
+    .padding(.top, 32)
+    .padding(.bottom, 16)
+  }
+
+  /// Android `InteractiveOptionsUI`(확정 후) — 같은 모양, 카드는 누를 수 없고 확인 버튼이 없다.
+  @ViewBuilder
+  private func selectionHistorySection() -> some View {
+    if let selection = store.confirmedSelection {
+      VStack(spacing: 0) {
+        optionsGuide("아래가 당신의 선택입니다.")
+        VStack(spacing: 12) {
+          ForEach(selection.options, id: \.label) { option in
+            optionCard(
+              option.label,
+              isSelected: option.nextNodeId == selection.selectedNodeId
+            )
+          }
+        }
+        .padding(.top, 24)
+        .padding(.bottom, 12)
+      }
+      .padding(.top, 32)
+      .padding(.bottom, 16)
+    }
   }
 
   @ViewBuilder
-  private func optionsHeader() -> some View {
-    HStack(spacing: 16) {
+  private func optionsGuide(_ text: String) -> some View {
+    HStack(spacing: 0) {
       PickeDivider(.gray200)
-      Text("이제 당신의 입장을 선택해주세요")
+      Text(text)
         .pretendardFont(.labelMedium)
         .italic()
-        .foregroundStyle(.gray500)
+        .foregroundStyle(.textSubtler)
         .fixedSize()
+        .padding(.horizontal, 16)
       PickeDivider(.gray200)
     }
   }
 
-  @ViewBuilder
-  private func optionsList() -> some View {
-    VStack(spacing: 12) {
-      ForEach(store.visibleOptions, id: \.label) { option in
-        optionCard(option)
-      }
-    }
+  /// Android `OptionSelectionCard` — `surfaceBeigeStrong` 면, 테두리 선택 `secondary500` / 그 외 `borderBeigeSelected`.
+  private func optionCard(
+    _ label: String,
+    isSelected: Bool
+  ) -> some View {
+    Text(label)
+      .pretendardFont(.labelSmall)
+      .foregroundStyle(isSelected ? .textDefault : .textSubtler)
+      .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 20)
+      .pickeCard(
+        .surfaceBeigeStrong,
+        border: isSelected ? .secondary500 : .borderBeigeSelected
+      )
+      .contentShape(Rectangle())
   }
 
-  @ViewBuilder
-  private func optionCard(_ option: ScenarioInteractiveOption) -> some View {
-    let isSelected = store.selectedOptionLabel == option.label
-
+  /// Android `OptionConfirmButton` — radius 2, 세로 16, 12 Medium.
+  private var confirmButton: some View {
     Button {
-      send(.optionTapped(option.label))
+      send(.confirmOptionTapped)
     } label: {
-      Text(option.label)
+      Text("입장 선택하기")
         .pretendardFont(.labelSmall)
-        .foregroundStyle(isSelected ? .gray900 : .gray500)
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 20)
-        .pickeCard(.beige400, border: isSelected ? .secondary500 : .beige700)
+        .foregroundStyle(.buttonPrimaryTextDefault)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .roundedBackground(
+          store.isConfirmEnabled ? .buttonPrimaryBackgroundDefault : .buttonPrimaryBackgroundDisabled,
+          radius: .radiusDefault
+        )
     }
     .buttonStyle(.plain)
-  }
-
-  @ViewBuilder
-  private func confirmButton() -> some View {
-    Button("입장 선택하기") { send(.confirmOptionTapped) }
-      .ctaButtonStyle(.primary, size: .large, height: 42)
-      .disabled(!store.isConfirmEnabled)
+    .disabled(!store.isConfirmEnabled)
   }
 }
 
 // MARK: - Player Bar
 
 extension ChatRoomView {
-  @ViewBuilder
-  private func playerBar() -> some View {
-    VStack(spacing: 16) {
-      progressBar()
-      AudioPlayerControlView(
-        isPlaying: .constant(store.isPlaying),
-        onBackward: { send(.seekBackwardTapped) },
-        onTogglePlay: { send(.togglePlayTapped) },
-        onForward: { send(.seekForwardTapped) },
-        onReplay: { send(.replayTapped) },
-        isReplayEnabled: store.canScrub,
-        tint: .neutral900,
-        playbackRateTitle: store.playbackRateTitle,
-        onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
-      )
-    }
-    .padding(.horizontal, 24)
-    .padding(.top, 16)
-    .padding(.bottom, 8)
-    .background(.beige50)
-    .topDivider(.beige600)
-  }
-
-  @ViewBuilder
-  private func progressBar() -> some View {
-    VStack(spacing: 8) {
-      GeometryReader { proxy in
-        let progress = store.totalDuration > 0
-          ? CGFloat(store.currentTime / store.totalDuration)
-          : 0
-        ZStack(alignment: .leading) {
-          Capsule().fill(.beige600).frame(height: 4)
-          Capsule().fill(.primary500).frame(width: proxy.size.width * progress, height: 4)
-          Circle()
-            .fill(.primary500)
-            .frame(width: 16, height: 16)
-            .offset(x: max(0, proxy.size.width * progress - 8))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .gesture(
-          DragGesture(minimumDistance: 0)
-            .onChanged { value in
-              guard store.canScrub,
-                    proxy.size.width > 0,
-                    store.totalDuration > 0 else { return }
-              let ratio = min(max(value.location.x / proxy.size.width, 0), 1)
-              send(.scrub(store.totalDuration * Double(ratio)))
-            }
-        )
-        .allowsHitTesting(store.canScrub)
-      }
-      .frame(height: 16)
-
-      HStack {
-        Text(timeString(store.currentTime))
-        Spacer()
-        Text(timeString(store.totalDuration))
-      }
-      .pretendardFont(.medium11)
-      .foregroundStyle(.neutral300)
-    }
-  }
-
-  private func timeString(_ seconds: TimeInterval) -> String {
-    let total = Int(seconds)
-    return String(format: "%d:%02d", total / 60, total % 60)
+  private var playerBar: some View {
+    PickeAudioPlayerBar(
+      isPlaying: store.isPlaying,
+      currentTime: store.currentTime,
+      totalDuration: store.totalDuration,
+      playbackRateTitle: store.playbackRateTitle,
+      isSeekEnabled: store.canScrub,
+      onTogglePlay: { send(.togglePlayTapped) },
+      onSeek: { send(.scrub($0)) },
+      onBackward: { send(.seekBackwardTapped) },
+      onForward: { send(.seekForwardTapped) },
+      onPlaybackRateTapped: { send(.playbackRateSelected(store.nextPlaybackRate)) },
+      onReplay: { send(.replayTapped) }
+    )
   }
 }
 
