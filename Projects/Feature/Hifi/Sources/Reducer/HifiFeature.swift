@@ -50,6 +50,10 @@ public struct HifiFeature {
 
     /// 종 아이콘 빨간점 — 미읽음 알림 존재 여부. 화면 진입마다 /unread 서버값으로 갱신(저장 안 함).
     public var hasUnreadNotification: Bool = false
+    /// Android 불러오기 실패 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
+    /// Android `scrollToTopTrigger` — 탐색 탭을 다시 누르면 1 늘려 목록을 맨 위로 올린다.
+    public var scrollToTopRequest: Int = 0
 
     public init() {}
   }
@@ -70,6 +74,8 @@ public struct HifiFeature {
     case itemTapped(id: Int)
     case reachedBottom
     case notificationTapped
+    case toastShown
+    case exploreTabReselected
     /// 탐색 화면 배너 광고 클릭
     case adBannerClicked
     case serverAdClicked(network: String)
@@ -156,6 +162,14 @@ extension HifiFeature {
 
     case let .itemTapped(id):
       return .send(.delegate(.openBattle(battleId: id)))
+
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
+
+    case .exploreTabReselected:
+      state.scrollToTopRequest += 1
+      return .none
 
     case .notificationTapped:
       return .send(.delegate(.openNotification))
@@ -278,6 +292,8 @@ extension HifiFeature {
         state.loadedCategory = category
         state.loadedSort = sort
       case let .failure(error):
+        // Android: 처음·추가 불러오기 모두 실패하면 토스트를 띄운다.
+        state.toastMessage = "정보를 불러오지 못했어요"
         PickeLogger.error("[HifiFeature] searchBattles failed: \(error.localizedDescription)", category: .ui)
       }
       return .none

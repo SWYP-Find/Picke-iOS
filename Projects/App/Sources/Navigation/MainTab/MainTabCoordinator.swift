@@ -270,7 +270,14 @@ private extension MainTabCoordinator {
         action: .home(.view(.homeTabReselected))
       ))))
     case .explore:
-      state.exploreState.routes.goBackToRoot()
+      guard state.exploreState.routes.count == 1 else {
+        state.exploreState.routes.goBackToRoot()
+        return .none
+      }
+      return .send(.explore(.router(.routeAction(
+        id: 0,
+        action: .hifi(.view(.exploreTabReselected))
+      ))))
     case .quickBattle:
       state.quickBattleState.routes.goBackToRoot()
     case .classroom:
