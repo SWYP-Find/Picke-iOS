@@ -38,6 +38,10 @@ public struct ChatRoomFeature {
     /// 한 번 끝까지 재생된 콘텐츠는 이후 재진입 시 시킹/건너뛰기를 허용한다.
     public var hasFinishedListening: Bool = false
     public var hasPresentedFinalVoteAlert: Bool = false
+    /// Android `isReviewing` — "다시 들어볼래요" 뒤에는 대사를 모두 보이고 리스트 끝에 "최종투표 하러가기" 를 둔다.
+    public var isReviewing: Bool = false
+    /// Android `maxListenedPositionMs` — 슬라이더·말풍선 탭은 지금까지 들은 위치까지만 이동한다.
+    public var maxListenedTime: TimeInterval = 0
     /// Android `ScenarioUiEvent` 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
     public var toastMessage: String?
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
@@ -96,13 +100,14 @@ public struct ChatRoomFeature {
         scenario: scenario,
         visibleNodeIds: visibleNodeIds,
         currentNodeId: currentNodeId,
-        currentTime: currentTime
+        currentTime: isReviewing ? max(currentTime, totalDuration) : currentTime
       )
     }
 
-    /// 현재 재생 중(가장 최근 노출된) 메시지 id. 문장 단위 노출이라 마지막 노출 버블이 활성.
+    /// 지금 재생 위치의 대사. 다시 듣는 중에는 전체가 보이므로 시작 시각으로 고른다(Android `indexOfLast`).
     public var activeMessageId: UUID? {
-      messages.last?.id
+      let currentMs = Int(currentTime * 1000)
+      return messages.last { ($0.startTimeMs ?? 0) <= currentMs }?.id
     }
 
     public var audioUrl: String? {
@@ -113,8 +118,23 @@ public struct ChatRoomFeature {
       return scenario.audios.values.first
     }
 
-    public var canScrub: Bool {
-      hasFinishedListening
+    /// Android `isForwardEnabled` — 선택지·최종투표 대화상자·오디오 오류 중에는 15초 넘기기를 막는다.
+    public var isForwardEnabled: Bool {
+      !shouldShowOptions && customAlert == nil && !hasAudioError
+    }
+
+    /// 현재 노드 구간. Android 는 노드마다 오디오가 따로라 이동이 노드 안에서만 일어난다.
+    public var currentNodeRange: ClosedRange<TimeInterval> {
+      guard let currentNode else { return 0 ... max(totalDuration, 0) }
+      let start = nodeStartTime(for: currentNode.nodeId)
+      return start ... max(start, nodeEndTime(for: currentNode))
+    }
+
+    /// Android `seekToPosition` — 노드 끝과 들은 위치 중 앞쪽까지만 이동한다.
+    public func clampedSeekTime(_ time: TimeInterval) -> TimeInterval {
+      let range = currentNodeRange
+      let upper = max(range.lowerBound, min(range.upperBound, maxListenedTime))
+      return min(max(time, range.lowerBound), upper)
     }
 
     public var currentNode: ScenarioNode? {
@@ -193,6 +213,8 @@ public struct ChatRoomFeature {
     case seekForwardTapped
     case replayTapped
     case scrub(TimeInterval)
+    case messageTapped(UUID)
+    case goToFinalVoteTapped
     case optionTapped(String)
     case confirmOptionTapped
   }
@@ -306,8 +328,8 @@ extension ChatRoomFeature {
 
     case .seekBackwardTapped:
       analyticsUseCase.track(.uiAction(action: .chatroomSeekBackward, screen: .chatroom))
-      // 15초 되감기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
-      let target = max(0, state.currentTime - 15)
+      // Android `seekRewind` — 현재 노드 시작 아래로는 가지 않는다.
+      let target = max(state.currentNodeRange.lowerBound, state.currentTime - 15)
       state.currentTime = target
       state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
@@ -315,9 +337,10 @@ extension ChatRoomFeature {
       }
 
     case .seekForwardTapped:
+      // Android `seekForward` — 막힌 상태면 무시하고, 노드 끝까지만 넘긴다.
+      guard state.isForwardEnabled else { return .none }
       analyticsUseCase.track(.uiAction(action: .chatroomSeekForward, screen: .chatroom))
-      // 15초 넘기기 버튼은 첫 재생 중에도 항상 동작한다 (canScrub 게이트는 드래그 스크럽 전용).
-      let target = min(state.totalDuration, state.currentTime + 15)
+      let target = min(state.currentNodeRange.upperBound, state.currentTime + 15)
       state.currentTime = target
       state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
@@ -325,23 +348,29 @@ extension ChatRoomFeature {
       }
 
     case .replayTapped:
-      // Android `replayFromStart` — 다시듣기는 항상 동작한다.
-      state.currentTime = 0
-      state.isPlaying = true
-      state.currentNodeId = state.scenario?.startNodeId
-      state.visibleNodeIds = state.scenario.map { [$0.startNodeId] } ?? []
-      state.isWaitingForNodeSelection = false
-      state.selectedOptionLabel = nil
-      state.confirmedSelection = nil
-      state.hasPresentedFinalVoteAlert = false
-      return .run { [player = audioPlayer] _ in
-        await player.seek(to: 0)
-        await player.play()
-      }
+      // Android `replayFromStart` — 항상 동작하며 현재 노드 처음부터 다시 재생한다.
+      return seekAndPlay(
+        state: &state,
+        to: state.currentNodeRange.lowerBound
+      )
+
+    case let .messageTapped(id):
+      // Android 말풍선 탭 — 현재 노드 대사만 그 시작 위치로 이동해 재생한다.
+      guard let message = state.messages.first(where: { $0.id == id }),
+            let startMs = message.startTimeMs
+      else { return .none }
+      let start = TimeInterval(startMs) / 1000
+      guard state.currentNodeRange.contains(start) else { return .none }
+      return seekAndPlay(
+        state: &state,
+        to: state.clampedSeekTime(start)
+      )
+
+    case .goToFinalVoteTapped:
+      return requestFinalVote(state: &state)
 
     case let .scrub(time):
-      guard state.canScrub else { return .none }
-      let target = min(max(0, time), state.totalDuration)
+      let target = state.clampedSeekTime(time)
       state.currentTime = target
       state.pendingSeekTime = target
       return .run { [player = audioPlayer] _ in
@@ -473,6 +502,7 @@ extension ChatRoomFeature {
         state.pendingSeekTime = nil
       }
       state.currentTime = time
+      state.maxListenedTime = max(state.maxListenedTime, time)
       if let effect = advanceNodeIfNeeded(state: &state, time: time) {
         return effect
       }
@@ -487,7 +517,8 @@ extension ChatRoomFeature {
           )
         }
         state.isPlaying = false
-        if !state.hasPresentedFinalVoteAlert {
+        // Android `handleNodeEnd` — 다시 듣는 중에는 대화상자를 다시 띄우지 않는다.
+        if !state.isReviewing, !state.hasPresentedFinalVoteAlert {
           state.hasPresentedFinalVoteAlert = true
           state.customAlert = .finalVote()
         }
@@ -511,6 +542,28 @@ extension ChatRoomFeature {
     case .dismissAudioError:
       state.hasAudioError = false
       return .none
+    }
+  }
+
+  private func seekAndPlay(
+    state: inout State,
+    to target: TimeInterval
+  ) -> Effect<Action> {
+    state.currentTime = target
+    state.pendingSeekTime = target
+    state.isPlaying = true
+    return .run { [player = audioPlayer] _ in
+      await player.seek(to: target)
+      await player.play()
+    }
+  }
+
+  private func requestFinalVote(state: inout State) -> Effect<Action> {
+    state.isPlaying = false
+    let battleId = state.battleId
+    return .run { [player = audioPlayer] send in
+      await player.pause()
+      await send(.delegate(.requestFinalVote(battleId: battleId)))
     }
   }
 
@@ -560,25 +613,20 @@ extension ChatRoomFeature {
         switch customAlertAction {
         case .confirmTapped:
           state.customAlert = nil
-          let battleId = state.battleId
-          return .run { [player = audioPlayer] send in
-            await player.pause()
-            await send(.delegate(.requestFinalVote(battleId: battleId)))
-          }
+          return requestFinalVote(state: &state)
         case .cancelTapped:
+          // Android `restartCurrentAudio` — 대사를 모두 보인 채 현재 노드 처음부터 다시 듣는다.
           state.customAlert = nil
-          state.currentTime = 0
-          state.isPlaying = true
-          // 다시 듣기(replay) 후 끝까지 들으면 최종투표 팝업이 재노출되도록 1회성 플래그를 리셋한다.
-          state.hasPresentedFinalVoteAlert = false
-          return .run { [player = audioPlayer] _ in
-            await player.seek(to: 0)
-            await player.play()
-          }
+          state.isReviewing = true
+          return seekAndPlay(
+            state: &state,
+            to: state.currentNodeRange.lowerBound
+          )
         }
       case .dismiss:
+        // Android 는 바깥 터치·닫기도 "최종투표하기" 와 같다.
         state.customAlert = nil
-        return .none
+        return requestFinalVote(state: &state)
       }
     }
   }

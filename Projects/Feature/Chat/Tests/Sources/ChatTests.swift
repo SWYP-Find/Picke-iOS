@@ -195,9 +195,11 @@ struct ChatTests {
     await store.send(.inner(.playerTimeUpdated(15.6))) {
       $0.pendingSeekTime = nil
       $0.currentTime = 15.6
+      $0.maxListenedTime = 15.6
     }
     await store.send(.inner(.playerTimeUpdated(16.1))) {
       $0.currentTime = 16.1
+      $0.maxListenedTime = 16.1
     }
     await store.finish()
   }

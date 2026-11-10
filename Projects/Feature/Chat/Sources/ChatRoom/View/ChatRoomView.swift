@@ -115,6 +115,10 @@ extension ChatRoomView {
             interactiveOptionsSection()
               .id(Self.optionsAnchorID)
           }
+          if store.isReviewing {
+            finalVoteButton
+              .padding(.top, 24)
+          }
         }
         .padding(.horizontal, 16)
         .padding(.top, 24)
@@ -165,6 +169,8 @@ extension ChatRoomView {
         text: message.text,
         isActive: isActive
       )
+      .contentShape(Rectangle())
+      .onTapGesture { send(.messageTapped(message.id)) }
       .id(message.id)
     case .left, .right:
       chatBubble(
@@ -201,6 +207,7 @@ extension ChatRoomView {
             text: message.text,
             isLeft: isLeft
           )
+          .onTapGesture { send(.messageTapped(message.id)) }
           if isLeft, isActive {
             AudioEqualizerView()
           }
@@ -366,23 +373,44 @@ extension ChatRoomView {
       .contentShape(Rectangle())
   }
 
-  /// Android `OptionConfirmButton` — radius 2, 세로 16, 12 Medium.
   private var confirmButton: some View {
-    Button {
+    optionConfirmButton(
+      "입장 선택하기",
+      isEnabled: store.isConfirmEnabled
+    ) {
       send(.confirmOptionTapped)
-    } label: {
-      Text("입장 선택하기")
+    }
+  }
+
+  /// Android `isReviewing` — 다시 들을 때 리스트 끝에 붙는 버튼.
+  private var finalVoteButton: some View {
+    optionConfirmButton(
+      "최종투표 하러가기",
+      isEnabled: true
+    ) {
+      send(.goToFinalVoteTapped)
+    }
+  }
+
+  /// Android `OptionConfirmButton` — radius 2, 세로 16, 12 Medium.
+  private func optionConfirmButton(
+    _ title: String,
+    isEnabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Text(title)
         .pretendardFont(.labelSmall)
         .foregroundStyle(.buttonPrimaryTextDefault)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .roundedBackground(
-          store.isConfirmEnabled ? .buttonPrimaryBackgroundDefault : .buttonPrimaryBackgroundDisabled,
+          isEnabled ? .buttonPrimaryBackgroundDefault : .buttonPrimaryBackgroundDisabled,
           radius: .radiusDefault
         )
     }
     .buttonStyle(.plain)
-    .disabled(!store.isConfirmEnabled)
+    .disabled(!isEnabled)
   }
 }
 
@@ -395,7 +423,7 @@ extension ChatRoomView {
       currentTime: store.currentTime,
       totalDuration: store.totalDuration,
       playbackRateTitle: store.playbackRateTitle,
-      isSeekEnabled: store.canScrub,
+      isForwardEnabled: store.isForwardEnabled,
       onTogglePlay: { send(.togglePlayTapped) },
       onSeek: { send(.scrub($0)) },
       onBackward: { send(.seekBackwardTapped) },
