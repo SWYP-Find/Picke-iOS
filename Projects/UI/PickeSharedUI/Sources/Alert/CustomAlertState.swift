@@ -86,7 +86,7 @@ public extension CustomAlertState where Action == CustomAlertAction {
 
   static func finalVote() -> CustomAlertState<CustomAlertAction> {
     CustomAlertState(
-      title: "최종투표하고 투표 결과를 보시겠습니까?",
+      title: "최종투표하고 투표 결과를 확인하시겠습니까?",
       confirmTitle: "최종투표하기",
       cancelTitle: "다시 들어볼래요",
       style: .finalVote
