@@ -34,6 +34,8 @@ public struct BattleFeature {
     public var votedBattleIds: Set<Int> = []
     /// 시스템 공유 시트 트리거.
     public var shareItem: ShareItem?
+    /// Android `isEntering` — 입장 요청 중에는 버튼을 막는다.
+    public var isEntering: Bool = false
     /// Android 불러오기 실패 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
     public var toastMessage: String?
 
@@ -41,6 +43,10 @@ public struct BattleFeature {
 
     public func selectedOption(for battleId: Int) -> Int? {
       selectedOptionByBattle[battleId]
+    }
+
+    public func isEnterEnabled(for battleId: Int) -> Bool {
+      selectedOptionByBattle[battleId] != nil && !isEntering
     }
   }
 
@@ -66,15 +72,20 @@ public struct BattleFeature {
   public enum AsyncAction: Equatable {
     case fetchRequested
     case prepareShare(ShareContent)
+    case checkEntryStep(battleId: Int, optionId: Int)
+    case submitPreVote(battleId: Int, optionId: Int)
   }
 
   public enum InnerAction: Equatable {
     case todayResponse(Result<TodayBattlePage, BattleError>)
     case sharePrepared(ShareItem)
+    case entryStepResponse(battleId: Int, optionId: Int, Result<BattleStep, BattleError>)
+    case preVoteResponse(battleId: Int, Result<PreVoteResult, BattleError>)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetchToday
+    case enter
   }
 
   @Dependency(\.battleUseCase) private var battleUseCase
@@ -82,8 +93,10 @@ public struct BattleFeature {
   @Dependency(\.shareUseCase) private var shareUseCase
 
   public enum DelegateAction: Equatable {
-    /// 배틀 입장 → 채팅방 진입
+    /// 배틀 입장(사전투표 완료) → 채팅방 진입
     case openBattle(battleId: Int)
+    /// 이미 참여한 배틀 → 관점(댓글) 화면 진입
+    case openPerspective(battleId: Int)
     /// 상단 백탭 → 홈 탭으로 복귀
     case backToHome
   }
@@ -156,10 +169,12 @@ extension BattleFeature {
 
     case let .enterBattleTapped(battleId):
       analyticsUseCase.track(.uiAction(action: .quickBattleEnter, screen: .quickBattle))
-      // 선택해야만 입장 가능. 입장 시 투표 확정 → 복귀 시 옵션 변경 비활성화.
-      guard state.selectedOptionByBattle[battleId] != nil else { return .none }
-      state.votedBattleIds.insert(battleId)
-      return .send(.delegate(.openBattle(battleId: battleId)))
+      // Android `enterBattle` — 배틀 단계를 확인해 처음이면 선택한 옵션으로 사전투표를 낸 뒤 입장한다.
+      guard state.isEnterEnabled(for: battleId),
+            let optionId = state.selectedOptionByBattle[battleId]
+      else { return .none }
+      state.isEntering = true
+      return .send(.async(.checkEntryStep(battleId: battleId, optionId: optionId)))
     }
   }
 
@@ -183,6 +198,26 @@ extension BattleFeature {
       return .run { [useCase = shareUseCase] send in
         await send(.inner(.sharePrepared(useCase.makeShareItem(content))))
       }
+
+    case let .checkEntryStep(battleId, optionId):
+      return .run { [useCase = battleUseCase] send in
+        let result = await Result {
+          try await useCase.fetchBattle(battleId: battleId).currentStep
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.entryStepResponse(battleId: battleId, optionId: optionId, result)))
+      }
+      .cancellable(id: CancelID.enter, cancelInFlight: true)
+
+    case let .submitPreVote(battleId, optionId):
+      return .run { [useCase = battleUseCase] send in
+        let result = await Result {
+          try await useCase.submitPreVote(battleId: battleId, optionId: optionId)
+        }
+        .mapError(BattleError.from)
+        return await send(.inner(.preVoteResponse(battleId: battleId, result)))
+      }
+      .cancellable(id: CancelID.enter, cancelInFlight: true)
     }
   }
 
@@ -207,6 +242,32 @@ extension BattleFeature {
     case let .sharePrepared(item):
       state.shareItem = item
       return .none
+
+    case let .entryStepResponse(battleId, optionId, result):
+      // Android: 단계가 NONE 이거나 조회에 실패하면 사전투표, 그 밖에는 관점 화면으로 간다.
+      if case let .success(step) = result, step != .none {
+        state.isEntering = false
+        return .send(.delegate(.openPerspective(battleId: battleId)))
+      }
+      return .send(.async(.submitPreVote(battleId: battleId, optionId: optionId)))
+
+    case let .preVoteResponse(battleId, result):
+      state.isEntering = false
+      switch result {
+      case .success:
+        analyticsUseCase.track(
+          .battleStep(BattleStepData(stepName: .preVote, contentID: "\(battleId)"))
+        )
+        state.votedBattleIds.insert(battleId)
+        return .send(.delegate(.openBattle(battleId: battleId)))
+      case .failure(.insufficientPoints):
+        state.toastMessage = "포인트가 부족합니다."
+        return .none
+      case let .failure(error):
+        PickeLogger.error("[BattleFeature] submitPreVote failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = "요청을 처리하지 못했어요"
+        return .none
+      }
     }
   }
 }

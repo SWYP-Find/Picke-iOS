@@ -323,7 +323,7 @@ private extension BattleView {
   /// Android `PickeButton` — 높이 48 이상, radius 2, 14 SemiBold, 비활성 `primary300`.
   @ViewBuilder
   func enterButton(_ battle: DailyBattle) -> some View {
-    let isEnabled = store.selectedOptionByBattle[battle.battleId] != nil
+    let isEnabled = store.state.isEnterEnabled(for: battle.battleId)
     Button {
       send(.enterBattleTapped(battleId: battle.battleId))
     } label: {
