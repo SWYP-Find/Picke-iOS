@@ -128,20 +128,24 @@ extension ChatCoordinator {
   ) -> Effect<Action> {
     switch action {
     case let .routeAction(id, action: .preVote(.delegate(.dismiss))):
-      // 루트(사전투표)의 뒤로가기는 Chat 플로우 전체를 닫고,
-      // 스택 위에 올라온 최종투표 화면이면 한 단계만 닫아 대화방으로 돌아간다.
+      // 루트(사전투표, 또는 청취 화면 자리를 바꾼 최종투표)의 뒤로가기는 Chat 플로우 전체를 닫고,
+      // 스택 위에 올라온 화면이면 한 단계만 닫는다.
       guard id == 0 else {
         state.routes.goBack()
         return .none
       }
       return .send(.delegate(.dismiss))
 
-    case let .routeAction(_, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _, isMindChanged)))):
+    case let .routeAction(id, action: .preVote(.delegate(.voteSubmitted(battleId, voteMode, _, isMindChanged)))):
       switch voteMode {
       case .pre:
-        state.routes.push(.chatRoom(.init(battleId: battleId)))
+        // Android `popUpTo(PreVote){inclusive}` — 사전투표 자리를 청취 화면으로 바꿔, 뒤로 가면 이전 화면으로 나간다.
+        // 배열을 통째로 갈아끼우면 TCAFlow 캐시가 이전 화면을 붙들므로 같은 인덱스의 screen 만 교체한다.
+        state.routes[screenAt: id] = .chatRoom(.init(battleId: battleId))
       case .post:
-        state.routes.push(.comment(.init(battleId: battleId, isMindChanged: isMindChanged)))
+        // Android `popUpToTabScreen()` — 이 흐름에는 관점 화면만 남겨, 뒤로 가면 탭 화면으로 나간다.
+        state.routes.goBackToRoot()
+        state.routes[screenAt: 0] = .comment(.init(battleId: battleId, isMindChanged: isMindChanged))
       }
       return .none
 
@@ -161,9 +165,10 @@ extension ChatCoordinator {
       return .send(.delegate(.openExplore))
 
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
-      return .send(.view(.backAction))
+      // 청취 화면은 사전투표 자리를 바꿔 루트가 될 수 있어, 루트면 흐름 전체를 닫는다.
+      return state.routes.count <= 1 ? .send(.delegate(.dismiss)) : .send(.view(.backAction))
 
-    case let .routeAction(_, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
+    case let .routeAction(id, action: .chatRoom(.delegate(.requestFinalVote(battleId)))):
       // QA-38: 투표 안정화 전까지 진입 차단. 플래그가 켜지면 기존 흐름 그대로 동작.
       guard FeatureFlag.isVotingEnabled else {
         return .run { _ in
@@ -172,7 +177,8 @@ extension ChatCoordinator {
           }
         }
       }
-      state.routes.push(.preVote(.init(battleId: battleId, voteMode: .post)))
+      // Android `popUpTo(Scenario){inclusive}` — 청취 화면 자리를 최종투표로 바꿔, 뒤로 가도 청취로 돌아가지 않는다.
+      state.routes[screenAt: id] = .preVote(.init(battleId: battleId, voteMode: .post))
       return .none
 
     case .routeAction(_, action: .comment(.delegate(.dismiss))):

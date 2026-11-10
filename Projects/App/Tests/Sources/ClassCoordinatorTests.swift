@@ -282,7 +282,7 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 일반_사전투표는_기참여시_기존처럼_자동직행하고_사후투표는_기존_선택을_요구한다() async throws {
+  func 일반_사전투표는_완료_단계면_자동직행하고_사후투표는_기존_선택을_요구한다() async throws {
     let session = ClassMockChatSession()
     let battleAPI: any BattleInterface = session
     let battleID = await session.register(room: ClassRoom.mocks[0])
@@ -292,9 +292,29 @@ struct ClassCoordinatorTests {
       content: "의견",
       optionId: 1
     ))
+    let fetched = try await battleAPI.fetchBattle(battleId: battleID)
+    func detail(_ step: BattleStep) -> BattleDetail {
+      BattleDetail(
+        battleInfo: fetched.battleInfo,
+        description: fetched.description,
+        shareUrl: fetched.shareUrl,
+        userVoteStatus: fetched.userVoteStatus,
+        currentStep: step,
+        categoryTags: fetched.categoryTags,
+        philosopherTags: fetched.philosopherTags,
+        valueTags: fetched.valueTags
+      )
+    }
+    // Android BattleRouting: 관점이 있어도 단계가 COMPLETED 가 아니면 사전투표에 머문다.
+    let listeningStore = TestStore(initialState: PreVoteFeature.State(battleId: battleID)) { PreVoteFeature() }
+    listeningStore.exhaustivity = .off
+    await listeningStore.send(.inner(.myPerspectiveResponse(.success(perspective))))
+    await listeningStore.send(.inner(.battleDetailResponse(.success(detail(.postVote)))))
+    #expect(listeningStore.state.battle != nil)
+
     let preStore = TestStore(initialState: PreVoteFeature.State(battleId: battleID)) { PreVoteFeature() }
     preStore.exhaustivity = .off
-    await preStore.send(.inner(.myPerspectiveResponse(.success(perspective))))
+    await preStore.send(.inner(.battleDetailResponse(.success(detail(.completed)))))
     await preStore.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
     #expect(!preStore.state.isShowingParticipationResult)
 

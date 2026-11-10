@@ -202,9 +202,9 @@ extension PreVoteFeature {
       if state.battleDetail == nil, state.battle == nil, state.viewState != .loading {
         effects.append(.send(.async(.fetchBattleDetail)))
       }
-      // 사전(pre) 진입 시에만 내 참여(perspective) 여부를 조회한다.
-      // 일반 배틀은 기참여 시 관점 화면으로 직행한다. 클래스 기존 콘텐츠는 결과 화면을 유지한다.
-      if state.voteMode == .pre, state.myPerspective == nil {
+      // 클래스 기존 콘텐츠만 내 참여(perspective) 여부를 조회해 결과 화면을 유지한다.
+      // 일반 배틀은 Android `BattleRouting` 처럼 상세의 단계(currentStep)로 진입을 판정한다.
+      if state.voteMode == .pre, state.showsResultsForExistingParticipation, state.myPerspective == nil {
         // 일반 배틀은 기참여 시 관점으로 직행하고 클래스 기존 콘텐츠는 결과 요약을 보여주므로, 확인 전에는 투표 UI를 숨긴다.
         state.isCheckingParticipation = true
         effects.append(.send(.async(.fetchMyPerspective)))
@@ -385,6 +385,10 @@ extension PreVoteFeature {
         state.battleDetail = detail
         state.battle = makeBattle(from: detail)
         state.detailLoadFailed = false
+        // Android: 일반 배틀은 단계가 COMPLETED 이면 관점 화면으로 바로 간다.
+        if state.voteMode == .pre, !state.showsResultsForExistingParticipation, detail.currentStep == .completed {
+          return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
+        }
       case let .failure(error):
         state.detailLoadFailed = true
         state.toastMessage = "정보를 불러오지 못했어요"
@@ -405,8 +409,7 @@ extension PreVoteFeature {
             state.selectedOptionId = nil
             return .none
           }
-          // 일반 배틀은 기존대로 관점(댓글) 화면으로 바로 직행.
-          return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
+          // 일반 배틀의 진입 판정은 상세 단계(currentStep)로 한다(위 battleDetailResponse).
         }
       case let .failure(error):
         PickeLogger.error("[PreVoteFeature] fetchMyPerspective failed: \(error.localizedDescription)", category: .ui)

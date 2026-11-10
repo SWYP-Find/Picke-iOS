@@ -109,8 +109,16 @@ struct MainTabCoordinatorTests {
     }
     #expect(events.value == [.tabExplore])
 
+    // 탐색 재선택은 Android 처럼 목록을 맨 위로 올린다(탐색 화면 상태만 바뀐다).
+    store.exhaustivity = .off
     await store.send(.tabTapped(MainTabCoordinator.Tab.explore.rawValue))
     await store.receive(\.tabReselected, MainTabCoordinator.Tab.explore.rawValue)
+    await store.receive(\.explore.router.routeAction)
+    guard case let .hifi(explore) = store.state.exploreState.routes[0].screen else {
+      Issue.record("탐색 루트 화면이 HifiFeature 가 아님")
+      return
+    }
+    #expect(explore.scrollToTopRequest == 1)
     await store.send(.tabTapped(-1))
     await store.finish()
     #expect(events.value == [.tabExplore])
