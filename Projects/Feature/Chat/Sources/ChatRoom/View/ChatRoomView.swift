@@ -33,21 +33,14 @@ public struct ChatRoomView: View {
   }
 
   public var body: some View {
-    VStack(spacing: 0) {
-      navigationBar()
-      content
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(alignment: .top) {
-          if store.hasAudioError {
-            FloatingErrorView(message: "오디오를 불러오는 중 문제가 발생했어요")
-              .padding(.top, 16)
-              .transition(.move(edge: .top).combined(with: .opacity))
-          }
-        }
-      playerBar
+    Group {
+      if store.isLoadingScenario, store.scenario == nil {
+        // 스켈레톤은 iOS 기존 것을 쓴다(상단 바·플레이어 바 자리까지 포함).
+        ChatRoomSkeletonView()
+      } else {
+        screenContent()
+      }
     }
-    .screenBackground()
-    .animation(.easeInOut(duration: 0.25), value: store.hasAudioError)
     .navigationBarHidden(true)
     .hidesSystemBars()
     .onAppear { send(.onAppear) }
@@ -61,12 +54,22 @@ public struct ChatRoomView: View {
   }
 
   @ViewBuilder
-  private var content: some View {
-    if store.isLoadingScenario, store.scenario == nil {
-      ChatRoomSkeletonView()
-    } else {
+  private func screenContent() -> some View {
+    VStack(spacing: 0) {
+      navigationBar()
       messageList()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .top) {
+          if store.hasAudioError {
+            FloatingErrorView(message: "오디오를 불러오는 중 문제가 발생했어요")
+              .padding(.top, 16)
+              .transition(.move(edge: .top).combined(with: .opacity))
+          }
+        }
+      playerBar
     }
+    .screenBackground()
+    .animation(.easeInOut(duration: 0.25), value: store.hasAudioError)
   }
 }
 

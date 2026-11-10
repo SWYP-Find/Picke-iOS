@@ -9,52 +9,34 @@ import SwiftUI
 
 import PickeDesignKit
 
-/// Android `PerspectiveListSkeleton` — 카드 4개, 가로 16·세로 12, 간격 12.
 struct CommentSkeletonView: View {
+  var count: Int = 3
+
   var body: some View {
     VStack(spacing: 12) {
-      ForEach(0 ..< 4, id: \.self) { _ in
+      ForEach(0 ..< count, id: \.self) { _ in
         card()
       }
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 12)
-    .allowsHitTesting(false)
   }
 
   @ViewBuilder
   private func card() -> some View {
-    VStack(alignment: .leading, spacing: 0) {
-      HStack(spacing: 8) {
-        SkeletonView.beige(.circle)
-          .frame(width: 32, height: 32)
+    VStack(alignment: .leading, spacing: 8) {
+      HStack(spacing: 6) {
+        SkeletonView(.round(cornerRadius: 14))
+          .frame(width: 28, height: 28)
         VStack(alignment: .leading, spacing: 4) {
-          SkeletonView.line(width: 40, height: 16)
-          SkeletonView.line(width: 50, height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 80, height: 12)
+          SkeletonView(.round(cornerRadius: 4)).frame(width: 48, height: 10)
         }
-        Spacer(minLength: 0)
+        Spacer()
       }
-      SkeletonView.line(width: 70, height: 20)
-        .padding(.top, 8)
-      SkeletonView.line(width: 260, height: 16)
-        .padding(.top, 12)
-      SkeletonView.line(width: 200, height: 16)
-        .padding(.top, 4)
-      HStack(spacing: 0) {
-        SkeletonView.line(width: 40, height: 14)
-        Spacer(minLength: 0)
-        SkeletonView.line(width: 24, height: 14)
-        SkeletonView.line(width: 24, height: 14)
-          .padding(.leading, 12)
-      }
-      .padding(.top, 12)
+      SkeletonView(.round(cornerRadius: 4)).frame(maxWidth: .infinity).frame(height: 12)
+      SkeletonView(.round(cornerRadius: 4)).frame(width: 200, height: 12)
     }
-    .padding(14)
+    .padding(12)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .pickeCard(
-      .surfaceBeigeDefault,
-      border: .borderBeigeDefault,
-      insideBorder: true
-    )
+    .pickeCard(.beige50, border: .beige600)
   }
 }
