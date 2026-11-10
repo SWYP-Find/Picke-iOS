@@ -20,44 +20,34 @@ public struct PreVoteView: View {
     self.store = store
   }
 
-  /// 안드로이드 시안: 사후(최종) 투표는 사전투표와 구분되도록 화면 배경을 통째로 검정으로 교체.
-  /// (VoteScreen.kt — PRE: surface, POST: Color.Black. 옵션 카드/CTA/상단바 색은 동일)
   private var isPostVote: Bool {
     store.voteMode == .post
   }
 
-  private var screenBackground: Color {
-    isPostVote ? .black : .beige50
-  }
-
-  private var titleColor: Color {
-    isPostVote ? .beige50 : .neutral500
+  /// Android `VoteScreenStyle.containerColor` — 사전 `surfaceBeigeDefault`, 최종 검정.
+  private var containerColor: Color {
+    isPostVote ? .black : .surfaceBeigeDefault
   }
 
   public var body: some View {
     Group {
-      if shouldShowLoadError {
-        loadErrorContent()
+      if store.isBattleNotFound {
+        battleNotFound()
       } else if shouldShowSkeleton {
         PreVoteSkeletonView(isDark: isPostVote)
-      } else {
-        loadedContent()
+      } else if let battle = store.battle {
+        loadedContent(battle)
       }
     }
-    .background(screenBackground.ignoresSafeArea())
+    .background(containerColor.ignoresSafeArea())
     .navigationBarHidden(true)
     .hidesSystemBars()
-    .overlay(alignment: .top) {
-      if !shouldShowSkeleton, !shouldShowLoadError {
-        navigationBar()
-          .background(.clear)
-          .padding(.top, 12)
-          .frame(maxWidth: .infinity)
-          .contentShape(Rectangle())
-          .zIndex(10)
-      }
-    }
     .onAppear { send(.onAppear) }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
     .onChange(of: store.shareSnapshotRequest) { _, request in
       guard let request else { return }
       send(.shareSnapshotRendered(captureCardSnapshot(request)))
@@ -70,222 +60,165 @@ public struct PreVoteView: View {
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
   }
 
-  /// 로드 실패 & 아직 표시할 배틀이 없을 때 무한 스켈레톤 대신 오류+재시도 노출.
-  private var shouldShowLoadError: Bool {
-    store.detailLoadFailed && store.battle == nil
-  }
-
   private var shouldShowSkeleton: Bool {
-    (store.viewState == .loading || store.battle == nil || store.isCheckingParticipation) && !shouldShowLoadError
+    store.viewState == .loading || store.battle == nil || store.isCheckingParticipation
   }
 
+  /// Android `VoteBattleNotFound` — `backgroundBeige` 상단 바 + 빈 상태 "해당 배틀은 존재하지 않습니다".
   @ViewBuilder
-  private func loadErrorContent() -> some View {
+  private func battleNotFound() -> some View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backButtonTapped) })
-        .foregroundStyle(.neutral800)
-
-      PickeRetryErrorView(message: "배틀을 불러오지 못했어요") { send(.retryTapped) }
+        .foregroundStyle(.textDefault)
+      PickeEmptyStateView(message: "해당 배틀은 존재하지 않습니다")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .screenBackground()
   }
 
+  /// Android `VoteContent` — 히어로(남는 높이 전부) → 24 → 선택지 → 32 → 하단 버튼(패딩 20).
   @ViewBuilder
-  private func loadedContent() -> some View {
-    if let battle = store.battle {
-      GeometryReader { proxy in
-        let topInset = PreVoteLayout.contentOverlapTopOffset
-          + PreVoteLayout.contentGradientSpacerHeight(
-            titleLength: battle.titleLine1.count + battle.titleLine2.count,
-            summaryLength: battle.summary.count
-          )
-
-        ZStack(alignment: .top) {
-          backgroundImage(battle)
-            .frame(width: proxy.size.width)
-
-          // 히어로 오버랩 여백을 스크롤 콘텐츠 안에 둔다. 공간이 남는 화면(16 Pro 등)에서는
-          // minHeight 로 뷰포트를 채워 옵션 카드가 CTA 바로 위에 붙고, 부족한 화면에서는
-          // 여백까지 함께 스크롤돼 카드가 잘린 채 고정되지 않는다.
-          ScrollView {
-            VStack(spacing: 0) {
-              Color.clear
-                .frame(height: topInset)
-
-              contentArea(battle)
-            }
-            .frame(
-              minHeight: max(0, proxy.size.height - PreVoteLayout.ctaReservedHeight),
-              alignment: .top
-            )
-          }
-          .scrollIndicators(.hidden)
-          .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
-          .safeAreaInset(edge: .bottom, spacing: 0) {
-            primaryButton()
-              .padding(.horizontal, PreVoteLayout.ctaHorizontalPadding)
-              .padding(.bottom, PreVoteLayout.ctaBottomSpacing)
-          }
-        }
-        .ignoresSafeArea(edges: .top)
-      }
-    } else {
-      PreVoteSkeletonView(isDark: isPostVote)
+  private func loadedContent(_ battle: PreVoteBattle) -> some View {
+    VStack(spacing: 0) {
+      heroSection(battle)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      optionSection(battle)
+        .padding(.horizontal, 20)
+        .padding(.top, 24)
+        .padding(.bottom, 32)
+      primaryButton
+        .padding(20)
+    }
+    .overlay(alignment: .top) {
+      navigationBar()
     }
   }
 }
 
-// MARK: - Background
+// MARK: - Hero
 
 extension PreVoteView {
+  /// Android `VoteBattleInfoSection` — 이미지를 꽉 채우고 위→아래 `[검정 0.3, 투명, 배경색]` 그라데이션.
   @ViewBuilder
-  private func backgroundImage(_ battle: PreVoteBattle) -> some View {
-    ZStack {
-      if let urlString = battle.backgroundImageURL,
-         let url = URL(string: urlString)
-      {
-        PickeRemoteImage(url: url)
-      } else {
-        Color.neutral200
-      }
-
-      Color.black.opacity(0.4)
-
-      VStack {
-        Spacer()
-        imageToContentGradient()
-      }
+  private func heroSection(_ battle: PreVoteBattle) -> some View {
+    ZStack(alignment: .bottomLeading) {
+      heroImage(battle)
+      contentSection(battle, onDarkBackground: isPostVote)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 16)
     }
-    .frame(maxWidth: .infinity)
-    .frame(height: PreVoteLayout.backgroundImageHeight)
-    .clipped()
   }
 
+  private func heroImage(_ battle: PreVoteBattle) -> some View {
+    Color.clear
+      .overlay {
+        PickeRemoteImage(url: battle.backgroundImageURL) {
+          heroPlaceholder
+        }
+      }
+      .overlay {
+        LinearGradient(
+          colors: [.black.opacity(0.3), .clear, containerColor],
+          startPoint: .top,
+          endPoint: .bottom
+        )
+      }
+      .clipped()
+      .ignoresSafeArea(edges: .top)
+  }
+}
+
+extension PreVoteView {
+  /// Android 이미지 로딩 shimmer — 최종투표는 `gray600`→`gray400`.
   @ViewBuilder
-  private func imageToContentGradient() -> some View {
-    LinearGradient(
-      stops: [
-        .init(color: screenBackground.opacity(0), location: 0),
-        .init(color: screenBackground.opacity(0.55), location: 0.55),
-        .init(color: screenBackground, location: 1),
-      ],
-      startPoint: .top,
-      endPoint: .bottom
-    )
-    .frame(height: PreVoteLayout.imageToContentGradientHeight)
+  private var heroPlaceholder: some View {
+    if isPostVote {
+      SkeletonView(.rect, base: .gray600, highlight: .gray400)
+    } else {
+      SkeletonView.beige(.rect)
+    }
   }
 }
 
 // MARK: - Navigation bar
 
 extension PreVoteView {
+  /// Android `PickeTopAppBar`(투명) — 높이 48, 뒤로 24 · 공유 20, 둘 다 `textInverse`.
   @ViewBuilder
   private func navigationBar() -> some View {
-    HStack {
+    HStack(spacing: 0) {
       Button { send(.backButtonTapped) } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 24, weight: .regular))
-          .frame(width: 20, height: 10)
-          .contentShape(Rectangle())
+        navigationIcon(.arrowLeft, size: 24)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("뒤로 가기")
 
-      Spacer()
+      Spacer(minLength: 0)
 
-      Button {
-        send(.shareTapped)
-      } label: {
-        Image(systemName: "square.and.arrow.up")
-          .font(.system(size: 24, weight: .regular))
-          .frame(width: 24, height: 24)
-          .contentShape(Rectangle())
+      Button { send(.shareTapped) } label: {
+        navigationIcon(.share, size: 20)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("공유")
     }
-    .padding(.horizontal, 16)
-    .foregroundStyle(.beige50)
+    .padding(.horizontal, 4)
+    .frame(height: 48)
+  }
+
+  private func navigationIcon(
+    _ asset: ImageAsset,
+    size: CGFloat
+  ) -> some View {
+    Image(asset: asset)
+      .renderingMode(.template)
+      .resizable()
+      .scaledToFit()
+      .foregroundStyle(.textInverse)
+      .frame(width: size, height: size)
+      .frame(width: 48, height: 48)
+      .contentShape(Rectangle())
   }
 }
 
-// MARK: - Content (gradient + 카피 + 선택지 + CTA)
+// MARK: - Content (태그 + 제목 + 설명)
 
 extension PreVoteView {
   @ViewBuilder
-  private func contentArea(_ battle: PreVoteBattle) -> some View {
-    VStack(spacing: 0) {
-      contentSection(battle)
-      // 유연 간격: 콘텐츠는 위(상단 spacer)에 고정, 옵션은 아래로 당겨 CTA 위 40 유지.
-      Spacer(minLength: PreVoteLayout.contentToOptionSpacing)
-      optionSection(battle)
-    }
-    .padding(.horizontal, PreVoteLayout.contentHorizontalPadding)
-    .padding(.top, PreVoteLayout.contentTopPadding)
-    .padding(.bottom, PreVoteLayout.contentBottomSpacing)
-    .frame(maxWidth: .infinity)
-    .background(
-      LinearGradient(
-        stops: [
-          .init(color: screenBackground.opacity(0), location: 0),
-          .init(color: screenBackground.opacity(0.72), location: 0.42),
-          .init(color: screenBackground, location: 0.7),
-          .init(color: screenBackground, location: 1),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-    )
-  }
-
-  @ViewBuilder
   private func contentSection(
     _ battle: PreVoteBattle,
-    titleColorOverride: Color? = nil
+    onDarkBackground: Bool
   ) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      VStack(alignment: .leading, spacing: 20) {
-        tagsRow(battle)
-        titleText(battle, colorOverride: titleColorOverride)
-      }
-      summaryText(battle)
+    VStack(alignment: .leading, spacing: 0) {
+      tagsRow(battle)
+      Text(battle.displayTitle)
+        .pretendardFont(.headingXXLarge, lineSpacingMultiple: 1.3)
+        .foregroundStyle(onDarkBackground ? .surfaceBeigeDefault : .textDefault)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 16)
+      Text(battle.summary)
+        .pretendardFont(.bodyMedium, lineSpacingMultiple: 1.4)
+        .foregroundStyle(onDarkBackground ? .gray400 : .textSubtle)
+        .multilineTextAlignment(.leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 12)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
+  /// Android `VoteTagChip` — 흰색 0.8 면, radius 2, 안쪽 8/2, 12 Medium `primary500`, 간격 8.
   @ViewBuilder
   private func tagsRow(_ battle: PreVoteBattle) -> some View {
-    HStack(spacing: 9) {
+    HStack(spacing: 8) {
       ForEach(battle.tags, id: \.self) { tag in
         Text(tag)
-          .pickeBadge(.filled, size: .tag)
+          .pretendardFont(.labelSmall)
+          .foregroundStyle(.primary500)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 2)
+          .background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: .radiusDefault))
       }
     }
-  }
-
-  @ViewBuilder
-  private func titleText(
-    _ battle: PreVoteBattle,
-    colorOverride: Color? = nil
-  ) -> some View {
-    Text([battle.titleLine1, battle.titleLine2].filter { !$0.isEmpty }.joined(separator: "\n"))
-      .pretendardFont(.bold24)
-      .foregroundStyle(colorOverride ?? titleColor)
-      .kerning(-0.6)
-      .lineSpacing(24 * 0.4)
-      .multilineTextAlignment(.leading)
-      .lineLimit(nil)
-      .fixedSize(horizontal: false, vertical: true)
-      .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
-  @ViewBuilder
-  private func summaryText(_ battle: PreVoteBattle) -> some View {
-    Text(battle.summary)
-      .pretendardFont(.regular13)
-      .foregroundStyle(.neutral400)
-      .lineSpacing(13 * 0.4)
-      .multilineTextAlignment(.leading)
-      .lineLimit(nil)
-      .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
@@ -302,92 +235,106 @@ extension PreVoteView {
         optionCard(battle.leftOption, avatarOverride: avatarOverrides[battle.leftOption.optionId])
         optionCard(battle.rightOption, avatarOverride: avatarOverrides[battle.rightOption.optionId])
       }
-      .frame(maxWidth: .infinity)
-      vsBadge()
+      // Android `height(IntrinsicSize.Max)` — 두 카드 높이를 큰 쪽에 맞춘다.
+      .fixedSize(horizontal: false, vertical: true)
+      vsBadge
     }
   }
 
+  /// Android `VoteOptionCard` — `surfaceBeigeSubtle` 면, 선택 `secondary500` / 그 외 `borderBeigeDisabled`,
+  /// 안쪽 세로 24·가로 16, 아바타 40 → 16 → 제목 16 SemiBold → 4 → 대표 10 SemiBold. 비선택 0.8.
   @ViewBuilder
   private func optionCard(
     _ option: PreVoteOption,
     avatarOverride: UIImage? = nil
   ) -> some View {
     let isSelected = store.selectedOptionId == option.optionId
-
-    return Button {
+    Button {
       send(.optionTapped(optionId: option.optionId))
     } label: {
-      VStack(spacing: 12) {
+      VStack(spacing: 0) {
         avatarView(imageURL: option.imageURL, override: avatarOverride)
-
-        VStack(spacing: 2) {
-          Text(option.stance)
-            .pretendardFont(.headingSmall)
-            .foregroundStyle(.neutral600)
-            .kerning(-0.35)
-            .lineLimit(2)
-            .minimumScaleFactor(0.85)
-            .multilineTextAlignment(.center)
-
-          Text(option.representative)
-            .pretendardFont(.labelSmall)
-            .foregroundStyle(.neutral300)
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .multilineTextAlignment(.center)
-        }
+        Text(option.stance)
+          .pretendardFont(.headingMedium, lineSpacingMultiple: 1.3)
+          .foregroundStyle(.textDefault)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, 16)
+        Text(option.representative)
+          .pretendardFont(.labelXSmall)
+          .foregroundStyle(.textSubtler)
+          .padding(.top, 4)
       }
-      .padding(8)
-      .frame(maxWidth: .infinity)
-      .frame(height: PreVoteLayout.optionCardHeight)
+      .padding(.vertical, 24)
+      .padding(.horizontal, 16)
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
       .pickeCard(
-        .beige300,
-        border: isSelected ? (isPostVote ? .secondary500 : .beige700) : .beige500
+        .surfaceBeigeSubtle,
+        border: isSelected ? .secondary500 : .borderBeigeDisabled
       )
-      .opacity(isSelected ? 1.0 : 0.88)
+      .opacity(isSelected ? 1 : 0.8)
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
 
+  /// Android `ProfileImage(40)` — `borderBeigeDefault` 원 + 가운데 2/3 크기 이미지(fit).
   @ViewBuilder
-  private func avatarView(imageURL: String, override: UIImage? = nil) -> some View {
-    Group {
-      if let override {
-        Image(uiImage: override)
-          .resizable()
-          .scaledToFit()
-      } else {
-        PickeRemoteImage(url: imageURL) {
-          SkeletonView(.round())
-            .frame(width: 28, height: 20)
+  private func avatarView(
+    imageURL: String,
+    override: UIImage? = nil
+  ) -> some View {
+    Circle()
+      .fill(.borderBeigeDefault)
+      .overlay {
+        Group {
+          if let override {
+            Image(uiImage: override)
+              .resizable()
+              .scaledToFit()
+          } else {
+            PickeRemoteImage(url: imageURL) {
+              Color.clear
+            }
+            .content(.fit)
+          }
         }
-        .content(.fit)
+        .frame(width: 40 * 2 / 3, height: 40 * 2 / 3)
       }
-    }
-    .frame(width: 28, height: 20)
-    .frame(width: 40, height: 40)
-    .background(.beige600, in: Circle())
+      .frame(width: 40, height: 40)
   }
 
-  @ViewBuilder
-  private func vsBadge() -> some View {
+  /// Android `VoteVersusBadge` — 36 원 `secondary200`, "VS" 14 Medium `textDefault`.
+  private var vsBadge: some View {
     Text("VS")
-      .pretendardFont(.bold11)
-      .foregroundStyle(.neutral800)
-      .frame(width: 28, height: 28)
+      .pretendardFont(.labelMedium)
+      .foregroundStyle(.textDefault)
+      .frame(width: 36, height: 36)
       .background(.secondary200, in: Circle())
-      .overlay(Circle().stroke(.beige50, lineWidth: 1.5))
   }
 }
 
 // MARK: - CTA
 
 extension PreVoteView {
-  @ViewBuilder
-  private func primaryButton() -> some View {
-    Button(store.primaryButtonTitle) { send(.primaryButtonTapped) }
-      .ctaButtonStyle(.primary, size: .large, height: PreVoteLayout.ctaHeight)
-      .disabled(!store.isPrimaryButtonEnabled)
+  /// Android `PickeButton` — 높이 48 이상, radius 2, 14 SemiBold `surfaceBeigeDefault`, 비활성 `primary300`.
+  private var primaryButton: some View {
+    Button {
+      send(.primaryButtonTapped)
+    } label: {
+      Text(store.primaryButtonTitle)
+        .pretendardFont(.headingSmall)
+        .foregroundStyle(.surfaceBeigeDefault)
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .roundedBackground(
+          store.isPrimaryButtonEnabled ? .buttonPrimaryBackgroundDefault : .primary300,
+          radius: .radiusDefault
+        )
+    }
+    .buttonStyle(.plain)
+    // `.disabled` 는 글자까지 흐리게 해서, Android 처럼 배경색만 바꾸고 누름만 막는다.
+    .allowsHitTesting(store.isPrimaryButtonEnabled)
+    .accessibilityAddTraits(store.isPrimaryButtonEnabled ? [] : .isStaticText)
   }
 }
 
@@ -408,14 +355,14 @@ extension PreVoteView {
     _ battle: PreVoteBattle,
     avatarOverrides: [Int: UIImage]
   ) -> some View {
-    VStack(spacing: PreVoteLayout.contentToOptionSpacing) {
+    VStack(spacing: 24) {
       // 스냅샷 배경은 모드와 무관하게 밝은색이라, 사후(post) 화면의 밝은 제목색을
       // 그대로 쓰면 베이지 위 베이지로 묻힌다 → 항상 어두운 제목색으로 고정.
-      contentSection(battle, titleColorOverride: .neutral500)
+      contentSection(battle, onDarkBackground: false)
       optionSection(battle, avatarOverrides: avatarOverrides)
     }
     .padding(16)
-    .frame(width: PreVoteLayout.snapshotWidth)
+    .frame(width: 360)
     .background(.beige50)
   }
 }

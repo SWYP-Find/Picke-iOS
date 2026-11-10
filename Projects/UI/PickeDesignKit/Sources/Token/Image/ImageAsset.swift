@@ -53,6 +53,8 @@ public enum ImageAsset: String {
 
   case close
   case arrowRight
+  case arrowLeft
+  case share
   case think
   case more
   case edit

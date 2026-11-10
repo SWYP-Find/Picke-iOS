@@ -49,6 +49,13 @@ public struct PreVoteFeature {
     /// 클래스의 기존 콘텐츠에서 기참여 결과 화면을 보여줄 때만 설정한다.
     public var showsResultsForExistingParticipation: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
+    /// Android `VoteUiEvent` 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
+
+    /// Android `VoteBattleNotFound` — 상세를 못 불러오면 빈 상태 화면을 보인다.
+    public var isBattleNotFound: Bool {
+      detailLoadFailed && battle == nil
+    }
 
     public var isShowingParticipationResult: Bool {
       showsResultsForExistingParticipation && voteMode == .pre && (
@@ -95,6 +102,7 @@ public struct PreVoteFeature {
     case onAppear
     case backButtonTapped
     case retryTapped
+    case toastShown
     case shareTapped
     case shareSnapshotRendered(Data?)
     case optionTapped(optionId: Int)
@@ -215,8 +223,13 @@ extension PreVoteFeature {
       return .send(.async(.prepareShare(shareContent(state: state, snapshot: snapshot))))
 
     case let .optionTapped(optionId):
+      // Android `selectedOptionId = optionId` — 같은 카드를 다시 눌러도 선택을 유지한다.
       guard !state.isShowingParticipationResult else { return .none }
-      state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
+      state.selectedOptionId = optionId
+      return .none
+
+    case .toastShown:
+      state.toastMessage = nil
       return .none
 
     case .primaryButtonTapped:
@@ -372,6 +385,7 @@ extension PreVoteFeature {
         state.detailLoadFailed = false
       case let .failure(error):
         state.detailLoadFailed = true
+        state.toastMessage = "정보를 불러오지 못했어요"
         PickeLogger.error(
           "[PreVoteFeature] fetchBattle failed: \(error) — \(error.localizedDescription)",
           category: .ui
@@ -421,6 +435,7 @@ extension PreVoteFeature {
         )))
       case let .failure(error):
         PickeLogger.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = "요청을 처리하지 못했어요"
         return .none
       }
 
