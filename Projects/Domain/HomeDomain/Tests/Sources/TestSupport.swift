@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 
+import APIEndpoint
 import PickeNetwork
 
 /// 고정 데이터를 서버 응답 봉투(`{ statusCode, data, error }`)로 해석해 돌려주는 스텁 클라이언트.
@@ -26,12 +27,17 @@ struct StubNetworkClient: PickeNetworkClient {
 
   let stubData: Data
   var statusCode: Int = 200
+  /// 주간 베스트 관점 요청에만 돌려줄 응답. nil 이면 `stubData` 를 쓴다.
+  var weeklyBestData: Data?
 
   func send<T: Decodable & Sendable>(
-    _: some PickeDataRequest,
+    _ request: some PickeDataRequest,
     as _: T.Type
   ) async throws(PickeNetworkError) -> T {
-    try decode(T.self)
+    if let weeklyBestData, request.path == PerspectiveService.weeklyBest.path {
+      return try decode(T.self, from: weeklyBestData)
+    }
+    return try decode(T.self)
   }
 
   func send<R: PickeDataRequest>(_: R) async throws(PickeNetworkError) -> R.Response {
@@ -48,10 +54,13 @@ struct StubNetworkClient: PickeNetworkClient {
 
   func upload(_: some PickeFileUploadRequest) async throws(PickeNetworkError) {}
 
-  private func decode<T: Decodable>(_: T.Type) throws(PickeNetworkError) -> T {
+  private func decode<T: Decodable>(
+    _: T.Type,
+    from source: Data? = nil
+  ) throws(PickeNetworkError) -> T {
     let envelope: Envelope<T>
     do {
-      envelope = try JSONDecoder().decode(Envelope<T>.self, from: stubData)
+      envelope = try JSONDecoder().decode(Envelope<T>.self, from: source ?? stubData)
     } catch {
       throw .decoding(.failed(error))
     }
