@@ -14,6 +14,7 @@ import HomeInterface
 import NotificationDomainInterface
 import PickeAnalyticsInterface
 import PickeCoreLogger
+import PickeCoreUtility
 
 @Reducer
 public struct HomeFeature {
@@ -108,6 +109,8 @@ public struct HomeFeature {
     case homeTabReselected
     /// 실패 토스트를 띄운 뒤 메시지를 비운다.
     case toastShown
+    /// 앱이 다시 활성화됨 — Android `AppLifecycleObserver.onStart` 처럼 오늘 출석이 안 됐으면 체크한다.
+    case appBecameActive
   }
 
   @CasePathable
@@ -117,28 +120,34 @@ public struct HomeFeature {
     case refreshHome
     /// 벨 배지용 미읽음 여부 서버 동기화 (GET /api/v1/notifications/unread).
     case syncUnreadBadge
-    /// 오늘의 출석 체크 (POST /attendance/check) — 성공 시 주간 현황까지 이어 조회한다.
-    case checkAttendance
+    /// 출석 체크 후 주간 현황을 조회해 시트를 띄운다(Android `checkInAndShowAttendanceSheetIfNeeded`).
+    case checkAttendance(day: String)
+    /// 시트 없이 출석 체크만 한다(Android `checkAttendanceIfNeeded`).
+    case checkAttendanceOnly(day: String)
   }
 
   @CasePathable
   public enum InnerAction: Equatable {
     case homeResponse(Result<HomeBundle, AuthError>)
     case unreadBadgeResponse(Result<Bool, AuthError>)
-    /// 출석 체크 성공 + 주간 현황 조회까지 끝난 결과.
-    case attendanceResponse(weekly: WeeklyAttendance, pointsEarned: Int)
+    /// 주간 현황 조회까지 끝난 결과(체크 성공 여부와 관계없이 시트를 띄운다).
+    case attendanceResponse(day: String, weekly: WeeklyAttendance, pointsEarned: Int)
+    /// 출석 체크 성공 — 오늘 날짜를 기록해 하루 1회만 부른다.
+    case attendanceChecked(day: String)
   }
 
   nonisolated enum CancelID: Hashable {
     case fetchHome
     case syncUnreadBadge
     case attendance
+    case attendanceCheckOnly
   }
 
   @Dependency(\.homeUseCase) private var homeUseCase
   @Dependency(\.notificationUseCase) private var notificationUseCase
   @Dependency(\.attendanceUseCase) private var attendanceUseCase
   @Dependency(\.analyticsUseCase) private var analyticsUseCase
+  @Dependency(\.date.now) private var now
 
   public var body: some Reducer<State, Action> {
     BindingReducer()
@@ -165,12 +174,6 @@ public struct HomeFeature {
 }
 
 extension HomeFeature {
-  /// staging 빌드 여부. 출석 시트를 테스트로 상시 노출할지 가르는 게이트.
-  /// 값은 xcconfig → Info.plist(SENTRY_ENVIRONMENT) 로 주입된다(Stage=staging, Prod=production).
-  static var isStagingEnvironment: Bool {
-    (Bundle.main.object(forInfoDictionaryKey: "SENTRY_ENVIRONMENT") as? String) == "staging"
-  }
-
   private func handleViewAction(
     state: inout State,
     action: View
@@ -180,17 +183,19 @@ extension HomeFeature {
       analyticsUseCase.track(.screenView(screen: .home, referrer: nil))
       // 벨 배지는 진입/재진입마다 서버(/unread)로 갱신 — fetchHome 이 스킵돼도 stale 방지.
       let syncBadge: Effect<Action> = .send(.async(.syncUnreadBadge))
-      // 출석 체크는 세션당 1회 — 하루 1회 제한이라 재진입마다 호출할 이유가 없다.
-      let attendance: Effect<Action> = state.hasTriedAttendance
-        ? .none
-        : .send(.async(.checkAttendance))
-      state.hasTriedAttendance = true
+      // Android: 출석 시트는 홈 진입 시 하루 1회(세션당 한 번 시도), 체크만은 하루 1회.
+      let attendance = attendanceEffectOnAppear(state: &state)
       // 홈 조회는 첫 진입 한 번만(Android ViewModel init) — 실패·로딩 중·로드 완료면 다시 부르지 않고 새로고침으로만 다시 부른다.
       // 초기값 `.loaded` + 미로드 = 한 번도 요청하지 않은 상태.
       guard !state.hasLoadedHome, state.viewState == .loaded else {
         return .merge(syncBadge, attendance)
       }
       return .merge(syncBadge, attendance, .send(.async(.fetchHome)))
+
+    case .appBecameActive:
+      let today = now.formatted(.yearMonthDay)
+      guard !AttendanceDayRecord().isChecked(on: today) else { return .none }
+      return .send(.async(.checkAttendanceOnly(day: today)))
 
     case .pullToRefresh:
       guard state.viewState != .loading else { return .none }
@@ -272,19 +277,28 @@ extension HomeFeature {
       }
       .cancellable(id: CancelID.syncUnreadBadge, cancelInFlight: true)
 
-    case .checkAttendance:
+    case let .checkAttendance(day):
       return .run { [useCase = attendanceUseCase] send in
         let result = try? await useCase.checkAttendance()
-        // 정책: Prod 는 오늘 첫 출석 성공(result != nil) 때만 노출.
-        // staging 은 테스트 목적으로 이미 출석(409)이어도 결과와 무관하게 상시 노출한다.
-        guard Self.isStagingEnvironment || result != nil else { return }
+        if result != nil {
+          await send(.inner(.attendanceChecked(day: day)))
+        }
+        // Android: 체크 결과(이미 출석·실패)와 관계없이 주간 조회가 성공하면 시트를 띄운다.
         guard let weekly = try? await useCase.fetchWeeklyAttendance() else { return }
         await send(.inner(.attendanceResponse(
+          day: day,
           weekly: weekly,
           pointsEarned: (result?.pointsEarned ?? 0) + (result?.streakBonusPoints ?? 0)
         )))
       }
       .cancellable(id: CancelID.attendance, cancelInFlight: true)
+
+    case let .checkAttendanceOnly(day):
+      return .run { [useCase = attendanceUseCase] send in
+        guard (try? await useCase.checkAttendance()) != nil else { return }
+        await send(.inner(.attendanceChecked(day: day)))
+      }
+      .cancellable(id: CancelID.attendanceCheckOnly, cancelInFlight: true)
     }
   }
 
@@ -333,13 +347,33 @@ extension HomeFeature {
       }
       return .none
 
-    case let .attendanceResponse(weekly, pointsEarned):
+    case let .attendanceChecked(day):
+      AttendanceDayRecord().markChecked(on: day)
+      return .none
+
+    case let .attendanceResponse(day, weekly, pointsEarned):
+      AttendanceDayRecord().markSheetShown(on: day)
       var modalState = AttendanceModalFeature.State()
       modalState.weekly = weekly
       modalState.pointsEarned = pointsEarned
       state.attendanceModal = modalState
       return .none
     }
+  }
+
+  /// 홈 진입 시 출석 처리 — 오늘 시트를 아직 안 보였으면 체크+시트, 보였는데 체크가 안 됐으면 체크만.
+  private func attendanceEffectOnAppear(state: inout State) -> Effect<Action> {
+    guard !state.hasTriedAttendance else { return .none }
+    state.hasTriedAttendance = true
+    let today = now.formatted(.yearMonthDay)
+    let record = AttendanceDayRecord()
+    if !record.isSheetShown(on: today) {
+      return .send(.async(.checkAttendance(day: today)))
+    }
+    if !record.isChecked(on: today) {
+      return .send(.async(.checkAttendanceOnly(day: today)))
+    }
+    return .none
   }
 
   private func handleAttendanceModal(

@@ -20,6 +20,7 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .core(.logger),
+    .core(.coreUtility),
     .SPM.composableArchitecture,
     .domain(.auth, .interface),
     .ui(.designKit),
