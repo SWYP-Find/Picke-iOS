@@ -30,10 +30,9 @@ public struct BattleView: View {
   }
 
   public var body: some View {
-    // ZStack 은 safe-area 존중(ignoresSafeArea 미적용) → appBar 가 노치 아래 + 항상 최상단 탭 가능.
-    // 배경/pager 는 각자 내부에서 ignoresSafeArea 로 풀블리드 유지.
+    // Android `TodayBattleScreen` — 화면 배경은 순수 검정.
     ZStack {
-      Color.neutral900.ignoresSafeArea()
+      Color.black.ignoresSafeArea()
 
       if store.viewState == .loading {
         BattleSkeletonView()
@@ -44,10 +43,9 @@ public struct BattleView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    // PreVoteView 패턴: 상단 paging 바 + 앱바를 overlay 로 올려 항상 최상단·탭 가능하게.
     .overlay(alignment: .top) {
-      VStack(spacing: 14) {
-        // 배틀이 여러 건일 때만 상단 paging 바 노출. 터치 시 해당 배틀로 이동.
+      VStack(spacing: 0) {
+        // 배틀이 여러 건일 때만 상단 paging 바 노출(Android: 위·좌우 16).
         if store.battles.count > 1 {
           BattlePagingBar(
             pageCount: store.battles.count,
@@ -59,15 +57,20 @@ public struct BattleView: View {
               withAnimation(.easeInOut(duration: 0.25)) { currentBattleId = id }
             }
           )
+          .padding([.horizontal, .top], 16)
         }
         appBar()
       }
-      .padding(.top, 10)
       .zIndex(10)
     }
     .navigationBarHidden(true)
     .hidesSystemBars()
     .onAppear { send(.onAppear) }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
     // 데이터 로드 후 첫 페이지를 현재 배틀로 초기화 (스크롤 전엔 scrollPosition 이 nil).
     .onChange(of: store.battles.map(\.id)) { _, ids in
       if currentBattleId == nil { currentBattleId = ids.first }
@@ -79,7 +82,7 @@ public struct BattleView: View {
   }
 }
 
-// MARK: - Pager (세로 페이징)
+// MARK: - Pager
 
 private extension BattleView {
   @ViewBuilder
@@ -88,7 +91,8 @@ private extension BattleView {
       ScrollView(.vertical, showsIndicators: false) {
         LazyVStack(spacing: 0) {
           ForEach(store.battles) { battle in
-            battlePage(battle, size: proxy.size)
+            battlePage(battle)
+              .frame(width: proxy.size.width, height: proxy.size.height)
           }
         }
         .scrollTargetLayout()
@@ -97,142 +101,139 @@ private extension BattleView {
       .scrollPosition(id: $currentBattleId)
       .scrollDisabled(store.battles.count <= 1)
     }
-    .ignoresSafeArea()
   }
 
-  // PreVoteView 패턴: 배경 이미지와 콘텐츠 각각에 proxy 폭을 명시해 폭을 제약한다.
+  /// Android `BattleContent` + 하단 바 — 히어로(남는 높이 전부) → 32 → 선택지 → 16 → 버튼(16/16/16/20).
   @ViewBuilder
-  func battlePage(_ battle: DailyBattle, size: CGSize) -> some View {
-    ZStack(alignment: .bottom) {
-      backgroundImage(battle.imageURL)
-        .frame(width: size.width, height: size.height)
-
-      bottomContent(battle)
-        .frame(width: size.width)
+  func battlePage(_ battle: DailyBattle) -> some View {
+    VStack(spacing: 0) {
+      hero(battle)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      vsOptions(battle)
+        .padding(.horizontal, 16)
+        .padding(.top, 32)
+        .padding(.bottom, 16)
+      enterButton(battle)
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 20)
     }
-    .frame(width: size.width, height: size.height)
   }
 }
 
-// MARK: - Background
+// MARK: - Hero
 
 private extension BattleView {
+  /// 이미지를 꽉 채우고 위→아래 `[검정 0.2, 검정 0.6, 검정]` 그라데이션, 내용은 아래 가운데.
   @ViewBuilder
-  func backgroundImage(_ imageURL: String?) -> some View {
-    ZStack {
-      if let imageURL, let url = URL(string: imageURL) {
-        PickeRemoteImage(url: url) { Color.neutral800 }
-      } else {
-        Color.neutral800
-      }
+  func hero(_ battle: DailyBattle) -> some View {
+    ZStack(alignment: .bottom) {
+      Color.clear
+        .overlay {
+          PickeRemoteImage(url: battle.imageURL) {
+            SkeletonView(.rect, base: .gray600, highlight: .gray400)
+          }
+        }
+        .overlay {
+          LinearGradient(
+            colors: [.black.opacity(0.2), .black.opacity(0.6), .black],
+            startPoint: .top,
+            endPoint: .bottom
+          )
+        }
+        .clipped()
+        .ignoresSafeArea(edges: .top)
 
-      LinearGradient(
-        stops: [
-          .init(color: .neutral900.opacity(0), location: 0),
-          .init(color: .neutral900.opacity(0.85), location: 0.55),
-          .init(color: .neutral900, location: 1),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
+      contentSection(battle)
+        .padding(.horizontal, 16)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .clipped()
   }
 }
 
 // MARK: - App Bar
 
 private extension BattleView {
+  /// 뒤로 가기는 iOS 기존 상단 바(`PickeNavigationBar`)를 유지하고, 공유만 Android 아이콘을 쓴다. 빈 화면에는 뒤로만.
   @ViewBuilder
   func appBar() -> some View {
     PickeNavigationBar(onBack: { send(.backTapped) }) {
-      // 데이터 없을 땐 공유 숨김.
       if let battleId = currentBattleId ?? store.battles.first?.battleId {
         Button { send(.shareTapped(battleId: battleId)) } label: {
-          Image(systemName: "square.and.arrow.up")
-            .font(.system(size: 18, weight: .semibold))
+          Image(asset: .share)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
             .frame(width: 24, height: 24)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("공유")
       }
     }
-    .foregroundStyle(.beige50)
+    .foregroundStyle(.textInverse)
     .contentShape(Rectangle())
   }
 }
 
-// MARK: - Bottom Content
+// MARK: - Content
 
 private extension BattleView {
   @ViewBuilder
-  func bottomContent(_ battle: DailyBattle) -> some View {
-    VStack(spacing: 32) {
-      contentSection(battle)
-      vsOptions(battle)
-      enterButton(battle)
+  func contentSection(_ battle: DailyBattle) -> some View {
+    VStack(spacing: 0) {
+      tagsRow(battle.tags)
+      Text(battle.title)
+        .pretendardFont(.bold24, lineSpacingMultiple: 1.3)
+        .foregroundStyle(.textInverse)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 20)
+      Text(battle.question)
+        .pretendardFont(.bodyMedium, lineSpacingMultiple: 1.4)
+        .foregroundStyle(.textMuted)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 12)
+      durationBadge(battle.durationText)
+        .padding(.top, 16)
     }
     .frame(maxWidth: .infinity)
-    .padding(.horizontal, 16)
-    .padding(.bottom, 40)
   }
 
-  @ViewBuilder
-  func contentSection(_ battle: DailyBattle) -> some View {
-    VStack(spacing: 16) {
-      VStack(spacing: 12) {
-        VStack(spacing: 20) {
-          tagsRow(battle.tags)
-          Text(battle.title)
-            .pretendardFont(.bold24)
-            .foregroundStyle(.beige50)
-            .kerning(-0.6)
-            .multilineTextAlignment(.center)
-            .lineSpacing(24 * 0.18)
-            .lineLimit(2)
-            .minimumScaleFactor(0.85)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-
-        if !battle.question.isEmpty {
-          Text(battle.question)
-            .pretendardFont(.bodyMedium)
-            .foregroundStyle(.gray300)
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
-        }
-      }
-
-      durationBadge(battle.durationText)
-    }
-  }
-
+  /// Android 태그 — `beige600` 면, radius 2, 최소 높이 20·가로 4, 12 SemiBold `textPrimary`, 간격 8.
   @ViewBuilder
   func tagsRow(_ tags: [String]) -> some View {
-    HStack(spacing: 9) {
+    HStack(spacing: 8) {
       ForEach(Array(tags.enumerated()), id: \.offset) { _, tag in
         Text("#\(tag)")
-          .pickeBadge(.filled, size: .tag)
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.textPrimary)
+          .padding(.horizontal, 4)
+          .frame(minHeight: 20)
+          .background(.beige600, in: RoundedRectangle(cornerRadius: .radiusDefault))
       }
     }
   }
 
+  /// Android 시간 뱃지 — 테두리 1 `gray300` radius 2, 안쪽 13/7, 시계 16 + 4 + 12 SemiBold `textMuted`.
   @ViewBuilder
   func durationBadge(_ text: String) -> some View {
     HStack(spacing: 4) {
-      Image(systemName: "clock")
-        .font(.system(size: 11, weight: .semibold))
+      Image(asset: .clock)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 16, height: 16)
       Text(text)
         .pretendardFont(.semiBold12)
     }
-    .foregroundStyle(.gray300)
-    .padding(.horizontal, 12)
-    .padding(.vertical, 6)
-    .roundedBorder(.gray500)
+    .foregroundStyle(.textMuted)
+    .padding(.horizontal, 13)
+    .padding(.vertical, 7)
+    .roundedBorder(.gray300)
   }
 }
 
-// MARK: - VS Options (세로 카드 + VS 배지)
+// MARK: - VS Options
 
 private extension BattleView {
   @ViewBuilder
@@ -249,12 +250,13 @@ private extension BattleView {
       }
 
       if options.count > 1 {
-        vsBadge()
+        vsBadge
       }
     }
   }
 
-  /// 선택 시 picke.pen 강조(neutral900 배경 + 골드 테두리), 미선택은 gray700.
+  /// Android `OpinionCard` — 최소 높이 140, 안쪽 20/24, 이름 10 Bold `textSecondary` → 8 → 입장 18 SemiBold
+  /// `textInverse` → 10 → 인용 12 Medium `textMuted`. 선택 `gray900` + `secondary500` 테두리, 그 외 `gray700`.
   @ViewBuilder
   func optionCard(
     _ option: DailyBattle.Option,
@@ -265,72 +267,83 @@ private extension BattleView {
       VStack(spacing: 0) {
         Text(option.representative)
           .pretendardFont(.bold10)
-          .foregroundStyle(.secondary500)
-          .kerning(1.5)
-          .padding(.bottom, 8)
-
+          .foregroundStyle(.textSecondary)
         Text(option.stance)
-          .pretendardFont(.bold18)
-          .foregroundStyle(.beige50)
-          .kerning(-0.45)
-          .multilineTextAlignment(.center)
-          .lineLimit(1)
-          .minimumScaleFactor(0.8)
-          .padding(.horizontal, 20)
-
-        if !option.quote.isEmpty {
-          Text(option.quote)
-            .pretendardFont(.labelSmall)
-            .foregroundStyle(.gray300)
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
-            .padding(.top, 10)
-            .padding(.horizontal, 20)
-        }
+          .pretendardFont(family: .SemiBold, size: 18)
+          .foregroundStyle(.textInverse)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, 8)
+        Text(option.quotedText)
+          .pretendardFont(.labelSmall)
+          .foregroundStyle(.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, 10)
       }
-      .frame(maxWidth: .infinity)
+      .multilineTextAlignment(.center)
+      .padding(.horizontal, 20)
       .padding(.vertical, 24)
-      .pickeCard(isSelected ? .neutral900 : .gray700, border: isSelected ? .secondary500 : .clear)
+      .frame(maxWidth: .infinity, minHeight: 140)
+      .pickeCard(
+        isSelected ? .gray900 : .gray700,
+        border: isSelected ? .secondary500 : .clear
+      )
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
 
-  @ViewBuilder
-  func vsBadge() -> some View {
+  /// Android VS — 40 원 `secondary200`, 14 SemiBold `textDefault`, 테두리 없음.
+  var vsBadge: some View {
     Text("VS")
       .pretendardFont(.headingSmall)
-      .foregroundStyle(.neutral900)
+      .foregroundStyle(.textDefault)
       .frame(width: 40, height: 40)
       .background(.secondary200, in: Circle())
-      .overlay(Circle().stroke(.beige50, lineWidth: 1.5))
   }
 }
 
 // MARK: - CTA
 
 private extension BattleView {
+  /// Android `PickeButton` — 높이 48 이상, radius 2, 14 SemiBold, 비활성 `primary300`.
   @ViewBuilder
   func enterButton(_ battle: DailyBattle) -> some View {
-    Button("배틀 입장하기") { send(.enterBattleTapped(battleId: battle.battleId)) }
-      .ctaButtonStyle(.primary, size: .large, height: 52)
-      .disabled(store.selectedOptionByBattle[battle.battleId] == nil)
+    let isEnabled = store.state.isEnterEnabled(for: battle.battleId)
+    Button {
+      send(.enterBattleTapped(battleId: battle.battleId))
+    } label: {
+      Text("배틀 입장하기")
+        .pretendardFont(.headingSmall)
+        .foregroundStyle(.surfaceBeigeDefault)
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .roundedBackground(
+          isEnabled ? .buttonPrimaryBackgroundDefault : .primary300,
+          radius: .radiusDefault
+        )
+    }
+    .buttonStyle(.plain)
+    // `.disabled` 는 글자까지 흐리게 해서, 배경색만 바꾸고 누름만 막는다.
+    .allowsHitTesting(isEnabled)
   }
 }
 
-// MARK: - Empty / Skeleton
+// MARK: - Empty
 
 private extension BattleView {
+  /// Android 빈 화면 — 로고 160×120 `borderBeigeDefault`, 14 Regular `surfaceBeigeStrong` 가운데.
   @ViewBuilder
   func emptyState() -> some View {
-    VStack(spacing: 8) {
-      Image(asset: .noDataLogo)
+    VStack(spacing: 0) {
+      Image(asset: .appLogo)
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
-        .frame(width: 135, height: 90)
-
-      Text("아직 빠른 배틀이 선정되지 않았어요\n 조금만 기다려주세요!")
-        .pretendardFont(.bodyMedium)
-        .foregroundStyle(.beige300)
+        .foregroundStyle(.borderBeigeDefault)
+        .frame(width: 160, height: 120)
+      Text("아직 빠른 배틀이 선정되지 않았어요\n조금만 기다려주세요!")
+        .pretendardFont(.bodyMedium, lineSpacingMultiple: 1.4)
+        .foregroundStyle(.surfaceBeigeStrong)
+        .multilineTextAlignment(.center)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }

@@ -200,6 +200,27 @@ public struct MainTabCoordinator {
         state.selectedTab = Tab.myPage.rawValue
         return .none
 
+      // Android `navigateToTab(Explore)` — 투표 포인트 부족 안내에서 배틀 흐름을 닫고 탐색 탭으로 간다.
+      case .home(.router(.routeAction(_, action: .chat(.delegate(.openExplore))))):
+        state.homeState.routes.goBackToRoot()
+        return .send(.selectTab(Tab.explore.rawValue))
+
+      case .explore(.router(.routeAction(_, action: .chat(.delegate(.openExplore))))):
+        state.exploreState.routes.goBackToRoot()
+        return .none
+
+      case .quickBattle(.router(.routeAction(_, action: .chat(.delegate(.openExplore))))):
+        state.quickBattleState.routes.goBackToRoot()
+        return .send(.selectTab(Tab.explore.rawValue))
+
+      case .classroom(.router(.routeAction(_, action: .chat(.delegate(.openExplore))))):
+        state.classState.routes.goBackToRoot()
+        return .send(.selectTab(Tab.explore.rawValue))
+
+      case .myPage(.router(.routeAction(_, action: .chat(.delegate(.openExplore))))):
+        state.myPageState.routes.goBackToRoot()
+        return .send(.selectTab(Tab.explore.rawValue))
+
       case .myPage(.router(.routeAction(_, action: .settings(.delegate(.sessionEnded))))):
         return .send(.delegate(.sessionEnded))
 
@@ -249,7 +270,14 @@ private extension MainTabCoordinator {
         action: .home(.view(.homeTabReselected))
       ))))
     case .explore:
-      state.exploreState.routes.goBackToRoot()
+      guard state.exploreState.routes.count == 1 else {
+        state.exploreState.routes.goBackToRoot()
+        return .none
+      }
+      return .send(.explore(.router(.routeAction(
+        id: 0,
+        action: .hifi(.view(.exploreTabReselected))
+      ))))
     case .quickBattle:
       state.quickBattleState.routes.goBackToRoot()
     case .classroom:

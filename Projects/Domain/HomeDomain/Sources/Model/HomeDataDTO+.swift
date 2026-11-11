@@ -63,14 +63,13 @@ public extension BestBattleDTO {
   }
 }
 
-public extension BestCommentDTO {
-  func toDomain() -> HomeBestComment? {
-    guard let battleId else { return nil }
-    return HomeBestComment(
+public extension WeeklyBestPerspectiveItemDTO {
+  func toDomain() -> HomeBestComment {
+    HomeBestComment(
+      perspectiveId: perspectiveId,
       battleId: battleId,
-      battleTitle: battleTitle ?? "",
-      optionTitle: optionTitle ?? "",
-      content: content ?? ""
+      battleTitle: battleTitle,
+      content: content
     )
   }
 }
@@ -129,7 +128,7 @@ public extension NewBattleDTO {
 
 public extension HomeDataDTO {
   /// 전체 DTO 를 화면용 도메인 객체 6 묶음으로 변환.
-  func toDomain() -> HomeBundle {
+  func toDomain(bestComments: [HomeBestComment] = []) -> HomeBundle {
     HomeBundle(
       newNotice: newNotice,
       heroes: editorPicks.enumerated().map { idx, dto in
@@ -139,7 +138,7 @@ public extension HomeDataDTO {
       bestBattles: bestBattles.enumerated().map { idx, dto in
         dto.toDomain(rank: idx + 1)
       },
-      bestComments: bestComments?.compactMap { $0.toDomain() } ?? [],
+      bestComments: bestComments,
       quizzes: todayQuizzes.map { $0.toDomain() },
       votes: todayVotes.map { $0.toDomain() },
       newBattles: newBattles.map { $0.toDomain() }

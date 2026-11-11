@@ -35,7 +35,7 @@ struct ClassMemberAPITests {
     ]
     """
     let payload = try JSONDecoder().decode([ClassMemberDTO].self, from: Data(json.utf8))
-    let members = try ClassMemberDTO.toMemberList(payload)
+    let members = ClassMemberDTO.toMemberList(payload)
 
     #expect(members.currentMemberID == 11)
     #expect(members.members.map(\.id) == [10, 11])
@@ -49,8 +49,9 @@ struct ClassMemberAPITests {
     [{"memberId":10,"displayName":"운영자","role":"OWNER","characterUrl":null,"me":false}]
     """
     let payload = try JSONDecoder().decode([ClassMemberDTO].self, from: Data(json.utf8))
-    #expect(throws: ClassError.userMessage("내 멤버 정보를 찾을 수 없어요.")) {
-      try ClassMemberDTO.toMemberList(payload)
-    }
+    // 참여하지 않은 운영자가 보는 명단처럼 내 행이 없어도 실패하지 않고, 아무도 본인으로 잡지 않는다.
+    let members = ClassMemberDTO.toMemberList(payload)
+    #expect(members.currentMemberID == nil)
+    #expect(members.members.map(\.id) == [10])
   }
 }

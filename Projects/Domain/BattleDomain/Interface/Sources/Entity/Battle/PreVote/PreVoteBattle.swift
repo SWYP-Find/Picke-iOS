@@ -21,6 +21,14 @@ public struct PreVoteBattle: Equatable, Identifiable {
 
   public var id: Int { battleId }
 
+  /// Android `title.replace(", ", ",\n")` — 쉼표 뒤에서 줄을 바꾼다.
+  public var displayTitle: String {
+    [titleLine1, titleLine2]
+      .filter { !$0.isEmpty }
+      .joined(separator: "\n")
+      .replacingOccurrences(of: ", ", with: ",\n")
+  }
+
   public init(
     battleId: Int,
     backgroundImageURL: String?,

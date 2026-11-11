@@ -16,6 +16,7 @@ public enum PerspectiveAPI {
   case likes(perspectiveId: Int)
   case reports(perspectiveId: Int)
   case reportComment(perspectiveId: Int, commentId: Int)
+  case weeklyBest
 
   public var description: String {
     switch self {
@@ -35,6 +36,8 @@ public enum PerspectiveAPI {
       return "\(perspectiveId)/comments/\(commentId)"
     case let .deleteComment(perspectiveId, commentId):
       return "\(perspectiveId)/comments/\(commentId)"
+    case .weeklyBest:
+      return "weekly-best"
     }
   }
 }

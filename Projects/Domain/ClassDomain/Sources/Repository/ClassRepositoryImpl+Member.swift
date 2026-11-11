@@ -17,7 +17,7 @@ extension ClassRepositoryImpl {
         ClassMemberService.members(classID: classID),
         as: [ClassMemberDTO].self
       )
-      return try ClassMemberDTO.toMemberList(data)
+      return ClassMemberDTO.toMemberList(data)
     } catch {
       throw Self.memberError(error)
     }

@@ -5,6 +5,7 @@
 //  Created by Picke on 10/11/26.
 //
 
+import Foundation
 import Testing
 import ComposableArchitecture
 import AdDomainInterface
@@ -62,15 +63,46 @@ struct HifiTests {
     await store.send(.view(.adVisible(code: "first", itemID: 6))) {
       $0.reportedAdCodesByItemID = [6: ["first"]]
     }
-    await store.receive(\.inner.impressionResponse)
+    await store.receive { action in
+      guard case .inner(.impressionResponse) = action else { return false }
+      return true
+    }
     await store.send(.view(.adVisible(code: "first", itemID: 6)))
     await store.send(.view(.adVisible(code: "first", itemID: 12))) {
       $0.reportedAdCodesByItemID[12] = ["first"]
     }
-    await store.receive(\.inner.impressionResponse)
+    await store.receive { action in
+      guard case .inner(.impressionResponse) = action else { return false }
+      return true
+    }
     let codes = await client.codes
     #expect(codes == ["first", "first"])
     await store.finish()
+  }
+
+  @Test @MainActor
+  func searchFailureShowsToast() async {
+    var state = HifiFeature.State()
+    state.viewState = .loading
+    let store = TestStore(initialState: state) { HifiFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.searchResponse(
+      .failure(.noData),
+      reset: true,
+      category: state.selectedCategory,
+      sort: state.selectedSort
+    )))
+    #expect(store.state.toastMessage == "정보를 불러오지 못했어요")
+  }
+
+  @Test @MainActor
+  func reselectingTabRequestsScrollToTop() async {
+    let store = TestStore(initialState: HifiFeature.State()) { HifiFeature() }
+
+    await store.send(.view(.exploreTabReselected)) {
+      $0.scrollToTopRequest = 1
+    }
   }
 
   private func ad(_ code: String) -> FeedAd {

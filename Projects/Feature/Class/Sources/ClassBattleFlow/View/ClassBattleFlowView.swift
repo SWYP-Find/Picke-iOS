@@ -511,7 +511,7 @@ private extension ClassBattleFlowView {
             .pickeCard(bubbleBackground, border: bubbleBorder)
             .overlay(alignment: line.side == "B" ? .leading : .trailing) {
               if row.isActive && store.isPlaying {
-                AudioEqualizerView(isPlaying: true)
+                AudioEqualizerView()
                   .frame(width: 24, height: 24)
                   .offset(x: line.side == "B" ? -36 : 36)
               }

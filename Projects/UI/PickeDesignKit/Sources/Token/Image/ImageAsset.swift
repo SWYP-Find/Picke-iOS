@@ -50,8 +50,11 @@ public enum ImageAsset: String {
   case replyCorner
 
   // MARK: - 공용 아이콘
+
   case close
   case arrowRight
+  case arrowLeft
+  case share
   case think
   case more
   case edit
@@ -59,6 +62,11 @@ public enum ImageAsset: String {
   case report
   case warning
   case send
+  case play
+  case playStop
+  case playBack
+  case playForward
+  case replay
 
   // MARK: - 철학자 아바타
 

@@ -8,7 +8,6 @@
 import Foundation
 
 import BattleDomainInterface
-import PickeCoreUtility
 
 public struct DailyBattle: Equatable, Identifiable {
   public var battleId: Int
@@ -57,6 +56,11 @@ public struct DailyBattle: Equatable, Identifiable {
       self.stance = stance
       self.quote = quote
     }
+
+    /// Android `OpinionCard` — 인용구를 큰따옴표로 감싼다.
+    public var quotedText: String {
+      "\"\(quote)\""
+    }
   }
 
   /// 서버 `BattleInfo`(오늘의 배틀 아이템) → 화면 모델 매핑.
@@ -67,7 +71,8 @@ public struct DailyBattle: Equatable, Identifiable {
       tags: info.tags.map(\.name),
       title: info.title,
       question: info.summary,
-      durationText: info.audioDuration.durationText,
+      // Android `TodayBattleItem.toUiModel` — 초를 분으로 올림해 "N분" 으로 표기한다.
+      durationText: "\((info.audioDuration + 59) / 60)분",
       options: info.options.prefix(2).map {
         // API title = 짧은 입장 라벨("선하다"), API stance = 설명 문장(긴 인용구).
         Option(id: $0.optionId, representative: $0.representative, stance: $0.title, quote: $0.stance)
