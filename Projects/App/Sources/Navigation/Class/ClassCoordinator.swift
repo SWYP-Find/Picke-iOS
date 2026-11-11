@@ -1099,8 +1099,14 @@ private extension ClassCoordinator {
 
     case let .routeAction(routeID, action: .battleFlow(.delegate(.dismiss))):
       guard routeID == state.routes.count - 1,
-            case .battleFlow? = state.routes.last?.screen else { return .none }
-      return .send(.view(.backAction))
+            case let .battleFlow(flow)? = state.routes.last?.screen else { return .none }
+      state.routes.goBack()
+      // 운영자 본인 참여처럼 배틀을 마치면 서버 인원 수가 바뀐다. 상세로 돌아오면 다시 받아 숫자를 맞춘다.
+      guard let roomID = flow.room?.id,
+            case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == roomID
+      else { return .none }
+      return fetchDetail(state: &state, routeID: state.routes.count - 1)
 
     case let .routeAction(routeID, action: .battleFlow(.delegate(.openReport(classID: classID)))):
       guard routeID == state.routes.count - 1,
