@@ -36,7 +36,7 @@ extension HomeBestCommentRow {
 
   private var battleTitleText: some View {
     Text(comment.battleTitle)
-      .pretendardFont(.semiBold13)
+      .pretendardFont(.regular13)
       .foregroundStyle(.textMuted)
       .lineLimit(1)
       .truncationMode(.tail)
