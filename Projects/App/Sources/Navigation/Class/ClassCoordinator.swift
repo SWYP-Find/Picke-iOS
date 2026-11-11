@@ -100,7 +100,7 @@ public struct ClassCoordinator {
       requestID: UUID,
       room: ClassRoom,
       members: [ClassMember],
-      currentMemberID: Int
+      currentMemberID: Int?
     )
     case membersFailed(
       routeID: Int,
