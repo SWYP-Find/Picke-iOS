@@ -534,12 +534,13 @@ struct ClassCoordinatorTests {
     )))
     await store.finish()
 
-    guard case let .ownerDashboard(current)? = store.state.routes.last?.screen else {
-      Issue.record("운영자 요약 화면이 유지되지 않았습니다.")
+    // Android ClassEdit 처럼 관리 메뉴 '수정'은 이름·마감일 수정 화면을 연다.
+    guard case let .classEdit(edit)? = store.state.routes.last?.screen else {
+      Issue.record("클래스 수정 화면이 열리지 않았습니다.")
       return
     }
-    #expect(current.instanceID == dashboard.instanceID)
-    #expect(store.state.deadlineEdit?.room == room)
+    #expect(edit.room == room)
+    #expect(store.state.deadlineEdit == nil)
   }
 
   @Test
@@ -747,8 +748,9 @@ struct ClassCoordinatorTests {
       .success(room)
     ))
     #expect(!store.state.showsTabBar)
-    await store.send(.deadlineEdit(.presented(.view(.backTapped))))
-    await store.receive(\.deadlineEdit.presented.delegate.dismiss)
+    await store.send(.router(.routeAction(id: 2, action: .classEdit(.view(.backTapped)))))
+    await store.receive(\.router.routeAction)
+    await store.receive(\.view.backAction)
     #expect(store.state.showsTabBar)
   }
 
@@ -1533,9 +1535,10 @@ struct ClassCoordinatorTests {
     ))))
     if edit {
       #expect(await useCase.cancelledRequestIDs.isEmpty)
-      #expect(store.state.deadlineEdit?.room == room)
-      guard case .ownerDashboard? = store.state.routes.last?.screen else {
-        Issue.record("마감일 편집 시 운영자 보고서가 유지되지 않음")
+      // 수정은 보고서 위에 클래스 수정 화면을 쌓으므로 보고서 로드는 그대로 둔다.
+      guard case .classEdit? = store.state.routes.last?.screen,
+            case .ownerDashboard? = store.state.routes.dropLast().last?.screen else {
+        Issue.record("클래스 수정 시 운영자 보고서가 유지되지 않음")
         return
       }
       await store.send(.view(.backToRootAction))
@@ -2451,10 +2454,10 @@ struct ClassDeadlineSheetCoordinatorTests {
       roomID: room.id,
       .success(room)
     ))
-    #expect(store.state.routes.count == 2)
-    #expect(store.state.deadlineEdit?.room == room)
+    #expect(store.state.routes.count == 3)
+    #expect(store.state.routes.last.map { if case .classEdit = $0.screen { true } else { false } } == true)
 
-    await store.send(.deadlineEdit(.dismiss))
+    await store.send(.view(.backAction))
     await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openRoom(room))))))
     await store.send(.router(.routeAction(id: 2, action: .detail(.delegate(.openDeadline(room))))))
     #expect(store.state.routes.count == 3)
@@ -2463,8 +2466,8 @@ struct ClassDeadlineSheetCoordinatorTests {
     await store.send(.deadlineEdit(.dismiss))
     await store.send(.router(.routeAction(id: 2, action: .detail(.delegate(.openReport(room))))))
     await store.send(.router(.routeAction(id: 3, action: .ownerDashboard(.delegate(.editClass)))))
-    #expect(store.state.routes.count == 4)
-    #expect(store.state.deadlineEdit?.room == room)
+    #expect(store.state.routes.count == 5)
+    #expect(store.state.routes.last.map { if case .classEdit = $0.screen { true } else { false } } == true)
   }
 
   @Test

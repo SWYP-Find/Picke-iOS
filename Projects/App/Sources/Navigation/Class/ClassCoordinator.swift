@@ -243,6 +243,16 @@ private extension ClassCoordinator {
     case .dismiss, .presented(.delegate(.dismiss)):
       state.deadlineSelection = nil
     case let .presented(.delegate(.confirmed(deadline, settingInstanceID: instanceID))):
+      if case var .classEdit(edit)? = state.routes.last?.screen {
+        guard state.deadlineSelection?.settingInstanceID == instanceID,
+              edit.instanceID == instanceID
+        else { return .none }
+        edit.deadline = deadline
+        edit.deadlineValidationMessage = nil
+        state.routes[screenAt: state.routes.count - 1] = .classEdit(edit)
+        state.deadlineSelection = nil
+        return .none
+      }
       guard state.deadlineSelection?.settingInstanceID == instanceID,
             case var .setting(setting)? = state.routes.last?.screen,
             setting.instanceID == instanceID, setting.canEditDeadline
@@ -289,43 +299,51 @@ private extension ClassCoordinator {
             editor.room.id == room.id,
             editor.isSaving
       else { return .none }
-      for (index, route) in state.routes.enumerated() {
-        switch route.screen {
-        case var .myClasses(list):
-          for roomIndex in list.rooms.indices where list.rooms[roomIndex].id == room.id {
-            list.rooms[roomIndex] = room
-          }
-          if list.viewState == .loaded || list.viewState == .empty {
-            list.viewState = list.visibleRooms.isEmpty ? .empty : .loaded
-          }
-          state.routes[screenAt: index] = .myClasses(list)
-        case var .detail(detail) where detail.room.id == room.id:
-          detail.room = room
-          state.routes[screenAt: index] = .detail(detail)
-        case var .ownerDashboard(dashboard) where dashboard.room.id == room.id:
-          dashboard.room = room
-          state.routes[screenAt: index] = .ownerDashboard(dashboard)
-        case var .closedBattle(closed) where closed.room.id == room.id:
-          closed.room = room
-          state.routes[screenAt: index] = .closedBattle(closed)
-        case var .members(member) where member.room.id == room.id:
-          member.room = room
-          state.routes[screenAt: index] = .members(member)
-        case var .report(report) where report.room.id == room.id:
-          report.room = room
-          state.routes[screenAt: index] = .report(report)
-        default:
-          break
-        }
-      }
-      for (battleID, cachedRoom) in state.chatRoomsByBattleID where cachedRoom.id == room.id {
-        state.chatRoomsByBattleID[battleID] = room
-      }
+      applyUpdatedRoom(state: &state, room: room)
       state.deadlineEdit = nil
       return .none
 
     case .presented:
       return .none
+    }
+  }
+
+  /// 마감일·이름 변경 결과를 스택의 모든 화면과 채팅방 캐시에 반영한다.
+  func applyUpdatedRoom(
+    state: inout State,
+    room: ClassRoom
+  ) {
+    for (index, route) in state.routes.enumerated() {
+      switch route.screen {
+      case var .myClasses(list):
+        for roomIndex in list.rooms.indices where list.rooms[roomIndex].id == room.id {
+          list.rooms[roomIndex] = room
+        }
+        if list.viewState == .loaded || list.viewState == .empty {
+          list.viewState = list.visibleRooms.isEmpty ? .empty : .loaded
+        }
+        state.routes[screenAt: index] = .myClasses(list)
+      case var .detail(detail) where detail.room.id == room.id:
+        detail.room = room
+        state.routes[screenAt: index] = .detail(detail)
+      case var .ownerDashboard(dashboard) where dashboard.room.id == room.id:
+        dashboard.room = room
+        state.routes[screenAt: index] = .ownerDashboard(dashboard)
+      case var .closedBattle(closed) where closed.room.id == room.id:
+        closed.room = room
+        state.routes[screenAt: index] = .closedBattle(closed)
+      case var .members(member) where member.room.id == room.id:
+        member.room = room
+        state.routes[screenAt: index] = .members(member)
+      case var .report(report) where report.room.id == room.id:
+        report.room = room
+        state.routes[screenAt: index] = .report(report)
+      default:
+        break
+      }
+    }
+    for (battleID, cachedRoom) in state.chatRoomsByBattleID where cachedRoom.id == room.id {
+      state.chatRoomsByBattleID[battleID] = room
     }
   }
 
@@ -1034,9 +1052,36 @@ private extension ClassCoordinator {
 
     case let .routeAction(routeID, action: .ownerDashboard(.delegate(.editClass))):
       guard routeID == state.routes.count - 1,
-            case let .ownerDashboard(dashboard)? = state.routes.last?.screen
+            case let .ownerDashboard(dashboard)? = state.routes.last?.screen,
+            dashboard.room.role == .owner
       else { return .none }
-      return openDeadlineEditor(state: &state, room: dashboard.room)
+      state.routes.push(.classEdit(.init(room: dashboard.room)))
+      return .none
+
+    case let .routeAction(routeID, action: .classEdit(.delegate(.editDeadline(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            state.deadlineEdit == nil,
+            case let .classEdit(edit)? = state.routes.last?.screen,
+            edit.instanceID == instanceID, edit.hasDeadline
+      else { return .none }
+      var selection = ClassDeadlineSelectionFeature.State()
+      selection.settingInstanceID = instanceID
+      // Android ClassEdit: 기존 마감일 이후로만 연장할 수 있다.
+      selection.minimumDate = max(edit.room.deadline, date.now)
+      selection.draftDeadline = edit.deadline
+      state.deadlineSelection = selection
+      return .none
+
+    case .routeAction(_, action: .classEdit(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .classEdit(.delegate(.saved(room)))):
+      guard routeID == state.routes.count - 1,
+            case .classEdit? = state.routes.last?.screen
+      else { return .none }
+      applyUpdatedRoom(state: &state, room: room)
+      state.routes.pop()
+      return .none
 
     case .routeAction(_, action: .ownerDashboard(.delegate(.deleteClass))):
       return returnToClassDetail(state: &state, action: .deleteTapped)
@@ -1292,8 +1337,9 @@ private extension ClassCoordinator {
       else { return .none }
       switch result {
       case let .success(room):
-        guard room.id == roomID else { return .none }
-        return openDeadlineEditor(state: &state, room: room)
+        guard room.id == roomID, room.role == .owner else { return .none }
+        state.routes.push(.classEdit(.init(room: room)))
+        return .none
       case let .failure(error):
         list.customAlert = .alert(
           title: "클래스 정보를 불러오지 못했어요",
@@ -1464,6 +1510,7 @@ extension ClassCoordinator {
     case recommend(ClassRecommendFeature)
     case battlePreview(ClassBattlePreviewFeature)
     case setting(ClassSettingFeature)
+    case classEdit(ClassEditFeature)
     case share(ClassShareFeature)
     case ownerName(ClassJoinFeature)
     case myClasses(MyClassFeature)
