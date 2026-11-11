@@ -153,39 +153,24 @@ private extension BattleView {
 // MARK: - App Bar
 
 private extension BattleView {
-  /// Android `PickeTopAppBar`(투명) — 높이 48, 뒤로·공유 24 `textInverse`. 빈 화면에는 뒤로만.
+  /// 뒤로 가기는 iOS 기존 상단 바(`PickeNavigationBar`)를 유지하고, 공유만 Android 아이콘을 쓴다. 빈 화면에는 뒤로만.
   @ViewBuilder
   func appBar() -> some View {
-    HStack(spacing: 0) {
-      Button { send(.backTapped) } label: {
-        appBarIcon(.arrowLeft)
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel("뒤로 가기")
-
-      Spacer(minLength: 0)
-
+    PickeNavigationBar(onBack: { send(.backTapped) }) {
       if let battleId = currentBattleId ?? store.battles.first?.battleId {
         Button { send(.shareTapped(battleId: battleId)) } label: {
-          appBarIcon(.share)
+          Image(asset: .share)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: 24, height: 24)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("공유")
       }
     }
-    .padding(.horizontal, 4)
-    .frame(height: 48)
-  }
-
-  func appBarIcon(_ asset: ImageAsset) -> some View {
-    Image(asset: asset)
-      .renderingMode(.template)
-      .resizable()
-      .scaledToFit()
-      .foregroundStyle(.textInverse)
-      .frame(width: 24, height: 24)
-      .frame(width: 48, height: 48)
-      .contentShape(Rectangle())
+    .foregroundStyle(.textInverse)
+    .contentShape(Rectangle())
   }
 }
 

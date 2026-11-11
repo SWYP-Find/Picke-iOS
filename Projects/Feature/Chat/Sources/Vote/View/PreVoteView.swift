@@ -143,40 +143,22 @@ extension PreVoteView {
 // MARK: - Navigation bar
 
 extension PreVoteView {
-  /// Android `PickeTopAppBar`(투명) — 높이 48, 뒤로 24 · 공유 20, 둘 다 `textInverse`.
+  /// 뒤로 가기는 iOS 기존 상단 바(`PickeNavigationBar`)를 쓰고, 공유만 Android 아이콘(20)을 쓴다.
   @ViewBuilder
   private func navigationBar() -> some View {
-    HStack(spacing: 0) {
-      Button { send(.backButtonTapped) } label: {
-        navigationIcon(.arrowLeft, size: 24)
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel("뒤로 가기")
-
-      Spacer(minLength: 0)
-
+    PickeNavigationBar(onBack: { send(.backButtonTapped) }) {
       Button { send(.shareTapped) } label: {
-        navigationIcon(.share, size: 20)
+        Image(asset: .share)
+          .renderingMode(.template)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 20, height: 20)
+          .frame(width: 24, height: 24)
       }
       .buttonStyle(.plain)
       .accessibilityLabel("공유")
     }
-    .padding(.horizontal, 4)
-    .frame(height: 48)
-  }
-
-  private func navigationIcon(
-    _ asset: ImageAsset,
-    size: CGFloat
-  ) -> some View {
-    Image(asset: asset)
-      .renderingMode(.template)
-      .resizable()
-      .scaledToFit()
-      .foregroundStyle(.textInverse)
-      .frame(width: size, height: size)
-      .frame(width: 48, height: 48)
-      .contentShape(Rectangle())
+    .foregroundStyle(.textInverse)
   }
 }
 
