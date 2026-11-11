@@ -108,9 +108,8 @@ public struct ClassBattleFlowFeature {
       case .ttsListening:
         return hasListened && pendingCheckpointID == nil && hasAnsweredCurrentPath
       case .completed:
-        return !hasSubmittedInCurrentSession
-          && hasPublishedPerspective == false
-          && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // Android PerspectiveScreen 처럼 의견을 이미 올렸어도 추가로 작성할 수 있다.
+        return !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       }
     }
 
@@ -181,8 +180,8 @@ public struct ClassBattleFlowFeature {
 
     public var shouldShowComposer: Bool {
       if editingPerspectiveID != nil { return true }
+      // Android PerspectiveScreen 은 하단 입력창을 항상 둔다. 첫 의견을 올린 뒤에도 숨기지 않는다.
       return step == .some(.completed) && canParticipate
-        && hasPublishedPerspective == false && !hasSubmittedInCurrentSession
     }
 
     /// 공개되지 않은 내 의견(검수중·거절됨)이 목록에 없을 때 목록 맨 위에 보여 줄 행.
