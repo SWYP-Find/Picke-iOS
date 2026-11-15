@@ -15,6 +15,8 @@ public enum BattleError: LocalizedError, Equatable {
   case backendError(String)
   case serverError(Int)
   case unknown(String)
+  /// 서버 `CREDIT_400_INSUFFICIENT`: 투표에 필요한 포인트가 부족하다.
+  case insufficientPoints
 
   public var errorDescription: String? {
     switch self {
@@ -32,6 +34,8 @@ public enum BattleError: LocalizedError, Equatable {
       "서버 오류 (코드: \(code))"
     case let .unknown(message):
       "알 수 없는 오류: \(message)"
+    case .insufficientPoints:
+      "포인트가 부족합니다"
     }
   }
 
@@ -51,6 +55,8 @@ public enum BattleError: LocalizedError, Equatable {
       "잠시 후 다시 시도해주세요"
     case .unknown:
       "예상치 못한 오류가 발생했습니다"
+    case .insufficientPoints:
+      "투표에 필요한 포인트가 부족합니다"
     }
   }
 
@@ -70,6 +76,8 @@ public enum BattleError: LocalizedError, Equatable {
       "잠시 후 다시 시도하거나 고객센터에 문의하세요"
     case .unknown:
       "문제가 지속되면 고객센터에 문의해주세요"
+    case .insufficientPoints:
+      "출석체크로 포인트를 모은 뒤 다시 시도해주세요"
     }
   }
 }

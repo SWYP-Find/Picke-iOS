@@ -46,6 +46,10 @@ public struct ClassCoordinatorView: View {
       case let .setting(settingStore):
         ClassSettingView(store: settingStore)
 
+      case let .classEdit(editStore):
+        ClassEditView(store: editStore)
+          .toolbar(.hidden, for: .tabBar)
+
       case let .share(shareStore):
         ClassShareView(store: shareStore)
 

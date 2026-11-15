@@ -109,9 +109,9 @@ struct HomeTests {
   @MainActor
   func pullToRefreshReloadsWithoutSkeleton() async {
     let comment = HomeBestComment(
+      perspectiveId: 501,
       battleId: 21,
       battleTitle: "인간은 본래 선한가",
-      optionTitle: "선하다",
       content: "선하게 태어나요"
     )
     var state = HomeFeature.State()
@@ -137,9 +137,9 @@ struct HomeTests {
   @MainActor
   func pullToRefreshFailureKeepsContentAndShowsToast() async {
     let comment = HomeBestComment(
+      perspectiveId: 501,
       battleId: 21,
       battleTitle: "인간은 본래 선한가",
-      optionTitle: "선하다",
       content: "선하게 태어나요"
     )
     var state = HomeFeature.State()
@@ -217,9 +217,9 @@ struct HomeTests {
   @MainActor
   func bestCommentTapTracksBestCommentSectionAndPresentsPreVote() async {
     let comment = HomeBestComment(
+      perspectiveId: 501,
       battleId: 21,
       battleTitle: "인간은 본래 선한가",
-      optionTitle: "선하다",
       content: "선하게 태어나요"
     )
     let tracked = LockIsolated<[ContentActionData]>([])
@@ -280,9 +280,9 @@ struct HomeTests {
   @MainActor
   func homeResponseStoresBestCommentsWithoutMockFallback() async {
     let comment = HomeBestComment(
+      perspectiveId: 501,
       battleId: 21,
       battleTitle: "인간은 본래 선한가",
-      optionTitle: "선하다",
       content: "선하게 태어나요"
     )
     let store = TestStore(initialState: HomeFeature.State()) {

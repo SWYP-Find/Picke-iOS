@@ -43,10 +43,12 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     battleId: Int,
     optionId: Int
   ) async throws -> PreVoteResult {
-    let data = try await client.send(
-      BattleService.preVote(battleId: battleId, body: PreVoteRequest(optionId: optionId)),
-      as: PreVoteDataDTO.self
-    )
+    let data = try await Self.mapInsufficientPoints {
+      try await client.send(
+        BattleService.preVote(battleId: battleId, body: PreVoteRequest(optionId: optionId)),
+        as: PreVoteDataDTO.self
+      )
+    }
 
     return data.toDomain()
   }
@@ -64,10 +66,12 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     battleId: Int,
     optionId: Int
   ) async throws -> PreVoteResult {
-    let data = try await client.send(
-      BattleService.postVote(battleId: battleId, body: PreVoteRequest(optionId: optionId)),
-      as: PreVoteDataDTO.self
-    )
+    let data = try await Self.mapInsufficientPoints {
+      try await client.send(
+        BattleService.postVote(battleId: battleId, body: PreVoteRequest(optionId: optionId)),
+        as: PreVoteDataDTO.self
+      )
+    }
 
     return data.toDomain()
   }
@@ -158,5 +162,17 @@ public final class BattleRepositoryImpl: BattleInterface, @unchecked Sendable {
     )
 
     return data.toDomain()
+  }
+
+  /// Android `SubmitVoteUseCase` — 서버 `CREDIT_400_INSUFFICIENT` 는 포인트 부족으로 바꾼다.
+  private static func mapInsufficientPoints<T>(_ operation: () async throws -> T) async throws -> T {
+    do {
+      return try await operation()
+    } catch let error as PickeNetworkError {
+      if case let .response(response) = error, response.code == "CREDIT_400_INSUFFICIENT" {
+        throw BattleError.insufficientPoints
+      }
+      throw error
+    }
   }
 }

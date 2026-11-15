@@ -173,6 +173,28 @@ struct BattleRepositoryTests {
     #expect(result.status == .updated)
   }
 
+  @Test func 투표_포인트_부족_코드는_insufficientPoints_로_바꾼다() async throws {
+    let json = """
+    {
+      "statusCode": 400,
+      "data": null,
+      "error": { "code": "CREDIT_400_INSUFFICIENT", "message": "포인트가 부족합니다" }
+    }
+    """
+    let repo = withDependencies {
+      $0.networkClient = StubNetworkClient(stubData: Data(json.utf8))
+    } operation: {
+      BattleRepositoryImpl()
+    }
+
+    await #expect(throws: BattleError.insufficientPoints) {
+      try await repo.submitPreVote(battleId: 1, optionId: 7)
+    }
+    await #expect(throws: BattleError.insufficientPoints) {
+      try await repo.submitPostVote(battleId: 1, optionId: 3)
+    }
+  }
+
   // MARK: - fetchVoteStats
 
   @Test func fetchVoteStats_는_100_초과_ratio_를_비율로_정규화한다() async throws {

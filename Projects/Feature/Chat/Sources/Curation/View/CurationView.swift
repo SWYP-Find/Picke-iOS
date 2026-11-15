@@ -28,6 +28,8 @@ public struct CurationView: View {
       GeometryReader { viewport in
         if store.viewState == .loading, store.battles.isEmpty {
           CurationSkeletonView()
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
         } else {
           battleList(viewport: viewport)
         }

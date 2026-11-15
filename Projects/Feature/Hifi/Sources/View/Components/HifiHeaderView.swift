@@ -9,44 +9,21 @@ import SwiftUI
 
 import PickeDesignKit
 
-/// 홈 화면 최상단 GNB 위 헤더 (PicKé 로고 + 알림 아이콘).
+/// Android `PickeTopAppBar(showLogo = true)` — 높이 48, 로고 63×40 `gray900`, 배경 `backgroundBeige`.
+/// Android 는 알림 버튼을 숨겨 두었으므로 로고만 둔다.
 struct HifiHeaderView: View {
-  let hasUnread: Bool
-  let onNotificationTapped: () -> Void
-
   var body: some View {
-    HStack {
+    HStack(spacing: 0) {
       Image(asset: .appLogo)
+        .renderingMode(.template)
         .resizable()
         .scaledToFit()
-        .frame(width: 62, height: 39)
-
-      Spacer()
-
-      Button(action: onNotificationTapped) {
-        bellIcon()
-      }
+        .foregroundStyle(.gray900)
+        .frame(width: 63, height: 40)
+      Spacer(minLength: 0)
     }
-    .padding(.horizontal, 24)
-    .padding(.vertical, 8)
-    .frame(height: 56)
-    .background(.beige50)
-  }
-}
-
-private extension HifiHeaderView {
-  @ViewBuilder
-  func bellIcon() -> some View {
-    if hasUnread {
-      Image(asset: .bell)
-        .resizable()
-        .scaledToFit()
-        .frame(width: 24, height: 24)
-    } else {
-      Image(systemName: "bell")
-        .font(.system(size: 20, weight: .regular))
-        .foregroundStyle(.neutral900)
-        .frame(width: 24, height: 24)
-    }
+    .padding(.horizontal, 16)
+    .frame(height: 48)
+    .background(.bgBeige)
   }
 }

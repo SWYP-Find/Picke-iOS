@@ -73,6 +73,11 @@ private extension BattleCoordinator {
       state.routes.push(.chatRoom(.init(route: .init(battleId: battleId))))
       return .none
 
+    case let .routeAction(_, action: .battle(.delegate(.openPerspective(battleId)))):
+      // Android: 이미 참여한 배틀은 관점 화면으로 바로 간다.
+      state.routes.push(.chat(.init(route: .comment(battleId: battleId))))
+      return .none
+
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
       return .send(.view(.backAction))
 

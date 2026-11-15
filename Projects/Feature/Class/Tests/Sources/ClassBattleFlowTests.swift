@@ -563,7 +563,7 @@ struct ClassBattleFlowTests {
   }
 
   @Test
-  func 이미_제출한_의견은_빈_재조회_응답으로_다시_작성할_수_없다() async {
+  func 이미_제출한_의견이_있어도_빈_재조회_응답_뒤_입력창은_남는다() async {
     var state = battleState(room: .mocks[0])
     state.session = session(step: .completed, commentRequired: false)
     state.viewState = .loaded
@@ -575,7 +575,7 @@ struct ClassBattleFlowTests {
     await store.send(.inner(.myPerspectiveResponse(requestID, .success([])))) {
       $0.myPerspectiveRequestID = nil
     }
-    #expect(!store.state.shouldShowComposer)
+    #expect(store.state.shouldShowComposer)
   }
 
   @Test
@@ -1269,7 +1269,7 @@ struct ClassBattleFlowTests {
   func 내_의견_수정은_입력창에_내용을_채우고_보내면_수정_후_다시_불러온다() async {
     var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
     state.hasPublishedPerspective = true
-    #expect(!state.shouldShowComposer)
+    #expect(state.shouldShowComposer)
     let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
       $0.uuid = .incrementing
       $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
@@ -1314,7 +1314,7 @@ struct ClassBattleFlowTests {
 
     #expect(store.state.editingPerspectiveID == nil)
     #expect(store.state.draft.isEmpty)
-    #expect(!store.state.shouldShowComposer)
+    #expect(store.state.shouldShowComposer)
   }
 
   @Test
@@ -1518,7 +1518,7 @@ struct ClassBattleFlowTests {
     await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
 
     #expect(store.state.hasPublishedPerspective == true)
-    #expect(!store.state.shouldShowComposer)
+    #expect(store.state.shouldShowComposer)
   }
 
   @Test
@@ -1600,7 +1600,7 @@ struct ClassBattleFlowTests {
     await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
 
     #expect(store.state.hasPublishedPerspective == true)
-    #expect(!store.state.shouldShowComposer)
+    #expect(store.state.shouldShowComposer)
   }
 
   @Test

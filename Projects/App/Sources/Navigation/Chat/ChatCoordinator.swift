@@ -157,6 +157,9 @@ extension ChatCoordinator {
       }
       return .none
 
+    case .routeAction(_, action: .preVote(.delegate(.openExplore))):
+      return .send(.delegate(.openExplore))
+
     case .routeAction(_, action: .chatRoom(.delegate(.dismiss))):
       return .send(.view(.backAction))
 
@@ -259,7 +262,7 @@ extension ChatCoordinator {
     action: ChatDelegate
   ) -> Effect<Action> {
     switch action {
-    case .dismiss, .popToRoot:
+    case .dismiss, .popToRoot, .openExplore:
       .none
     }
   }

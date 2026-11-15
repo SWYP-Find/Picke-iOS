@@ -15,6 +15,7 @@ import SwiftUI
 @ViewAction(for: HomeFeature.self)
 public struct HomeView: View {
   @Bindable public var store: StoreOf<HomeFeature>
+  @Environment(\.scenePhase) private var scenePhase
 
   private static let topAnchorID = "homeTop"
 
@@ -42,6 +43,11 @@ public struct HomeView: View {
       AttendanceModalView(store: modalStore)
     }
     .onAppear { send(.onAppear) }
+    .onChange(of: scenePhase) { oldPhase, newPhase in
+      // Android `AppLifecycleObserver.onStart` — 앱으로 돌아올 때마다 하루 1회 출석 체크.
+      guard oldPhase != .active, newPhase == .active else { return }
+      send(.appBecameActive)
+    }
     .onChange(of: store.toastMessage, initial: true) { _, message in
       guard let message else { return }
       ToastManager.shared.showError(message)

@@ -28,10 +28,15 @@ public struct HifiView: View {
       fixedTopBar()
       contentArea()
     }
-    .screenBackground(.beige50)
+    .screenBackground(.bgBeige)
     .navigationBarHidden(true)
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 }
 
@@ -41,11 +46,11 @@ private extension HifiView {
   @ViewBuilder
   func fixedTopBar() -> some View {
     VStack(spacing: 0) {
-      HifiHeaderView(hasUnread: store.hasUnreadNotification) { send(.notificationTapped) }
+      HifiHeaderView()
       categoryTabs()
       sortRow()
     }
-    .background(.beige50)
+    .background(.bgBeige)
     .frame(maxWidth: .infinity)
     .zIndex(1)
     // 스크롤 중 상단 바가 슬라이드·어긋나 보이던 13 mini/iOS 18.6 잔상 제거.
@@ -66,6 +71,8 @@ private extension HifiView {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    // Android: 정렬 줄과 목록은 흰 바탕 위에 카드를 올린다.
+    .background(.white)
     .clipped()
     .contentShape(Rectangle())
     .simultaneousGesture(categorySwipe)
@@ -78,17 +85,8 @@ private extension HifiView {
 
   @ViewBuilder
   func emptyState() -> some View {
-    VStack(spacing: 8) {
-      Image(asset: .noDataLogo)
-        .resizable()
-        .scaledToFit()
-        .frame(width: 135, height: 90)
-
-      Text("새로운 콘텐츠가 없습니다")
-        .pretendardFont(.bodyMedium)
-        .foregroundStyle(.beige800)
-    }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    PickeEmptyStateView(message: "아직 준비된 배틀이 없어요!")
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 
@@ -107,39 +105,51 @@ private extension HifiView {
   @ViewBuilder
   func exploreList() -> some View {
     GeometryReader { viewport in
-      ScrollView {
-        LazyVStack(spacing: 0) {
-          ForEach(store.exploreItems) { item in
-            // 마지막 카드 아래엔 구분선을 그리지 않는다.
-            exploreRow(item, showsDivider: item.id != store.exploreItems.last?.id)
-              .onAppear {
-                // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
-                if item.id == store.exploreItems.last?.id {
-                  send(.reachedBottom)
+      ScrollViewReader { proxy in
+        ScrollView {
+          LazyVStack(spacing: 0) {
+            Color.clear
+              .frame(height: 0)
+              .id(Self.topAnchorID)
+            ForEach(store.exploreItems) { item in
+              // Android: 카드 위마다 구분선, 마지막 카드 아래에도 한 줄.
+              exploreRow(item, isLast: item.id == store.exploreItems.last?.id)
+                .onAppear {
+                  // 무한 스크롤: 마지막 아이템 노출 시 다음 페이지 로드
+                  if item.id == store.exploreItems.last?.id {
+                    send(.reachedBottom)
+                  }
                 }
-              }
 
-            if let ad = store.withState({ state in
-              state.exploreItems.firstIndex(where: { $0.id == item.id })
-                .flatMap { state.ad(after: $0) }
-            }) {
-              FeedAdRow(
-                ad: ad,
-                viewport: viewport.frame(in: .global),
-                onVisible: { send(.adVisible(code: ad.code, itemID: item.id)) },
-                onAdClick: { send(.serverAdClicked(network: ad.network)) }
-              )
-              .id(ad.code)
+              if let ad = store.withState({ state in
+                state.exploreItems.firstIndex(where: { $0.id == item.id })
+                  .flatMap { state.ad(after: $0) }
+              }) {
+                FeedAdRow(
+                  ad: ad,
+                  viewport: viewport.frame(in: .global),
+                  onVisible: { send(.adVisible(code: ad.code, itemID: item.id)) },
+                  onAdClick: { send(.serverAdClicked(network: ad.network)) }
+                )
+                .id(ad.code)
+              }
             }
           }
+          // 마지막 카드가 하단에 딱 붙지 않도록 10pt 여백.
+          .padding(.bottom, 10)
         }
-        // 마지막 카드가 하단에 딱 붙지 않도록 10pt 여백.
-        .padding(.bottom, 10)
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        .onChange(of: store.scrollToTopRequest) {
+          withAnimation {
+            proxy.scrollTo(Self.topAnchorID, anchor: .top)
+          }
+        }
       }
-      .scrollIndicators(.hidden)
-      .scrollBounceBehavior(.basedOnSize, axes: .vertical)
     }
   }
+
+  static let topAnchorID = "exploreTop"
 
   /// 좌우 스와이프로 카테고리 전환 (빈 상태/스켈레톤 포함 콘텐츠 영역 전체에 적용).
   /// 인접 카테고리 계산은 Feature 가 담당.
@@ -168,8 +178,7 @@ private extension HifiView {
           .frame(maxWidth: .infinity)
       }
     }
-    .padding(.horizontal, 16)
-    .background(.white)
+    // Android `PickeTabBar` — 화면 전체 폭, 배경 투명.
     .transaction { transaction in
       transaction.animation = nil
     }
@@ -213,52 +222,61 @@ private extension HifiView {
 // MARK: - List Row
 
 private extension HifiView {
+  /// Android `ExploreCard` — 가로 16·세로 14, 썸네일과 간격 12, 제목 → 6 → 요약, 아래에 시간·조회수.
   @ViewBuilder
-  func exploreRow(_ item: ExploreItem, showsDivider: Bool = true) -> some View {
+  func exploreRow(
+    _ item: ExploreItem,
+    isLast: Bool
+  ) -> some View {
     Button { send(.itemTapped(id: item.id)) } label: {
-      HStack(alignment: .center, spacing: 8) {
+      HStack(alignment: .top, spacing: 12) {
         thumbnail(item.imageURL)
-
-        VStack(alignment: .leading, spacing: 24) {
-          VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 6) {
-              Text("#\(item.category)")
-                .pickeBadge(.filled, size: .tag)
-
-              Text(item.title)
-                .pretendardFont(.headingSmall)
-                .foregroundStyle(.neutral500)
-                .kerning(-0.35)
-                .lineSpacing(14 * 0.28)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Text(item.summary)
-              .pretendardFont(.regular13)
-              .foregroundStyle(.neutral400)
-              .lineSpacing(13 * 0.4)
-              .lineLimit(2)
-              .truncationMode(.tail)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.horizontal, 2)
-          }
-
-          footer(item)
-        }
+        rowText(item)
+          .frame(height: Self.thumbnailHeight)
       }
       .padding(.horizontal, 16)
-      .padding(.vertical, 12)
-      .background(.beige50)
+      .padding(.vertical, 14)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .background(.surfaceBeigeDefault)
+      .overlay(alignment: .top) {
+        PickeDivider(.borderBeigeDefault)
+      }
       .overlay(alignment: .bottom) {
-        if showsDivider {
-          PickeDivider(.beige600)
+        if isLast {
+          PickeDivider(.borderBeigeDefault)
         }
       }
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
+
+  @ViewBuilder
+  func rowText(_ item: ExploreItem) -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(alignment: .top, spacing: 6) {
+        Text("#\(item.category)")
+          .pickeBadge(.filled, size: .tag)
+        Text(item.title)
+          .pretendardFont(.headingSmall)
+          .foregroundStyle(.textSubtler)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      Text(item.summary)
+        .pretendardFont(.regular13, lineSpacingMultiple: 1.4)
+        .foregroundStyle(.gray400)
+        .lineLimit(2)
+        .truncationMode(.tail)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, 6)
+      Spacer(minLength: 0)
+      footer(item)
+    }
+  }
+
+  static let thumbnailHeight: CGFloat = 80 * 4 / 3
 
   @ViewBuilder
   func thumbnail(_ url: String?) -> some View {
@@ -270,29 +288,35 @@ private extension HifiView {
       }
     }
     // 행 높이와 무관하게 크기 고정 — 안드로이드 ExploreScreen (80dp, 3:4 비율) 파리티.
-    .frame(width: 80, height: 80 * 4 / 3)
+    .frame(width: 80, height: Self.thumbnailHeight)
     .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
   }
 
+  /// Android 푸터 — 아이콘 16 `textMuted`, 4, 12 Medium `gray400`, 항목 간 12, 오른쪽 정렬.
   @ViewBuilder
   func footer(_ item: ExploreItem) -> some View {
-    HStack(spacing: 6) {
-      Spacer()
-      HStack(spacing: 2) {
-        Image(systemName: "clock")
-          .font(.system(size: 11, weight: .regular))
-        Text("\(item.minutes)분")
-          .pretendardFont(.labelSmall)
-      }
-      .foregroundStyle(.neutral300)
+    HStack(spacing: 12) {
+      Spacer(minLength: 0)
+      footerItem(.clock, text: "\(item.minutes)분")
+      footerItem(.eye, text: item.viewCount.decimalFormatted)
+    }
+  }
 
-      HStack(spacing: 2) {
-        Image(systemName: "eye")
-          .font(.system(size: 11, weight: .regular))
-        Text(item.viewCount.decimalFormatted)
-          .pretendardFont(.labelSmall)
-      }
-      .foregroundStyle(.neutral300)
+  @ViewBuilder
+  func footerItem(
+    _ icon: ImageAsset,
+    text: String
+  ) -> some View {
+    HStack(spacing: 4) {
+      Image(asset: icon)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .foregroundStyle(.textMuted)
+        .frame(width: 16, height: 16)
+      Text(text)
+        .pretendardFont(.labelSmall)
+        .foregroundStyle(.gray400)
     }
   }
 }

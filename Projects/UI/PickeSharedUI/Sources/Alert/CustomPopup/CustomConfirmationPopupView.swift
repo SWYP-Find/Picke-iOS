@@ -50,7 +50,8 @@ struct CustomConfirmationPopup: View {
         Color.black
           .opacity(isContentVisible ? 0.6 : 0)
           .ignoresSafeArea()
-          .onTapGesture(perform: onCancel)
+          // Android 최종투표 대화상자는 바깥 터치도 "최종투표하기" 와 같다.
+          .onTapGesture(perform: style == .finalVote ? onConfirm : onCancel)
 
         popupContent
           .frame(maxWidth: popupMaxWidth(for: proxy.size.width))

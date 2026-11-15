@@ -31,9 +31,8 @@ public extension SearchBattleDTO {
     )
   }
 
-  /// 초 단위 오디오 길이를 분으로 환산 (최소 1분).
+  /// Android `audioDuration / 60` — 초를 분으로 내림한다(60초 미만은 0분).
   private static func toMinutes(_ seconds: Int) -> Int {
-    guard seconds > 0 else { return 0 }
-    return max(1, Int((Double(seconds) / 60).rounded()))
+    max(0, seconds) / 60
   }
 }

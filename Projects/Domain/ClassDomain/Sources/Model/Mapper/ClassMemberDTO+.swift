@@ -13,13 +13,11 @@ extension ClassMemberDTO {
 }
 
 extension ClassMemberDTO {
-  static func toMemberList(_ payload: [Self]) throws -> ClassMemberList {
-    guard let current = payload.first(where: \.me) else {
-      throw ClassError.userMessage("내 멤버 정보를 찾을 수 없어요.")
-    }
-    return ClassMemberList(
+  static func toMemberList(_ payload: [Self]) -> ClassMemberList {
+    // 서버는 참여하지 않은 운영자 행을 명단에 넣지 않는다. 내 행이 없어도 명단은 보여준다(Android 동일).
+    ClassMemberList(
       members: payload.map { $0.toDomain() },
-      currentMemberID: current.memberId
+      currentMemberID: payload.first(where: \.me)?.memberId
     )
   }
 }

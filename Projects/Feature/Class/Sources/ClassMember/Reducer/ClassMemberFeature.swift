@@ -27,7 +27,7 @@ public struct ClassMemberFeature {
     public let instanceID: UUID
     public var room: ClassRoom
     public var members: [ClassMember]
-    public var currentMemberID: Int
+    public var currentMemberID: Int?
     public var viewState: ViewState
     public var isLoading = false
     public var loadErrorMessage: String?
@@ -46,7 +46,7 @@ public struct ClassMemberFeature {
     public init(
       room: ClassRoom,
       members: [ClassMember] = [],
-      currentMemberID: Int = 1,
+      currentMemberID: Int? = 1,
       instanceID: UUID? = nil,
       preloadedViewState: ViewState? = nil
     ) {
@@ -108,7 +108,7 @@ public struct ClassMemberFeature {
     case editName(PresentationAction<ClassMemberEditNameFeature.Action>)
     case customAlert(PresentationAction<CustomAlertAction>)
     case loadingStarted(UUID)
-    case membersLoaded(room: ClassRoom, members: [ClassMember], currentMemberID: Int, requestID: UUID)
+    case membersLoaded(room: ClassRoom, members: [ClassMember], currentMemberID: Int?, requestID: UUID)
     case loadFailed(requestID: UUID, message: String)
     case dataUpdated(room: ClassRoom, members: [ClassMember])
     case dataFailed(String)
@@ -128,7 +128,7 @@ public struct ClassMemberFeature {
   public enum DelegateAction: Equatable {
     case dismiss
     case retryMembers(roomID: Int)
-    case removeMember(roomID: Int, memberID: Int, currentMemberID: Int)
+    case removeMember(roomID: Int, memberID: Int, currentMemberID: Int?)
     case updateDisplayName(roomID: Int, memberID: Int, currentMemberID: Int, name: String)
   }
 
@@ -312,15 +312,16 @@ extension ClassMemberFeature {
     case .nameSaved:
       guard !state.isSaving,
             state.editName != nil,
-            state.members.contains(where: { $0.id == state.currentMemberID })
+            let currentMemberID = state.currentMemberID,
+            state.members.contains(where: { $0.id == currentMemberID })
       else { return .none }
       let name = state.draftName.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !name.isEmpty else { return .none }
       state.isSaving = true
       return .send(.delegate(.updateDisplayName(
         roomID: state.room.id,
-        memberID: state.currentMemberID,
-        currentMemberID: state.currentMemberID,
+        memberID: currentMemberID,
+        currentMemberID: currentMemberID,
         name: name
       )))
     case let .removeTapped(id):

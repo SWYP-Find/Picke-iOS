@@ -29,6 +29,8 @@ public enum PerspectiveService {
   case fetchPerspectiveLikes(perspectiveId: Int)
   case reportPerspective(perspectiveId: Int)
   case reportComment(perspectiveId: Int, commentId: Int)
+  /// 홈 Best 댓글 — 직전 한 주 좋아요 상위 관점 (토큰 선택).
+  case weeklyBest
 }
 
 extension PerspectiveService: PickeDataRequest {
@@ -60,12 +62,14 @@ extension PerspectiveService: PickeDataRequest {
       return PerspectiveAPI.reports(perspectiveId: perspectiveId).description
     case let .reportComment(perspectiveId, commentId):
       return PerspectiveAPI.reportComment(perspectiveId: perspectiveId, commentId: commentId).description
+    case .weeklyBest:
+      return PerspectiveAPI.weeklyBest.description
     }
   }
 
   public var method: HTTPMethod {
     switch self {
-    case .detail, .listLabeledComments, .fetchPerspectiveLikes:
+    case .detail, .listLabeledComments, .fetchPerspectiveLikes, .weeklyBest:
       return .get
     case .createComment, .likePerspective, .reportPerspective, .reportComment:
       return .post
@@ -93,7 +97,8 @@ extension PerspectiveService: PickeDataRequest {
          .unlikePerspective,
          .fetchPerspectiveLikes,
          .reportPerspective,
-         .reportComment:
+         .reportComment,
+         .weeklyBest:
       return nil
     }
   }

@@ -15,18 +15,25 @@ public struct HomeDataDTO: Decodable {
   public let editorPicks: [EditorPickDTO]
   public let trendingBattles: [TrendingBattleDTO]
   public let bestBattles: [BestBattleDTO]
-  public let bestComments: [BestCommentDTO]?
   public let todayQuizzes: [TodayQuizDTO]
   public let todayVotes: [TodayVoteDTO]
   public let newBattles: [NewBattleDTO]
 }
 
-/// Android 홈 계약의 선택 필드. 현재 서버가 아직 보내지 않는 경우에도 홈 로드는 유지한다.
-public struct BestCommentDTO: Decodable {
-  public let battleId: Int?
-  public let battleTitle: String?
-  public let optionTitle: String?
-  public let content: String?
+/// `GET /api/v1/perspectives/weekly-best` 응답 — 홈 Best 댓글 (Android `WeeklyBestPerspectiveResponseDto`).
+public struct WeeklyBestPerspectiveDataDTO: Decodable {
+  public let weekStart: String
+  public let weekEnd: String
+  public let items: [WeeklyBestPerspectiveItemDTO]
+}
+
+public struct WeeklyBestPerspectiveItemDTO: Decodable {
+  public let perspectiveId: Int
+  public let battleId: Int
+  public let battleTitle: String
+  public let content: String
+  public let likeCount: Int
+  public let participated: Bool
 }
 
 public struct TagDTO: Decodable, Equatable {

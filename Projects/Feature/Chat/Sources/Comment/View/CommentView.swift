@@ -66,9 +66,7 @@ private extension CommentView {
     // Android PerspectiveScreen: 상단 바·통계·탭은 고정, 아래 목록만 스크롤한다. 배경 backgroundBeige.
     VStack(spacing: 0) {
       navigationBar
-      if !store.hasLoadedHeader {
-        CommentHeaderSkeletonView()
-      } else if !store.headerLoadFailed {
+      if !store.headerLoadFailed {
         summarySection()
         filterTabs()
       }
@@ -312,6 +310,7 @@ private extension CommentView {
 
       if store.isLoadingComments, store.comments.isEmpty {
         CommentSkeletonView()
+          .padding(.horizontal, 16)
       } else if store.comments.isEmpty {
         emptyState()
       } else {

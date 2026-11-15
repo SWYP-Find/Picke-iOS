@@ -70,10 +70,6 @@ struct HomeRepositoryTests {
           "viewCount": 900
         }
       ],
-      "bestComments": [
-        { "battleId": 21, "battleTitle": "인간은 본래 선한가", "optionTitle": "선하다", "content": "선하게 태어나요" },
-        { "battleId": null, "battleTitle": "제외", "optionTitle": "", "content": "" }
-      ],
       "todayQuizzes": [
         {
           "battleId": 31,
@@ -149,10 +145,30 @@ struct HomeRepositoryTests {
   }
   """
 
+  private static let weeklyBestEnvelope = """
+  {
+    "statusCode": 200,
+    "data": {
+      "weekStart": "2026-11-02",
+      "weekEnd": "2026-11-08",
+      "items": [
+        { "perspectiveId": 501, "battleId": 21, "battleTitle": "인간은 본래 선한가", "content": "선하게 태어나요", "likeCount": 30, "participated": true },
+        { "perspectiveId": 502, "battleId": 22, "battleTitle": "진실을 말해야 하는가", "content": "둘", "likeCount": 20, "participated": false },
+        { "perspectiveId": 503, "battleId": 21, "battleTitle": "인간은 본래 선한가", "content": "셋", "likeCount": 10, "participated": false },
+        { "perspectiveId": 504, "battleId": 22, "battleTitle": "진실을 말해야 하는가", "content": "넷", "likeCount": 5, "participated": false }
+      ]
+    }
+  }
+  """
+
   @Test func fetchHome_성공시_도메인_번들로_매핑된다() async throws {
     let data = try #require(Self.fullEnvelope.data(using: .utf8))
+    let weeklyBest = try #require(Self.weeklyBestEnvelope.data(using: .utf8))
     let repository = withDependencies {
-      $0.networkClient = StubNetworkClient(stubData: data)
+      $0.networkClient = StubNetworkClient(
+        stubData: data,
+        weeklyBestData: weeklyBest
+      )
     } operation: {
       HomeRepositoryImpl()
     }
@@ -179,12 +195,14 @@ struct HomeRepositoryTests {
     #expect(bundle.bestBattles[1].rank == 2)
     #expect(bundle.bestBattles[1].battleId == 22)
     #expect(bundle.bestBattles[1].tags.isEmpty)
-    #expect(bundle.bestComments == [HomeBestComment(
+    // Android 처럼 주간 베스트 관점 상위 3개만 쓴다.
+    #expect(bundle.bestComments.map(\.perspectiveId) == [501, 502, 503])
+    #expect(bundle.bestComments[0] == HomeBestComment(
+      perspectiveId: 501,
       battleId: 21,
       battleTitle: "인간은 본래 선한가",
-      optionTitle: "선하다",
       content: "선하게 태어나요"
-    )])
+    ))
 
     #expect(bundle.quizzes.count == 1)
     #expect(bundle.quizzes[0].isCorrectA == true)
@@ -199,6 +217,25 @@ struct HomeRepositoryTests {
     #expect(bundle.newBattles.count == 1)
     #expect(bundle.newBattles[0].philosopherAImageURL == nil)
     #expect(bundle.newBattles[0].philosopherBImageURL == URL(string: "https://example.com/philo-b.png"))
+  }
+
+  @Test func fetchHome_주간_베스트가_실패해도_홈은_불러오고_Best_댓글만_비운다() async throws {
+    let data = try #require(Self.fullEnvelope.data(using: .utf8))
+    let weeklyBestFailure = try #require(Self.emptyDataEnvelope.data(using: .utf8))
+    let repository = withDependencies {
+      $0.networkClient = StubNetworkClient(
+        stubData: data,
+        weeklyBestData: weeklyBestFailure
+      )
+    } operation: {
+      HomeRepositoryImpl()
+    }
+
+    let bundle = try await repository.fetchHome()
+
+    #expect(bundle.newNotice == true)
+    #expect(bundle.bestBattles.count == 2)
+    #expect(bundle.bestComments.isEmpty)
   }
 
   @Test func fetchHome_빈_섹션이면_빈_배열로_매핑된다() async throws {
