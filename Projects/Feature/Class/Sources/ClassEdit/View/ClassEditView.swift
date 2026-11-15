@@ -52,6 +52,7 @@ private extension ClassEditView {
 
         nameSection()
         deadlineSection()
+        battleSection()
 
         if let message = store.errorMessage {
           Text(message)
@@ -93,7 +94,7 @@ private extension ClassEditView {
       .accessibilityIdentifier("class-edit-name")
 
       if store.isNameInvalid {
-        Text("클래스 명을 입력해 주세요")
+        Text("공백만으로는 클래스를 만들 수 없어요")
           .pretendardFont(.regular13)
           .foregroundStyle(.red)
       }
@@ -128,6 +129,14 @@ private extension ClassEditView {
     .buttonStyle(.plain)
     .disabled(!store.hasDeadline || store.isSaving)
     .accessibilityIdentifier("class-edit-deadline")
+  }
+
+  @ViewBuilder
+  func battleSection() -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      sectionLabel("선택한 배틀")
+      ClassSelectedBattleCard(battle: store.room.battle)
+    }
   }
 
   func sectionLabel(_ title: String) -> some View {

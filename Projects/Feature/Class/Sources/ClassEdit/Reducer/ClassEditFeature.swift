@@ -107,6 +107,10 @@ public struct ClassEditFeature {
         case let .success(room):
           state.room = room
           return .send(.delegate(.saved(room)))
+        case .failure(.invalidDeadline), .failure(.deadlineExtensionOnly):
+          // Android 처럼 서버의 마감일 오류는 마감일 필드 아래 범위 안내로 보여준다.
+          state.deadlineValidationMessage = Self.deadlineRangeMessage
+          return .none
         case let .failure(error):
           state.errorMessage = error.message
           return .none
@@ -163,9 +167,13 @@ private extension ClassEditFeature {
   func deadlineValidationMessage(state: State) -> String? {
     guard state.isDeadlineChanged else { return nil }
     let isNotExtended = state.deadline <= state.room.deadline
-    let isAfterTicketEnd = state.room.ticketExpiresAt.map { state.deadline > $0 } ?? false
-    return isNotExtended || isAfterTicketEnd
-      ? "기존 마감일 이후부터 이용권 종료일까지 선택할 수 있어요"
-      : nil
+    // Android 는 날짜 단위로 비교한다. 이용권 종료일 당일은 시각과 상관없이 고를 수 있다.
+    let calendar = Calendar.current
+    let isAfterTicketEnd = state.room.ticketExpiresAt.map {
+      calendar.startOfDay(for: state.deadline) > calendar.startOfDay(for: $0)
+    } ?? false
+    return isNotExtended || isAfterTicketEnd ? Self.deadlineRangeMessage : nil
   }
+
+  static let deadlineRangeMessage = "기존 마감일 이후부터 이용권 종료일까지 선택할 수 있어요"
 }

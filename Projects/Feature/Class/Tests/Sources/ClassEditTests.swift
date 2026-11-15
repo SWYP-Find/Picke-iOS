@@ -89,10 +89,60 @@ struct ClassEditTests {
     await noDeadline.send(.view(.deadlineFieldTapped))
   }
 
+  @Test
+  func 서버_마감일_오류는_마감일_범위_안내로_보여준다() async {
+    let room = makeRoom()
+    var state = ClassEditFeature.State(room: room)
+    state.deadline = room.deadline.addingTimeInterval(3600)
+    let store = TestStore(initialState: state) { ClassEditFeature() } withDependencies: {
+      $0.classRoomUseCase = ClassEditRoomStub(
+        onUpdateName: { _ in room },
+        onUpdateDeadline: { _ in throw ClassError.deadlineExtensionOnly }
+      )
+    }
+
+    await store.send(.view(.saveTapped)) {
+      $0.isSaving = true
+    }
+    await store.receive(\.inner, .saveResponse(.failure(.deadlineExtensionOnly))) {
+      $0.isSaving = false
+      $0.deadlineValidationMessage = "기존 마감일 이후부터 이용권 종료일까지 선택할 수 있어요"
+    }
+  }
+
+  @Test
+  func 이용권_종료일_당일은_시각과_상관없이_고를_수_있다() async {
+    let ticketEnd = Calendar.current.startOfDay(for: referenceNow.addingTimeInterval(86400 * 3))
+    let room = makeRoom(ticketExpiresAt: ticketEnd)
+    var sameDay = ClassEditFeature.State(room: room)
+    sameDay.deadline = ticketEnd.addingTimeInterval(3600 * 20)
+    let store = TestStore(initialState: sameDay) { ClassEditFeature() } withDependencies: {
+      $0.classRoomUseCase = ClassEditRoomStub(
+        onUpdateName: { _ in room },
+        onUpdateDeadline: { _ in room }
+      )
+    }
+    await store.send(.view(.saveTapped)) {
+      $0.isSaving = true
+    }
+    await store.receive(\.inner, .saveResponse(.success(room))) {
+      $0.isSaving = false
+    }
+    await store.receive(\.delegate, .saved(room))
+
+    var nextDay = ClassEditFeature.State(room: room)
+    nextDay.deadline = ticketEnd.addingTimeInterval(86400 + 60)
+    let rejected = TestStore(initialState: nextDay) { ClassEditFeature() }
+    await rejected.send(.view(.saveTapped)) {
+      $0.deadlineValidationMessage = "기존 마감일 이후부터 이용권 종료일까지 선택할 수 있어요"
+    }
+  }
+
   private func makeRoom(
     name: String? = nil,
     deadline: Date? = nil,
-    role: ClassRole = .owner
+    role: ClassRole = .owner,
+    ticketExpiresAt: Date? = nil
   ) -> ClassRoom {
     let source = ClassRoom.mocks[0]
     return ClassRoom(
@@ -108,7 +158,7 @@ struct ClassEditTests {
       requiresComment: source.requiresComment,
       ownerParticipates: source.ownerParticipates,
       memberCapacity: source.memberCapacity,
-      ticketExpiresAt: nil
+      ticketExpiresAt: ticketExpiresAt
     )
   }
 }
