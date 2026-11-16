@@ -24,7 +24,6 @@ let project = Project.makeModule(
     .SPM.mixpanel,
     .SPM.mixpanelSessionReplay,
     .SPM.sentry,
-    .SPM.sentrySwiftUI,
   ],
   hasTests: true,
   hasInterface: true,
