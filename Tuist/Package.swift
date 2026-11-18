@@ -103,9 +103,14 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/sqlite-data", exact: "1.11.0"),
     // SQLiteData 1.11.0의 section API가 요구하는 Select.From: Table 제약을 유지한다.
     .package(url: "https://github.com/pointfreeco/swift-structured-queries", exact: "0.36.0"),
-    // 1.13부터 swift-issue-reporting 의 IssueReporting 과 제품명이 겹쳐
-    // tuist cache warm 이 _IssueReporting 순환 의존성으로 실패하므로 1.11 로 고정한다 (1.12 태그 없음).
-    .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", .upToNextMinor(from: "1.11.0")),
+    // Point-Free 패키지는 툴체인별 manifest 를 따로 둔다.
+    // - Swift 6.4+ : swift-issue-reporting 을 쓰므로 Package.resolved 의 1.11.0 고정이 그대로 유지된다.
+    //   (1.13 의 tools 6.4 manifest 는 swift-issue-reporting 의 IssueReporting 과 제품명이 겹쳐
+    //    tuist cache warm 이 _IssueReporting 순환 의존성으로 실패하므로 resolved 를 1.11.0 으로 둔다.)
+    // - Swift 6.4 미만 : case-paths·custom-dump·clocks·combine-schedulers 가 1.13.0 이상을 요구한다.
+    //   1.13 의 Package@swift-6.0.swift 는 1.11 과 같은 구조라 순환이 생기지 않는다.
+    // 상한을 1.x 전체로 열어 두 툴체인 모두 해석되게 한다 (#81).
+    .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", "1.11.0"..<"2.0.0"),
     .package(url: "https://github.com/Roy-wonji/TCAFlow.git", branch: "main"),
     .package(url: "https://github.com/google/GoogleSignIn-iOS", from: "9.1.0"),
     .package(url: "https://github.com/Alamofire/Alamofire.git", from: "5.10.2"),
