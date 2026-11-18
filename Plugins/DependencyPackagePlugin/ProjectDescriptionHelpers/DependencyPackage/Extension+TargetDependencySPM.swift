@@ -33,6 +33,6 @@ public extension TargetDependency.SPM {
   static let mixpanel = TargetDependency.external(name: "Mixpanel", condition: .none)
   static let mixpanelSessionReplay = TargetDependency.external(name: "MixpanelSessionReplay", condition: .none)
   static let adFit = TargetDependency.external(name: "AdFitSDK", condition: .none)
-  static let sentry = TargetDependency.external(name: "Sentry", condition: .none)
-  static let sentrySwiftUI = TargetDependency.external(name: "SentrySwiftUI", condition: .none)
+  // Sentry 9.34.0 이하 바이너리 xcframework 는 서명 인증서가 폐기돼(sentry-cocoa #9633) 소스 빌드 제품을 쓴다.
+  static let sentry = TargetDependency.external(name: "SentrySPM", condition: .none)
 }

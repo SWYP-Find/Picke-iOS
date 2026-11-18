@@ -12,7 +12,7 @@ import ComposableArchitecture
 import PickeCoreLogger
 import Mixpanel
 import MixpanelSessionReplay
-@preconcurrency import Sentry
+@preconcurrency import SentrySwift
 
 // MARK: - Live
 

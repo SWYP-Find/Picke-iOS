@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-import SentrySwiftUI
+import SentrySwift
 
 /// 화면 렌더 구간을 Sentry 트랜잭션으로 감싸는 래퍼.
 ///
