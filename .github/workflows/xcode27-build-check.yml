@@ -1,0 +1,95 @@
+name: Xcode 27 build check (임시)
+
+# 이슈 #81 확인용 임시 워크플로. develop 코드를 수정 없이 Xcode 27(Swift 6.4)로
+# 시뮬레이터 빌드만 해 본다. 시크릿은 쓰지 않고 더미 xcconfig·plist 로 컴파일만 확인한다.
+# 확인이 끝나면 이 브랜치는 삭제한다.
+
+on:
+  push:
+    branches: [ci/xcode27-build-check]
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 툴체인 버전
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - uses: jdx/mise-action@v2
+
+      - name: 더미 설정 파일 생성 (시크릿 없음)
+        run: |
+          mkdir -p Config
+          cat > Config/Shared.xcconfig <<'CFG'
+          PROJECT_NAME = Multi
+          BUNDLE_ID_PREFIX = io.Roy.Module
+          BUNDLE_DISPLAY_NAME = $(PROJECT_NAME)
+          MARKETING_VERSION = 1.0.0
+          CURRENT_PROJECT_VERSION = 1
+          SWIFT_OPTIMIZATION_LEVEL = -Onone
+          DEAD_CODE_STRIPPING = YES
+          STRIP_INSTALLED_PRODUCT = YES
+          SENTRY_DSN = https:/$()/dummy@sentry.invalid/0
+          CFG
+          for env in Stage Prod Release Dev; do
+            cond=STAGE; [ "$env" = Prod ] && cond=PROD; [ "$env" = Release ] && cond=RELEASE; [ "$env" = Dev ] && cond=DEV
+            cat > "Config/$env.xcconfig" <<CFG
+          #include "./Shared.xcconfig"
+          OTHER_SWIFT_FLAGS[config=STAGE][sdk=*] = \$(inherited) -DDEBUG
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS = $cond
+          BUNDLE_DISPLAY_NAME = Picke-ci
+          BASE_URL = https:/\$()/example.invalid
+          GOOGLE_CLIENT_ID = dummy
+          GOOGLE_IOS_CLIENT_ID = dummy
+          REVERSED_CLIENT_ID = com.googleusercontent.apps.dummy
+          MIXPANEL_TOKEN = dummy
+          KAKAO_REST_API_KEY = dummy
+          ADMOB_TOKEN = ca-app-pub-0000000000000000~0000000000
+          REWARD_AD_UNIT = ca-app-pub-0000000000000000/0000000000
+          SENTRY_ENVIRONMENT = ci
+          ADFIT_BANNER_320X50 = dummy
+          ADFIT_BANNER_320X100 = dummy
+          ADFIT_BANNER_320X480 = dummy
+          ADFIT_NATIVE_1_1 = dummy
+          ADFIT_NATIVE_2_1 = dummy
+          ADFIT_APP_TRANSITION = dummy
+          CFG
+          done
+          sed -i '' 's/^          //' Config/*.xcconfig
+          mkdir -p Projects/App/Resources
+          cat > Projects/App/Resources/GoogleService-Info.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>API_KEY</key><string>dummy</string>
+          <key>GCM_SENDER_ID</key><string>000000000000</string>
+          <key>PLIST_VERSION</key><string>1</string>
+          <key>BUNDLE_ID</key><string>io.Roy.Module.Picke</string>
+          <key>PROJECT_ID</key><string>dummy</string>
+          <key>STORAGE_BUCKET</key><string>dummy.appspot.com</string>
+          <key>IS_ADS_ENABLED</key><false/><key>IS_ANALYTICS_ENABLED</key><false/>
+          <key>IS_APPINVITE_ENABLED</key><false/><key>IS_GCM_ENABLED</key><true/>
+          <key>IS_SIGNIN_ENABLED</key><true/>
+          <key>GOOGLE_APP_ID</key><string>1:000000000000:ios:0000000000000000</string>
+          </dict></plist>
+          PLIST
+
+      - name: tuist install (의존성 해석)
+        run: tuist install
+
+      - name: tuist generate
+        run: tuist generate --no-open --no-binary-cache
+
+      - name: 시뮬레이터 빌드 (Picke-Stage)
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Picke.xcworkspace -scheme Picke-Stage -configuration Stage \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee build.log | xcbeautify --quieter || {
+              echo "---- error 요약 ----"; grep -E "error:" build.log | sort | uniq | head -50; exit 1; }
