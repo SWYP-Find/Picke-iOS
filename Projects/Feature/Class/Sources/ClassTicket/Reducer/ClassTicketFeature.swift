@@ -44,6 +44,9 @@ public struct ClassTicketFeature {
       return String(scalars)
     }
 
+    /// 이용권 코드 길이. 예: `PKE05D2E1`
+    public static let codeLength = 9
+
     public var canCheckCode: Bool {
       !normalizedCode.isEmpty && !isChecking && !isLoadingExistingTicket
     }
@@ -141,6 +144,11 @@ public struct ClassTicketFeature {
     Reduce { state, action in
       switch action {
       case .binding(\.code):
+        // 코드는 `PKE` + 16진수 6자리(9자)다. 영문·숫자가 9자를 넘으면 잘라낸다.
+        let codeCharacters = state.normalizedCode.filter { $0 != "-" }
+        if codeCharacters.count > State.codeLength {
+          state.code = String(codeCharacters.prefix(State.codeLength))
+        }
         let wasLookingUpRegisteredTicket = state.preview != nil && state.isLoadingExistingTicket
         state.preview = nil
         if wasLookingUpRegisteredTicket {

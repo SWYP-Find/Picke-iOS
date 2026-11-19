@@ -127,7 +127,7 @@ private extension ClassDetailView {
       Button { send(.membersTapped) } label: {
         informationRow(
           "클래스 멤버",
-          detail: "총 \(store.room.memberCount)명이 참여하고 있어요",
+          detail: "총 \(store.room.activeMemberCount)명이 참여하고 있어요",
           actionTitle: "보기"
         )
       }

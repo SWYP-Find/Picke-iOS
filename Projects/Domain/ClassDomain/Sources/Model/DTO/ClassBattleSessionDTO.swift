@@ -24,11 +24,16 @@ struct ClassBattleSessionDTO: Decodable, Sendable {
       let options: [Option]
     }
 
+    struct Tag: Decodable, Sendable {
+      let name: String
+    }
+
     let battleInfo: Info
     let description: String?
     let shareUrl: String?
     let userVoteStatus: String?
     let currentStep: String?
+    let categoryTags: [Tag]?
 
   }
 

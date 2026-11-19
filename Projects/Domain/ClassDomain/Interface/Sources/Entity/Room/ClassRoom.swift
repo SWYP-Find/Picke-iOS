@@ -16,7 +16,10 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
   public let deadline: Date
   public let ticketExpiresAt: Date?
   public let closeAt: Date?
+  /// 사용 좌석 수. 활동한 뒤 나간 사람도 포함한다. 남은 자리는 `memberCapacity - memberCount`.
   public let memberCount: Int
+  /// 현재 명단 인원(참여하는 운영자 포함). 화면의 "멤버 N명"에 쓴다.
+  public let activeMemberCount: Int
   public let memberCapacity: Int?
   public let role: ClassRole
   public let status: ClassStatus
@@ -32,6 +35,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     deadline: Date,
     closeAt: Date? = nil,
     memberCount: Int,
+    activeMemberCount: Int? = nil,
     role: ClassRole,
     status: ClassStatus,
     allowsAnonymousOpinion: Bool,
@@ -50,6 +54,7 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
     self.ticketExpiresAt = ticketExpiresAt
     self.closeAt = closeAt
     self.memberCount = memberCount
+    self.activeMemberCount = activeMemberCount ?? memberCount
     self.memberCapacity = memberCapacity
     self.role = role
     self.status = status

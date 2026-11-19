@@ -7,6 +7,7 @@ public struct ClassDebate: Equatable, Sendable {
   public let canReply: Bool
   public let canRetry: Bool
   public let philosopherName: String
+  public let philosopherImageURL: URL?
   public let participantOptionTitle: String
   public let opponentOptionTitle: String
   public let messages: [ClassDebateMessage]
@@ -21,6 +22,7 @@ public struct ClassDebate: Equatable, Sendable {
     canReply: Bool,
     canRetry: Bool,
     philosopherName: String,
+    philosopherImageURL: URL? = nil,
     participantOptionTitle: String,
     opponentOptionTitle: String,
     messages: [ClassDebateMessage],
@@ -34,6 +36,7 @@ public struct ClassDebate: Equatable, Sendable {
     self.canReply = canReply
     self.canRetry = canRetry
     self.philosopherName = philosopherName
+    self.philosopherImageURL = philosopherImageURL
     self.participantOptionTitle = participantOptionTitle
     self.opponentOptionTitle = opponentOptionTitle
     self.messages = messages

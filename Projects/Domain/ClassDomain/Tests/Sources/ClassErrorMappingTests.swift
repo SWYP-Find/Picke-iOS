@@ -7,7 +7,7 @@ struct ClassErrorMappingTests {
   @Test(arguments: [
     ("CLASS_404_CODE", ClassError.invalidCode),
     ("CLASS_409_CLOSED", .closed),
-    ("CLASS_409_TICKET_ENDED", .closed),
+    ("CLASS_409_TICKET_ENDED", .ticketEnded),
     ("CLASS_409_JOINED", .alreadyJoined),
     ("CLASS_409_NAME", .duplicateName),
     ("CLASS_404", .notFound),

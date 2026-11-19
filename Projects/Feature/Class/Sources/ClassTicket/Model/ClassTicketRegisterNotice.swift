@@ -16,6 +16,7 @@ public enum ClassTicketRegisterNotice: Equatable, Sendable {
   case registrationExpired
   case alreadyActive
   case registerFailed
+  case locked
 
   /// Android `toRegisterDialog`와 같은 매핑. 사용 중 이용권(`TICKET_409_ACTIVE`)만 iOS에서 따로 안내한다.
   public init(error: ClassTicketError) {
@@ -24,6 +25,7 @@ public enum ClassTicketRegisterNotice: Equatable, Sendable {
     case .invalidCode, .revoked: self = .invalidCode
     case .registrationExpired: self = .registrationExpired
     case .activeTicket: self = .alreadyActive
+    case .locked: self = .locked
     case .notFound, .invalidResponse, .network: self = .registerFailed
     }
   }
@@ -35,6 +37,7 @@ public enum ClassTicketRegisterNotice: Equatable, Sendable {
     case .registrationExpired: return .ticketRegistrationExpired()
     case .alreadyActive: return .ticketAlreadyActive()
     case .registerFailed: return .ticketRegisterFailed()
+    case .locked: return .ticketLocked()
     }
   }
 }

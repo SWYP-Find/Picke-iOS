@@ -3,6 +3,7 @@ import ClassDomainInterface
 struct ClassDebateDTO: Decodable, Sendable {
   struct Philosopher: Decodable, Sendable {
     let name: String
+    let imageUrl: String?
   }
 
   struct Option: Decodable, Sendable {

@@ -31,7 +31,8 @@ extension ClassBattleSessionDTO.Battle {
       currentStep: currentStep,
       participantsCount: battleInfo.participantsCount ?? 0,
       audioDuration: battleInfo.audioDuration ?? 0,
-      options: battleInfo.options.map { $0.toDomain() }
+      options: battleInfo.options.map { $0.toDomain() },
+      categoryTags: categoryTags?.map(\.name) ?? []
     )
   }
 }

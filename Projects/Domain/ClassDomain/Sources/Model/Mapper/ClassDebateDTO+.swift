@@ -1,4 +1,5 @@
 import ClassDomainInterface
+import Foundation
 
 extension ClassDebateDTO.Message {
   func toDomain() throws -> ClassDebateMessage {
@@ -26,6 +27,7 @@ extension ClassDebateDTO {
       canReply: canReply,
       canRetry: canRetry,
       philosopherName: philosopher.name,
+      philosopherImageURL: philosopher.imageUrl.flatMap(URL.init(string:)),
       participantOptionTitle: participantOption.title,
       opponentOptionTitle: opponentOption.title,
       messages: messages.map { try $0.toDomain() },

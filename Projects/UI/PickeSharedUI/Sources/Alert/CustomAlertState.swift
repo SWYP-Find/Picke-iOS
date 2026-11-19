@@ -218,6 +218,10 @@ public extension CustomAlertState where Action == CustomAlertAction {
     notice("코드 등록이 완료되지 않았습니다\n네트워크 확인 후 한 번 더 시도해주세요")
   }
 
+  static func ticketLocked() -> CustomAlertState<CustomAlertAction> {
+    notice("코드를 5번 잘못 입력해\n1시간 동안 입력할 수 없어요")
+  }
+
   static func ticketAlreadyActive() -> CustomAlertState<CustomAlertAction> {
     notice("이미 사용 중인 이용권이 있어요\n만료 후 등록할 수 있어요")
   }

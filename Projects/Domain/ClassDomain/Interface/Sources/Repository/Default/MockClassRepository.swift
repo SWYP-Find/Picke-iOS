@@ -432,6 +432,7 @@ private extension ClassRoom {
       deadline: deadline,
       closeAt: closeAt,
       memberCount: memberCount,
+      activeMemberCount: memberCount,
       role: role,
       status: status,
       allowsAnonymousOpinion: allowsAnonymousOpinion,

@@ -102,7 +102,7 @@ private extension ClassTicketView {
       }
       .pretendardFont(.labelSmall)
 
-      TextField("", text: $store.code, prompt: Text("전달 받은 코드를 입력해주세요").foregroundStyle(.gray300))
+      TextField("", text: $store.code, prompt: Text("예: PKE05D2E1").foregroundStyle(.gray300))
         .textInputAutocapitalization(.characters)
         .autocorrectionDisabled()
         .keyboardType(.asciiCapable)

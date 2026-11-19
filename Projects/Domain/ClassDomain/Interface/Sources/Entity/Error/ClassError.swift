@@ -10,6 +10,7 @@ import Foundation
 public enum ClassError: LocalizedError, Equatable, Sendable {
   case invalidCode
   case closed
+  case ticketEnded
   case alreadyJoined
   case duplicateName
   case accessDenied
@@ -42,7 +43,8 @@ public enum ClassError: LocalizedError, Equatable, Sendable {
   public var message: String {
     switch self {
     case .invalidCode: return "참여 코드를 다시 확인해 주세요."
-    case .closed: return "종료된 클래스입니다."
+    case .closed: return "참여 기간이 마감된 클래스입니다."
+    case .ticketEnded: return "이용 기간이 끝난 클래스입니다."
     case .alreadyJoined: return "이미 참여한 클래스입니다."
     case .duplicateName: return "이미 사용 중인 이름이에요."
     case .accessDenied: return "클래스 결과를 볼 권한이 없어요."

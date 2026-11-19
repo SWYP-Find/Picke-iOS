@@ -58,8 +58,8 @@ struct ClassTicketTests {
       $0.shouldCheckExistingTicket = false
       $0.isLoadingExistingTicket = true
     }
-    await store.send(.binding(.set(\.code, "PICKE-AB12-CD34"))) {
-      $0.code = "PICKE-AB12-CD34"
+    await store.send(.binding(.set(\.code, "PKE05D2E1"))) {
+      $0.code = "PKE05D2E1"
     }
     #expect(!store.state.canCheckCode)
     await gate.complete(ticket)
@@ -354,6 +354,24 @@ struct ClassTicketTests {
     #expect(ClassTicketRegisterNotice(error: .notFound) == .registerFailed)
     #expect(ClassTicketRegisterNotice(error: .invalidResponse) == .registerFailed)
     #expect(ClassTicketRegisterNotice(error: .network("x")) == .registerFailed)
+  }
+
+  @Test
+  func 코드를_5번_잘못_넣어_잠기면_1시간_입력_제한을_안내한다() {
+    #expect(ClassTicketRegisterNotice(error: .locked) == .locked)
+    #expect(ClassTicketError.locked.message == "코드를 5번 잘못 입력해 1시간 동안 입력할 수 없어요.")
+  }
+
+  @Test
+  func 코드는_PKE_형식_9자를_넘으면_잘라낸다() async {
+    let store = TestStore(initialState: ClassTicketFeature.State()) { ClassTicketFeature() }
+    await store.send(.binding(.set(\.code, "pke05d2e1ff"))) {
+      $0.code = "PKE05D2E1"
+    }
+    await store.send(.binding(.set(\.code, "pke-05d2e1"))) {
+      $0.code = "pke-05d2e1"
+    }
+    #expect(store.state.normalizedCode == "PKE-05D2E1")
   }
 
   @Test
