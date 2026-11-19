@@ -7,6 +7,8 @@ public enum ClassTicketError: LocalizedError, Equatable, Sendable {
   case claimed
   case activeTicket
   case notFound
+  /// 없는 코드를 1시간 안에 5번 넣어 1시간 동안 입력이 막힘(`TICKET_429_LOCKED`).
+  case locked
   case invalidResponse
   case network(String)
 
@@ -20,6 +22,7 @@ public enum ClassTicketError: LocalizedError, Equatable, Sendable {
     case .claimed: return "이미 다른 계정에 등록된 이용권 코드예요."
     case .activeTicket: return "이미 사용 중인 이용권이 있어요. 만료 후 등록할 수 있어요."
     case .notFound: return "등록된 이용권이 없어요."
+    case .locked: return "코드를 5번 잘못 입력해 1시간 동안 입력할 수 없어요."
     case .invalidResponse: return "이용권 정보를 읽지 못했어요. 다시 시도해 주세요."
     case let .network(message): return message
     }

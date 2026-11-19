@@ -60,9 +60,9 @@ public struct ClassMemberFeature {
 
     public var memberCountTitle: String {
       guard let capacity = room.memberCapacity, capacity > 0 else {
-        return "멤버 \(room.memberCount)"
+        return "멤버 \(room.activeMemberCount)"
       }
-      return "멤버 \(room.memberCount) / \(capacity)"
+      return "멤버 \(room.activeMemberCount) / \(capacity)"
     }
 
     public var visibleMembers: [ClassMember] {

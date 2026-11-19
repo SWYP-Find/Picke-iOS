@@ -12,6 +12,8 @@ public struct ClassBattleDetail: Equatable, Identifiable, Sendable {
   public let participantsCount: Int
   public let audioDuration: Int
   public let options: [ClassBattleOption]
+  /// 카테고리 태그 이름(예: `철학`). 커스텀 배틀도 서버가 주제 카테고리를 태그로 붙인다.
+  public let categoryTags: [String]
 
   public init(
     id: Int,
@@ -24,7 +26,8 @@ public struct ClassBattleDetail: Equatable, Identifiable, Sendable {
     currentStep: ClassBattleStep,
     participantsCount: Int,
     audioDuration: Int,
-    options: [ClassBattleOption]
+    options: [ClassBattleOption],
+    categoryTags: [String] = []
   ) {
     self.id = id
     self.title = title
@@ -37,5 +40,6 @@ public struct ClassBattleDetail: Equatable, Identifiable, Sendable {
     self.participantsCount = participantsCount
     self.audioDuration = audioDuration
     self.options = options
+    self.categoryTags = categoryTags
   }
 }

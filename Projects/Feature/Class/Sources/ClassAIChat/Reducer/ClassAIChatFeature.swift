@@ -63,7 +63,9 @@ public struct ClassAIChatFeature {
     }
 
     public var opponentAvatarURL: URL? {
-      selectedOptionID == 1 ? room.battle.philosopherBImageURL : room.battle.philosopherAImageURL
+      // 이름과 얼굴이 어긋나지 않게 서버가 준 토론 철학자 이미지를 먼저 쓴다.
+      if let url = debate?.philosopherImageURL { return url }
+      return selectedOptionID == 1 ? room.battle.philosopherBImageURL : room.battle.philosopherAImageURL
     }
 
     public var quickReplies: [String] {

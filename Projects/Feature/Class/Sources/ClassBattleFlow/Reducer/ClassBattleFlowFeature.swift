@@ -137,7 +137,9 @@ public struct ClassBattleFlowFeature {
     }
 
     public var voteCategoryLabel: String? {
-      guard let category = room?.battle.categoryDisplayTitle, !category.isEmpty else { return nil }
+      // 클래스 배틀 상세의 카테고리 태그를 먼저 쓴다. 커스텀 배틀은 방 정보에 카테고리가 없다.
+      let category = session?.battle.categoryTags.first ?? room?.battle.categoryDisplayTitle
+      guard let category, !category.isEmpty else { return nil }
       return "#\(category)"
     }
 

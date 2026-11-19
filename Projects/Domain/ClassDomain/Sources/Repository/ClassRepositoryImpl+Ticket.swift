@@ -49,6 +49,7 @@ extension ClassRepositoryImpl {
         case "TICKET_409_CLAIMED": return .claimed
         case "TICKET_409_ACTIVE": return .activeTicket
         case "TICKET_404": return .notFound
+        case "TICKET_429_LOCKED": return .locked
         default: return .network(response.message ?? "이용권 정보를 불러오지 못했어요.")
         }
       }

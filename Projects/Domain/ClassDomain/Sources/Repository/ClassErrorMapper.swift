@@ -25,7 +25,8 @@ enum ClassErrorMapper {
   private static func classError(code: String) -> ClassError? {
     switch code {
     case "CLASS_404_CODE": return .invalidCode
-    case "CLASS_409_CLOSED", "CLASS_409_TICKET_ENDED": return .closed
+    case "CLASS_409_CLOSED": return .closed
+    case "CLASS_409_TICKET_ENDED": return .ticketEnded
     case "CLASS_409_JOINED": return .alreadyJoined
     case "CLASS_409_NAME": return .duplicateName
     case "CLASS_404": return .notFound

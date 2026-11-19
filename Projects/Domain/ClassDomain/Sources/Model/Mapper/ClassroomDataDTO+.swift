@@ -13,6 +13,7 @@ extension ClassListItemDTO {
       deadline: .distantFuture,
       closeAt: closeDate,
       memberCount: memberCount,
+      activeMemberCount: activeMemberCount,
       role: try myRole.classRole(),
       status: closed ? .closed : .open,
       allowsAnonymousOpinion: false,
@@ -38,6 +39,7 @@ extension ClassDetailDataDTO {
       deadline: try deadline.map { try $0.classDate() } ?? .distantFuture,
       closeAt: try closeAt.classDate(),
       memberCount: memberCount,
+      activeMemberCount: activeMemberCount,
       role: try myRole.classRole(),
       status: closed ? .closed : .open,
       allowsAnonymousOpinion: false,
@@ -59,6 +61,7 @@ extension ClassJoinPreviewDataDTO {
       battleThumbnailURL: battleThumbnailUrl.flatMap(URL.init(string:)),
       battleType: battleType,
       memberCount: memberCount,
+      activeMemberCount: activeMemberCount,
       capacity: capacity,
       closeAt: try closeAt.classDate()
     )

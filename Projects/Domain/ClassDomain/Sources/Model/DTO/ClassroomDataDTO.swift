@@ -11,6 +11,7 @@ struct ClassListItemDTO: Decodable, Sendable {
   let battleThumbnailUrl: String?
   let battleType: ClassBattleType
   let memberCount: Int
+  let activeMemberCount: Int?
   let capacity: Int
   let closeAt: String
   let closed: Bool
@@ -31,6 +32,7 @@ struct ClassDetailDataDTO: Decodable, Sendable {
   let battle: Battle
   let battleType: ClassBattleType
   let memberCount: Int
+  let activeMemberCount: Int?
   let capacity: Int
   let deadline: String?
   let ticketExpiresAt: String
@@ -47,6 +49,7 @@ struct ClassJoinPreviewDataDTO: Decodable, Sendable {
   let battleThumbnailUrl: String?
   let battleType: String
   let memberCount: Int
+  let activeMemberCount: Int?
   let capacity: Int
   let closeAt: String
 }
