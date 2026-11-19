@@ -20,8 +20,8 @@ struct ClassResultTests {
     hasSummaryTab: Bool,
     hasReportTab: Bool,
     insight: ClassResultInsightBoard? = nil
-  ) -> ClassResultFeature.Loaded {
-    ClassResultFeature.Loaded(
+  ) -> ClassResultContent {
+    ClassResultContent(
       className: "클래스",
       isInProgress: false,
       tag: "#철학",

@@ -92,7 +92,7 @@ private extension ClassResultView {
   }
 
   @ViewBuilder
-  func header(_ loaded: ClassResultFeature.Loaded) -> some View {
+  func header(_ loaded: ClassResultContent) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 6) {
         if loaded.isInProgress {
@@ -128,7 +128,7 @@ private extension ClassResultView {
   @ViewBuilder
   func tabBar() -> some View {
     HStack(spacing: 0) {
-      ForEach(ClassResultFeature.Tab.allCases, id: \.self) { tab in
+      ForEach(ClassResultTab.allCases, id: \.self) { tab in
         let isSelected = store.visibleTab == tab
         Button { send(.tabSelected(tab)) } label: {
           Text(tab.rawValue)
@@ -158,7 +158,7 @@ private extension ClassResultView {
 
 private extension ClassResultView {
   @ViewBuilder
-  func summarySection(_ loaded: ClassResultFeature.Loaded) -> some View {
+  func summarySection(_ loaded: ClassResultContent) -> some View {
     VStack(alignment: .leading, spacing: 24) {
       if let insight = loaded.insight {
         aiInsightCard(insight, deadline: loaded.deadline)
@@ -285,7 +285,7 @@ private extension ClassResultView {
   @ViewBuilder
   func reportSection(
     _ report: ClassResultMyReportBoard,
-    loaded: ClassResultFeature.Loaded
+    loaded: ClassResultContent
   ) -> some View {
     VStack(alignment: .leading, spacing: 24) {
       titledBlock("내 투표 결과", size: 13) {

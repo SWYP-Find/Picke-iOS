@@ -147,6 +147,11 @@ public struct ClassCoordinator {
         {
           return effect
         }
+        if case let .classEdit(edit)? = state.routes.last?.screen,
+           edit.instanceID == selection.settingInstanceID, edit.hasDeadline
+        {
+          return effect
+        }
         state.deadlineSelection = nil
       }
       return effect

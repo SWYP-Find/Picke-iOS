@@ -2430,6 +2430,15 @@ struct ClassDeadlineSheetCoordinatorTests {
     #expect(store.state.routes.count == 4)
     #expect(store.state.deadlineEdit == nil)
     #expect(store.state.routes.last.map { if case .classEdit = $0.screen { true } else { false } } == true)
+
+    // 수정 화면의 마감일 필드를 누르면 마감일 선택 시트가 유지되어야 한다.
+    await store.send(.router(.routeAction(id: 3, action: .classEdit(.view(.deadlineFieldTapped)))))
+    guard case let .classEdit(edit)? = store.state.routes.last?.screen else {
+      Issue.record("수정 화면이 아니다")
+      return
+    }
+    await store.receive(\.router)
+    #expect(store.state.deadlineSelection?.settingInstanceID == edit.instanceID)
   }
 
   @Test

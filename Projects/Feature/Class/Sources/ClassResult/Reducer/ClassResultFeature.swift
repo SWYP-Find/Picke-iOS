@@ -15,31 +15,12 @@ import Foundation
 public struct ClassResultFeature {
   public init() {}
 
-  public enum Tab: String, CaseIterable, Equatable, Sendable {
-    case summary = "클래스 요약"
-    case report = "내 리포트"
-  }
-
-  public struct Loaded: Equatable, Sendable {
-    public var className: String
-    public var isInProgress: Bool
-    public var tag: String
-    public var battleTitle: String
-    public var deadline: Date
-    public var hasSummaryTab: Bool
-    public var hasReportTab: Bool
-    public var stats: ClassResultStats
-    public var insight: ClassResultInsightBoard?
-    public var report: ClassResultMyReportBoard?
-    public var receivedLikeCount: Int?
-  }
-
   @ObservableState
   public struct State: Equatable {
     public let room: ClassRoom
     public var isLoading = true
-    public var loaded: Loaded?
-    public var selectedTab: Tab = .summary
+    public var loaded: ClassResultContent?
+    public var selectedTab: ClassResultTab = .summary
     public var isRequesting = false
     public var toastMessage: String?
 
@@ -52,7 +33,7 @@ public struct ClassResultFeature {
       return loaded.hasSummaryTab && loaded.hasReportTab
     }
 
-    public var visibleTab: Tab {
+    public var visibleTab: ClassResultTab {
       guard let loaded else { return selectedTab }
       if !loaded.hasSummaryTab {
         return .report
@@ -79,14 +60,14 @@ public struct ClassResultFeature {
   public enum View {
     case onAppear
     case backTapped
-    case tabSelected(Tab)
+    case tabSelected(ClassResultTab)
     case insightRetryTapped
     case myOpinionTapped
     case toastShown
   }
 
   public enum InnerAction: Equatable {
-    case loaded(Loaded, myActivityFailed: Bool)
+    case loaded(ClassResultContent, myActivityFailed: Bool)
     case loadFailed
     case insightRetried
     case insightRetryFailed
@@ -227,7 +208,7 @@ extension ClassResultFeature {
       }
       let activity = try? await activityTask
       let categoryName = session.battle.categoryTags.first
-      let loaded = Loaded(
+      let loaded = ClassResultContent(
         className: detail.name,
         isInProgress: !result.closed,
         tag: categoryName.map { "#\($0)" } ?? "",
