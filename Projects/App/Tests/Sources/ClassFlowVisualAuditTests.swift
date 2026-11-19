@@ -1742,9 +1742,9 @@ final class ClassFlowVisualAuditTests: XCTestCase {
     var detailState = ClassCoordinator.State()
     detailState.routes.push(.detail(.init(room: room)))
     let detailStore = makeStore(detailState)
-    detailStore.send(.router(.routeAction(id: 1, action: .detail(.delegate(.openDeadline(room))))))
-    XCTAssertEqual(detailStore.routes.count, 2)
-    try await save("deadline-sheet-detail-compact", store: detailStore)
+    // Android: 상세의 마감일 "수정"은 ClassEdit 화면으로 이동한다.
+    detailStore.send(.router(.routeAction(id: 1, action: .detail(.delegate(.openEdit(room))))))
+    XCTAssertEqual(detailStore.routes.count, 3)
 
     detailState.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
     let dashboardStore = makeStore(detailState)

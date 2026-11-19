@@ -15,26 +15,16 @@ import Testing
 @MainActor
 struct ClassMemberTests {
   @Test
-  func 정원은_알려진_양수일_때만_표시하고_초과_인원도_그대로_보여준다() {
-    let cases: [(Int?, String)] = [
-      (nil, "멤버 22"),
-      (0, "멤버 22"),
-      (-1, "멤버 22"),
-      (30, "멤버 22 / 30"),
-    ]
-    for (capacity, expected) in cases {
+  func 멤버_수는_안드로이드처럼_불러온_명단_인원만_표시하고_정원은_붙이지_않는다() {
+    let members = (1 ... 4).map { ClassMember(id: $0, name: "참여자\($0)", isOwner: $0 == 1) }
+    for capacity in [nil, 0, 30] as [Int?] {
       let state = ClassMemberFeature.State(
         room: room(memberCount: 22, capacity: capacity),
+        members: members,
         instanceID: UUID()
       )
-      #expect(state.memberCountTitle == expected)
+      #expect(state.memberCountTitle == "멤버 4")
     }
-
-    let overCapacity = ClassMemberFeature.State(
-      room: room(memberCount: 31, capacity: 30),
-      instanceID: UUID()
-    )
-    #expect(overCapacity.memberCountTitle == "멤버 31 / 30")
   }
 
   @Test
@@ -55,7 +45,7 @@ struct ClassMemberTests {
       $0.searchText = "김선생"
     }
     #expect(store.state.visibleMembers.count == 1)
-    #expect(store.state.memberCountTitle == "멤버 22 / 30")
+    #expect(store.state.memberCountTitle == "멤버 22")
 
     let updatedRoom = room(memberCount: 21, capacity: 30)
     let updatedMembers = Array(members.dropLast())
@@ -63,7 +53,7 @@ struct ClassMemberTests {
       $0.room = updatedRoom
       $0.members = updatedMembers
     }
-    #expect(store.state.memberCountTitle == "멤버 21 / 30")
+    #expect(store.state.memberCountTitle == "멤버 21")
     #expect(store.state.visibleMembers.count == 1)
   }
 

@@ -135,7 +135,7 @@ private extension ClassEditView {
   func battleSection() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       sectionLabel("선택한 배틀")
-      ClassSelectedBattleCard(battle: store.room.battle)
+      ClassSelectedBattleCard(battle: store.room.battle, isAIBattle: store.room.battleType == .custom)
     }
   }
 

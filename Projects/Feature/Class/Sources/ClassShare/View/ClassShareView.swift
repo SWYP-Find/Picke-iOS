@@ -30,8 +30,17 @@ public struct ClassShareView: View {
       ScrollView {
         VStack(alignment: .leading, spacing: 32) {
           intro()
-          codeCard()
-          battleSection()
+          // Android ClassShareContent: 로딩은 스켈레톤, 실패는 불러오기 실패 영역.
+          switch store.viewState {
+          case .loading:
+            skeleton()
+          case .error:
+            PickeLoadFailedSection()
+              .frame(maxWidth: .infinity)
+          case .loaded:
+            codeCard()
+            battleSection()
+          }
         }
         .padding(16)
       }
@@ -44,6 +53,12 @@ public struct ClassShareView: View {
     }
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
+    .onAppear { send(.onAppear) }
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 }
 
@@ -183,8 +198,23 @@ private extension ClassShareView {
         .pretendardFont(.semiBold15)
         .foregroundStyle(.gray800)
 
-      ClassSelectedBattleCard(battle: store.room.battle)
+      ClassSelectedBattleCard(
+        battle: store.room.battle,
+        isAIBattle: store.room.battleType == .custom
+      )
     }
+  }
+
+  @ViewBuilder
+  func skeleton() -> some View {
+    VStack(alignment: .leading, spacing: 32) {
+      SkeletonView(.round(cornerRadius: 2)).frame(height: 236)
+      VStack(alignment: .leading, spacing: 12) {
+        SkeletonView(.round(cornerRadius: 2)).frame(width: 80, height: 20)
+        SkeletonView(.round(cornerRadius: 2)).frame(height: 150)
+      }
+    }
+    .accessibilityLabel("클래스 정보를 불러오는 중")
   }
 
   var enterButton: some View {

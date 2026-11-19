@@ -78,6 +78,7 @@ public struct MyClassFeature {
     case managementTapped(Int)
     case managementDismissed
     case editClassTapped
+    case shareTapped
     case deleteTapped
     case deleteConfirmed
     case leaveTapped
@@ -101,6 +102,7 @@ public struct MyClassFeature {
     case dismiss
     case openRoom(ClassRoom)
     case openInformation(ClassRoom)
+    case openShare(ClassRoom)
     case left(Int)
   }
 
@@ -205,6 +207,12 @@ extension MyClassFeature {
       else { return .none }
       state.modal = nil
       return .send(.delegate(.openInformation(room)))
+    case .shareTapped:
+      // Android MyClass onShareCodeClick: ClassShare 화면으로 이동한다.
+      guard !state.isLeaving else { return .none }
+      guard let id = state.selectedRoomID, let room = state.rooms[id: id] else { return .none }
+      state.modal = nil
+      return .send(.delegate(.openShare(room)))
     case .deleteTapped:
       guard !state.isLeaving, !state.isDeleting else { return .none }
       guard let id = state.selectedRoomID,

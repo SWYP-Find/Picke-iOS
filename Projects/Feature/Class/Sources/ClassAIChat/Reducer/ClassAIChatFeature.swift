@@ -32,6 +32,8 @@ public struct ClassAIChatFeature {
     public var canRetrySession = false
     public var transportRetryAvailable = false
     public var errorMessage: String?
+    /// Android ClassDebate 토스트 문구(조회 실패·요청 실패).
+    public var toastMessage: String?
     public var hasStarted = false
     public var sessionRequestID: UUID?
     public var responseRequestID: UUID?
@@ -147,6 +149,7 @@ public struct ClassAIChatFeature {
     case quickReplyTapped(String)
     case sendTapped
     case finalVoteTapped
+    case toastShown
   }
 
   @CasePathable
@@ -325,6 +328,10 @@ extension ClassAIChatFeature {
       guard state.isCompleted else { return .none }
       state.customAlert = .finalVote()
       return .none
+
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
     }
   }
 }
@@ -344,8 +351,9 @@ extension ClassAIChatFeature {
       switch result {
       case let .success(debate):
         state.apply(debate)
-      case let .failure(error):
-        state.errorMessage = error.localizedDescription
+      case .failure:
+        // Android ClassDebateViewModel.fetchDebate: 실패하면 "정보를 불러오지 못했어요" 토스트.
+        state.toastMessage = "정보를 불러오지 못했어요"
         state.canRetrySession = true
         state.transportRetryAvailable = true
       }
@@ -363,13 +371,14 @@ extension ClassAIChatFeature {
         if debate.status == .completed {
           state.customAlert = .finalVote()
         }
-      case let .failure(error):
+      case .failure:
+        // Android ClassDebateViewModel.submitReply: 실패하면 "요청을 처리하지 못했어요" 토스트.
         if state.messages.last?.speaker == .user {
           state.messages.removeLast()
         }
         state.draft = state.pendingText ?? state.draft
         state.pendingText = nil
-        state.errorMessage = error.localizedDescription
+        state.toastMessage = "요청을 처리하지 못했어요"
       }
       return .none
 

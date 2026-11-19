@@ -58,11 +58,9 @@ public struct ClassMemberFeature {
       viewState = preloadedViewState ?? .loading
     }
 
+    /// Android ClassMemberScreen `class_member_count`: 불러온 명단 전체 인원(검색과 무관), 정원은 표시하지 않는다.
     public var memberCountTitle: String {
-      guard let capacity = room.memberCapacity, capacity > 0 else {
-        return "멤버 \(room.activeMemberCount)"
-      }
-      return "멤버 \(room.activeMemberCount) / \(capacity)"
+      "멤버 \(members.count)"
     }
 
     public var visibleMembers: [ClassMember] {

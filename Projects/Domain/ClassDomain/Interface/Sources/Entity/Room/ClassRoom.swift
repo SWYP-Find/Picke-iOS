@@ -65,6 +65,55 @@ public struct ClassRoom: Equatable, Identifiable, Sendable {
 }
 
 public extension ClassRoom {
+  /// Android ClassDetail·ClassShare 처럼 `/classes/{id}/battle` 응답으로 배틀 카드의
+  /// 카테고리 태그·입장·소요 시간을 채운다. 상세 응답의 배틀은 제목·요약만 준다.
+  func applyingBattle(_ detail: ClassBattleDetail) -> ClassRoom {
+    let optionA = detail.options.first
+    let optionB = detail.options.dropFirst().first
+    // `/battle` 은 입장 설명을 주지 않으므로 같은 배틀이면 기존 설명을 유지한다.
+    let isSameBattle = battle.id == detail.id
+    let summary = ClassBattleSummary(
+      id: detail.id,
+      title: detail.title,
+      summary: detail.summary,
+      thumbnailURL: detail.thumbnailURL ?? battle.thumbnailURL,
+      philosopherA: optionA?.representative ?? "",
+      optionATitle: optionA?.title ?? "",
+      optionADescription: isSameBattle ? battle.optionADescription : nil,
+      philosopherAImageURL: optionA?.imageURL,
+      philosopherB: optionB?.representative ?? "",
+      optionBTitle: optionB?.title ?? "",
+      optionBDescription: isSameBattle ? battle.optionBDescription : nil,
+      philosopherBImageURL: optionB?.imageURL,
+      category: battle.category,
+      categoryDisplayTitle: detail.categoryTags.first ?? "",
+      level: battle.level,
+      audioDuration: detail.audioDuration,
+      viewCount: battle.viewCount,
+      commentCount: battle.commentCount
+    )
+    return ClassRoom(
+      id: id,
+      name: name,
+      joinCode: joinCode,
+      battle: summary,
+      deadline: deadline,
+      closeAt: closeAt,
+      memberCount: memberCount,
+      activeMemberCount: activeMemberCount,
+      role: role,
+      status: status,
+      allowsAnonymousOpinion: allowsAnonymousOpinion,
+      requiresComment: requiresComment,
+      ownerParticipates: ownerParticipates,
+      memberCapacity: memberCapacity,
+      battleType: battleType,
+      ticketExpiresAt: ticketExpiresAt
+    )
+  }
+}
+
+public extension ClassRoom {
   static let mocks: [ClassRoom] = [
     .init(
       id: 1,

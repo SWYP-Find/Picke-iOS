@@ -17,6 +17,8 @@ public protocol ClassRoomInterface: Sendable {
   func joinClass(joinCode: String, nickname: String) async throws -> ClassRoom
   func updateDeadline(id: Int, deadline: Date) async throws -> ClassRoom
   func updateName(id: Int, name: String) async throws -> ClassRoom
+  /// Android `PATCH /classes/{id}` — 이름과(바뀐 경우) 마감일을 한 번에 보낸다.
+  func updateClass(id: Int, name: String, deadline: Date?) async throws -> ClassRoom
   func deleteClass(id: Int) async throws
   func leaveClass(id: Int) async throws
 }
@@ -24,6 +26,15 @@ public protocol ClassRoomInterface: Sendable {
 public extension ClassRoomInterface {
   func updateName(id _: Int, name _: String) async throws -> ClassRoom {
     throw ClassError.userMessage("클래스 이름 변경을 지원하지 않습니다.")
+  }
+
+  /// 단일 PATCH 를 지원하지 않는 테스트 대역용 기본 구현.
+  func updateClass(id: Int, name: String, deadline: Date?) async throws -> ClassRoom {
+    var updated = try await updateName(id: id, name: name)
+    if let deadline {
+      updated = try await updateDeadline(id: id, deadline: deadline)
+    }
+    return updated
   }
 
   func fetchClassPreview(joinCode: String) async throws -> ClassJoinPreview {

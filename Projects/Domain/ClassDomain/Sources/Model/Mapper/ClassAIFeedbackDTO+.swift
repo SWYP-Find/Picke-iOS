@@ -103,3 +103,46 @@ extension ClassInsightDTO {
     }
   }
 }
+
+// MARK: - Android ClassResult 보드 (상태 보존)
+
+extension ClassAIGenerationState {
+  var resultReportState: ClassResultReportState {
+    switch self {
+    case .beforeClose: .beforeClose
+    case .notEligible: .notEligible
+    case .pending, .unknown: .pending
+    case .generating: .generating
+    case .succeeded: .succeeded
+    case .limited: .limited
+    case .failed: .failed
+    }
+  }
+}
+
+extension ClassInsightDTO {
+  func toBoard() -> ClassResultInsightBoard {
+    ClassResultInsightBoard(state: state.resultReportState, insightText: insightText, retryable: retryable)
+  }
+}
+
+extension ClassPersonalReportDTO {
+  func toBoard() -> ClassResultMyReportBoard {
+    ClassResultMyReportBoard(
+      state: state.resultReportState,
+      preOptionTitle: preOption?.title,
+      postOptionTitle: postOption?.title,
+      perspectiveCount: perspectiveCount ?? 0,
+      commentCount: commentCount ?? 0,
+      feedback: feedback.map {
+        ClassResultMyReportBoard.Feedback(
+          judgmentBasis: $0.judgmentBasis,
+          strength: $0.strength?.body,
+          nextFocus: $0.nextFocus?.body,
+          nextQuestion: $0.nextQuestion,
+          coverage: $0.coverage
+        )
+      }
+    )
+  }
+}

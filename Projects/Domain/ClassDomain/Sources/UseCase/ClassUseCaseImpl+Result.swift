@@ -21,6 +21,14 @@ extension ClassUseCaseImpl {
     try await repository.fetchInsight(roomID: roomID)
   }
 
+  public func fetchInsightBoard(roomID: Int) async throws -> ClassResultInsightBoard {
+    try await repository.fetchInsightBoard(roomID: roomID)
+  }
+
+  public func fetchMyReportBoard(roomID: Int) async throws -> ClassResultMyReportBoard {
+    try await repository.fetchMyReportBoard(roomID: roomID)
+  }
+
   public func retryInsight(roomID: Int) async throws {
     try await repository.retryInsight(roomID: roomID)
   }

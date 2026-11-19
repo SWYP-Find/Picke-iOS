@@ -53,6 +53,7 @@ public struct ClassOwnerDashboardView: View {
         ClassManagementSheet(
           room: store.room,
           onEdit: { send(.managementEditTapped) },
+          onShare: { send(.managementShareTapped) },
           onDelete: { send(.managementDeleteTapped) }
         )
         .frame(maxWidth: .infinity)

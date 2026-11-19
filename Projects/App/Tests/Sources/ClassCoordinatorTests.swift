@@ -598,29 +598,16 @@ struct ClassCoordinatorTests {
       id: 1,
       action: .detail(.delegate(.openReport(updatedRoom)))
     )))
-    await store.send(.router(.routeAction(
-      id: 2,
-      action: .ownerDashboard(.view(.onAppear))
-    )))
-    await store.receive {
-      guard case .router(.routeAction(id: 2, action: .ownerDashboard(.async(.fetchDashboard)))) = $0
-      else { return false }
-      return true
-    }
-    await store.receive {
-      guard case let .router(.routeAction(id: 2, action: .ownerDashboard(action))) = $0,
-            case .inner(.resultResponse) = action else { return false }
-      return true
-    }
     await store.finish()
 
-    guard case let .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
-      Issue.record("마감일 변경 후 운영자 보고서가 열리지 않음")
+    // Android ClassResult: 운영자도 공용 결과 화면을 열고, 갱신된 방으로 결과를 다시 받는다.
+    guard case let .result(resultState)? = store.state.routes.last?.screen else {
+      Issue.record("마감일 변경 후 결과 화면이 열리지 않음")
       return
     }
-    #expect(dashboard.room.deadline == updatedRoom.deadline)
-    #expect(dashboard.sourceViewState == .ready)
-    #expect(dashboard.classResult == result)
+    #expect(resultState.room.deadline == updatedRoom.deadline)
+    #expect(resultState.isLoading)
+    _ = result
   }
 
   @Test
@@ -1021,7 +1008,7 @@ struct ClassCoordinatorTests {
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
     guard case let .detail(preservedDetail) = store.state.routes[1].screen,
-          case let .report(report)? = store.state.routes.last?.screen
+          case let .result(report)? = store.state.routes.last?.screen
     else {
       Issue.record("댓글 리포트가 기존 상세 위에 열리지 않음")
       return
@@ -1032,7 +1019,7 @@ struct ClassCoordinatorTests {
 
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
-    await store.send(.router(.routeAction(id: 2, action: .report(.delegate(.dismiss)))))
+    await store.send(.router(.routeAction(id: 2, action: .result(.delegate(.dismiss)))))
     await store.receive {
       guard case .view(.backAction) = $0 else { return false }
       return true
@@ -1064,7 +1051,7 @@ struct ClassCoordinatorTests {
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
     guard case .detail = store.state.routes[1].screen,
-          case let .report(report)? = store.state.routes.last?.screen
+          case let .result(report)? = store.state.routes.last?.screen
     else {
       Issue.record("AI 경로를 정리한 뒤 리포트가 상세 위에 열리지 않음")
       return
@@ -1091,7 +1078,7 @@ struct ClassCoordinatorTests {
 
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
-    guard case .report? = store.state.routes.last?.screen else {
+    guard case .result? = store.state.routes.last?.screen else {
       Issue.record("완료된 AI 투표의 댓글 리포트가 열리지 않음")
       return
     }
@@ -1101,7 +1088,7 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 운영자_댓글의_리포트는_운영자_대시보드로_열린다() async {
+  func 운영자_댓글의_리포트도_Android_공용_결과_화면으로_열린다() async {
     let room = ClassRoom.mocks[0]
     let battleID = -1_000_000 - room.id
     var state = ClassCoordinator.State()
@@ -1115,8 +1102,8 @@ struct ClassCoordinatorTests {
 
     await store.send(.view(.chatReportTapped(battleID: battleID)))
     #expect(store.state.routes.count == 3)
-    guard case let .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
-      Issue.record("운영자 댓글이 운영자 대시보드로 연결되지 않음")
+    guard case let .result(dashboard)? = store.state.routes.last?.screen else {
+      Issue.record("운영자 댓글이 결과 화면으로 연결되지 않음")
       return
     }
     #expect(dashboard.room == room)
@@ -1197,13 +1184,13 @@ struct ClassCoordinatorTests {
       id: 2,
       action: .closedBattle(.delegate(.openReport(room)))
     )))
-    guard case .report? = store.state.routes.last?.screen else {
-      Issue.record("멤버 리포트로 이동하지 않음")
+    guard case .result? = store.state.routes.last?.screen else {
+      Issue.record("멤버 결과 화면으로 이동하지 않음")
       return
     }
     #expect(!store.state.showsTabBar)
 
-    await store.send(.router(.routeAction(id: 3, action: .report(.delegate(.dismiss)))))
+    await store.send(.router(.routeAction(id: 3, action: .result(.delegate(.dismiss)))))
     await store.receive {
       guard case .view(.backAction) = $0 else { return false }
       return true
@@ -1217,7 +1204,7 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 운영자_대시보드에서는_탭바를_숨긴다() async {
+  func 결과_화면에서는_탭바를_숨기고_닫으면_복구한다() async {
     let room = ClassRoom.mocks[0]
     var state = ClassCoordinator.State()
     state.routes.push(.detail(testDetailState(room: room)))
@@ -1231,36 +1218,15 @@ struct ClassCoordinatorTests {
       action: .detail(.delegate(.openReport(room)))
     )))
     #expect(!store.state.showsTabBar)
-    guard case var .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
-      Issue.record("운영자 대시보드가 열리지 않음")
+    guard case let .result(result)? = store.state.routes.last?.screen else {
+      Issue.record("결과 화면이 열리지 않음")
       return
     }
-
-    var tabBarState = store.state
-    dashboard.selectedTab = .report
-    tabBarState.routes[screenAt: 2] = .ownerDashboard(dashboard)
-    #expect(!tabBarState.showsTabBar)
-
-    dashboard.management = .init(kind: .management)
-    tabBarState.routes[screenAt: 2] = .ownerDashboard(dashboard)
-    #expect(!tabBarState.showsTabBar)
-
-    dashboard.management = nil
-    tabBarState.routes[screenAt: 2] = .ownerDashboard(dashboard)
-    #expect(!tabBarState.showsTabBar)
-
-    tabBarState.deadlineEdit = .init(
-      room: room,
-      instanceID: UUID(),
-      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
-    )
-    #expect(!tabBarState.showsTabBar)
-    tabBarState.deadlineEdit = nil
-    #expect(!tabBarState.showsTabBar)
+    #expect(result.room == room)
 
     await store.send(.router(.routeAction(
       id: 2,
-      action: .ownerDashboard(.delegate(.dismiss))
+      action: .result(.delegate(.dismiss))
     )))
     await store.receive {
       guard case .view(.backAction) = $0 else { return false }
@@ -1295,7 +1261,7 @@ struct ClassCoordinatorTests {
   }
 
   @Test
-  func 마감된_운영자_결과는_요약으로_직접_이동한다() async {
+  func 마감된_운영자_결과도_공용_결과_화면으로_이동한다() async {
     let room = ClassRoom.mocks[2]
     var state = ClassCoordinator.State()
     state.routes.push(.detail(testDetailState(room: room)))
@@ -1310,8 +1276,8 @@ struct ClassCoordinatorTests {
       id: 1,
       action: .detail(.delegate(.openReport(room)))
     )))
-    guard case .ownerDashboard? = store.state.routes.last?.screen else {
-      Issue.record("운영자 요약으로 이동하지 않음")
+    guard case .result? = store.state.routes.last?.screen else {
+      Issue.record("운영자 결과 화면으로 이동하지 않음")
       return
     }
   }
@@ -2435,7 +2401,7 @@ struct ClassDeadlineSheetCoordinatorTests {
   }
 
   @Test
-  func 세_화면에서_현재_경로를_유지하며_마감일_시트를_연다() async {
+  func 목록과_상세의_수정은_현재_경로_위에_수정_화면을_연다() async {
     let room = ClassRoom.mocks[0]
     var list = MyClassFeature.State()
     list.rooms = [room]
@@ -2459,15 +2425,20 @@ struct ClassDeadlineSheetCoordinatorTests {
 
     await store.send(.view(.backAction))
     await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openRoom(room))))))
-    await store.send(.router(.routeAction(id: 2, action: .detail(.delegate(.openDeadline(room))))))
-    #expect(store.state.routes.count == 3)
-    #expect(store.state.deadlineEdit?.room == room)
-
-    await store.send(.deadlineEdit(.dismiss))
-    await store.send(.router(.routeAction(id: 2, action: .detail(.delegate(.openReport(room))))))
-    await store.send(.router(.routeAction(id: 3, action: .ownerDashboard(.delegate(.editClass)))))
-    #expect(store.state.routes.count == 5)
+    // Android ClassDetail 마감일 "수정"도 ClassEdit 화면으로 이동한다.
+    await store.send(.router(.routeAction(id: 2, action: .detail(.delegate(.openEdit(room))))))
+    #expect(store.state.routes.count == 4)
+    #expect(store.state.deadlineEdit == nil)
     #expect(store.state.routes.last.map { if case .classEdit = $0.screen { true } else { false } } == true)
+
+    // 수정 화면의 마감일 필드를 누르면 마감일 선택 시트가 유지되어야 한다.
+    await store.send(.router(.routeAction(id: 3, action: .classEdit(.view(.deadlineFieldTapped)))))
+    guard case let .classEdit(edit)? = store.state.routes.last?.screen else {
+      Issue.record("수정 화면이 아니다")
+      return
+    }
+    await store.receive(\.router)
+    #expect(store.state.deadlineSelection?.settingInstanceID == edit.instanceID)
   }
 
   @Test
@@ -2489,7 +2460,6 @@ struct ClassDeadlineSheetCoordinatorTests {
     await store.send(.deadlineEdit(.dismiss))
     await store.send(.view(.backAction))
     await store.send(.view(.backToRootAction))
-    await store.send(.router(.routeAction(id: 1, action: .detail(.delegate(.openDeadline(room))))))
     #expect(store.state.deadlineEdit?.instanceID == editor.instanceID)
     #expect(store.state.routes.count == 2)
   }
