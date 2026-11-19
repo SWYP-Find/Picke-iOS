@@ -142,19 +142,12 @@ private extension ClassEditFeature {
       state.isSaving = true
       state.errorMessage = nil
       let roomID = state.room.id
-      let name = state.isNameChanged ? state.trimmedName : nil
+      // Android ClassEditViewModel.updateClass: 이름은 항상, 마감일은 바뀐 경우만 한 번의 PATCH 로 보낸다.
+      let name = state.trimmedName
       let deadline = state.isDeadlineChanged ? state.deadline : nil
       return .run { [classUseCase] send in
         let result = await Result {
-          var updated: ClassRoom?
-          if let name {
-            updated = try await classUseCase.updateName(id: roomID, name: name)
-          }
-          if let deadline {
-            updated = try await classUseCase.updateDeadline(id: roomID, deadline: deadline)
-          }
-          guard let updated else { throw ClassError.userMessage("변경할 내용이 없어요.") }
-          return updated
+          try await classUseCase.updateClass(id: roomID, name: name, deadline: deadline)
         }
         .mapError(ClassError.from)
         await send(.inner(.saveResponse(result)))

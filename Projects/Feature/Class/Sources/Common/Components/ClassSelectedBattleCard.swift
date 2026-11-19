@@ -13,6 +13,14 @@ import SwiftUI
 /// 설정과 공유 화면에서 선택한 배틀을 보여주는 카드.
 struct ClassSelectedBattleCard: View {
   let battle: ClassBattleSummary
+  /// Android ClassBattleType.isAiBattle(CUSTOM)이면 소요 시간을 숨긴다.
+  var isAIBattle = false
+
+  /// Android ClassBattleUiModel: 분은 올림, AI 배틀이거나 0분이면 표시하지 않는다.
+  private var durationMinutes: Int? {
+    let minutes = (battle.audioDuration + 59) / 60
+    return isAIBattle || minutes == 0 ? nil : minutes
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -30,19 +38,23 @@ private extension ClassSelectedBattleCard {
   func battleInfo() -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
-        Text("#\(battle.categoryDisplayTitle)")
-          .frame(minHeight: 17)
-          .pickeBadge(.filled, size: .tag)
+        if !battle.categoryDisplayTitle.isEmpty {
+          Text("#\(battle.categoryDisplayTitle)")
+            .frame(minHeight: 17)
+            .pickeBadge(.filled, size: .tag)
+        }
 
         Spacer(minLength: 0)
 
-        HStack(spacing: 2) {
-          Image(systemName: "clock")
-            .pretendardFont(.labelXSmall)
-          Text("\(battle.durationMinutes)분")
-            .pretendardFont(.labelSmall)
+        if let durationMinutes {
+          HStack(spacing: 2) {
+            Image(systemName: "clock")
+              .pretendardFont(.labelXSmall)
+            Text("\(durationMinutes)분")
+              .pretendardFont(.labelSmall)
+          }
+          .foregroundStyle(.gray300)
         }
-        .foregroundStyle(.gray300)
       }
       .frame(minHeight: 22)
 

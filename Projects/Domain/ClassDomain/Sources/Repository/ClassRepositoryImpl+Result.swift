@@ -43,6 +43,24 @@ extension ClassRepositoryImpl {
     }
   }
 
+  public func fetchInsightBoard(roomID: Int) async throws -> ClassResultInsightBoard {
+    do {
+      let payload = try await client.send(ClassResultService.insight(roomID), as: ClassInsightDTO.self)
+      return payload.toBoard()
+    } catch {
+      throw Self.feedbackError(error)
+    }
+  }
+
+  public func fetchMyReportBoard(roomID: Int) async throws -> ClassResultMyReportBoard {
+    do {
+      let payload = try await client.send(ClassResultService.myReport(roomID), as: ClassPersonalReportDTO.self)
+      return payload.toBoard()
+    } catch {
+      throw Self.feedbackError(error)
+    }
+  }
+
   public func retryInsight(roomID: Int) async throws {
     do {
       let payload = try await client.send(ClassResultService.retryInsight(roomID), as: ClassInsightRetryDTO.self)

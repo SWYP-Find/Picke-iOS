@@ -67,6 +67,9 @@ public struct ClassCoordinatorView: View {
 
       case let .report(reportStore):
         ClassReportView(store: reportStore)
+
+      case let .result(resultStore):
+        ClassResultView(store: resultStore)
           .toolbar(.hidden, for: .tabBar)
 
       case let .myOpinions(opinionsStore):

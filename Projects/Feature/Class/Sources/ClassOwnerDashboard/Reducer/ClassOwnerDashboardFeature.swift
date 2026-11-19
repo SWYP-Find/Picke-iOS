@@ -328,6 +328,7 @@ public struct ClassOwnerDashboardFeature {
     case managementTapped
     case managementDismissed
     case managementEditTapped
+    case managementShareTapped
     case managementDeleteTapped
     case tabSelected(ClassOwnerTab)
     case myOpinionsTapped
@@ -381,6 +382,7 @@ public struct ClassOwnerDashboardFeature {
     case dismiss
     case openMyOpinions(UUID)
     case editClass
+    case openShare
     case deleteClass
     case openMemberDetail(ClassOwnerMember)
     case openReplyDetail(ClassOwnerOpinion)
@@ -452,6 +454,9 @@ extension ClassOwnerDashboardFeature {
     case .managementEditTapped:
       state.management = nil
       return .send(.delegate(.editClass))
+    case .managementShareTapped:
+      state.management = nil
+      return .send(.delegate(.openShare))
     case .managementDeleteTapped:
       state.management = nil
       return .send(.delegate(.deleteClass))

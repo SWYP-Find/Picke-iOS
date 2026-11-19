@@ -95,7 +95,7 @@ private extension MyClassRoomCard {
     HStack(spacing: 6) {
       metaItem(
         systemName: "person",
-        text: "멤버 \(room.activeMemberCount)명"
+        text: "멤버 \(room.memberCount)명"
       )
 
       if let deadlineText {

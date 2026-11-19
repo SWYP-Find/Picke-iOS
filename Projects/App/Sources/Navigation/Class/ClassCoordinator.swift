@@ -31,7 +31,10 @@ public struct ClassCoordinator {
     @Presents public var deadlineEdit: ClassDeadlineEditFeature.State?
     @Presents public var deadlineSelection: ClassDeadlineSelectionFeature.State?
 
-    public var isDeadlinePanelPresented: Bool { deadlineEdit != nil || deadlineSelection != nil }
+    public var isDeadlinePanelPresented: Bool {
+      deadlineEdit != nil || deadlineSelection != nil
+    }
+
     var pendingJoinID: UUID?
     var completingJoinCodeInstanceID: UUID?
     var completingJoinNicknameInstanceID: UUID?
@@ -140,7 +143,8 @@ public struct ClassCoordinator {
       let effect = routedBody.reduce(into: &state, action: action)
       if let selection = state.deadlineSelection {
         if case let .setting(setting)? = state.routes.last?.screen,
-           setting.instanceID == selection.settingInstanceID, setting.canEditDeadline {
+           setting.instanceID == selection.settingInstanceID, setting.canEditDeadline
+        {
           return effect
         }
         state.deadlineSelection = nil
@@ -214,7 +218,10 @@ private extension ClassCoordinator {
     state.routes[screenAt: routeID] = .detail(detail)
     return .run { [classUseCase] send in
       do {
-        let room = try await classUseCase.fetchClass(id: roomID)
+        // Android ClassDetailViewModel.fetchClassDetail: 상세와 배틀을 함께 받아 카드에 카테고리·입장을 채운다.
+        async let detailRoom = classUseCase.fetchClass(id: roomID)
+        async let session = classUseCase.fetchBattle(classID: roomID)
+        let room = try await detailRoom.applyingBattle(session.battle)
         await send(.inner(.detailLoaded(
           routeID: routeID,
           roomID: roomID,
@@ -581,7 +588,10 @@ private extension ClassCoordinator {
       state.routes.push(.ticket(.init(instanceID: uuid())))
       return .none
 
-    case let .routeAction(routeID, action: .ticket(.delegate(.registrationConfirmed(startDate: startDate, endDate: endDate)))):
+    case let .routeAction(
+      routeID,
+      action: .ticket(.delegate(.registrationConfirmed(startDate: startDate, endDate: endDate)))
+    ):
       guard routeID == state.routes.count - 1,
             case let .ticket(completed)? = state.routes.last?.screen,
             completed.phase == .registered,
@@ -817,8 +827,29 @@ private extension ClassCoordinator {
       state.routes.push(.share(.init(room: room)))
       return .none
 
-    case .routeAction(_, action: .share(.delegate(.dismiss))):
+    case let .routeAction(routeID, action: .share(.delegate(.dismiss))):
+      // Android ClassShare onBackClick: 기존 클래스에서 열었으면 이전 화면으로 돌아간다.
+      if state.routes.indices.contains(routeID),
+         case let .share(share) = state.routes[routeID].screen,
+         share.isExistingClass
+      {
+        return .send(.view(.backAction))
+      }
       return .send(.view(.backToRootAction))
+
+    case .routeAction(_, action: .share(.delegate(.openMyClasses))):
+      // Android ClassShare onGoToClassClick: 내 클래스 목록으로 이동한다.
+      return returnToMyClasses(state: &state)
+
+    case let .routeAction(_, action: .detail(.delegate(.openShare(room)))),
+         let .routeAction(_, action: .myClasses(.delegate(.openShare(room)))):
+      state.routes.push(.share(.init(room: room, isExistingClass: true)))
+      return .none
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.openShare))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.share(.init(room: dashboard.room, isExistingClass: true)))
+      return .none
 
     case let .routeAction(routeID, action: .share(.delegate(.nameOwner(room)))):
       guard routeID == state.routes.count - 1,
@@ -886,17 +917,25 @@ private extension ClassCoordinator {
             list.rooms.contains(where: { $0.id == room.id })
       else { return .none }
       return .run { [classUseCase] send in
-        let result = await Result { try await classUseCase.fetchClass(id: room.id) }
-          .mapError(ClassError.from)
+        // Android ClassEditViewModel: 상세와 배틀을 함께 받아 선택한 배틀 카드를 채운다.
+        let result = await Result {
+          async let detailRoom = classUseCase.fetchClass(id: room.id)
+          async let session = classUseCase.fetchBattle(classID: room.id)
+          return try await detailRoom.applyingBattle(session.battle)
+        }
+        .mapError(ClassError.from)
         await send(.inner(.deadlineDetailResponse(routeID: routeID, roomID: room.id, result)))
       }
 
-    case let .routeAction(routeID, action: .detail(.delegate(.openDeadline(room)))):
+    case let .routeAction(routeID, action: .detail(.delegate(.openEdit(room)))):
+      // Android ClassDetail DeadlineEditClick·ManageEditClick → ClassEdit.
       guard routeID == state.routes.count - 1,
             case let .detail(detail)? = state.routes.last?.screen,
-            detail.room.id == room.id
+            detail.room.id == room.id,
+            room.role == .owner
       else { return .none }
-      return openDeadlineEditor(state: &state, room: room)
+      state.routes.push(.classEdit(.init(room: detail.room)))
+      return .none
 
     case let .routeAction(_, action: .detail(.delegate(.openMembers(room)))):
       let member = ClassMemberFeature.State(room: room, instanceID: uuid())
@@ -986,11 +1025,24 @@ private extension ClassCoordinator {
 
     case let .routeAction(_, action: .detail(.delegate(.openReport(room)))),
          let .routeAction(_, action: .closedBattle(.delegate(.openReport(room)))):
-      if room.role == .owner {
-        state.routes.push(.ownerDashboard(.init(room: room)))
-      } else {
-        state.routes.push(.report(.init(room: room)))
-      }
+      // Android onResultClick → ClassResult: 운영자·멤버가 같은 결과 화면을 쓴다.
+      state.routes.push(.result(.init(room: room)))
+      return .none
+
+    case let .routeAction(routeID, action: .result(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .result? = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .result(.delegate(.openMyOpinions(classID)))):
+      // Android ClassResult NavigateToMyOpinion.
+      guard routeID == state.routes.count - 1,
+            case .result? = state.routes.last?.screen
+      else { return .none }
+      var opinions = ClassMyOpinionsFeature.State()
+      opinions.classID = classID
+      state.routes.push(.myOpinions(opinions))
       return .none
 
     case let .routeAction(routeID, action: .report(.delegate(.openMyOpinions(instanceID)))):
@@ -1081,6 +1133,10 @@ private extension ClassCoordinator {
       else { return .none }
       applyUpdatedRoom(state: &state, room: room)
       state.routes.pop()
+      // Android RESULT_CLASS_CHANGED: 상세로 돌아오면 상세·배틀을 다시 받는다.
+      if case .detail? = state.routes.last?.screen {
+        return fetchDetail(state: &state, routeID: state.routes.count - 1)
+      }
       return .none
 
     case .routeAction(_, action: .ownerDashboard(.delegate(.deleteClass))):
@@ -1158,11 +1214,8 @@ private extension ClassCoordinator {
             case let .battleFlow(flow)? = state.routes.last?.screen,
             let room = flow.room,
             room.id == classID else { return .none }
-      if room.role == .owner {
-        state.routes.push(.ownerDashboard(.init(room: room)))
-      } else {
-        state.routes.push(.report(.init(room: room)))
-      }
+      // Android onResultClick → ClassResult: 운영자·멤버가 같은 결과 화면을 쓴다.
+      state.routes.push(.result(.init(room: room)))
       return .none
 
     case let .routeAction(routeID, action: .battleFlow(.delegate(.openPerspective(id)))):
@@ -1190,14 +1243,13 @@ private extension ClassCoordinator {
           }
         } else {
           while state.routes.count > 1, let screen = state.routes.last?.screen {
-            let isCompletedFlowRoute: Bool
-            switch screen {
+            let isCompletedFlowRoute: Bool = switch screen {
             case let .aiVote(previous):
-              isCompletedFlowRoute = previous.room.id == vote.room.id
+              previous.room.id == vote.room.id
             case let .aiChat(previous):
-              isCompletedFlowRoute = previous.room.id == vote.room.id
+              previous.room.id == vote.room.id
             default:
-              isCompletedFlowRoute = false
+              false
             }
             guard isCompletedFlowRoute else { break }
             state.routes.goBack()
@@ -1230,11 +1282,35 @@ private extension ClassCoordinator {
       return .none
 
     case .routeAction(_, action: .detail(.delegate(.deleted))):
-      return .send(.view(.backToRootAction))
+      // Android onClassRemoved: 이전 화면(내 클래스)으로 돌아가 목록을 갱신한다.
+      return returnToMyClasses(state: &state)
+
+    case let .routeAction(_, action: .detail(.delegate(.left(roomID)))):
+      state.completedAIBattles[-1_000_000 - roomID] = nil
+      state.chatRoomsByBattleID[-1_000_000 - roomID] = nil
+      return returnToMyClasses(state: &state)
 
     default:
       return .none
     }
+  }
+
+  /// 스택의 내 클래스 목록으로 돌아가 다시 불러온다. 목록이 없으면 소개 화면 위에 연다.
+  func returnToMyClasses(state: inout State) -> Effect<Action> {
+    if let listIndex = state.routes.lastIndex(where: {
+      if case .myClasses = $0.screen { return true }
+      return false
+    }) {
+      while state.routes.count > listIndex + 1 {
+        state.routes.goBack()
+      }
+      return .send(.router(.routeAction(id: listIndex, action: .myClasses(.async(.fetchRooms)))))
+    }
+    invalidateCompletingJoin(state: &state)
+    state.routes.goBackToRoot()
+    state.chatRoomsByBattleID.removeAll()
+    state.routes.push(.myClasses(.init()))
+    return .none
   }
 
   func returnToClassDetail(
@@ -1318,9 +1394,7 @@ private extension ClassCoordinator {
       while state.routes.count > detailIndex + 2 {
         state.routes.goBack()
       }
-      state.routes[screenAt: detailIndex + 1] = room.role == .owner
-        ? .ownerDashboard(.init(room: room))
-        : .report(.init(room: room))
+      state.routes[screenAt: detailIndex + 1] = .result(.init(room: room))
       return .none
     }
   }
@@ -1517,6 +1591,7 @@ extension ClassCoordinator {
     case detail(ClassDetailFeature)
     case members(ClassMemberFeature)
     case report(ClassReportFeature)
+    case result(ClassResultFeature)
     case myOpinions(ClassMyOpinionsFeature)
     case closedBattle(ClassClosedBattleFeature)
     case ownerDashboard(ClassOwnerDashboardFeature)

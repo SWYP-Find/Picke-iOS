@@ -52,6 +52,7 @@ public struct MyClassView: View {
           ClassManagementSheet(
             room: room,
             onEdit: { send(.editClassTapped) },
+            onShare: { send(.shareTapped) },
             onDelete: { send(.deleteTapped) },
             onLeave: { send(.leaveTapped) }
           )

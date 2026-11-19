@@ -22,7 +22,7 @@ public struct ClassDetailView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(onBack: { send(.backTapped) }, centerTitle: "클래스 상세") {
-        if store.viewState == .loaded, store.room.role == .owner {
+        if store.viewState == .loaded {
           Button { send(.managementTapped) } label: {
             Image(systemName: "ellipsis")
               .font(.system(size: 20))
@@ -54,8 +54,10 @@ public struct ClassDetailView: View {
         modalBackdrop({ send(.managementDismissed) }) {
           ClassManagementSheet(
             room: store.room,
-            onEdit: { send(.deadlineTapped) },
-            onDelete: { send(.deleteTapped) }
+            onEdit: { send(.editTapped) },
+            onShare: { send(.shareTapped) },
+            onDelete: { send(.deleteTapped) },
+            onLeave: { send(.leaveTapped) }
           )
         }
       case .deadline:
@@ -65,6 +67,11 @@ public struct ClassDetailView: View {
       }
     }
     .customAlert($store.scope(state: \.customAlert, action: \.customAlert))
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
 }
 
@@ -72,11 +79,10 @@ private extension ClassDetailView {
   @ViewBuilder
   func detailContent() -> some View {
     ScrollView {
+      // Android ClassDetailContent: 헤더·정보·배틀·버튼을 20 간격으로 쌓는다.
       VStack(alignment: .leading, spacing: 20) {
-        VStack(alignment: .leading, spacing: 16) {
-          headerSection()
-          classInformation()
-        }
+        headerSection()
+        classInformation()
         battleSection()
         actionButtons()
       }
@@ -107,13 +113,20 @@ private extension ClassDetailView {
 
   @ViewBuilder
   func headerSection() -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text(store.room.status == .open ? "진행 중" : "종료")
-        .pretendardFont(.medium13)
-        .foregroundStyle(.primary500)
-        .padding(.horizontal, 6)
-        .padding(.vertical, 2)
-        .background(.beige600, in: RoundedRectangle(cornerRadius: 2))
+    VStack(alignment: .leading, spacing: 8) {
+      // Android PickeBadge: 진행 중 SECONDARY(filled), 종료 TERTIARY(회색).
+      switch store.room.status {
+      case .open:
+        Text("진행 중")
+          .pickeBadge(.filled, size: .tag)
+      case .closed:
+        Text("종료")
+          .pretendardFont(.semiBold12)
+          .foregroundStyle(.gray300)
+          .padding(.horizontal, 6)
+          .padding(.vertical, 2)
+          .roundedBackground(.gray50)
+      }
 
       Text(store.room.name)
         .pretendardFont(.semiBold24)
@@ -127,7 +140,7 @@ private extension ClassDetailView {
       Button { send(.membersTapped) } label: {
         informationRow(
           "클래스 멤버",
-          detail: "총 \(store.room.activeMemberCount)명이 참여하고 있어요",
+          detail: "총 \(store.room.memberCount)명이 참여하고 있어요",
           actionTitle: "보기"
         )
       }
@@ -181,85 +194,37 @@ private extension ClassDetailView {
 
   @ViewBuilder
   func battleSection() -> some View {
-    VStack(alignment: .leading, spacing: 8) {
+    // Android ClassDetailBattleSection: `/battle` 응답으로 채운 ClassBattleCard 를 보여준다.
+    VStack(alignment: .leading, spacing: 12) {
       Text("이번 클래스 배틀")
         .pretendardFont(.semiBold15)
         .foregroundStyle(.gray300)
 
       Button { send(.battleTapped) } label: {
-        HStack(spacing: 8) {
-          AsyncImage(url: store.room.battle.thumbnailURL) { image in
-            image.resizable().scaledToFill()
-          } placeholder: {
-            Color.beige600
-          }
-          .frame(width: 76, height: 94)
-          .clipShape(RoundedRectangle(cornerRadius: 2))
-
-          VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-              HStack(spacing: 6) {
-                if !store.room.battle.categoryDisplayTitle.isEmpty {
-                  Text("#\(store.room.battle.categoryDisplayTitle)")
-                    .pickeBadge(.filled, size: .tag)
-                }
-                Text(store.room.battle.title)
-                  .pretendardFont(family: .SemiBold, size: 14)
-                  .foregroundStyle(.gray500)
-                  .lineLimit(1)
-              }
-              Text(store.room.battle.summary)
-                .pretendardFont(.regular13)
-                .foregroundStyle(.gray300)
-                .lineLimit(2)
-            }
-            if store.room.battle.audioDuration > 0 {
-              HStack(spacing: 2) {
-                Spacer(minLength: 0)
-                Image(systemName: "clock")
-                  .font(.system(size: 12))
-                Text("\(store.room.battle.durationMinutes)분")
-                  .pretendardFont(family: .Medium, size: 12)
-              }
-              .foregroundStyle(.gray300)
-            }
-          }
-          .frame(height: 94)
-          Spacer(minLength: 0)
-        }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.beige50, in: RoundedRectangle(cornerRadius: 2))
-        .overlay(RoundedRectangle(cornerRadius: 2).stroke(.beige600, lineWidth: 1))
+        ClassSelectedBattleCard(
+          battle: store.room.battle,
+          isAIBattle: store.room.battleType == .custom
+        )
       }
       .buttonStyle(.plain)
-      .disabled(!store.canParticipateInBattle)
     }
   }
 
   @ViewBuilder
   func actionButtons() -> some View {
+    // Android ClassDetailActionSection: 마감 여부와 관계없이 두 버튼을 모두 둔다.
     VStack(spacing: 12) {
-      if store.room.status == .closed {
-        Button("결과 보기") {
-          send(store.room.role == .owner ? .reportTapped : .battleTapped)
-        }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
-      } else {
-        Button { send(.battleTapped) } label: {
-          Text("배틀 참여")
-            .pretendardFont(.headingMedium)
-            .foregroundStyle(.primary500)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(.primary50, in: RoundedRectangle(cornerRadius: 2))
-        }
-        .buttonStyle(.plain)
-        .disabled(!store.canParticipateInBattle)
-        Button("결과 보기") { send(.reportTapped) }
-          .ctaButtonStyle(.primary, size: .large, height: 52)
+      Button { send(.battleTapped) } label: {
+        Text("배틀 참여")
+          .pretendardFont(.headingMedium)
+          .foregroundStyle(.primary500)
+          .frame(maxWidth: .infinity)
+          .frame(height: 52)
+          .background(Color.buttonSecondaryBackgroundDefault, in: RoundedRectangle(cornerRadius: 2))
       }
+      .buttonStyle(.plain)
+      Button("결과 보기") { send(.reportTapped) }
+        .ctaButtonStyle(.primary, size: .large, height: 52)
     }
   }
 

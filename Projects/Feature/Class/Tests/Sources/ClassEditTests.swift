@@ -29,7 +29,7 @@ struct ClassEditTests {
   }
 
   @Test
-  func 이름만_바꾸면_이름_변경만_요청하고_저장_결과를_전달한다() async {
+  func 이름만_바꾸면_마감일_없이_PATCH_한_번으로_저장하고_결과를_전달한다() async {
     let room = makeRoom()
     let renamed = makeRoom(name: "새 클래스 이름")
     let calls = LockIsolated<[String]>([])
@@ -37,8 +37,9 @@ struct ClassEditTests {
     state.name = "새 클래스 이름"
     let store = TestStore(initialState: state) { ClassEditFeature() } withDependencies: {
       $0.classRoomUseCase = ClassEditRoomStub(
-        onUpdateName: { name in calls.withValue { $0.append("name:\(name)") }; return renamed },
-        onUpdateDeadline: { _ in calls.withValue { $0.append("deadline") }; return room }
+        onUpdateName: { _ in renamed },
+        onUpdateDeadline: { _ in room },
+        calls: calls
       )
     }
 
@@ -50,7 +51,8 @@ struct ClassEditTests {
       $0.room = renamed
     }
     await store.receive(\.delegate, .saved(renamed))
-    #expect(calls.value == ["name:새 클래스 이름"])
+    // Android ClassEditViewModel.updateClass: 이름은 항상, 마감일은 바뀐 경우만 한 번에 보낸다.
+    #expect(calls.value == ["class:새 클래스 이름|nil"])
   }
 
   @Test
@@ -166,6 +168,26 @@ struct ClassEditTests {
 private struct ClassEditRoomStub: ClassRoomInterface {
   let onUpdateName: @Sendable (String) async throws -> ClassRoom
   let onUpdateDeadline: @Sendable (Date) async throws -> ClassRoom
+  var calls: LockIsolated<[String]>?
+
+  init(
+    onUpdateName: @escaping @Sendable (String) async throws -> ClassRoom,
+    onUpdateDeadline: @escaping @Sendable (Date) async throws -> ClassRoom,
+    calls: LockIsolated<[String]>? = nil
+  ) {
+    self.onUpdateName = onUpdateName
+    self.onUpdateDeadline = onUpdateDeadline
+    self.calls = calls
+  }
+
+  func updateClass(id _: Int, name: String, deadline: Date?) async throws -> ClassRoom {
+    calls?.withValue { $0.append("class:\(name)|\(deadline.map { _ in "deadline" } ?? "nil")") }
+    var updated = try await onUpdateName(name)
+    if let deadline {
+      updated = try await onUpdateDeadline(deadline)
+    }
+    return updated
+  }
 
   func updateName(id _: Int, name: String) async throws -> ClassRoom {
     try await onUpdateName(name)

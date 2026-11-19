@@ -79,11 +79,12 @@ struct ClassBattleFlowCoordinatorTests {
       Issue.record("리포트 뒤로가기를 위한 의견 화면 경로가 사라졌습니다")
       return
     }
-    guard case let .ownerDashboard(dashboard)? = store.state.routes.last?.screen else {
-      Issue.record("TTS 의견 화면에서 리포트로 이동하지 않았습니다")
+    // Android ClassResult: 운영자·멤버 공용 결과 화면으로 이동한다.
+    guard case let .result(result)? = store.state.routes.last?.screen else {
+      Issue.record("TTS 의견 화면에서 결과 화면으로 이동하지 않았습니다")
       return
     }
-    #expect(dashboard.room.id == room.id)
+    #expect(result.room.id == room.id)
   }
 
   @Test

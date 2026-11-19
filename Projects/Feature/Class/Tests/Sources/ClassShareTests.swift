@@ -20,6 +20,18 @@ struct ClassShareTests {
     let state = ClassShareFeature.State(room: room)
     #expect(state.shareMessage.contains(room.name))
     #expect(state.shareMessage.contains(room.joinCode))
+    // Android class_share_code_message.
+    #expect(state.shareMessage == "[픽케] '\(room.name)' 클래스에 초대합니다.\n참여 코드: \(room.joinCode)\n픽케 앱 클래스 탭에서 참여 코드를 입력해 주세요.")
+  }
+
+  @Test
+  func 기존_클래스에서_연_공유_화면의_클래스로_이동하기는_내_클래스_목록으로_간다() async {
+    let store = TestStore(initialState: ClassShareFeature.State(room: room, isExistingClass: true)) {
+      ClassShareFeature()
+    }
+
+    await store.send(.view(.enterClassTapped))
+    await store.receive(\.delegate, .openMyClasses)
   }
 
   @Test
@@ -38,7 +50,7 @@ struct ClassShareTests {
       memberCapacity: room.memberCapacity
     )
     #expect(ClassShareFeature.State(room: noDeadline).deadlineText == nil)
-    #expect(ClassShareFeature.State(room: room).deadlineText?.hasPrefix("참여 마감 · ") == true)
+    #expect(ClassShareFeature.State(room: room).deadlineText?.hasPrefix("참여 마감・") == true)
   }
 
   @Test

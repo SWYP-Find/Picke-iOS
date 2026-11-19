@@ -1,8 +1,50 @@
 import Foundation
 
 public extension MockClassRepository {
+  /// 상세·공유·결과 화면이 상세와 함께 받는 `/battle` 을 저장된 클래스로 흉내 낸다.
   public func fetchBattle(classID: Int) async throws -> ClassBattleSession {
-    throw ClassError.unknown("모의 클래스 기능이 설정되지 않았습니다: fetchBattle")
+    let room = try await fetchClass(id: classID)
+    let battle = room.battle
+    return ClassBattleSession(
+      classID: room.id,
+      myRole: room.role,
+      closeAt: room.closeAt ?? room.deadline,
+      closed: room.status == .closed,
+      commentRequired: room.requiresComment,
+      canParticipate: room.role != .owner || room.ownerParticipates,
+      participationCompleted: false,
+      battle: ClassBattleDetail(
+        id: battle.id,
+        title: battle.title,
+        summary: battle.summary,
+        thumbnailURL: battle.thumbnailURL,
+        description: "",
+        shareURL: nil,
+        userVoteStatus: nil,
+        currentStep: .none,
+        participantsCount: room.memberCount,
+        audioDuration: battle.audioDuration,
+        options: [
+          ClassBattleOption(
+            id: 1,
+            label: "A",
+            title: battle.optionATitle,
+            stance: battle.optionATitle,
+            representative: battle.philosopherA,
+            imageURL: battle.philosopherAImageURL
+          ),
+          ClassBattleOption(
+            id: 2,
+            label: "B",
+            title: battle.optionBTitle,
+            stance: battle.optionBTitle,
+            representative: battle.philosopherB,
+            imageURL: battle.philosopherBImageURL
+          ),
+        ],
+        categoryTags: battle.categoryDisplayTitle.isEmpty ? [] : [battle.categoryDisplayTitle]
+      )
+    )
   }
 
   public func submitPreVote(classID: Int, optionID: Int) async throws -> ClassVoteReceipt {

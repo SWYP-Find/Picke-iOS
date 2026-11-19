@@ -32,6 +32,8 @@ public struct ClassDetailFeature {
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
     public var isLoading = false
     public var errorMessage: String?
+    public var toastMessage: String?
+    public var isLeaveConfirmation = false
 
     public init(room: ClassRoom) {
       @Dependency(\.uuid) var uuid
@@ -71,8 +73,13 @@ public struct ClassDetailFeature {
     case codeTapped
     case codeDismissed
     case deadlineTapped
+    case editTapped
+    case shareTapped
     case deleteTapped
     case deleteConfirmed
+    case leaveTapped
+    case leaveConfirmed
+    case toastShown
   }
 
   public enum DelegateAction: Equatable {
@@ -82,16 +89,20 @@ public struct ClassDetailFeature {
     case openBattle(ClassRoom)
     case openClosedBattle(ClassRoom)
     case openReport(ClassRoom)
-    case openDeadline(ClassRoom)
+    case openEdit(ClassRoom)
+    case openShare(ClassRoom)
     case deleted(Int)
+    case left(Int)
   }
 
   public enum AsyncAction: Equatable {
     case delete(Int)
+    case leave(Int)
   }
 
   public enum InnerAction: Equatable {
     case deleted(Int, ClassError?)
+    case left(Int, ClassError?)
   }
 
   @Dependency(\.classRoomUseCase) private var classRoomUseCase
@@ -148,15 +159,17 @@ extension ClassDetailFeature {
   ) -> Effect<Action> {
     switch action {
     case .presented(.confirmTapped):
-      let isDeleteConfirmation = state.customAlert?.style == .deleteConfirm
+      let isConfirmation = state.customAlert?.style == .deleteConfirm
+      let isLeave = state.isLeaveConfirmation
       state.customAlert = nil
       state.errorMessage = nil
-      return isDeleteConfirmation
-        ? handleViewAction(state: &state, action: .deleteConfirmed)
-        : .none
+      state.isLeaveConfirmation = false
+      guard isConfirmation else { return .none }
+      return handleViewAction(state: &state, action: isLeave ? .leaveConfirmed : .deleteConfirmed)
     case .presented(.cancelTapped), .dismiss:
       state.customAlert = nil
       state.errorMessage = nil
+      state.isLeaveConfirmation = false
       return .none
     }
   }
@@ -179,9 +192,14 @@ extension ClassDetailFeature {
       return .send(.delegate(.openMembers(state.room)))
     case .battleTapped:
       guard state.viewState == .loaded else { return .none }
-      guard state.canParticipateInBattle else { return .none }
-      if state.room.status == .closed {
-        return .send(.delegate(.openClosedBattle(state.room)))
+      // Android ClassDetailViewModel.startBattle: 마감 → 미참여 운영자 순으로 토스트를 띄운다.
+      guard state.room.status == .open else {
+        state.toastMessage = "참여 기간이 마감되었어요."
+        return .none
+      }
+      guard state.canParticipateInBattle else {
+        state.toastMessage = "운영자 참여를 켜지 않은 클래스라 배틀에 참여할 수 없어요."
+        return .none
       }
       return .send(.delegate(.openBattle(state.room)))
     case .reportTapped:
@@ -189,7 +207,6 @@ extension ClassDetailFeature {
       return .send(.delegate(.openReport(state.room)))
     case .managementTapped:
       guard state.viewState == .loaded else { return .none }
-      guard state.room.role == .owner else { return .none }
       state.modal = .init(kind: .management)
       return .none
     case .managementDismissed:
@@ -202,11 +219,36 @@ extension ClassDetailFeature {
     case .codeDismissed:
       state.modal = nil
       return .none
-    case .deadlineTapped:
+    case .deadlineTapped, .editTapped:
+      // Android DeadlineEditClick·ManageEditClick 모두 ClassEdit 화면으로 이동한다.
       guard state.viewState == .loaded else { return .none }
       guard state.room.role == .owner else { return .none }
       state.modal = nil
-      return .send(.delegate(.openDeadline(state.room)))
+      return .send(.delegate(.openEdit(state.room)))
+    case .shareTapped:
+      guard state.viewState == .loaded else { return .none }
+      state.modal = nil
+      return .send(.delegate(.openShare(state.room)))
+    case .leaveTapped:
+      guard state.viewState == .loaded else { return .none }
+      guard state.room.role == .member else { return .none }
+      state.modal = nil
+      state.isLeaveConfirmation = true
+      state.customAlert = CustomAlertState(
+        title: "클래스에서 나가면 해당 클래스의 활동과 결과를 더 이상 확인할 수 없어요.",
+        confirmTitle: "나가기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
+      return .none
+    case .leaveConfirmed:
+      guard state.room.role == .member, !state.isLoading else { return .none }
+      state.customAlert = nil
+      return .send(.async(.leave(state.room.id)))
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
     case .deleteTapped:
       guard state.viewState == .loaded else { return .none }
       guard state.room.role == .owner else { return .none }
@@ -242,6 +284,15 @@ extension ClassDetailFeature {
           await send(.inner(.deleted(id, ClassError.from(error))))
         }
       }
+    case let .leave(id):
+      return .run { [classRoomUseCase] send in
+        do {
+          try await classRoomUseCase.leaveClass(id: id)
+          await send(.inner(.left(id, nil)))
+        } catch {
+          await send(.inner(.left(id, ClassError.from(error))))
+        }
+      }
     }
   }
 
@@ -251,7 +302,7 @@ extension ClassDetailFeature {
   ) -> Effect<Action> {
     state.isLoading = false
     switch action {
-    case let .deleted(_, .some(error)):
+    case let .deleted(_, .some(error)), let .left(_, .some(error)):
       state.errorMessage = error.localizedDescription
       state.customAlert = .alert(
         title: "요청을 완료하지 못했어요",
@@ -260,6 +311,8 @@ extension ClassDetailFeature {
       return .none
     case let .deleted(id, .none):
       return .send(.delegate(.deleted(id)))
+    case let .left(id, .none):
+      return .send(.delegate(.left(id)))
     }
   }
 }
