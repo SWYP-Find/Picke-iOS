@@ -121,6 +121,10 @@ def check_gate():
         with open(os.path.join(repo, korean), "w", encoding="utf-8") as f:
             f.write("<svg/>\n")
         cases.append(("한글 경로 변경 감지", [p for p in hs.changed_code_files(repo) if p == korean] or [], True))
+        os.makedirs(os.path.join(repo, "docs"))
+        git("mv", os.path.join("Projects", "A.swift"), os.path.join("docs", "A.swift"))  # 코드 밖으로 옮긴 원본도 잡아야 한다
+        moved = os.path.join("Projects", "A.swift")
+        cases.append(("코드 밖으로 이름 변경", [p for p in hs.changed_code_files(repo) if p == moved], True))
         for name, flagged, should_block in cases:
             if bool(flagged) != should_block:
                 errors.append(f"커밋 게이트 '{name}': {'막아야' if should_block else '통과해야'} 함 ({flagged})")
@@ -167,7 +171,7 @@ def main():
         print("하네스 검사 실패:")
         print("\n".join("  " + e for e in errors))
         return 1
-    print(f"하네스 검사 통과 (제목 {len(MESSAGES)} · 브랜치 {len(BRANCHES)} · 명령 {len(COMMANDS)} · 설치 2 · 게이트 4건)")
+    print(f"하네스 검사 통과 (제목 {len(MESSAGES)} · 브랜치 {len(BRANCHES)} · 명령 {len(COMMANDS)} · 설치 2 · 게이트 5건)")
     return 0
 
 
