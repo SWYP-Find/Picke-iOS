@@ -226,6 +226,7 @@ struct ClassBattlePreviewTests {
       $0.audioErrorMessage = "미리 들을 수 있는 음원이 없어요"
     }
     #expect(store.state.previewScripts.map(\.text) == ["실제 대사"])
+    #expect(store.state.visibleScripts.map(\.text) == ["실제 대사"])
     #expect(!store.state.isAudioReady)
   }
 }

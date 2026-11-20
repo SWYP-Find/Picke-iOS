@@ -21,8 +21,13 @@ struct AudioPlayerServiceTests {
     #expect(player.rate == 0)
 
     service.setPlaybackRate(.nan)
-    service.setPlaybackRate(3)
+    service.setPlaybackRate(4)
     #expect(player.defaultRate == 1.5)
+    #expect(player.rate == 0)
+
+    // Android 배속 순환의 마지막 3배속은 받아들인다.
+    service.setPlaybackRate(3)
+    #expect(player.defaultRate == 3)
     #expect(player.rate == 0)
   }
 

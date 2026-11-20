@@ -85,9 +85,10 @@ public struct ClassBattlePreviewFeature {
       return rates[(index + 1) % rates.count]
     }
 
-    /// Android `visibleScripts`.
+    /// Android `visibleScripts`. 음원이 없거나 불러오지 못하면 재생으로 대사를 열 수 없으니 전부 보여준다.
     public var visibleScripts: [ScenarioScript] {
-      Array(previewScripts.prefix(maxRevealedIndex + 1))
+      guard audioErrorMessage == nil else { return previewScripts }
+      return Array(previewScripts.prefix(maxRevealedIndex + 1))
     }
 
     /// Android `activeIndex`: 재생 위치 직전에 시작한 대사.
