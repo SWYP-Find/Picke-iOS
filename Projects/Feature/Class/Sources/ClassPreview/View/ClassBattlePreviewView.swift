@@ -22,7 +22,7 @@ public struct ClassBattlePreviewView: View {
   public var body: some View {
     VStack(spacing: 0) {
       navigationBar
-      previewBadge
+      previewBadge()
       conversation()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       playerBar
@@ -44,7 +44,8 @@ private extension ClassBattlePreviewView {
   }
 
   /// Android `ClassBattlePreviewBadge`.
-  var previewBadge: some View {
+  @ViewBuilder
+  func previewBadge() -> some View {
     HStack(spacing: 2) {
       Image(systemName: "play.fill")
         .resizable()
@@ -81,16 +82,14 @@ private extension ClassBattlePreviewView {
   /// Android `ClassBattlePreviewScriptSection` — 나온 대사만 `ScenarioChatBubble` 로 쌓고 재생 중인 대사로 스크롤한다.
   @ViewBuilder
   func scriptList() -> some View {
-    let scripts = store.visibleScripts
-    let activeIndex = store.isPlaying ? store.activeScriptIndex : nil
+    let rows = store.visibleRows
     ScrollViewReader { proxy in
       ScrollView {
         LazyVStack(alignment: .leading, spacing: Metric.rowSpacing) {
-          ForEach(Array(scripts.enumerated()), id: \.element.id) { index, script in
-            let showsHeader = index == 0 || scripts[index - 1].speakerType != script.speakerType
-            scriptRow(script, showsHeader: showsHeader, isActive: index == activeIndex)
-              .padding(.top, showsHeader && index > 0 ? Metric.speakerGroupSpacing : 0)
-              .id(script.id)
+          ForEach(rows) { row in
+            scriptRow(row)
+              .padding(.top, row.hasTopSpacing ? Metric.speakerGroupSpacing : 0)
+              .id(row.id)
           }
 
           if let error = store.audioErrorMessage {
@@ -107,9 +106,9 @@ private extension ClassBattlePreviewView {
       }
       .scrollIndicators(.hidden)
       .onChange(of: store.activeScriptIndex) { _, index in
-        guard let index, scripts.indices.contains(index) else { return }
+        guard let index, rows.indices.contains(index) else { return }
         withAnimation(.easeOut(duration: 0.2)) {
-          proxy.scrollTo(scripts[index].id, anchor: .top)
+          proxy.scrollTo(rows[index].id, anchor: .top)
         }
       }
     }
@@ -117,15 +116,11 @@ private extension ClassBattlePreviewView {
 
   /// Android `ScenarioChatBubble` — 재생 중인 대사만 진하게, 나머지는 흐리게 보인다.
   @ViewBuilder
-  func scriptRow(
-    _ script: ScenarioScript,
-    showsHeader: Bool,
-    isActive: Bool
-  ) -> some View {
-    let speaker = store.withState { $0.speaker(for: script) }
-    switch speaker.side {
+  func scriptRow(_ row: ClassBattlePreviewRow) -> some View {
+    let isActive = row.isActive
+    switch row.speaker.side {
     case .center:
-      Text(script.text.replacingOccurrences(of: ", ", with: ",\n"))
+      Text(row.script.text.replacingOccurrences(of: ", ", with: ",\n"))
         .pretendardFont(.labelSmall, lineSpacingMultiple: 1.4)
         .italic()
         .foregroundStyle(isActive ? .textSubtle : .textMuted)
@@ -134,7 +129,7 @@ private extension ClassBattlePreviewView {
         .frame(maxWidth: .infinity)
         .opacity(isActive ? 1 : Metric.dimmedOpacity)
     case .left, .right:
-      chatBubble(script, speaker: speaker, showsHeader: showsHeader, isActive: isActive)
+      chatBubble(row.script, speaker: row.speaker, showsHeader: row.showsHeader, isActive: isActive)
     }
   }
 

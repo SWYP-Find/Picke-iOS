@@ -186,6 +186,40 @@ struct ClassBattlePreviewTests {
   }
 
   @Test
+  func 연이은_철학자_대사도_화자가_바뀌면_이름을_다시_보인다() {
+    var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
+    state.audioErrorMessage = "미리 들을 수 있는 음원이 없어요"
+    state.scenario = BattleScenario(
+      battleId: state.battle.id,
+      title: "시나리오 제목",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "START",
+          audioDuration: 60,
+          autoNextNodeId: nil,
+          scripts: [
+            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .philosopher, speakerName: "칸트", text: "하나"),
+            ScenarioScript(scriptId: 2, startTimeMs: 1000, speakerType: .philosopher, speakerName: "니체", text: "둘"),
+            ScenarioScript(scriptId: 3, startTimeMs: 2000, speakerType: .philosopher, speakerName: "니체", text: "셋"),
+          ],
+          interactiveOptions: []
+        ),
+      ]
+    )
+
+    let rows = state.visibleRows
+    #expect(rows.map(\.showsHeader) == [true, true, false])
+    #expect(rows.map(\.hasTopSpacing) == [false, true, false])
+    #expect(rows.allSatisfy { !$0.isActive })
+  }
+
+  @Test
   func 음원이_없는_시나리오는_대사만_표시하고_재생을_비활성화한다() async {
     var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
     state.isActive = true

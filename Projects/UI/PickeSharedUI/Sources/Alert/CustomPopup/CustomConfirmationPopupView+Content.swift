@@ -46,7 +46,7 @@ extension CustomConfirmationPopup {
     case .noticeReversed:
       noticeReversedContent
     case .singleAction:
-      singleActionContent
+      singleActionContent()
     }
   }
 
@@ -95,7 +95,8 @@ extension CustomConfirmationPopup {
   }
 
   /// Android `PickeSingleActionDialog` — 베이지 카드·primary 테두리, 16pt 본문과 가득 찬 확인 버튼.
-  var singleActionContent: some View {
+  @ViewBuilder
+  func singleActionContent() -> some View {
     VStack(spacing: 0) {
       Text(title)
         .pretendardFont(.headingMedium, lineSpacingMultiple: 24 / 16)

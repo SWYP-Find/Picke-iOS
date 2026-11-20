@@ -91,6 +91,23 @@ public struct ClassBattlePreviewFeature {
       return Array(previewScripts.prefix(maxRevealedIndex + 1))
     }
 
+    /// 화면에 그릴 대사 행. 화자는 이름까지 비교해, 연이은 철학자 대사라도 화자가 바뀌면 이름을 다시 보인다.
+    public var visibleRows: [ClassBattlePreviewRow] {
+      let scripts = visibleScripts
+      let speakers = scripts.map { speaker(for: $0) }
+      let activeIndex = isPlaying ? activeScriptIndex : nil
+      return scripts.indices.map { index in
+        let isNewSpeaker = index == 0 || speakers[index - 1] != speakers[index]
+        return ClassBattlePreviewRow(
+          script: scripts[index],
+          speaker: speakers[index],
+          showsHeader: isNewSpeaker,
+          isActive: index == activeIndex,
+          hasTopSpacing: index > 0 && isNewSpeaker
+        )
+      }
+    }
+
     /// Android `activeIndex`: 재생 위치 직전에 시작한 대사.
     public var activeScriptIndex: Int? {
       previewScripts.lastIndex { TimeInterval($0.startTimeMs) / 1000 <= currentTime }
