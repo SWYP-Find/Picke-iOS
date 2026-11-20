@@ -34,7 +34,7 @@ def main():
         with open(os.path.join(state, "usage.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "target": target}, ensure_ascii=False) + "\n")
     except OSError:
-        pass
+        pass  # 기록 실패로 도구 실행을 막지 않는다
 
 
 if __name__ == "__main__":

@@ -28,6 +28,7 @@ KNOWN_FAILURES = os.path.join(".claude", "known-test-failures.txt")
 # 기본 DerivedData에서 Sentry 컴파일 · 컴파일 캐시(CAS) 연결 오류가 난 적이 있어 검증 전용 폴더를 쓴다.
 XCODEBUILD_TAIL = ["-derivedDataPath", DERIVED_DATA, "COMPILATION_CACHE_ENABLE_CACHING=NO"]
 LAYERS = ("Core", "Domain", "Feature", "Service", "UI")
+XCODE_STEPS = "xcode"
 
 
 def destination():
@@ -90,20 +91,27 @@ def steps_for(files, run_all):
         return steps
     steps.append(("boundaries", [os.path.join(".claude", "scripts", "check-boundaries")], "."))
     steps.append(("generate", ["./make", "generate", "--no-open"], "."))
+    steps.append((XCODE_STEPS, None, "."))  # 스킴은 generate가 끝난 뒤 계산한다
+    return steps
+
+
+def xcode_steps(files, run_all):
+    """바뀐 모듈의 테스트 · 빌드 단계. 생성된 워크스페이스의 스킴으로 만든다.
+    Project.swift가 있는 바뀐 모듈의 스킴이 없으면 건너뛰지 않고 오류로 돌려준다."""
     modules = changed_modules(files, run_all)
-    if not modules and not any(f.startswith("Projects/") for f in files):
+    build_app_only = not modules
+    if build_app_only:
         modules = [("App", "App")]  # Tuist · Plugins · 설정만 바뀌면 앱 전체 빌드로 확인한다
-        build_app_only = True
-    else:
-        build_app_only = False
     known = schemes()
-    dest = ["-destination", destination()] if modules else []
+    dest = ["-destination", destination()]
+    steps, errors = [], []
     for layer, name in modules:
         if layer == "App":
             continue
         scheme = f"{name}Tests" if f"{name}Tests" in known else name
         if scheme not in known:
-            print(f"  · {layer}/{name}: 스킴이 없어 건너뜀 (앱 빌드로 확인)")
+            if os.path.exists(os.path.join("Projects", layer, name, "Project.swift")):
+                errors.append(f"{layer}/{name}: 생성된 워크스페이스에 스킴이 없습니다")
             continue
         has_tests = os.path.isdir(os.path.join("Projects", layer, name, "Tests"))
         action = "test" if has_tests else "build"
@@ -117,7 +125,7 @@ def steps_for(files, run_all):
         # 의존하는 모듈이 깨졌는지 앱 전체 빌드로 본다
         steps.append(("build:App", ["xcodebuild", "build", "-workspace", WORKSPACE, *APP_SCHEME, *dest,
                                     *XCODEBUILD_TAIL], "."))
-    return steps
+    return steps, errors
 
 
 def main():
@@ -130,7 +138,15 @@ def main():
     if dry_run:
         print("바뀐 코드 파일:", ", ".join(files) or "없음")
         for name, cmd, _ in steps:
-            print(f"  {name}: {' '.join(cmd)}")
+            if name == XCODE_STEPS:
+                planned, errors = xcode_steps([f for f in files if not hs.is_harness(f)], run_all)
+                print("  (아래는 현재 워크스페이스 기준, 실제 실행 때는 generate 뒤 다시 계산)")
+                for sub_name, sub_cmd, _ in planned:
+                    print(f"  {sub_name}: {' '.join(sub_cmd)}")
+                for error in errors:
+                    print(f"  ✘ {error}")
+            else:
+                print(f"  {name}: {' '.join(cmd)}")
         return 0
 
     warning = hs.install_git_hooks(root)
@@ -145,14 +161,26 @@ def main():
                        "steps": [], "failures": {}})
         return 0
 
-    skipped = known_failures()
-    if skipped and any(name == "test:App" for name, _, _ in steps):
-        print(f"알려진 실패 {len(skipped)}건 제외 ({KNOWN_FAILURES}): " + ", ".join(skipped))
+    # 검증하는 내용은 시작 시점의 코드다. 도중에 바뀌면 통과로 기록하지 않는다.
+    entries = hs.code_entries(root)
+    snapshot = hs.fingerprint(root)
+    app_files = [f for f in files if not hs.is_harness(f)]
 
     log_dir = os.path.join(hs.STATE_DIR, "verify")
     os.makedirs(log_dir, exist_ok=True)
     results = []
-    for name, cmd, cwd in steps:
+    while steps:
+        name, cmd, cwd = steps.pop(0)
+        if name == XCODE_STEPS:
+            planned, errors = xcode_steps(app_files, run_all)
+            if errors:
+                print("✘ 스킴 확인 실패: " + "; ".join(errors))
+                hs.save(root, {"passed": False, "fingerprint": snapshot, "steps": results, "failures": failures})
+                return 1
+            if any(sub_name == "test:App" for sub_name, _, _ in planned) and known_failures():
+                print(f"알려진 실패 {len(known_failures())}건 제외 ({KNOWN_FAILURES}): " + ", ".join(known_failures()))
+            steps = planned + steps
+            continue
         log_path = os.path.join(log_dir, f"{name.replace(':', '-')}.log")
         print(f"▶ {name} (로그: {log_path})", flush=True)
         started = time.monotonic()
@@ -176,7 +204,11 @@ def main():
         results.append({"name": name, "ok": True, "seconds": seconds})
         print(f"✔ {name} ({seconds}초)")
 
-    hs.save(root, {"passed": True, "fingerprint": hs.fingerprint(root), "code": hs.code_entries(root),
+    if hs.fingerprint(root) != snapshot:
+        print("✘ 검증하는 동안 코드가 바뀌었습니다. 통과로 기록하지 않습니다. 다시 실행하세요.")
+        hs.save(root, {"passed": False, "fingerprint": snapshot, "steps": results, "failures": failures})
+        return 1
+    hs.save(root, {"passed": True, "fingerprint": snapshot, "code": entries,
                    "steps": results, "failures": failures})
     print("검증 통과. 기록: " + hs.VERIFY_FILE)
     return 0

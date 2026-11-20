@@ -283,7 +283,7 @@ def main():
                 with open(path, encoding="utf-8") as f:
                     check_ai_mark(f.read(), "PR 본문 파일")
             except OSError:
-                pass
+                pass  # 아직 없는 파일이면 gh가 직접 오류를 낸다
     commit_matches = list(COMMIT_RE.finditer(skeleton))
     push_matches = list(PUSH_RE.finditer(skeleton))
     commits = [segment(skeleton, m) for m in commit_matches]
