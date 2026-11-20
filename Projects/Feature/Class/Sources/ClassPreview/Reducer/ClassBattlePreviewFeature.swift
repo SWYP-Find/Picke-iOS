@@ -38,6 +38,8 @@ public struct ClassBattlePreviewFeature {
     public var audioDuration: TimeInterval = 60
     public var pendingSeekTime: TimeInterval?
     public var audioErrorMessage: String?
+    /// Android `maxRevealedIndex`: 재생 위치까지 나온 대사만 보이고, 되감아도 숨기지 않는다.
+    public var maxRevealedIndex = -1
 
     public init(battle: ClassBattleSummary) {
       self.battle = battle
@@ -70,14 +72,27 @@ public struct ClassBattlePreviewFeature {
       return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
 
+    /// Android `AudioPlayerDefaults.PLAYBACK_SPEEDS` — 배속 버튼을 누를 때마다 이 순서로 돈다.
+    public static let supportedPlaybackRates: [Float] = [1, 1.5, 2, 3]
+
     public var playbackRateTitle: String {
-      switch playbackRate {
-      case 1: return "1.0"
-      case 1.25: return "1.25"
-      case 1.5: return "1.5"
-      case 2: return "2.0"
-      default: return "1.0"
-      }
+      String(format: "%.1f", playbackRate)
+    }
+
+    public var nextPlaybackRate: Float {
+      let rates = Self.supportedPlaybackRates
+      let index = rates.firstIndex(of: playbackRate) ?? 0
+      return rates[(index + 1) % rates.count]
+    }
+
+    /// Android `visibleScripts`.
+    public var visibleScripts: [ScenarioScript] {
+      Array(previewScripts.prefix(maxRevealedIndex + 1))
+    }
+
+    /// Android `activeIndex`: 재생 위치 직전에 시작한 대사.
+    public var activeScriptIndex: Int? {
+      previewScripts.lastIndex { TimeInterval($0.startTimeMs) / 1000 <= currentTime }
     }
 
     public var previewScripts: [ScenarioScript] {
@@ -156,6 +171,8 @@ public struct ClassBattlePreviewFeature {
     case scenario(UUID)
     case audioLoad(UUID)
     case audioObserver(UUID)
+    /// 재생·일시정지 명령. 화면을 떠날 때 먼저 취소해 늦게 도착한 재생이 일시정지를 덮지 않게 한다.
+    case playback(UUID)
   }
 
   @Dependency(\.classBattlePreviewDependencies) private var previewDependencies
@@ -234,7 +251,7 @@ private extension ClassBattlePreviewFeature {
         state.hasFinished = false
         state.pendingSeekTime = 0
         state.isPlaying = true
-        return .run { [player = audioPlayer] _ in
+        return playback(instanceID: state.instanceID) { player in
           await player.seek(to: 0)
           await player.play()
         }
@@ -245,7 +262,7 @@ private extension ClassBattlePreviewFeature {
         action: shouldPlay ? .play : .pause,
         contentID: "\(state.battle.id)"
       ))
-      return .run { [player = audioPlayer] _ in
+      return playback(instanceID: state.instanceID) { player in
         if shouldPlay {
           await player.play()
         } else {
@@ -254,7 +271,7 @@ private extension ClassBattlePreviewFeature {
       }
 
     case let .playbackRateSelected(rate):
-      guard [Float(1), 1.25, 1.5, 2].contains(rate) else { return .none }
+      guard State.supportedPlaybackRates.contains(rate) else { return .none }
       state.playbackRate = rate
       return .run { [player = audioPlayer] _ in await player.setPlaybackRate(rate) }
 
@@ -275,7 +292,7 @@ private extension ClassBattlePreviewFeature {
       state.pendingSeekTime = 0
       state.hasFinished = false
       state.isPlaying = true
-      return .run { [player = audioPlayer] _ in
+      return playback(instanceID: state.instanceID) { player in
         await player.seek(to: 0)
         await player.play()
       }
@@ -367,7 +384,7 @@ private extension ClassBattlePreviewFeature {
       state.isPlaying = true
       return .merge(
         .send(.async(.observeTime(state.instanceID))),
-        .run { [player = audioPlayer] _ in await player.play() }
+        playback(instanceID: state.instanceID) { player in await player.play() }
       )
 
     case let .playerTimeUpdated(time):
@@ -378,6 +395,9 @@ private extension ClassBattlePreviewFeature {
       }
       let limit = state.previewDuration
       state.currentTime = min(limit, max(0, time))
+      if let index = state.activeScriptIndex {
+        state.maxRevealedIndex = max(state.maxRevealedIndex, index)
+      }
       let finishThreshold = state.audioDuration <= 60 ? max(0, limit - 0.3) : limit
       guard time >= finishThreshold else { return .none }
       state.isPlaying = false
@@ -409,12 +429,28 @@ private extension ClassBattlePreviewFeature {
     return url
   }
 
+  /// 재생 명령을 한 줄로 묶는다. 새 명령이나 화면 이탈이 앞선 명령을 취소한다.
+  func playback(
+    instanceID: UUID,
+    _ command: @escaping @Sendable (any AudioPlayerInterface) async -> Void
+  ) -> Effect<Action> {
+    .run { [player = audioPlayer] _ in
+      guard !Task.isCancelled else { return }
+      await command(player)
+    }
+    .cancellable(id: CancelID.playback(instanceID), cancelInFlight: true)
+  }
+
   func stopEffects(instanceID: UUID) -> Effect<Action> {
     .merge(
       .cancel(id: CancelID.scenario(instanceID)),
       .cancel(id: CancelID.audioLoad(instanceID)),
       .cancel(id: CancelID.audioObserver(instanceID)),
-      .run { [player = audioPlayer] _ in await player.pause() }
+      // 아직 실행되지 않은 재생 명령을 먼저 취소한 뒤 일시정지해, 나간 뒤 소리가 이어지지 않게 한다.
+      .concatenate(
+        .cancel(id: CancelID.playback(instanceID)),
+        .run { [player = audioPlayer] _ in await player.pause() }
+      )
     )
   }
 }

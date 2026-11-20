@@ -165,5 +165,6 @@ private extension ClassTopicView {
       Text("조건에 맞는 콘텐츠 보기")
     }
     .ctaButtonStyle(.primary, size: .large, height: 52)
+    .disabled(!store.canSearch)
   }
 }

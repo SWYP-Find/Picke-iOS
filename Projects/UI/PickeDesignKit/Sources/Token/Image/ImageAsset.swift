@@ -59,6 +59,9 @@ public enum ImageAsset: String {
   case more
   case edit
   case trash
+  case arrowUpRight
+  case logOut
+  case megaphone
   case report
   case warning
   case send

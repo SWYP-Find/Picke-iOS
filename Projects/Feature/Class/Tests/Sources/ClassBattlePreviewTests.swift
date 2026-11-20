@@ -16,6 +16,18 @@ import Testing
 @MainActor
 struct ClassBattlePreviewTests {
   @Test
+  func 배속은_안드로이드처럼_누를_때마다_1_1점5_2_3_순으로_돈다() {
+    var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
+    var titles: [String] = []
+    for _ in 0..<4 {
+      titles.append(state.playbackRateTitle)
+      state.playbackRate = state.nextPlaybackRate
+    }
+    #expect(titles == ["1.0", "1.5", "2.0", "3.0"])
+    #expect(state.playbackRate == 1)
+  }
+
+  @Test
   func 미리듣기는_60초에서_멈추고_오디오를_일시정지한다() async {
     let player = RecordingPreviewAudioPlayer()
     var state = ClassBattlePreviewFeature.State(battle: .mocks[0])

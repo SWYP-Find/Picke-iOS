@@ -21,7 +21,8 @@ public struct ClassTicketFeature {
     public var code = ""
     public var isChecking = false
     public var isLoadingExistingTicket = false
-    public var expandedFAQ: Int?
+    /// Android `TicketCodeGuideItem`처럼 안내 항목마다 따로 펼친다.
+    public var expandedFAQs: Set<Int> = []
     public var preview: ClassTicketPreview?
     public var ticket: ClassTicket?
     public var registrationStartDate: Date?
@@ -212,7 +213,9 @@ public struct ClassTicketFeature {
         return .send(.delegate(.addRegistrationRequested))
 
       case let .view(.faqTapped(index)):
-        state.expandedFAQ = state.expandedFAQ == index ? nil : index
+        if state.expandedFAQs.remove(index) == nil {
+          state.expandedFAQs.insert(index)
+        }
         return .none
 
       case .view(.checkTapped):

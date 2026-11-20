@@ -216,6 +216,16 @@ struct ClassTests {
       categories: [.society, .philosophy]
     ))
   }
+
+  @Test
+  func 카테고리를_고르지_않으면_콘텐츠_보기가_비활성이고_검색하지_않는다() async {
+    let store = TestStore(initialState: ClassTopicFeature.State()) {
+      ClassTopicFeature()
+    }
+    #expect(!store.state.canSearch)
+
+    await store.send(.view(.searchTapped))
+  }
 }
 
 private func introTicket(_ status: ClassTicket.Status) -> ClassTicket {

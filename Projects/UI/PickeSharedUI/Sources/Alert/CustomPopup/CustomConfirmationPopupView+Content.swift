@@ -18,7 +18,8 @@ extension CustomConfirmationPopup {
     switch style {
     case .confirmation:
       return 20
-    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic, .notice, .noticeReversed:
+    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic, .notice, .noticeReversed,
+         .singleAction:
       return 0
     }
   }
@@ -44,6 +45,8 @@ extension CustomConfirmationPopup {
       noticeContent
     case .noticeReversed:
       noticeReversedContent
+    case .singleAction:
+      singleActionContent
     }
   }
 
@@ -81,18 +84,50 @@ extension CustomConfirmationPopup {
     }
   }
 
-  /// 안내(반대 배치) — 확인(왼쪽 밝은)·취소(오른쪽 primary). 배경 탭(취소)이 "안내만 닫기"가 되게 한다.
+  /// Android `PickeConfirmDialog` — 확인(왼쪽 테두리)·취소(오른쪽 채움). 배경 탭(취소)이 "안내만 닫기"가 되게 한다.
   var noticeReversedContent: some View {
-    pickeAlertCard {
-      VStack(spacing: 16) {
-        pickeBodyText(title)
+    pickeConfirmDialog(
+      leftTitle: confirmTitle,
+      leftAction: onConfirm,
+      rightTitle: cancelTitle,
+      rightAction: onCancel
+    )
+  }
 
-        pickeTwoButtonRow(
-          leftTitle: confirmTitle, leftAction: onConfirm,
-          rightTitle: cancelTitle, rightAction: onCancel
-        )
+  /// Android `PickeSingleActionDialog` — 베이지 카드·primary 테두리, 16pt 본문과 가득 찬 확인 버튼.
+  var singleActionContent: some View {
+    VStack(spacing: 0) {
+      Text(title)
+        .pretendardFont(.headingMedium, lineSpacingMultiple: 24 / 16)
+        .foregroundStyle(.primary500)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 32)
+
+      Rectangle()
+        .fill(.primary500)
+        .frame(height: 1)
+
+      Button(action: onConfirm) {
+        Text(confirmTitle)
+          .pretendardFont(.headingSmall)
+          .foregroundStyle(.textInverse)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 16)
+          .background(.primary500)
+          .contentShape(Rectangle())
       }
+      .buttonStyle(.plain)
     }
+    .frame(maxWidth: 313)
+    .background(.borderBeigeDisabled)
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
+    .overlay {
+      RoundedRectangle(cornerRadius: .radiusDefault)
+        .strokeBorder(.primary500, lineWidth: 1)
+    }
+    .onTapGesture {}
   }
 
   /// 주제 제안 — 타이틀 + 본문 + 뒤로가기(왼쪽 밝은) / 제안하기(오른쪽 primary).
