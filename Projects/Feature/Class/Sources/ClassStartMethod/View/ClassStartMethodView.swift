@@ -145,19 +145,16 @@ private extension ClassStartMethodView {
     .overlayPreferenceValue(ClassStartInfoAnchorPreferenceKey.self) { anchors in
       GeometryReader { geometry in
         if let anchor = anchors[guide] {
-          let icon = geometry[anchor]
+          // Android ClassPillBadge 처럼 배지 전체를 누르면 이용 가이드 시트를 연다.
+          let badge = geometry[anchor]
           Button { send(.guideTapped(guide)) } label: {
-            Image(systemName: "info.circle")
-              .resizable()
-              .scaledToFit()
-              .frame(width: 14, height: 14)
-              .foregroundStyle(.primary500)
-              .frame(width: 44, height: 44, alignment: .bottomLeading)
+            Color.clear
+              .frame(width: badge.width, height: max(badge.height, 44))
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
           .accessibilityLabel(guide == .pickeBattle ? "Pické 배틀 이용 가이드" : "커스텀 배틀 이용 가이드")
-          .position(x: icon.minX + 22, y: icon.maxY - 22)
+          .position(x: badge.midX, y: badge.midY)
         }
       }
     }
@@ -174,14 +171,13 @@ private extension ClassStartMethodView {
         .resizable()
         .scaledToFit()
         .frame(width: 14, height: 14)
-        .opacity(0)
         .accessibilityHidden(true)
-        .anchorPreference(key: ClassStartInfoAnchorPreferenceKey.self, value: .bounds) { [guide: $0] }
     }
     .pretendardFont(.labelSmall)
     .foregroundStyle(.primary500)
     .padding(.horizontal, 9)
     .padding(.vertical, 4)
     .background(.primary50, in: Capsule())
+    .anchorPreference(key: ClassStartInfoAnchorPreferenceKey.self, value: .bounds) { [guide: $0] }
   }
 }

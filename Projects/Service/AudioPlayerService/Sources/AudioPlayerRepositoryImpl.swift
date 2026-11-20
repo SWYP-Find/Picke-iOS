@@ -110,7 +110,8 @@ final class AudioPlayerService {
   func pause() { player.pause() }
 
   func setPlaybackRate(_ rate: Float) {
-    guard [1, 1.25, 1.5, 2].contains(rate) else { return }
+    // Android `AudioPlayerDefaults.PLAYBACK_SPEEDS`(1·1.5·2·3)와 클래스 배틀 메뉴의 1.25.
+    guard [1, 1.25, 1.5, 2, 3].contains(rate) else { return }
     player.defaultRate = rate
     if player.rate != 0 {
       player.rate = rate

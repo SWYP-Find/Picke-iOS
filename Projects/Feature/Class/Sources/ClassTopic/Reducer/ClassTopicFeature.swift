@@ -21,6 +21,9 @@ public struct ClassTopicFeature {
 
     public init() {}
 
+    /// Android `ClassCreateUiState.isNextEnabled`(CONDITION): 카테고리를 하나 이상 골라야 한다.
+    public var canSearch: Bool { !categories.isEmpty }
+
     public var filter: ClassTopicFilter {
       ClassTopicFilter(
         keyword: keyword.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -91,6 +94,7 @@ extension ClassTopicFeature {
       return .none
 
     case .searchTapped:
+      guard state.canSearch else { return .none }
       return .send(.delegate(.search(state.filter)))
     }
   }

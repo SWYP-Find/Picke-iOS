@@ -21,7 +21,10 @@ public struct ClassTicketView: View {
   public var body: some View {
     VStack(spacing: 0) {
       PickeNavigationBar(
-        onBack: { send(.backTapped) },
+        onBack: {
+          isCodeFocused = false
+          send(.backTapped)
+        },
         centerTitle: store.navigationTitle
       )
       .foregroundStyle(.gray800)
@@ -40,6 +43,7 @@ public struct ClassTicketView: View {
           }
         }
         .frame(maxWidth: .infinity)
+        .id(store.phase)
       }
       .scrollIndicators(.hidden)
       .scrollBounceBehavior(.basedOnSize)
@@ -102,7 +106,7 @@ private extension ClassTicketView {
       }
       .pretendardFont(.labelSmall)
 
-      TextField("", text: $store.code, prompt: Text("예: PKE05D2E1").foregroundStyle(.gray300))
+      TextField("", text: $store.code, prompt: Text("전달 받은 코드를 입력해주세요").foregroundStyle(.gray300))
         .textInputAutocapitalization(.characters)
         .autocorrectionDisabled()
         .keyboardType(.asciiCapable)
@@ -145,14 +149,14 @@ private extension ClassTicketView {
           Image(systemName: "chevron.down")
             .pretendardFont(.medium11)
             .foregroundStyle(.gray300)
-            .rotationEffect(.degrees(store.expandedFAQ == index ? 180 : 0))
+            .rotationEffect(.degrees(store.expandedFAQs.contains(index) ? 180 : 0))
         }
         .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
 
-      if store.expandedFAQ == index {
+      if store.expandedFAQs.contains(index) {
         Text(answer)
           .pretendardFont(.bodySmall)
           .foregroundStyle(.gray500)
@@ -179,10 +183,8 @@ private extension ClassTicketView {
 
       ticketCard()
 
-      Text("등록하는 순간 이용 기간이 시작돼요\n클래스를 만들기 전에도 기간은 흘러가요")
-        .pretendardFont(.bodySmall)
-        .foregroundStyle(.gray300)
-        .padding(.top, 12)
+      registerNoticeCard()
+        .padding(.top, 32)
 
       Text("등록 후 마이페이지에서 이용권을 확인할 수 있어요")
         .pretendardFont(.bodySmall)
@@ -285,9 +287,6 @@ private extension ClassTicketView {
       VStack(spacing: 16) {
         ticketDetail(label: "참여 인원", value: store.capacityDetail)
         ticketDetail(label: "이용 기간", value: store.ticketPeriodText)
-        if store.phase == .preview, let registerBy = store.preview?.registerBy {
-          ticketDetail(label: "등록 기한", value: registerBy.formatted(.yearMonthDayDotted))
-        }
         ticketDetail(label: "클래스 생성", value: "이용 기간 내 무제한")
       }
       .padding(.horizontal, 16)
@@ -300,6 +299,28 @@ private extension ClassTicketView {
         .strokeBorder(.borderGraySubtle, lineWidth: 1)
     }
     .accessibilityIdentifier("class-ticket-card")
+  }
+
+  /// Android `TicketRegisterNoticeCard`: 분홍 배경·테두리, 확성기 아이콘, primary 12pt 문구.
+  @ViewBuilder
+  func registerNoticeCard() -> some View {
+    HStack(spacing: 6) {
+      Image(asset: .megaphone)
+        .resizable()
+        .renderingMode(.template)
+        .scaledToFit()
+        .frame(width: 24, height: 24)
+      Text("등록하는 순간 이용 기간이 시작돼요\n클래스를 만들기 전에도 기간은 흘러가요")
+        .pretendardFont(.bodySmall)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .foregroundStyle(.textPrimary)
+    .padding(12)
+    .background(.surfacePrimarySubtle, in: RoundedRectangle(cornerRadius: 2))
+    .overlay {
+      RoundedRectangle(cornerRadius: 2)
+        .strokeBorder(.primary100, lineWidth: 1)
+    }
   }
 
   @ViewBuilder

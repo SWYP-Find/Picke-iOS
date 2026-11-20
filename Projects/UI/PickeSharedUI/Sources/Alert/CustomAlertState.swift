@@ -47,8 +47,10 @@ public enum CustomAlertStyle: Equatable {
   case suggestTopic
   /// 본문 + 취소(왼쪽 밝은)·확인(오른쪽 primary), 취소 문구가 비면 확인 1개.
   case notice
-  /// 본문 + 확인(왼쪽 밝은)·취소(오른쪽 primary). 배경 탭(취소)이 "안내만 닫기"여야 할 때 쓴다.
+  /// Android `PickeConfirmDialog` — 확인(왼쪽 테두리)·취소(오른쪽 채움). 배경 탭(취소)이 "안내만 닫기"여야 할 때 쓴다.
   case noticeReversed
+  /// Android `PickeSingleActionDialog` — 본문 + 가득 찬 확인 버튼 1개.
+  case singleAction
 }
 
 @CasePathable
@@ -234,7 +236,7 @@ public extension CustomAlertState where Action == CustomAlertAction {
       title: title,
       confirmTitle: confirmTitle,
       cancelTitle: "",
-      style: .notice
+      style: .singleAction
     )
   }
 }

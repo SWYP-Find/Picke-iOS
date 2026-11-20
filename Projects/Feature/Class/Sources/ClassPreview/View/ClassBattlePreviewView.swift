@@ -22,13 +22,11 @@ public struct ClassBattlePreviewView: View {
   public var body: some View {
     VStack(spacing: 0) {
       navigationBar
-      previewBadge
+      previewBadge()
       conversation()
-      playerBar()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+      playerBar
     }
-    .padding(.top, 8)
-    .padding(.bottom, 9)
-    .ignoresSafeArea(.container, edges: .bottom)
     .screenBackground()
     .toolbar(.hidden, for: .navigationBar)
     .onAppear { send(.onAppear) }
@@ -42,19 +40,26 @@ private extension ClassBattlePreviewView {
       onBack: { send(.backTapped) },
       centerTitle: store.title
     )
-    .foregroundStyle(.neutral900)
+    .foregroundStyle(.textDefault)
   }
 
-  var previewBadge: some View {
-    Label("1분 미리 듣기 중", systemImage: "play.fill")
-      .pretendardFont(.semiBold12)
-      .foregroundStyle(.primary500)
-      .padding(.horizontal, 10)
-      .frame(height: 25)
-      .background(.beige500, in: Capsule())
-      .frame(maxWidth: .infinity)
-      .padding(.top, 4)
-      .padding(.bottom, 22)
+  /// Android `ClassBattlePreviewBadge`.
+  @ViewBuilder
+  func previewBadge() -> some View {
+    HStack(spacing: 2) {
+      Image(systemName: "play.fill")
+        .resizable()
+        .scaledToFit()
+        .frame(width: 9, height: 10)
+        .frame(width: 16, height: 16)
+      Text("1분 미리 듣기 중")
+        .pretendardFont(.headingSmall)
+    }
+    .foregroundStyle(.textPrimary)
+    .padding(.horizontal, 8)
+    .padding(.vertical, 2)
+    .background(.surfacePrimarySubtle, in: Capsule())
+    .padding(.top, 8)
   }
 
   @ViewBuilder
@@ -63,178 +68,167 @@ private extension ClassBattlePreviewView {
     case .loading:
       ProgressView()
         .tint(.primary500)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .error:
       PickeRetryErrorView(message: "대화를 불러오지 못했어요") {
         send(.retryTapped)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .loaded:
-      ScrollViewReader { proxy in
-        ScrollView {
-          LazyVStack(spacing: 20) {
-            ForEach(store.previewScripts) { script in
-              scriptRow(script)
-                .id(script.id)
-            }
+      scriptList()
+    }
+  }
 
-            if let error = store.audioErrorMessage {
-              Text(error)
-                .pretendardFont(.regular13)
-                .foregroundStyle(.primary500)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 20)
-            }
+  /// Android `ClassBattlePreviewScriptSection` — 나온 대사만 `ScenarioChatBubble` 로 쌓고 재생 중인 대사로 스크롤한다.
+  @ViewBuilder
+  func scriptList() -> some View {
+    let rows = store.visibleRows
+    ScrollViewReader { proxy in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: Metric.rowSpacing) {
+          ForEach(rows) { row in
+            scriptRow(row)
+              .padding(.top, row.hasTopSpacing ? Metric.speakerGroupSpacing : 0)
+              .id(row.id)
           }
-          .padding(.horizontal, 16)
-          .padding(.top, 2)
-          .padding(.bottom, 24)
+
+          if let error = store.audioErrorMessage {
+            Text(error)
+              .pretendardFont(.regular13)
+              .foregroundStyle(.textPrimary)
+              .frame(maxWidth: .infinity)
+              .padding(.top, 20)
+          }
         }
-        .scrollIndicators(.hidden)
-        .onChange(of: store.currentTime) { _, _ in
-          let scripts = store.previewScripts.filter {
-            TimeInterval($0.startTimeMs) / 1000 <= store.currentTime
-          }
-          if let last = scripts.last {
-            withAnimation(.easeOut(duration: 0.2)) {
-              proxy.scrollTo(last.id, anchor: .bottom)
-            }
-          }
+        .padding(.horizontal, 16)
+        .padding(.top, 20)
+        .padding(.bottom, 40)
+      }
+      .scrollIndicators(.hidden)
+      .onChange(of: store.scrollTargetRowID) { _, id in
+        guard let id else { return }
+        withAnimation(.easeOut(duration: 0.2)) {
+          proxy.scrollTo(id, anchor: .top)
         }
       }
     }
   }
 
+  /// Android `ScenarioChatBubble` — 재생 중인 대사만 진하게, 나머지는 흐리게 보인다.
   @ViewBuilder
-  func scriptRow(_ script: ScenarioScript) -> some View {
-    let speaker = store.withState { $0.speaker(for: script) }
-    switch speaker.side {
-    case .left:
-      HStack(alignment: .top, spacing: 10) {
-        avatar(speaker)
-        scriptContent(script, speaker: speaker)
-      }
-    case .right:
-      HStack(alignment: .top, spacing: 10) {
-        scriptContent(script, speaker: speaker)
-        avatar(speaker)
-      }
+  func scriptRow(_ row: ClassBattlePreviewRow) -> some View {
+    let isActive = row.isActive
+    switch row.speaker.side {
     case .center:
-      scriptContent(script, speaker: speaker)
-        .frame(maxWidth: .infinity)
-    }
-  }
-
-  func scriptContent(
-    _ script: ScenarioScript,
-    speaker: ChatSpeaker
-  ) -> some View {
-    VStack(alignment: speaker.side == .right ? .trailing : .leading, spacing: 9) {
-      Text(speaker.name)
-        .pretendardFont(.headingSmall)
-        .foregroundStyle(.neutral900)
-
-      Text(script.text)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.gray400)
-        .lineSpacing(4)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 8)
+      Text(row.displayText)
+        .pretendardFont(.labelSmall, lineSpacingMultiple: 1.4)
+        .italic()
+        .foregroundStyle(isActive ? .textSubtle : .textMuted)
+        .multilineTextAlignment(.center)
         .padding(.vertical, 6)
-        .pickeCard(
-          speaker.side == .right ? .beige400 : .cardBaseBackgroundDefault,
-          insideBorder: speaker.side == .right
-        )
+        .frame(maxWidth: .infinity)
+        .opacity(isActive ? 1 : Metric.dimmedOpacity)
+    case .left, .right:
+      chatBubble(row.script, speaker: row.speaker, showsHeader: row.showsHeader, isActive: isActive)
     }
-    .frame(maxWidth: .infinity, alignment: speaker.side == .right ? .trailing : .leading)
   }
 
-  func avatar(_ speaker: ChatSpeaker) -> some View {
-    Group {
-      switch speaker.name {
-      case "플라톤":
-        Image(asset: .avatarPlato)
-          .resizable()
-          .scaledToFit()
-      case "사르트르":
-        Image(asset: .avatarSartre)
-          .resizable()
-          .scaledToFit()
-      default:
-        PickeRemoteImage(
-          url: speaker.imageURL ?? "",
-          shape: .round(cornerRadius: 18)
-        )
-        .content(.fit)
+  @ViewBuilder
+  func chatBubble(
+    _ script: ScenarioScript,
+    speaker: ChatSpeaker,
+    showsHeader: Bool,
+    isActive: Bool
+  ) -> some View {
+    let isLeft = speaker.side == .left
+    HStack(alignment: .top, spacing: 6) {
+      if isLeft {
+        avatarSlot(speaker, isVisible: showsHeader)
       }
-    }
-    .frame(width: 36, height: 36)
-    .background(.beige600, in: Circle())
-  }
-
-  @ViewBuilder
-  func playerBar() -> some View {
-    VStack(spacing: 2) {
-      progressBar()
-      AudioPlayerControlView(
-        isPlaying: .constant(store.isPlaying),
-        onBackward: { send(.seekBackwardTapped) },
-        onTogglePlay: { send(.togglePlayTapped) },
-        onForward: { send(.seekForwardTapped) },
-        onReplay: { send(.replayTapped) },
-        isReplayEnabled: store.isAudioReady,
-        tint: .neutral900,
-        playbackRateTitle: store.playbackRateTitle,
-        captionVerticalOffset: -8,
-        onPlaybackRateSelected: { send(.playbackRateSelected($0)) }
-      )
-      .disabled(!store.isAudioReady)
-    }
-    .padding(.horizontal, 24)
-    .padding(.top, 24)
-    .padding(.bottom, 8)
-    .background(.white)
-  }
-
-  @ViewBuilder
-  func progressBar() -> some View {
-    VStack(spacing: 2) {
-      GeometryReader { geometry in
-        ZStack(alignment: .leading) {
-          Capsule()
-            .fill(.neutral300)
-            .frame(height: 3)
-          Capsule()
-            .fill(.primary500)
-            .frame(width: geometry.size.width * store.progress, height: 3)
-          Circle()
-            .fill(.primary500)
-            .frame(width: 10, height: 10)
-            .offset(x: max(0, geometry.size.width * store.progress - 5))
+      VStack(alignment: isLeft ? .leading : .trailing, spacing: 6) {
+        if showsHeader {
+          Text(speaker.name)
+            .pretendardFont(.headingSmall)
+            .foregroundStyle(.textDefault)
         }
-        .frame(maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .gesture(
-          DragGesture(minimumDistance: 0)
-            .onChanged { value in
-              guard store.isAudioReady, geometry.size.width > 0 else { return }
-              let ratio = min(1, max(0, value.location.x / geometry.size.width))
-              send(.scrubbed(store.previewDuration * ratio))
-            }
-        )
+        HStack(spacing: 6) {
+          if !isLeft, isActive {
+            AudioEqualizerView()
+          }
+          Text(script.text)
+            .pretendardFont(.regular13, lineSpacingMultiple: 1.4)
+            .foregroundStyle(.textBody)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, isLeft ? 6 : 8)
+            .pickeCard(
+              isLeft ? .surfaceBeigeDefault : .surfaceBeigeStrong,
+              border: .borderBeigeDefault
+            )
+            .frame(maxWidth: Metric.bubbleMaxWidth)
+          if isLeft, isActive {
+            AudioEqualizerView()
+          }
+        }
       }
-      .frame(height: 12)
+      if !isLeft {
+        avatarSlot(speaker, isVisible: showsHeader)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: isLeft ? .leading : .trailing)
+    .opacity(isActive ? 1 : Metric.dimmedOpacity)
+  }
 
-      HStack {
-        Text(store.currentTimeText)
-        Spacer()
-        Text(store.durationText)
-      }
-      .pretendardFont(.medium11)
-      .foregroundStyle(.neutral300)
+  /// Android `ChatBubbleAvatar` — 안 보일 때도 40 자리를 비워 둔다.
+  @ViewBuilder
+  func avatarSlot(
+    _ speaker: ChatSpeaker,
+    isVisible: Bool
+  ) -> some View {
+    if isVisible {
+      Circle()
+        .fill(.borderBeigeDefault)
+        .overlay {
+          PickeRemoteImage(url: speaker.imageURL) {
+            Color.clear
+          }
+          .content(.fit)
+          .frame(width: Metric.avatarImageSize, height: Metric.avatarImageSize)
+        }
+        .frame(width: Metric.avatarSize, height: Metric.avatarSize)
+    } else {
+      Color.clear
+        .frame(width: Metric.avatarSize, height: Metric.avatarSize)
     }
   }
+
+  /// Android `AudioPlayerBar` — 배속은 누를 때마다 1.0 → 1.5 → 2.0 → 3.0 으로 돈다.
+  var playerBar: some View {
+    PickeAudioPlayerBar(
+      isPlaying: store.isPlaying,
+      currentTime: store.currentTime,
+      totalDuration: store.previewDuration,
+      playbackRateTitle: store.playbackRateTitle,
+      isSeekEnabled: store.isAudioReady,
+      onTogglePlay: { send(.togglePlayTapped) },
+      onSeek: { send(.scrubbed($0)) },
+      onBackward: { send(.seekBackwardTapped) },
+      onForward: { send(.seekForwardTapped) },
+      onPlaybackRateTapped: { send(.playbackRateSelected(store.nextPlaybackRate)) },
+      onReplay: { send(.replayTapped) }
+    )
+    .disabled(!store.isAudioReady)
+  }
+}
+
+/// Android `ChatBubble` · `ClassBattlePreviewScreen` 치수.
+private enum Metric {
+  static let avatarSize: CGFloat = 40
+  static let avatarImageSize: CGFloat = 28
+  static let bubbleMaxWidth: CGFloat = 272
+  static let rowSpacing: CGFloat = 6
+  static let speakerGroupSpacing: CGFloat = 14
+  static let dimmedOpacity: CGFloat = 0.8
 }

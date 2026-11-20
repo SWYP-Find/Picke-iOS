@@ -16,6 +16,18 @@ import Testing
 @MainActor
 struct ClassBattlePreviewTests {
   @Test
+  func 배속은_안드로이드처럼_누를_때마다_1_1점5_2_3_순으로_돈다() {
+    var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
+    var titles: [String] = []
+    for _ in 0..<4 {
+      titles.append(state.playbackRateTitle)
+      state.playbackRate = state.nextPlaybackRate
+    }
+    #expect(titles == ["1.0", "1.5", "2.0", "3.0"])
+    #expect(state.playbackRate == 1)
+  }
+
+  @Test
   func 미리듣기는_60초에서_멈추고_오디오를_일시정지한다() async {
     let player = RecordingPreviewAudioPlayer()
     var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
@@ -174,6 +186,84 @@ struct ClassBattlePreviewTests {
   }
 
   @Test
+  func 앞으로_탐색한_대사는_화면에_나오는_순간_스크롤_대상이_된다() {
+    var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
+    state.scenario = BattleScenario(
+      battleId: state.battle.id,
+      title: "시나리오 제목",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "START",
+          audioDuration: 60,
+          autoNextNodeId: nil,
+          scripts: [
+            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .narrator, speakerName: "해설", text: "하나"),
+            ScenarioScript(scriptId: 2, startTimeMs: 10000, speakerType: .narrator, speakerName: "해설", text: "둘"),
+            ScenarioScript(scriptId: 3, startTimeMs: 20000, speakerType: .narrator, speakerName: "해설", text: "셋"),
+          ],
+          interactiveOptions: []
+        ),
+      ]
+    )
+    state.maxRevealedIndex = 0
+    #expect(state.scrollTargetRowID == 1)
+
+    // 탐색으로 재생 위치만 25초로 옮기면 아직 대사 3이 안 나와 스크롤하지 않는다.
+    state.currentTime = 25
+    #expect(state.scrollTargetRowID == nil)
+
+    // 재생 시간이 들어와 대사가 나오면 그때 대사 3으로 스크롤한다.
+    state.maxRevealedIndex = 2
+    #expect(state.scrollTargetRowID == 3)
+  }
+
+  @Test
+  func 연이은_철학자_대사도_화자가_바뀌면_이름을_다시_보인다() {
+    var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
+    state.audioErrorMessage = "미리 들을 수 있는 음원이 없어요"
+    state.scenario = BattleScenario(
+      battleId: state.battle.id,
+      title: "시나리오 제목",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "START",
+          audioDuration: 60,
+          autoNextNodeId: nil,
+          scripts: [
+            ScenarioScript(scriptId: 0, startTimeMs: 0, speakerType: .narrator, speakerName: "해설", text: "옛날, 옛적에"),
+            ScenarioScript(scriptId: 1, startTimeMs: 500, speakerType: .philosopher, speakerName: "칸트", text: "하나"),
+            ScenarioScript(scriptId: 2, startTimeMs: 1000, speakerType: .philosopher, speakerName: "니체", text: "둘"),
+            ScenarioScript(scriptId: 3, startTimeMs: 2000, speakerType: .philosopher, speakerName: "니체", text: "셋"),
+          ],
+          interactiveOptions: []
+        ),
+      ]
+    )
+
+    // 음원이 없으면 전부 보이므로 재생 위치의 대사가 바로 스크롤 대상이다.
+    state.currentTime = 1.5
+    #expect(state.scrollTargetRowID == 2)
+
+    let rows = state.visibleRows
+    #expect(rows.map(\.displayText) == ["옛날,\n옛적에", "하나", "둘", "셋"])
+    #expect(rows.map(\.showsHeader) == [true, true, true, false])
+    #expect(rows.map(\.hasTopSpacing) == [false, true, true, false])
+    #expect(rows.allSatisfy { !$0.isActive })
+  }
+
+  @Test
   func 음원이_없는_시나리오는_대사만_표시하고_재생을_비활성화한다() async {
     var state = ClassBattlePreviewFeature.State(battle: .mocks[0])
     state.isActive = true
@@ -214,6 +304,8 @@ struct ClassBattlePreviewTests {
       $0.audioErrorMessage = "미리 들을 수 있는 음원이 없어요"
     }
     #expect(store.state.previewScripts.map(\.text) == ["실제 대사"])
+    #expect(store.state.visibleScripts.map(\.text) == ["실제 대사"])
+    #expect(store.state.visibleRows.map(\.displayText) == ["실제 대사"])
     #expect(!store.state.isAudioReady)
   }
 }
