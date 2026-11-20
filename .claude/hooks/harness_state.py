@@ -63,9 +63,10 @@ def base_ref(root):
 
 def changed_code_files(root):
     """develop 이후 바뀐 코드 파일(커밋 · 스테이징 · 작업 중 · 새 파일 모두)."""
-    tracked = git(root, "diff", "--name-only", base_ref(root)).splitlines()
-    untracked = git(root, "ls-files", "--others", "--exclude-standard").splitlines()
-    return sorted({p for p in tracked + untracked if is_code(p)})
+    # -z: 한글 등 비ASCII 경로가 따옴표 · 이스케이프로 바뀌지 않게 한다
+    tracked = git(root, "diff", "--name-only", "-z", base_ref(root)).split("\0")
+    untracked = git(root, "ls-files", "-z", "--others", "--exclude-standard").split("\0")
+    return sorted({p for p in tracked + untracked if p and is_code(p)})
 
 
 def fingerprint(root):
