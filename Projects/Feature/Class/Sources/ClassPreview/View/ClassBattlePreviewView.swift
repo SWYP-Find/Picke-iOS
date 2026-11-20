@@ -105,10 +105,10 @@ private extension ClassBattlePreviewView {
         .padding(.bottom, 40)
       }
       .scrollIndicators(.hidden)
-      .onChange(of: store.activeScriptIndex) { _, index in
-        guard let index, rows.indices.contains(index) else { return }
+      .onChange(of: store.scrollTargetRowID) { _, id in
+        guard let id else { return }
         withAnimation(.easeOut(duration: 0.2)) {
-          proxy.scrollTo(rows[index].id, anchor: .top)
+          proxy.scrollTo(id, anchor: .top)
         }
       }
     }

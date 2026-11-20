@@ -108,6 +108,14 @@ public struct ClassBattlePreviewFeature {
       }
     }
 
+    /// 재생 위치의 대사가 화면에 나왔을 때 그 대사로 스크롤한다. 앞으로 탐색해 아직 안 나온 대사면
+    /// 나오는 순간 값이 바뀌어 그때 스크롤된다(Android `animateScrollToItem(activeIndex)`).
+    public var scrollTargetRowID: Int? {
+      let scripts = visibleScripts
+      guard let index = activeScriptIndex, scripts.indices.contains(index) else { return nil }
+      return scripts[index].id
+    }
+
     /// Android `activeIndex`: 재생 위치 직전에 시작한 대사.
     public var activeScriptIndex: Int? {
       previewScripts.lastIndex { TimeInterval($0.startTimeMs) / 1000 <= currentTime }
