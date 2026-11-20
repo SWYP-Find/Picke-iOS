@@ -1,0 +1,5 @@
+# develop에서 이미 실패하는 테스트. verify가 -skip-testing으로 빼고 매번 출력한다. 고치면 줄을 지운다.
+# 형식: 테스트 타깃/스위트/테스트()  # 이유 (기록 날짜)
+PickeTests/MainTabCoordinatorTests/배틀_복귀_후_클래스를_재선택해도_소개에서_홈으로_나갈_수_있다()  # UUID 의존성 미지정 (2026-11-20)
+PickeTests/MainTabCoordinatorTests/다른_탭_선택은_이전_탭과_다른_스택을_보존한다()  # UUID 의존성 미지정 (2026-11-20)
+PickeTests/MainTabCoordinatorTests/클래스_재선택은_클래스_루트만_초기화하고_인트로에서_탭바를_숨긴다()  # UUID 의존성 미지정 (2026-11-20)

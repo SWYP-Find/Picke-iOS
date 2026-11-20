@@ -1,5 +1,15 @@
 # Git 워크플로우 가이드
 
+## 🔒 하네스가 검사하는 규칙
+
+`.claude/hooks/check-git-rules.sh`(Claude 훅)와 git `pre-commit`이 아래를 강제한다. 아래 절과 다르면 이 절이 우선한다. (`docs/agent/harness.md`)
+
+- `main` · `develop` · `release`에 직접 커밋 · 푸시 · 삭제하지 않는다. PR로 머지한다.
+- 브랜치 이름: `{종류}/{요약}` — 종류는 `feature` · `fix` · `hotfix` · `refactor` · `chore` · `docs` · `test` · `ci` · `release` (예: `feature/class-edit-20261121`, `fix/#81-xctest-range`)
+- 커밋 제목: 한국어 한 줄, 50자 이하, 마침표로 끝내지 않음. `[FEAT]:` · `feat:` 머리말과 `#이슈번호`는 선택
+- `Co-Authored-By: Claude` · `Generated with Claude` 줄 금지, `.DS_Store` 커밋 금지
+- 코드를 바꿨으면 `.claude/scripts/verify` 통과 뒤 커밋. `--no-verify` · `-n` · `core.hooksPath` 변경 금지
+
 ## 🎯 Git 규칙
 
 ### 브랜치 전략

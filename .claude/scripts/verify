@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""변경 경로에 맞는 빌드 · 테스트를 실행하고 결과를 증거로 남긴다. (docs/agent/harness.md 검증 게이트)
+
+사용: .claude/scripts/verify            develop 이후 바뀐 코드에 맞는 단계만 실행
+      .claude/scripts/verify --all      모든 모듈 테스트 + 앱 빌드
+      .claude/scripts/verify --dry-run  실행할 단계만 출력
+
+- 통과하면 .claude/state/verify.json에 작업 트리 지문과 코드 파일 목록을 남긴다. 커밋 게이트와 종료 확인이 이 기록을 본다.
+- 출력은 .claude/state/verify/{단계}.log에 저장한다. 종료 코드를 파이프로 가리지 않는다.
+- 같은 단계가 2번 연속 실패하면 세 번째 시도 전에 사용자에게 보고한다.
+- 하네스 파일(.claude/hooks · scripts · settings.json, .githooks)만 바뀌면 harness 단계만 돈다.
+- 시뮬레이터는 부팅된 iPhone을 먼저 쓴다. PICKE_VERIFY_DESTINATION으로 바꿀 수 있다.
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hooks"))
+import harness_state as hs  # noqa: E402
+
+WORKSPACE = "Picke.xcworkspace"
+APP_SCHEME = ["-scheme", "Picke-Stage", "-configuration", "Stage"]
+APP_TEST_TARGET = "PickeTests"
+DERIVED_DATA = os.path.join(hs.STATE_DIR, "DerivedData")
+KNOWN_FAILURES = os.path.join(".claude", "known-test-failures.txt")
+# 기본 DerivedData에서 Sentry 컴파일 · 컴파일 캐시(CAS) 연결 오류가 난 적이 있어 검증 전용 폴더를 쓴다.
+XCODEBUILD_TAIL = ["-derivedDataPath", DERIVED_DATA, "COMPILATION_CACHE_ENABLE_CACHING=NO"]
+LAYERS = ("Core", "Domain", "Feature", "Service", "UI")
+
+
+def destination():
+    override = os.environ.get("PICKE_VERIFY_DESTINATION")
+    if override:
+        return override
+    out = subprocess.run(["xcrun", "simctl", "list", "devices", "available", "-j"],
+                         capture_output=True, text=True, check=True).stdout
+    phones = [(runtime, d) for runtime, devices in json.loads(out)["devices"].items()
+              for d in devices if "iOS" in runtime and "iPhone" in d["name"]]
+    if not phones:
+        sys.exit("사용할 iPhone 시뮬레이터가 없습니다. PICKE_VERIFY_DESTINATION을 지정하세요.")
+    booted = [d for _, d in phones if d["state"] == "Booted"]
+    device = booted[0] if booted else sorted(phones, key=lambda p: p[0])[-1][1]
+    return f"platform=iOS Simulator,id={device['udid']}"
+
+
+def known_failures():
+    """이미 develop에서 실패하는 테스트. 고치면 줄을 지운다. (docs/agent/harness.md)"""
+    try:
+        with open(KNOWN_FAILURES, encoding="utf-8") as f:
+            lines = [line.split("#", 1)[0].strip() for line in f]
+    except OSError:
+        return []
+    return [line for line in lines if line]
+
+
+def schemes():
+    out = subprocess.run(["xcodebuild", "-list", "-json", "-workspace", WORKSPACE],
+                         capture_output=True, text=True).stdout
+    try:
+        return set(json.loads(out)["workspace"]["schemes"])
+    except (ValueError, KeyError):
+        return set()
+
+
+def changed_modules(files, run_all):
+    """바뀐 파일이 속한 모듈 (레이어, 이름). App은 ("App", "App")."""
+    if run_all:
+        modules = {(layer, name) for layer in LAYERS if os.path.isdir(os.path.join("Projects", layer))
+                   for name in os.listdir(os.path.join("Projects", layer))
+                   if os.path.exists(os.path.join("Projects", layer, name, "Project.swift"))}
+        return sorted(modules | {("App", "App")})
+    modules = set()
+    for f in files:
+        parts = f.split("/")
+        if len(parts) >= 3 and parts[0] == "Projects" and parts[1] == "App":
+            modules.add(("App", "App"))
+        elif len(parts) >= 4 and parts[0] == "Projects" and parts[1] in LAYERS:
+            modules.add((parts[1], parts[2]))
+    return sorted(modules)
+
+
+def steps_for(files, run_all):
+    steps = []  # (이름, 명령, 폴더)
+    if run_all or any(hs.is_harness(f) for f in files):
+        steps.append(("harness", [os.path.join(".claude", "scripts", "harness-check")], "."))
+    files = [f for f in files if not hs.is_harness(f)]
+    if not (run_all or files):
+        return steps
+    steps.append(("boundaries", [os.path.join(".claude", "scripts", "check-boundaries")], "."))
+    steps.append(("generate", ["./make", "generate", "--no-open"], "."))
+    modules = changed_modules(files, run_all)
+    if not modules and not any(f.startswith("Projects/") for f in files):
+        modules = [("App", "App")]  # Tuist · Plugins · 설정만 바뀌면 앱 전체 빌드로 확인한다
+        build_app_only = True
+    else:
+        build_app_only = False
+    known = schemes()
+    dest = ["-destination", destination()] if modules else []
+    for layer, name in modules:
+        if layer == "App":
+            continue
+        scheme = f"{name}Tests" if f"{name}Tests" in known else name
+        if scheme not in known:
+            print(f"  · {layer}/{name}: 스킴이 없어 건너뜀 (앱 빌드로 확인)")
+            continue
+        has_tests = os.path.isdir(os.path.join("Projects", layer, name, "Tests"))
+        action = "test" if has_tests else "build"
+        steps.append((f"{action}:{name}", ["xcodebuild", action, "-workspace", WORKSPACE, "-scheme", scheme,
+                                           *dest, *XCODEBUILD_TAIL], "."))
+    if ("App", "App") in modules and not build_app_only:
+        skips = [f"-skip-testing:{t}" for t in known_failures()]
+        steps.append(("test:App", ["xcodebuild", "test", "-workspace", WORKSPACE, *APP_SCHEME, *dest,
+                                   f"-only-testing:{APP_TEST_TARGET}", *skips, *XCODEBUILD_TAIL], "."))
+    else:
+        # 의존하는 모듈이 깨졌는지 앱 전체 빌드로 본다
+        steps.append(("build:App", ["xcodebuild", "build", "-workspace", WORKSPACE, *APP_SCHEME, *dest,
+                                    *XCODEBUILD_TAIL], "."))
+    return steps
+
+
+def main():
+    root = hs.repo_root(os.getcwd())
+    os.chdir(root)
+    run_all = "--all" in sys.argv[1:]
+    dry_run = "--dry-run" in sys.argv[1:]
+    files = hs.changed_code_files(root)
+    steps = steps_for(files, run_all)
+    if dry_run:
+        print("바뀐 코드 파일:", ", ".join(files) or "없음")
+        for name, cmd, _ in steps:
+            print(f"  {name}: {' '.join(cmd)}")
+        return 0
+
+    warning = hs.install_git_hooks(root)
+    if warning:  # 커밋 게이트가 돌지 않는 상태에서는 통과 기록을 남기지 않는다
+        print("✘ " + warning)
+        return 1
+    state = hs.load(root)
+    failures = state.get("failures", {})
+    if not steps:
+        print("검증할 코드 변경이 없습니다.")
+        hs.save(root, {"passed": True, "fingerprint": hs.fingerprint(root), "code": hs.code_entries(root),
+                       "steps": [], "failures": {}})
+        return 0
+
+    skipped = known_failures()
+    if skipped and any(name == "test:App" for name, _, _ in steps):
+        print(f"알려진 실패 {len(skipped)}건 제외 ({KNOWN_FAILURES}): " + ", ".join(skipped))
+
+    log_dir = os.path.join(hs.STATE_DIR, "verify")
+    os.makedirs(log_dir, exist_ok=True)
+    results = []
+    for name, cmd, cwd in steps:
+        log_path = os.path.join(log_dir, f"{name.replace(':', '-')}.log")
+        print(f"▶ {name} (로그: {log_path})", flush=True)
+        started = time.monotonic()
+        with open(log_path, "w", encoding="utf-8") as log_file:
+            code = subprocess.run(cmd, cwd=cwd, stdout=log_file, stderr=subprocess.STDOUT).returncode
+        seconds = round(time.monotonic() - started)
+        if code != 0:
+            with open(log_path, encoding="utf-8", errors="replace") as log_file:
+                log = log_file.read()
+            failures[name] = failures.get(name, 0) + 1
+            print(f"✘ {name} 실패 ({seconds}초): 종료 코드 {code}")
+            print("  마지막 로그:\n    " + "\n    ".join(log.strip().splitlines()[-15:]))
+            if failures[name] >= hs.MAX_FAILURES:
+                print(f"\n같은 단계({name})가 {failures[name]}번 연속 실패했습니다. "
+                      "세 번째 시도 전에 시도한 내용과 실패 원인을 사용자에게 보고하고 승인을 받으세요.")
+            hs.save(root, {"passed": False, "fingerprint": hs.fingerprint(root),
+                           "steps": results + [{"name": name, "ok": False, "seconds": seconds}],
+                           "failures": failures})
+            return 1
+        failures.pop(name, None)
+        results.append({"name": name, "ok": True, "seconds": seconds})
+        print(f"✔ {name} ({seconds}초)")
+
+    hs.save(root, {"passed": True, "fingerprint": hs.fingerprint(root), "code": hs.code_entries(root),
+                   "steps": results, "failures": failures})
+    print("검증 통과. 기록: " + hs.VERIFY_FILE)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

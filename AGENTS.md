@@ -1,5 +1,14 @@
 # Picke iOS Architecture Guide
 
+## 🧰 에이전트 하네스 (먼저 읽기)
+
+- 색인과 Hard 규칙은 `CLAUDE.md`, 리뷰 기준은 `REVIEW.md`, 훅 · 검증 게이트는 `docs/agent/harness.md`에 있다. 이 파일은 SwiftUI · TCA 상세 규칙의 원본이다.
+- 수정 경로에 맞는 경로별 규칙을 직접 읽는다: `Projects/**` → `.claude/rules/ios.md`, Tuist · Plugins → `.claude/rules/tuist.md`, `fastlane/**` → `.claude/rules/fastlane.md`.
+- Codex에는 Claude 훅이 걸리지 않는다. 커밋 전에 직접 실행한다:
+  - `.claude/scripts/verify` — 바뀐 경로에 맞는 빌드 · 테스트. 통과 기록이 없으면 git `pre-commit`이 커밋을 막는다.
+  - `bash .claude/hooks/check-git-rules.sh --check-message "제목"` · `--check-branch "브랜치"`
+- `main` · `develop` · `release`에 직접 커밋 · 푸시하지 않는다. verify의 같은 단계가 2번 연속 실패하면 멈추고 사용자에게 보고한다.
+
 ## 📱 프로젝트 개요
 
 - **프로젝트명**: Picke

@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""모듈 경계 검사. 정해진 모듈 밖에서 쓰면 안 되는 API를 찾으면 실패한다. (docs/agent/harness.md · AGENTS.md)
+
+사용: .claude/scripts/check-boundaries      (verify가 코드 변경이 있을 때 먼저 실행한다)
+규칙을 더하려면 RULES에 한 줄 추가하고 AGENTS.md · .claude/rules/ios.md에 같은 규칙을 적는다.
+새 규칙은 develop에서 위반이 0건일 때만 넣는다. 기존 위반이 있으면 항상 실패하는 게이트가 된다.
+"""
+import fnmatch
+import os
+import re
+import subprocess
+import sys
+
+FEATURE_SOURCES = "Projects/Feature/*/Sources/**/*.swift"
+APP_CODE = "Projects/**/*.swift"
+TESTS = ["Projects/**/Tests/**", "Projects/**/Testing/**", "Projects/**/UITests/**", "Projects/App/AuditHost/**"]
+
+# (이름, 검사할 파일 glob, 허용 경로 glob 목록, 금지 패턴, 안내)
+RULES = [
+    ("Feature는 Domain 구현 · 네트워크 모듈을 import하지 않는다", FEATURE_SOURCES, [],
+     r"^\s*import\s+(?:[A-Za-z]+Domain|PickeNetwork|API|APIEndpoint)\s*$",
+     "{기능}DomainInterface의 UseCase를 쓴다 (AGENTS.md UseCase 강제)"),
+    ("Feature는 Repository를 직접 의존하지 않는다", FEATURE_SOURCES, [],
+     r"@Dependency\(\\\.[A-Za-z]*Repository\)|\b[A-Za-z]+RepositoryImpl\b",
+     "UseCase를 주입받는다 (AGENTS.md UseCase 강제)"),
+    ("try! 금지", APP_CODE, TESTS, r"\btry!",
+     "do-catch 또는 Result로 다룬다"),
+]
+
+
+def tracked_files(root):
+    out = subprocess.run(["git", "-C", root, "ls-files", "--cached", "--others", "--exclude-standard"],
+                         capture_output=True, text=True, check=True).stdout
+    return out.splitlines()
+
+
+def matches(path, pattern):
+    # fnmatch의 *는 /도 넘는다. **/를 0개 이상 폴더로 다룬다.
+    return fnmatch.fnmatch(path, pattern) or fnmatch.fnmatch(path, pattern.replace("/**/", "/"))
+
+
+def check_generated(root):
+    """Tuist가 만드는 프로젝트 · 워크스페이스는 git에 넣지 않는다."""
+    out = subprocess.run(["git", "-C", root, "ls-files", "--cached"], capture_output=True, text=True, check=True).stdout
+    found = sorted({p.split(".xc", 1)[0] for p in out.splitlines() if ".xcodeproj/" in p or ".xcworkspace/" in p})
+    return [f"  {p}.xc* [Tuist 생성물 추적] → git rm --cached 후 ./make generate로 만든다" for p in found]
+
+
+def main():
+    root = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True).stdout.strip() or "."
+    files = tracked_files(root)
+    violations = []
+    for name, target, allowed, pattern, hint in RULES:
+        regex = re.compile(pattern, re.MULTILINE)
+        for path in files:
+            if not matches(path, target) or any(matches(path, a) for a in allowed):
+                continue
+            try:
+                with open(os.path.join(root, path), encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+            except OSError:
+                continue
+            lines = text.splitlines()
+            for m in regex.finditer(text):
+                line = text.count("\n", 0, m.start()) + 1
+                if lines[line - 1].lstrip().startswith(("//", "*", "/*")):
+                    continue  # 주석은 검사하지 않는다
+                violations.append(f"  {path}:{line}  [{name}] → {hint}")
+    violations += check_generated(root)
+    if violations:
+        print("모듈 경계 위반 (AGENTS.md · docs/agent/harness.md):")
+        print("\n".join(violations))
+        return 1
+    print(f"모듈 경계 검사 통과 (규칙 {len(RULES) + 1}개)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

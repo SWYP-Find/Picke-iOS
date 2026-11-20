@@ -146,14 +146,17 @@ docs/graph/
 # Config
 **/Config
 
-# Claude Code local settings (contains sensitive information)
+# Claude Code 하네스는 추적한다(전역 .claude/ 무시를 되살림). 로컬 상태 · 개인 설정은 제외
+!.claude/
+.claude/state/
+.claude/worktrees/
+.claude/.omc/
+.claude/ios-harness.config.json
+.claude/hooks/__pycache__/
 .claude/settings.local.json
 
 # Claude Code agent memory (contains work history)
 .claude/agent-memory/
-
-# Claude Code symbolic link (links to AGENTS.md)
-CLAUDE.md
 
 # OMC (oh-my-claudecode) state files
 .omc/
