@@ -204,7 +204,8 @@ struct ClassBattlePreviewTests {
           audioDuration: 60,
           autoNextNodeId: nil,
           scripts: [
-            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .philosopher, speakerName: "칸트", text: "하나"),
+            ScenarioScript(scriptId: 0, startTimeMs: 0, speakerType: .narrator, speakerName: "해설", text: "옛날, 옛적에"),
+            ScenarioScript(scriptId: 1, startTimeMs: 500, speakerType: .philosopher, speakerName: "칸트", text: "하나"),
             ScenarioScript(scriptId: 2, startTimeMs: 1000, speakerType: .philosopher, speakerName: "니체", text: "둘"),
             ScenarioScript(scriptId: 3, startTimeMs: 2000, speakerType: .philosopher, speakerName: "니체", text: "셋"),
           ],
@@ -214,8 +215,9 @@ struct ClassBattlePreviewTests {
     )
 
     let rows = state.visibleRows
-    #expect(rows.map(\.showsHeader) == [true, true, false])
-    #expect(rows.map(\.hasTopSpacing) == [false, true, false])
+    #expect(rows.map(\.displayText) == ["옛날,\n옛적에", "하나", "둘", "셋"])
+    #expect(rows.map(\.showsHeader) == [true, true, true, false])
+    #expect(rows.map(\.hasTopSpacing) == [false, true, true, false])
     #expect(rows.allSatisfy { !$0.isActive })
   }
 
@@ -261,6 +263,7 @@ struct ClassBattlePreviewTests {
     }
     #expect(store.state.previewScripts.map(\.text) == ["실제 대사"])
     #expect(store.state.visibleScripts.map(\.text) == ["실제 대사"])
+    #expect(store.state.visibleRows.map(\.displayText) == ["실제 대사"])
     #expect(!store.state.isAudioReady)
   }
 }

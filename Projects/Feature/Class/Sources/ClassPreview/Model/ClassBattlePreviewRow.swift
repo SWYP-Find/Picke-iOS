@@ -20,6 +20,13 @@ public struct ClassBattlePreviewRow: Equatable, Identifiable {
 
   public var id: Int { script.id }
 
+  /// 화면에 쓰는 대사. 해설은 쉼표 뒤에서 줄을 바꾼다(채팅방 해설과 같은 규칙).
+  public var displayText: String {
+    speaker.side == .center
+      ? script.text.replacingOccurrences(of: ", ", with: ",\n")
+      : script.text
+  }
+
   public init(
     script: ScenarioScript,
     speaker: ChatSpeaker,

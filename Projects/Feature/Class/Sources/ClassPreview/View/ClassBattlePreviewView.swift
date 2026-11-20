@@ -120,7 +120,7 @@ private extension ClassBattlePreviewView {
     let isActive = row.isActive
     switch row.speaker.side {
     case .center:
-      Text(row.script.text.replacingOccurrences(of: ", ", with: ",\n"))
+      Text(row.displayText)
         .pretendardFont(.labelSmall, lineSpacingMultiple: 1.4)
         .italic()
         .foregroundStyle(isActive ? .textSubtle : .textMuted)
