@@ -52,6 +52,10 @@ COMMANDS = [  # (Bash 명령, 통과해야 하는가) — 보호 브랜치가 �
     ("git config alias.c 'commit -n'", False),
     ("git config --get alias.c", True),
     ('git commit -m "$MSG"', False),
+    ('git commit -m "$(cat msg.txt)"', False),
+    ("git commit -m '가격 $ 표시 수정'", True),          # 작은따옴표 안 $는 글자 그대로
+    ("git commit -m '$HOME 경로 표시 수정'", True),
+    ('git commit -m "가격 \\$5 표시 수정"', True),
     ("git commit -m \"$(cat <<'EOF'\n하네스 추가\nEOF\n)\"", True),
 ]
 INSTALLS = [  # (기존 pre-commit 내용 · None이면 없음, 게이트가 있다고 봐야 하는가)

@@ -218,8 +218,40 @@ def commit_subject(skeleton, match, part, bodies):
             if placeholder:
                 return first_line(bodies[int(placeholder.group(1))])
             first = value.splitlines()[0] if value else ""
-            return None if "$" in first else first   # 셸 변수 메시지는 실행 전에 알 수 없다 → 막는다
+            raw = MESSAGE_OPT_RE.search(skeleton, match.end())   # 따옴표가 남은 원문으로 셸 확장 여부를 본다
+            # 셸 변수 · 명령 치환 제목은 실행 전에 알 수 없다 → 막는다
+            return None if raw and expands_first_line(skeleton[raw.end():]) else first
     return ""
+
+
+MESSAGE_OPT_RE = re.compile(r"(?:^|\s)(?:-m|--message)(?:=|\s+)")
+EXPANSION_START = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789{(@*#?$!-")
+
+
+def expands_first_line(word):
+    """셸 단어 원문의 첫 줄에 실행 때 바뀌는 $이름 · ${ · $( · ` 가 있는지.
+    작은따옴표 안 · \\$ · 뒤에 이름이 없는 $('가격 $ 표시')는 글자 그대로다."""
+    quote = None
+    i = 0
+    while i < len(word):
+        ch = word[i]
+        if ch == "\n":
+            return False
+        if quote == "'":
+            if ch == "'":
+                quote = None
+        elif ch == "\\":
+            i += 1                                   # 다음 글자는 글자 그대로
+        elif ch == "`" or (ch == "$" and i + 1 < len(word) and word[i + 1] in EXPANSION_START):
+            return True
+        elif ch == '"':
+            quote = None if quote == '"' else '"'
+        elif ch == "'" and quote is None:
+            quote = "'"
+        elif quote is None and ch in " \t;&|":
+            return False                             # 단어 끝
+        i += 1
+    return False
 
 
 def git(*args):
