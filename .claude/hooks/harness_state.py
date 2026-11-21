@@ -163,6 +163,16 @@ def staged_unverified(root):
     return [p for p in staged if index.get(p, DELETED) != verified.get(p)]  # 삭제는 verify 때도 지워져 있어야 한다
 
 
+GATE_CALL = '"$(git rev-parse --show-toplevel)/.githooks/pre-commit" "$@"'
+# 게이트를 실행하고 실패를 그대로 돌려주는 줄만 인정한다. 경로를 적기만 한 줄(printf 등)은 아니다.
+GATE_LINES = ("exec " + GATE_CALL, GATE_CALL + " || exit 1")
+
+
+def calls_gate(text):
+    """표식 줄과 게이트 실행 줄(GATE_LINES 중 하나, 줄 전체 일치)이 모두 있어야 게이트가 있는 훅이다."""
+    return HOOK_MARK in text and any(line.strip() in GATE_LINES for line in text.splitlines())
+
+
 def install_git_hooks(root):
     """현재 hooks 폴더(core.hooksPath 그대로)에 .githooks/pre-commit을 부르는 심을 만든다.
 
@@ -173,13 +183,12 @@ def install_git_hooks(root):
     path = os.path.join(hooks_dir, "pre-commit")
     if os.path.exists(path):
         with open(path, encoding="utf-8", errors="replace") as f:
-            if HOOK_MARK in f.read():
+            if calls_gate(f.read()):
                 return ""
-        return (f"{path}에 다른 pre-commit 훅이 있어 검증 게이트를 설치하지 못했습니다. 그 훅에서 .githooks/pre-commit을 부르게 "
-                f"합치고 '{HOOK_MARK}' 줄을 넣은 뒤 다시 실행하세요. (docs/agent/harness.md)")
+        return (f"{path}에 검증 게이트를 부르지 않는 pre-commit 훅이 있어 게이트를 설치하지 못했습니다. 그 훅에 "
+                f"'{HOOK_MARK}' 줄과 '{GATE_LINES[1]}' 줄을 넣은 뒤 다시 실행하세요. (docs/agent/harness.md)")
     os.makedirs(hooks_dir, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
-        f.write(f"#!/bin/sh\n{HOOK_MARK} (docs/agent/harness.md)\n"
-                'exec "$(git rev-parse --show-toplevel)/.githooks/pre-commit" "$@"\n')
+        f.write(f"#!/bin/sh\n{HOOK_MARK} (docs/agent/harness.md)\n{GATE_LINES[0]}\n")
     os.chmod(path, 0o755)
     return ""

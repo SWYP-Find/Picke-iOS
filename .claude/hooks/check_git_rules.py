@@ -5,7 +5,7 @@
   3) 커밋 제목: 한국어 한 줄, 50자 이하, 마침표로 끝내지 않음 ([FEAT]: · feat: 머리말과 #이슈번호는 선택)
   4) .DS_Store 커밋 금지
   5) 커밋 메시지 · PR 본문에 Co-Authored-By: Claude · Generated with Claude 줄 금지
-  6) pre-commit 검증 게이트 우회 금지(--no-verify · -n · core.hooksPath 변경)
+  6) pre-commit 검증 게이트 우회 금지(--no-verify · -n · core.hooksPath 변경 · git 별칭 정의)
 
 위반하면 stderr에 이유를 쓰고 exit 2 → Claude Code가 명령을 막는다.
 직접 실행: python3 check_git_rules.py --check-message "로그인 화면 추가" / --check-branch "feature/login"
@@ -23,7 +23,8 @@ PROTECTED = {"main", "develop", "release"}
 HANGUL_RE = re.compile(r"[가-힣]")
 SQUASH_SUFFIX_RE = re.compile(r" \(#[0-9]+\)$")
 
-GIT_OPTS = r"(?:\s+(?:-C|-c|--git-dir|--work-tree)\s+\S+|\s+-\S+)*"   # git -C 경로 commit 등
+# git -C 경로 commit 등. 옵션 값은 -로 시작하지 않는다고 본다(값과 옵션이 겹치면 정규식 되짚기가 기하급수로 는다).
+GIT_OPTS = r"(?:\s+(?:-C|-c|--git-dir|--work-tree)\s+[^\s-]\S*|\s+-\S+)*"
 # 명령이 시작되는 자리(처음 · && · || · ; · | · 줄바꿈 · $( · ( 뒤)에 오는 git만 실제 명령으로 본다.
 # echo "git commit" 같은 문자열이나 heredoc 본문 속 문장은 검사하지 않는다.
 CMD_START = r"(?:^|&&|\|\||;|\||\n|\$\(|\()\s*(?:\w+=\S+\s+)*"
@@ -45,6 +46,14 @@ HOOKS_PATH_CHANGE_RE = re.compile(
     r"core\.hooksPath[\"']?\s*=\s*" + GATE_VALUE + r"|config\b[^;&|\n]*?(?:--unset|--replace-all|--add)[^;&|\n]*core\.hooksPath"
     r"|config\b(?:\s+--(?:local|global|system|worktree))*\s+[\"']?core\.hooksPath[\"']?\s+" + GATE_VALUE + r"[^\s;&|]",
     re.I)
+# git 별칭 정의(git -c alias.x=… · git config alias.x 값). 별칭 속 --no-verify는 commit 토큰 검사로 보이지 않는다. 조회는 통과.
+# 실제 git 명령 자리(CMD_START)의 전역 옵션 · config 인자만 본다. 커밋 제목 등 따옴표 속 글자는 보지 않는다.
+# 설정 키는 대소문자를 가리지 않으므로 alias만 (?i:)로 본다. 전체 re.I면 -c와 -C가 겹쳐 되짚기가 폭증한다.
+ALIAS_DEF_RE = re.compile(
+    CMD_START + r"git" + GIT_OPTS +
+    # config 뒤 옵션은 종류를 가리지 않는다(--file 경로 · -f 경로 · --global · set 하위 명령 등). 값이 따라오면 정의다.
+    r"(?:\s+-c\s+[\"']?(?i:alias)\.|\s+config(?:\s+(?:-f|--file|--blob|--type|--comment)\s+[^\s-]\S*|\s+-\S+|\s+set)*"
+    r"\s+[\"']?(?i:alias)\.[^\s\"']+[\"']?\s+[^\s;&|])")
 SHELL_STRING_PREV = {"-c", "eval"}  # bash -c '…' · eval '…' 문자열 안의 명령도 본다
 NO_VERIFY = "--no-" + "verify"
 VALUE_OPTS = {"-m", "--message", "-F", "--file", "-C", "-c", "--reuse-message", "--reedit-message",
@@ -214,8 +223,40 @@ def commit_subject(skeleton, match, part, bodies):
             if placeholder:
                 return first_line(bodies[int(placeholder.group(1))])
             first = value.splitlines()[0] if value else ""
-            return "" if "$" in first else first   # 셸 변수 메시지는 실행 전에 알 수 없다
+            raw = MESSAGE_OPT_RE.search(skeleton, match.end())   # 따옴표가 남은 원문으로 셸 확장 여부를 본다
+            # 셸 변수 · 명령 치환 제목은 실행 전에 알 수 없다 → 막는다
+            return None if raw and expands_first_line(skeleton[raw.end():]) else first
     return ""
+
+
+MESSAGE_OPT_RE = re.compile(r"(?:^|\s)(?:-m|--message)(?:=|\s+)")
+EXPANSION_START = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_0123456789{(@*#?$!-")
+
+
+def expands_first_line(word):
+    """셸 단어 원문의 첫 줄에 실행 때 바뀌는 $이름 · ${ · $( · ` 가 있는지.
+    작은따옴표 안 · \\$ · 뒤에 이름이 없는 $('가격 $ 표시')는 글자 그대로다."""
+    quote = None
+    i = 0
+    while i < len(word):
+        ch = word[i]
+        if ch == "\n":
+            return False
+        if quote == "'":
+            if ch == "'":
+                quote = None
+        elif ch == "\\":
+            i += 1                                   # 다음 글자는 글자 그대로
+        elif ch == "`" or (ch == "$" and i + 1 < len(word) and word[i + 1] in EXPANSION_START):
+            return True
+        elif ch == '"':
+            quote = None if quote == '"' else '"'
+        elif ch == "'" and quote is None:
+            quote = "'"
+        elif quote is None and ch in " \t;&|":
+            return False                             # 단어 끝
+        i += 1
+    return False
 
 
 def git(*args):
@@ -273,6 +314,8 @@ def main():
         fail("pre-commit 검증 게이트를 건너뛰는 옵션(-n 등)은 쓰지 않습니다. verify를 통과시킨 뒤 커밋하세요.")
     if HOOKS_PATH_CHANGE_RE.search(skeleton):
         fail("core.hooksPath를 바꾸면 pre-commit 검증 게이트가 꺼집니다. 바꾸지 않습니다.")
+    if ALIAS_DEF_RE.search(skeleton):
+        fail("git 별칭(alias)은 정의하지 않습니다. 별칭에 게이트 우회 옵션을 숨길 수 있어 명령을 직접 씁니다.")
     marked = [segment(skeleton, m) for m in list(GH_PR_RE.finditer(skeleton)) + list(COMMIT_RE.finditer(skeleton))]
     if marked:  # 따옴표 안 여러 줄 -m · heredoc 본문까지 보려고 명령 전체를 검사한다
         check_ai_mark(cmd, "커밋 메시지 · PR 본문")
@@ -310,7 +353,10 @@ def main():
         fail(".DS_Store가 스테이징돼 있습니다. 'git rm --cached <경로>'로 빼세요.")
     for m, part in zip(commit_matches, commits):
         subject = commit_subject(skeleton, m, part, bodies)
-        if subject:  # -m · -F(heredoc · 파일) 없이 편집기로 쓰는 커밋은 메시지를 검사하지 않는다
+        if subject is None:
+            fail("셸 변수로 만든 -m 메시지는 실행 전에 검사할 수 없습니다. 제목을 -m에 직접 쓰거나 "
+                 "-F 파일 · heredoc(-m \"$(cat <<'EOF' …)\")을 쓰세요.")
+        if subject:  # -m · -F(heredoc · 파일) 없이 편집기로 쓰는 커밋은 메시지를 검사하지 않는다(에이전트는 편집기를 못 쓴다)
             check_message(subject)
     check_verified()
 

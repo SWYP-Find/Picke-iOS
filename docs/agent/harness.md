@@ -44,7 +44,8 @@
 공용 판정(코드 경로 · 지문 · 검증 기록 · 훅 설치)은 `harness_state.py` 하나에 둔다.
 
 - 이 저장소의 `core.hooksPath`는 `.git/hooks`이고 거기에 Git LFS 훅과 `commit-msg` 정리 훅이 있다. **hooksPath를 바꾸지 않는다.** verify와 커밋 게이트가 그 폴더에 표식 줄(`# picke-harness pre-commit`)이 있는 `pre-commit` 심을 만든다.
-- 표식 없는 다른 `pre-commit`이 이미 있으면 덮어쓰지 않고 실패한다(verify exit 1, 커밋 게이트 exit 2). 기존 훅 끝에서 `.githooks/pre-commit`을 부르게 합치고 표식 줄을 넣으면 풀린다.
+- 게이트를 부르지 않는 다른 `pre-commit`이 이미 있으면 덮어쓰지 않고 실패한다(verify exit 1, 커밋 게이트 exit 2). 표식 줄만으로는 통과하지 않는다. 기존 훅에 표식 줄과 `"$(git rev-parse --show-toplevel)/.githooks/pre-commit" "$@" || exit 1` 줄(줄 전체 그대로)을 넣으면 풀린다.
+- 커밋 제목은 `-m` 리터럴 · `-F` 파일 · heredoc일 때 검사한다. `-m "$MSG"` · `-m "$(cat 파일)"`처럼 셸이 바꾸는 제목은 미리 알 수 없어 막는다(작은따옴표 안 · `\$`의 `$`는 글자 그대로라 통과). git 별칭 정의(`-c alias.x=…` · `git config alias.x …`)도 우회 옵션을 숨길 수 있어 막는다.
 - `.githooks/pre-commit`은 **HEAD에 커밋된** 게이트를 꺼내 실행한다. 게이트 자체를 바꾸는 커밋도 이전 게이트로 검사된다.
 - PreToolUse 훅은 명령 실행 **전** 작업 트리를 본다. 같은 명령 안에서 고친 뒤 `commit -a` 하면 놓치므로 실제 차단은 `pre-commit`이 커밋 직전 index로 한다. 사람이 터미널에서 커밋해도 같은 검사를 받는다.
 - 훅은 빨라야 한다. git commit · push가 아니면 bash 문자열 비교만 하고 끝낸다. 지문 계산은 코드 파일 전체를 새 index로 해시한다(약 1.5초). 실제 index를 복사하면 같은 크기로 빠르게 고친 파일을 stat 캐시로 놓친다.

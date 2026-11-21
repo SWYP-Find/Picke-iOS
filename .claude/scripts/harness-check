@@ -48,6 +48,34 @@ COMMANDS = [  # (Bash 명령, 통과해야 하는가) — 보호 브랜치가 �
     ("git push -u origin feature/harness-check", True),
     ('git commit -m "하네스 추가\n\nCo-Authored-By: Claude <noreply@anthropic.com>"', False),
     ('git commit -m "add harness"', False),
+    ("git -c alias.c='commit --no-verify' c -m '하네스 추가'", False),
+    ("git config alias.c 'commit -n'", False),
+    ("git config --get alias.c", True),
+    ("git -c user.name=t -c alias.c='commit -n' c -m '하네스 추가'", False),
+    ("cd /tmp && git config --global alias.c 'commit -n'", False),
+    ("git config --file .git/config alias.c 'commit --no-verify'", False),
+    ("git config -f .git/config alias.c 'commit -n'", False),
+    ("git config set alias.c 'commit -n'", False),
+    ("git config --file .git/config --get alias.c", True),
+    ("git -c ALIAS.c='commit -n' c -m '하네스 추가'", False),          # 설정 키는 대소문자를 가리지 않는다
+    ("git" + " -C x" * 40 + " status", True),                      # 정규식 되짚기 폭증 없이 끝나야 한다
+    ("git -C" + " -C" * 40 + " commit -m '하네스 추가'", True),
+    ("git commit -m 'git config alias.foo 설정 설명 추가'", True),   # 제목 속 글자는 별칭 정의가 아니다
+    ('git commit -m "$MSG"', False),
+    ('git commit -m "$(cat msg.txt)"', False),
+    ("git commit -m '가격 $ 표시 수정'", True),          # 작은따옴표 안 $는 글자 그대로
+    ("git commit -m '$HOME 경로 표시 수정'", True),
+    ('git commit -m "가격 \\$5 표시 수정"', True),
+    ("git commit -m \"$(cat <<'EOF'\n하네스 추가\nEOF\n)\"", True),
+]
+INSTALLS = [  # (기존 pre-commit 내용 · None이면 없음, 게이트가 있다고 봐야 하는가)
+    (None, True),
+    ("#!/bin/sh\nexit 0\n", False),
+    ("#!/bin/sh\n# picke-harness pre-commit\nexit 0\n", False),   # 표식만 있고 게이트를 부르지 않음
+    ("#!/bin/sh\n# picke-harness pre-commit\n# .githooks/pre-commit\nexit 0\n", False),   # 주석 속 경로
+    ("#!/bin/sh\n# picke-harness pre-commit\nprintf '%s' .githooks/pre-commit\nexit 0\n", False),   # 경로를 적기만 함
+    ("#!/bin/sh\n# picke-harness pre-commit\n\"$(git rev-parse --show-toplevel)/.githooks/pre-commit\" \"$@\"\nexit 0\n", False),   # 실패를 버림
+    ("#!/bin/sh\nother-check\n# picke-harness pre-commit\n\"$(git rev-parse --show-toplevel)/.githooks/pre-commit\" \"$@\" || exit 1\n", True),
 ]
 
 
@@ -59,30 +87,31 @@ def scratch_repo():
     """feature 브랜치 · 깨끗한 작업 트리의 임시 저장소. 커밋 검사가 검증 게이트에 걸리지 않게 한다."""
     import tempfile
     path = tempfile.mkdtemp(prefix="harness-check-")
-    for cmd in (["init", "-q", "-b", "feature/harness-check"],):
+    for cmd in (["init", "-q", "-b", "feature/harness-check"],   # HEAD가 없으면 게이트가 판정하지 못해 막는다
+                ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "기준"]):
         subprocess.run(["git", "-C", path, *cmd], check=True, capture_output=True)
     return path
 
 
 def check_install():
-    """심 설치: 빈 hooks 폴더면 설치, 표식 없는 다른 pre-commit이 있으면 이유를 돌려줘야 한다(fail closed)."""
+    """심 설치: 빈 hooks 폴더면 설치, 게이트를 부르지 않는 pre-commit이 있으면 덮어쓰지 않고 이유를 돌려줘야 한다(fail closed)."""
     sys.path.insert(0, os.path.join(".claude", "hooks"))
     import harness_state as hs
     errors = []
-    for foreign in (False, True):
+    for i, (existing, ok) in enumerate(INSTALLS):
         repo = scratch_repo()
         try:
             hook = os.path.join(repo, ".git", "hooks", "pre-commit")
-            if foreign:
+            if existing is not None:
                 with open(hook, "w", encoding="utf-8") as f:
-                    f.write("#!/bin/sh\nexit 0\n")
+                    f.write(existing)
             warning = hs.install_git_hooks(repo)
             with open(hook, encoding="utf-8") as f:
-                installed = hs.HOOK_MARK in f.read()
-            if foreign and (not warning or installed):
-                errors.append("다른 pre-commit 훅이 있으면 설치를 거부하고 이유를 돌려줘야 함")
-            if not foreign and (warning or not installed):
-                errors.append(f"빈 hooks 폴더에 심을 설치해야 함: {warning}")
+                content = f.read()
+            if ok and (warning or not hs.calls_gate(content)):
+                errors.append(f"설치 {i + 1}: 게이트를 부르는 훅이어야 함: {warning}")
+            if not ok and (not warning or content != existing):
+                errors.append(f"설치 {i + 1}: 기존 훅을 그대로 두고 이유를 돌려줘야 함")
         finally:
             subprocess.run(["rm", "-rf", repo])
     return errors
@@ -171,7 +200,7 @@ def main():
         print("하네스 검사 실패:")
         print("\n".join("  " + e for e in errors))
         return 1
-    print(f"하네스 검사 통과 (제목 {len(MESSAGES)} · 브랜치 {len(BRANCHES)} · 명령 {len(COMMANDS)} · 설치 2 · 게이트 5건)")
+    print(f"하네스 검사 통과 (제목 {len(MESSAGES)} · 브랜치 {len(BRANCHES)} · 명령 {len(COMMANDS)} · 설치 {len(INSTALLS)} · 게이트 5건)")
     return 0
 
 
