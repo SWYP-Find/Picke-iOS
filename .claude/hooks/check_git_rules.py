@@ -23,7 +23,8 @@ PROTECTED = {"main", "develop", "release"}
 HANGUL_RE = re.compile(r"[가-힣]")
 SQUASH_SUFFIX_RE = re.compile(r" \(#[0-9]+\)$")
 
-GIT_OPTS = r"(?:\s+(?:-C|-c|--git-dir|--work-tree)\s+\S+|\s+-\S+)*"   # git -C 경로 commit 등
+# git -C 경로 commit 등. 옵션 값은 -로 시작하지 않는다고 본다(값과 옵션이 겹치면 정규식 되짚기가 기하급수로 는다).
+GIT_OPTS = r"(?:\s+(?:-C|-c|--git-dir|--work-tree)\s+[^\s-]\S*|\s+-\S+)*"
 # 명령이 시작되는 자리(처음 · && · || · ; · | · 줄바꿈 · $( · ( 뒤)에 오는 git만 실제 명령으로 본다.
 # echo "git commit" 같은 문자열이나 heredoc 본문 속 문장은 검사하지 않는다.
 CMD_START = r"(?:^|&&|\|\||;|\||\n|\$\(|\()\s*(?:\w+=\S+\s+)*"
@@ -47,10 +48,12 @@ HOOKS_PATH_CHANGE_RE = re.compile(
     re.I)
 # git 별칭 정의(git -c alias.x=… · git config alias.x 값). 별칭 속 --no-verify는 commit 토큰 검사로 보이지 않는다. 조회는 통과.
 # 실제 git 명령 자리(CMD_START)의 전역 옵션 · config 인자만 본다. 커밋 제목 등 따옴표 속 글자는 보지 않는다.
+# 설정 키는 대소문자를 가리지 않으므로 alias만 (?i:)로 본다. 전체 re.I면 -c와 -C가 겹쳐 되짚기가 폭증한다.
 ALIAS_DEF_RE = re.compile(
-    CMD_START + r"git(?:\s+(?:-C|--git-dir|--work-tree)\s+\S+|\s+-c\s+\S+|\s+-[^c\s]\S*)*"
-    r"(?:\s+-c\s+[\"']?alias\.|\s+config(?:\s+--(?:local|global|system|worktree|add|replace-all))*\s+[\"']?alias\.[^\s\"']+[\"']?\s+[^\s;&|])",
-    re.I)
+    CMD_START + r"git" + GIT_OPTS +
+    # config 뒤 옵션은 종류를 가리지 않는다(--file 경로 · -f 경로 · --global · set 하위 명령 등). 값이 따라오면 정의다.
+    r"(?:\s+-c\s+[\"']?(?i:alias)\.|\s+config(?:\s+(?:-f|--file|--blob|--type|--comment)\s+[^\s-]\S*|\s+-\S+|\s+set)*"
+    r"\s+[\"']?(?i:alias)\.[^\s\"']+[\"']?\s+[^\s;&|])")
 SHELL_STRING_PREV = {"-c", "eval"}  # bash -c '…' · eval '…' 문자열 안의 명령도 본다
 NO_VERIFY = "--no-" + "verify"
 VALUE_OPTS = {"-m", "--message", "-F", "--file", "-C", "-c", "--reuse-message", "--reedit-message",
