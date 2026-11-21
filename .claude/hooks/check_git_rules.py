@@ -45,9 +45,11 @@ HOOKS_PATH_CHANGE_RE = re.compile(
     r"core\.hooksPath[\"']?\s*=\s*" + GATE_VALUE + r"|config\b[^;&|\n]*?(?:--unset|--replace-all|--add)[^;&|\n]*core\.hooksPath"
     r"|config\b(?:\s+--(?:local|global|system|worktree))*\s+[\"']?core\.hooksPath[\"']?\s+" + GATE_VALUE + r"[^\s;&|]",
     re.I)
-# git 별칭 정의(-c alias.x=… · config alias.x 값). 별칭 속 --no-verify는 commit 토큰 검사로 보이지 않는다. 조회는 통과.
+# git 별칭 정의(git -c alias.x=… · git config alias.x 값). 별칭 속 --no-verify는 commit 토큰 검사로 보이지 않는다. 조회는 통과.
+# 실제 git 명령 자리(CMD_START)의 전역 옵션 · config 인자만 본다. 커밋 제목 등 따옴표 속 글자는 보지 않는다.
 ALIAS_DEF_RE = re.compile(
-    r"(?:^|\s)-c\s+[\"']?alias\.|config\b(?:\s+--(?:local|global|system|worktree|add|replace-all))*\s+[\"']?alias\.[^\s\"']+[\"']?\s+[^\s;&|]",
+    CMD_START + r"git(?:\s+(?:-C|--git-dir|--work-tree)\s+\S+|\s+-c\s+\S+|\s+-[^c\s]\S*)*"
+    r"(?:\s+-c\s+[\"']?alias\.|\s+config(?:\s+--(?:local|global|system|worktree|add|replace-all))*\s+[\"']?alias\.[^\s\"']+[\"']?\s+[^\s;&|])",
     re.I)
 SHELL_STRING_PREV = {"-c", "eval"}  # bash -c '…' · eval '…' 문자열 안의 명령도 본다
 NO_VERIFY = "--no-" + "verify"

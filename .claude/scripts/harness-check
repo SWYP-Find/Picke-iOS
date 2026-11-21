@@ -51,6 +51,9 @@ COMMANDS = [  # (Bash 명령, 통과해야 하는가) — 보호 브랜치가 �
     ("git -c alias.c='commit --no-verify' c -m '하네스 추가'", False),
     ("git config alias.c 'commit -n'", False),
     ("git config --get alias.c", True),
+    ("git -c user.name=t -c alias.c='commit -n' c -m '하네스 추가'", False),
+    ("cd /tmp && git config --global alias.c 'commit -n'", False),
+    ("git commit -m 'git config alias.foo 설정 설명 추가'", True),   # 제목 속 글자는 별칭 정의가 아니다
     ('git commit -m "$MSG"', False),
     ('git commit -m "$(cat msg.txt)"', False),
     ("git commit -m '가격 $ 표시 수정'", True),          # 작은따옴표 안 $는 글자 그대로
