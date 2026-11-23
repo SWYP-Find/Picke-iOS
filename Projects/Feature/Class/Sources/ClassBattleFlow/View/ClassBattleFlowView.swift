@@ -8,8 +8,6 @@ import SwiftUI
 @ViewAction(for: ClassBattleFlowFeature.self)
 public struct ClassBattleFlowView: View {
   @Bindable public var store: StoreOf<ClassBattleFlowFeature>
-  @State private var isEditingPreVote = false
-  @State private var preVoteDraftOptionID: Int?
 
   public init(store: StoreOf<ClassBattleFlowFeature>) {
     self.store = store
@@ -24,13 +22,19 @@ public struct ClassBattleFlowView: View {
         switch store.step {
         case .some(.none): voteScreen()
         case .some(.postVote):
-          if store.needsMidVoteRecovery { listeningScreen() }
-          else { voteScreen() }
+          if store.needsMidVoteRecovery {
+            listeningScreen()
+          } else {
+            voteScreen()
+          }
         case .some(.preVote): listeningScreen()
         case .some(.ttsListening): listeningScreen()
         case .some(.completed):
-          if store.showsPreVoteLanding { voteScreen() }
-          else { perspectiveScreen() }
+          if store.showsPreVoteLanding {
+            voteScreen()
+          } else {
+            perspectiveScreen()
+          }
         case nil: loadingScreen()
         }
       }
@@ -47,9 +51,17 @@ public struct ClassBattleFlowView: View {
 }
 
 private extension ClassBattleFlowView {
-  var isFinalVote: Bool { store.step == .some(.postVote) }
-  var isPreVoteLanding: Bool { store.step == .some(.completed) && store.showsPreVoteLanding }
-  var voteBackground: Color { isFinalVote ? .gray900 : .white }
+  var isFinalVote: Bool {
+    store.step == .some(.postVote)
+  }
+
+  var isPreVoteLanding: Bool {
+    store.step == .some(.completed) && store.showsPreVoteLanding
+  }
+
+  var voteBackground: Color {
+    isFinalVote ? .gray900 : .white
+  }
 
   @ViewBuilder
   func loadingScreen() -> some View {
@@ -98,8 +110,8 @@ private extension ClassBattleFlowView {
               height: isPreVoteLanding
                 ? max(420, min(510, proxy.size.height * 0.63))
                 : isFinalVote
-                  ? max(330, min(405, proxy.size.height * 0.5 + 15))
-                  : max(315, min(390, proxy.size.height * 0.5))
+                ? max(330, min(405, proxy.size.height * 0.5 + 15))
+                : max(315, min(390, proxy.size.height * 0.5))
             )
             voteIntroduction()
             if !isPreVoteLanding {
@@ -172,7 +184,8 @@ private extension ClassBattleFlowView {
       Spacer()
       if !isFinalVote,
          store.room?.battleType == .tts,
-         let shareURL = store.session?.battle.shareURL {
+         let shareURL = store.session?.battle.shareURL
+      {
         ShareLink(item: shareURL) {
           Image(systemName: "square.and.arrow.up")
             .frame(width: 32, height: 44)
@@ -245,11 +258,11 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func optionSection(isPreVoteDraft: Bool = false) -> some View {
+  func optionSection() -> some View {
     ZStack {
       HStack(alignment: .top, spacing: 8) {
         ForEach(store.options) { option in
-          optionCard(option, isPreVoteDraft: isPreVoteDraft)
+          optionCard(option)
         }
       }
 
@@ -265,14 +278,10 @@ private extension ClassBattleFlowView {
   }
 
   @ViewBuilder
-  func optionCard(
-    _ option: ClassBattleOption,
-    isPreVoteDraft: Bool
-  ) -> some View {
-    let isSelected = (isPreVoteDraft ? preVoteDraftOptionID : store.selectedOptionID) == option.id
+  func optionCard(_ option: ClassBattleOption) -> some View {
+    let isSelected = store.selectedOptionID == option.id
     Button {
-      if isPreVoteDraft { preVoteDraftOptionID = option.id }
-      else { send(.optionTapped(option.id)) }
+      send(.optionTapped(option.id))
     } label: {
       VStack(spacing: 0) {
         Group {
@@ -333,15 +342,15 @@ private extension ClassBattleFlowView {
       Button(store.voteFooterButtonTitle) {
         send(isPreVoteLanding ? .preVoteResultTapped : .submitTapped)
       }
-        .ctaButtonStyle(.primary, size: .large, height: 52)
-        .disabled(!isPreVoteLanding && !store.canSubmit)
+      .ctaButtonStyle(.primary, size: .large, height: 52)
+      .disabled(!isPreVoteLanding && !store.canSubmit)
       if !isFinalVote, let deadline = store.voteDeadlineLabel {
         Label(
           deadline,
           systemImage: "clock"
         )
-          .pretendardFont(.regular13, lineHeightMultiple: 1.4)
-          .foregroundStyle(.gray300)
+        .pretendardFont(.regular13, lineHeightMultiple: 1.4)
+        .foregroundStyle(.gray300)
       }
     }
     .frame(maxWidth: .infinity)
@@ -349,7 +358,9 @@ private extension ClassBattleFlowView {
   }
 
   func voteFooterBottomPadding(hasBottomSafeArea: Bool) -> CGFloat {
-    if isFinalVote { return hasBottomSafeArea ? 6 : 10 }
+    if isFinalVote {
+      return hasBottomSafeArea ? 6 : 10
+    }
     // 홈 인디케이터가 있는 기기에서는 Figma처럼 마지막 줄인 마감 문구만 그 영역에 10pt 걸친다.
     guard hasBottomSafeArea, store.voteDeadlineLabel != nil else { return 20 }
     return -10
@@ -358,19 +369,11 @@ private extension ClassBattleFlowView {
   @ViewBuilder
   func listeningScreen() -> some View {
     VStack(spacing: 0) {
+      // QA: 청취 화면 우상단 "투표 변경"은 Android에 없어 뺀다. 변경은 하단 "사전투표 변경하기"로 한다.
       PickeNavigationBar(
         onBack: { send(.backTapped) },
         centerTitle: store.displayTitle
-      ) {
-        if store.step == .some(.preVote), store.canParticipate {
-          Button("투표 변경") {
-            preVoteDraftOptionID = store.selectedOptionID
-            isEditingPreVote = true
-          }
-            .pretendardFont(.medium11)
-            .foregroundStyle(.primary500)
-        }
-      }
+      )
       .foregroundStyle(.neutral800)
       .background(.beige200)
       ScrollViewReader { proxy in
@@ -401,10 +404,6 @@ private extension ClassBattleFlowView {
       audioFooter()
     }
     .screenBackground()
-    .sheet(isPresented: $isEditingPreVote, onDismiss: { preVoteDraftOptionID = nil }) {
-      preVoteEditor()
-        .presentationDetents([.medium])
-    }
   }
 
   @ViewBuilder
@@ -429,17 +428,17 @@ private extension ClassBattleFlowView {
           }
           .frame(maxWidth: .infinity, alignment: .leading)
           .padding(12)
-            .background(
-              store.selectedMidOptionID == option.nextNodeId ? .beige300 : .white,
-              in: RoundedRectangle(cornerRadius: 4)
-            )
-            .overlay {
-              RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(
-                  store.selectedMidOptionID == option.nextNodeId ? .primary500 : .beige600,
-                  lineWidth: 1
-                )
-            }
+          .background(
+            store.selectedMidOptionID == option.nextNodeId ? .beige300 : .white,
+            in: RoundedRectangle(cornerRadius: 4)
+          )
+          .overlay {
+            RoundedRectangle(cornerRadius: 4)
+              .strokeBorder(
+                store.selectedMidOptionID == option.nextNodeId ? .primary500 : .beige600,
+                lineWidth: 1
+              )
+          }
         }
         .buttonStyle(.plain)
       }
@@ -449,31 +448,6 @@ private extension ClassBattleFlowView {
     }
     .padding(16)
     .background(.beige200)
-  }
-
-  @ViewBuilder
-  func preVoteEditor() -> some View {
-    VStack(alignment: .leading, spacing: 20) {
-      Text("사전투표 변경하기")
-        .pretendardFont(.headingMedium)
-        .foregroundStyle(.gray800)
-      optionSection(isPreVoteDraft: true)
-      Button("사전투표 변경하기") {
-        guard let preVoteDraftOptionID else { return }
-        send(.optionTapped(preVoteDraftOptionID))
-        send(.submitTapped)
-        isEditingPreVote = false
-      }
-      .ctaButtonStyle(.primary, size: .large, height: 52)
-      .disabled(
-        !store.canParticipate || store.submitRequestID != nil
-          || preVoteDraftOptionID == nil
-          || preVoteDraftOptionID == store.voteHistory?.preVote.optionID
-      )
-      Spacer()
-    }
-    .padding(20)
-    .background(.white)
   }
 
   @ViewBuilder
@@ -510,7 +484,7 @@ private extension ClassBattleFlowView {
             .padding(.vertical, line.side == "B" ? 8 : 6)
             .pickeCard(bubbleBackground, border: bubbleBorder)
             .overlay(alignment: line.side == "B" ? .leading : .trailing) {
-              if row.isActive && store.isPlaying {
+              if row.isActive, store.isPlaying {
                 AudioEqualizerView()
                   .frame(width: 24, height: 24)
                   .offset(x: line.side == "B" ? -36 : 36)
@@ -642,8 +616,9 @@ private extension ClassBattleFlowView {
           }
           if store.isLoadingPerspectives {
             SkeletonView(.rect).frame(height: 90)
-          } else if store.perspectives.isEmpty && store.perspectiveErrorMessage == nil
-            && store.hiddenMyPerspectiveRow == nil {
+          } else if store.perspectives.isEmpty, store.perspectiveErrorMessage == nil,
+                    store.hiddenMyPerspectiveRow == nil
+          {
             Text("아직 등록된 의견이 없어요.")
               .pretendardFont(.bodyMedium)
               .foregroundStyle(.gray500)
@@ -655,14 +630,14 @@ private extension ClassBattleFlowView {
               .pretendardFont(.regular13)
               .foregroundStyle(.primary500)
           }
-          if store.hasPublishedPerspective == nil && store.myPerspectiveRequestID == nil {
+          if store.hasPublishedPerspective == nil, store.myPerspectiveRequestID == nil {
             Button("내 의견 확인 다시 시도") { send(.retryMyPerspectiveTapped) }
               .pretendardFont(.semiBold13)
               .foregroundStyle(.primary500)
               .frame(maxWidth: .infinity)
               .padding(.vertical, 16)
           }
-          if store.hasMorePerspectives && !store.isLoadingPerspectives {
+          if store.hasMorePerspectives, !store.isLoadingPerspectives {
             Button("의견 더 보기") { send(.loadMorePerspectivesTapped) }
               .pretendardFont(.semiBold13)
               .foregroundStyle(.primary500)
@@ -828,7 +803,10 @@ private extension ClassBattleFlowView {
         .pretendardFont(.medium13)
         .foregroundStyle(store.perspectiveSort == value ? .white : .primary500)
         .frame(width: 58, height: 30)
-        .background(store.perspectiveSort == value ? Color.primary500 : .primary50, in: RoundedRectangle(cornerRadius: 2))
+        .background(
+          store.perspectiveSort == value ? Color.primary500 : .primary50,
+          in: RoundedRectangle(cornerRadius: 2)
+        )
         .overlay {
           RoundedRectangle(cornerRadius: 2)
             .stroke(.primary500, lineWidth: 1)
@@ -1063,10 +1041,16 @@ private extension ClassBattleFlowView {
       centerTitle: store.displayTitle
     ) {
       Button { send(.reportTapped) } label: {
-        Label("리포트", systemImage: "list.bullet.rectangle")
-          .pretendardFont(.bold11)
+        // 클래스 댓글 화면(ClassCommentView)에서 쓰던 리포트 아이콘과 맞춘다.
+        HStack(spacing: 4) {
+          Image(systemName: "doc.text")
+            .pretendardFont(family: .Regular, size: 14)
+          Text("리포트")
+            .pretendardFont(.labelSmall)
+        }
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("리포트")
       .foregroundStyle(.primary500)
     }
     .background(.beige200)

@@ -18,7 +18,16 @@ struct ClassRecommendTests {
       filter: .init(level: .middle, categories: [.society, .art, .philosophy])
     )
 
-    #expect(state.conditionTitles == ["중등", "사회", "예술", "철학"])
+    #expect(state.conditionTitles == ["초급", "사회", "예술", "철학"])
+  }
+
+  @Test
+  func 검색에서_고른_중급을_조건_칩에_그대로_표시한다() {
+    let state = ClassRecommendFeature.State(
+      filter: .init(level: .high, categories: [.philosophy])
+    )
+
+    #expect(state.conditionTitles == ["중급", "철학"])
   }
 
   @Test
@@ -27,7 +36,7 @@ struct ClassRecommendTests {
       filter: .init(keyword: "  철학 \n", level: .middle, categories: [.philosophy, .society])
     )
 
-    #expect(state.conditionTitles == ["철학", "중등", "철학", "사회"])
+    #expect(state.conditionTitles == ["철학", "초급", "철학", "사회"])
   }
 
   @Test
