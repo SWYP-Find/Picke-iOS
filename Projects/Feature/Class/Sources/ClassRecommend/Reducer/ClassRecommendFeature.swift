@@ -47,7 +47,7 @@ public struct ClassRecommendFeature {
 
     public var conditionTitles: [String] {
       let keyword = filter.keyword.trimmingCharacters(in: .whitespacesAndNewlines)
-      return (keyword.isEmpty ? [] : [keyword]) + [filter.level.title] + filter.categories.map(\.title)
+      return (keyword.isEmpty ? [] : [keyword]) + [filter.level.topicTitle] + filter.categories.map(\.title)
     }
 
     public var introTitle: String {

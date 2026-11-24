@@ -220,7 +220,7 @@ private extension ClassDetailView {
           .foregroundStyle(.primary500)
           .frame(maxWidth: .infinity)
           .frame(height: 52)
-          .background(Color.buttonSecondaryBackgroundDefault, in: RoundedRectangle(cornerRadius: 2))
+          .background(Color.primary50, in: RoundedRectangle(cornerRadius: 2))  // QA: Android 배틀 참여 버튼 배경(F3EBE9)
       }
       .buttonStyle(.plain)
       Button("결과 보기") { send(.reportTapped) }

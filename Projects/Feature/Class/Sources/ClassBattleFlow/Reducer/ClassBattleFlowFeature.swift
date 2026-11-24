@@ -5,8 +5,8 @@ import CommentDomainInterface
 import ComposableArchitecture
 import Foundation
 import HomeDomainInterface
-import PickeCoreUtility
 import PerspectiveDomainInterface
+import PickeCoreUtility
 import PickeSharedUI
 
 @Reducer
@@ -39,6 +39,7 @@ public struct ClassBattleFlowFeature {
         )
       }
     }
+
     public var pendingPerspectiveLikeResults: [Int: CommentLikeResult] = [:]
     public var nextPerspectiveCursor: String?
     public var hasMorePerspectives = false
@@ -85,9 +86,17 @@ public struct ClassBattleFlowFeature {
 
     public init() {}
 
-    public var step: ClassBattleStep? { session?.battle.currentStep }
-    public var options: [ClassBattleOption] { session?.battle.options ?? [] }
-    public var canParticipate: Bool { session?.canParticipate == true }
+    public var step: ClassBattleStep? {
+      session?.battle.currentStep
+    }
+
+    public var options: [ClassBattleOption] {
+      session?.battle.options ?? []
+    }
+
+    public var canParticipate: Bool {
+      session?.canParticipate == true
+    }
 
     public var canSubmit: Bool {
       // 의견 수정은 이미 게시한 의견이 대상이라 게시 조건과 별도로 판단하고, 마감 여부는 서버에 맡긴다.
@@ -138,9 +147,12 @@ public struct ClassBattleFlowFeature {
 
     public var voteCategoryLabel: String? {
       // 클래스 배틀 상세의 카테고리 태그를 먼저 쓴다. 커스텀 배틀은 방 정보에 카테고리가 없다.
-      let category = session?.battle.categoryTags.first ?? room?.battle.categoryDisplayTitle
-      guard let category, !category.isEmpty else { return nil }
-      return "#\(category)"
+      // 세션 태그가 비어 있거나 공백이면 `#`만 보이지 않게 방 정보 카테고리로 넘어간다.
+      let candidates = (session?.battle.categoryTags ?? []) + [room?.battle.categoryDisplayTitle ?? ""]
+      let category = candidates
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .first { !$0.isEmpty }
+      return category.map { "#\($0)" }
     }
 
     public var voteCommentCountLabel: String? {
@@ -172,7 +184,7 @@ public struct ClassBattleFlowFeature {
     }
 
     public var playbackRateTitle: String {
-      playbackRate.formatted(.number.precision(.fractionLength(1...2)))
+      playbackRate.formatted(.number.precision(.fractionLength(1 ... 2)))
     }
 
     public var shouldShowOptions: Bool {
@@ -181,7 +193,9 @@ public struct ClassBattleFlowFeature {
     }
 
     public var shouldShowComposer: Bool {
-      if editingPerspectiveID != nil { return true }
+      if editingPerspectiveID != nil {
+        return true
+      }
       // Android PerspectiveScreen 은 하단 입력창을 항상 둔다. 첫 의견을 올린 뒤에도 숨기지 않는다.
       return step == .some(.completed) && canParticipate
     }
@@ -255,7 +269,8 @@ public struct ClassBattleFlowFeature {
       var nodeID: Int? = scenario.startNodeId
       var visited = Set<Int>()
       while let id = nodeID, visited.insert(id).inserted,
-            let node = scenario.nodes.first(where: { $0.nodeId == id }) {
+            let node = scenario.nodes.first(where: { $0.nodeId == id })
+      {
         if !node.interactiveOptions.isEmpty {
           guard let chosenNextID = selectedPaths[id],
                 node.interactiveOptions.contains(where: { $0.nextNodeId == chosenNextID })
@@ -298,7 +313,8 @@ public struct ClassBattleFlowFeature {
     public var opinionChangeLabel: String? {
       guard let voteHistory else { return nil }
       guard let changed = voteHistory.opinionChanged
-        ?? voteHistory.postVote.map({ $0.optionID != voteHistory.preVote.optionID }) else {
+        ?? voteHistory.postVote.map({ $0.optionID != voteHistory.preVote.optionID })
+      else {
         return nil
       }
       return changed ? "생각이 바뀌었어요" : "생각이 동일해요"
@@ -439,21 +455,25 @@ extension ClassBattleFlowFeature {
         return loadProgress(state: &state)
       }
       if state.isAudioStep, !state.showsPreVoteLanding,
-         let battleID = state.session?.battle.id {
+         let battleID = state.session?.battle.id
+      {
         if state.isAudioReady {
           return observePlayerTime(instanceID: state.instanceID)
         }
         return loadAudio(state: &state, battleID: battleID)
       }
-      if state.step == .some(.completed), state.perspectiveRequestID == nil
-      {
+      if state.step == .some(.completed), state.perspectiveRequestID == nil {
         let shouldRefresh = state.refreshAfterPerspectiveDetail
         let returnedFromOwnPerspective = shouldRefresh && state.refreshAfterOwnPerspectiveDetail
         state.refreshAfterPerspectiveDetail = false
         state.refreshAfterOwnPerspectiveDetail = false
-        if shouldRefresh { state.hasSubmittedInCurrentSession = false }
+        if shouldRefresh {
+          state.hasSubmittedInCurrentSession = false
+        }
         // 내 의견 상세에서 삭제 후 돌아왔을 수 있으므로 /me 결과로 다시 판정한다.
-        if returnedFromOwnPerspective { state.hasPublishedPerspective = nil }
+        if returnedFromOwnPerspective {
+          state.hasPublishedPerspective = nil
+        }
         return .merge(
           state.perspectives.isEmpty || shouldRefresh
             ? loadPerspectives(state: &state, cursor: nil, preserveExisting: shouldRefresh) : .none,
@@ -559,7 +579,7 @@ extension ClassBattleFlowFeature {
             guard let optionID else { throw ClassBattleError.invalidOption }
             _ = try await useCase.submitPreVote(classID: classID, optionID: optionID)
           case .preVote:
-            if !isPreVoteLocked && optionID != preVoteOptionID {
+            if !isPreVoteLocked, optionID != preVoteOptionID {
               guard let optionID else { throw ClassBattleError.invalidOption }
               _ = try await useCase.submitPreVote(classID: classID, optionID: optionID)
             } else {
@@ -621,7 +641,11 @@ extension ClassBattleFlowFeature {
             state.pendingCheckpointID == nil else { return .none }
       state.isPlaying.toggle()
       return .run { [player = audioPlayer, shouldPlay = state.isPlaying] _ in
-        if shouldPlay { await player.play() } else { await player.pause() }
+        if shouldPlay {
+          await player.play()
+        } else {
+          await player.pause()
+        }
       }
       .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true)
     case let .seekBy(delta):
@@ -858,7 +882,8 @@ extension ClassBattleFlowFeature {
         }
         if progress.session.battle.currentStep == .completed {
           if state.hasSubmittedInCurrentSession
-            || (progress.session.commentRequired && progress.session.participationCompleted) {
+            || (progress.session.commentRequired && progress.session.participationCompleted)
+          {
             state.hasPublishedPerspective = true
           } else if progress.session.commentRequired {
             state.hasPublishedPerspective = false
@@ -871,8 +896,8 @@ extension ClassBattleFlowFeature {
         state.selectedOptionID = progress.session.battle.currentStep == .preVote
           ? progress.voteHistory?.preVote.optionID
           : progress.session.battle.currentStep == .completed
-            ? progress.voteHistory?.postVote?.optionID
-            : nil
+          ? progress.voteHistory?.postVote?.optionID
+          : nil
         if state.isAudioStep, !state.showsPreVoteLanding {
           return loadAudio(state: &state, battleID: progress.session.battle.id)
         }
@@ -898,7 +923,9 @@ extension ClassBattleFlowFeature {
       case .success:
         state.draft = ""
         state.hasAdvancedInCurrentSession = true
-        if submittedStep == .postVote { state.needsMidVoteRecovery = false }
+        if submittedStep == .postVote {
+          state.needsMidVoteRecovery = false
+        }
         if submittedStep == .completed {
           state.hasSubmittedInCurrentSession = true
           state.hasPublishedPerspective = true
@@ -1001,10 +1028,12 @@ extension ClassBattleFlowFeature {
       let seekTime = state.pendingSeekTime
       return .merge(
         .run { [player = audioPlayer] _ in
-          if let seekTime { await player.seek(to: seekTime) }
+          if let seekTime {
+            await player.seek(to: seekTime)
+          }
           await player.play()
         }
-          .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true),
+        .cancellable(id: CancelID.playback(state.instanceID), cancelInFlight: true),
         observePlayerTime(instanceID: state.instanceID)
       )
     case let .playerTimeUpdated(instanceID, time):
@@ -1115,7 +1144,9 @@ extension ClassBattleFlowFeature {
       case .success:
         // Android와 같이 삭제한 내 의견을 바로 빼고 새 의견을 다시 쓸 수 있게 한다.
         state.perspectives.removeAll { $0.id == id }
-        if state.myPerspective?.id == id { state.myPerspective = nil }
+        if state.myPerspective?.id == id {
+          state.myPerspective = nil
+        }
         if state.editingPerspectiveID == id {
           state.editingPerspectiveID = nil
           state.draft = ""
@@ -1185,7 +1216,9 @@ extension ClassBattleFlowFeature {
     state.perspectiveErrorMessage = nil
     if cursor == nil {
       state.nextPerspectiveCursor = nil
-      if !preserveExisting { state.perspectives = [] }
+      if !preserveExisting {
+        state.perspectives = []
+      }
     }
     let optionID = state.selectedPerspectiveOptionID
     let sort = state.perspectiveSort
@@ -1250,10 +1283,12 @@ extension ClassBattleFlowFeature {
     guard let scenario = state.scenario, state.pendingCheckpointID == nil else { return nil }
     var visited = Set<Int>()
     while let node = state.currentNode, visited.insert(node.nodeId).inserted,
-          time >= scenario.nodeEndTime(for: node) {
+          time >= scenario.nodeEndTime(for: node)
+    {
       if !node.interactiveOptions.isEmpty {
         if let selectedNextID = state.selectedPaths[node.nodeId],
-           let selectedOption = node.interactiveOptions.first(where: { $0.nextNodeId == selectedNextID }) {
+           let selectedOption = node.interactiveOptions.first(where: { $0.nextNodeId == selectedNextID })
+        {
           return advanceAfterChoice(state: &state, checkpointID: node.nodeId, option: selectedOption)
         }
         state.pendingCheckpointID = node.nodeId
@@ -1281,7 +1316,8 @@ extension ClassBattleFlowFeature {
     if let pathKey, let rawURL = scenario.audios[pathKey] {
       branchURL = URL(string: rawURL)
     } else if pathKey != nil,
-              scenario.audios["PATH_A"] != nil || scenario.audios["PATH_B"] != nil {
+              scenario.audios["PATH_A"] != nil || scenario.audios["PATH_B"] != nil
+    {
       state.errorMessage = ClassBattleError.invalidResponse.message
       return .none
     } else {
@@ -1341,10 +1377,15 @@ extension ClassBattleFlowFeature {
     var nodeID: Int? = firstNodeID
     var visited = Set<Int>()
     while let id = nodeID, visited.insert(id).inserted,
-          let node = scenario.nodes.first(where: { $0.nodeId == id }) {
+          let node = scenario.nodes.first(where: { $0.nodeId == id })
+    {
       let name = node.nodeName.uppercased()
-      if name.contains("_A") { return "PATH_A" }
-      if name.contains("_B") { return "PATH_B" }
+      if name.contains("_A") {
+        return "PATH_A"
+      }
+      if name.contains("_B") {
+        return "PATH_B"
+      }
       nodeID = node.autoNextNodeId
     }
     return nil

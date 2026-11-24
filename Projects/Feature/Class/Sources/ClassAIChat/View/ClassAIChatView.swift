@@ -111,18 +111,9 @@ private extension ClassAIChatView {
           stanceNotice
             .padding(.bottom, 14)
 
-          if let aiNotice = store.debate?.aiNotice, !aiNotice.isEmpty {
-            Text(aiNotice)
-              .pretendardFont(.regular13)
-              .foregroundStyle(.gray500)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.bottom, 8)
-          }
-
-          ForEach(Array(store.messages.enumerated()), id: \.element.id) { index, message in
-            let beginsTurn = index == 0 || store.messages[index - 1].speaker != message.speaker
-            messageRow(message, beginsTurn: beginsTurn)
-              .padding(.top, beginsTurn && index > 0 ? 14 : 0)
+          ForEach(store.messageRows) { row in
+            messageRow(row.message, beginsTurn: row.beginsTurn)
+              .padding(.top, row.hasTurnSpacing ? 14 : 0)
           }
 
           if store.isGenerating {
@@ -360,12 +351,12 @@ private extension ClassAIChatView {
 
   var inputField: some View {
     TextField(
-      "내용을 입력하세요",
+      store.inputPlaceholder,
       text: Binding(
         get: { store.draft },
         set: { send(.draftChanged($0)) }
       ),
-      prompt: Text("내용을 입력하세요").foregroundStyle(.gray300),
+      prompt: Text(store.inputPlaceholder).foregroundStyle(.gray300),
       axis: .vertical
     )
     .pretendardFont(.regular13)

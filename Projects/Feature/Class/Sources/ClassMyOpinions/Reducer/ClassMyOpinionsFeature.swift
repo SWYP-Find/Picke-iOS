@@ -218,7 +218,7 @@ public struct ClassMyOpinionsFeature {
               id: String($0.id),
               kind: .comment,
               body: $0.content,
-              stance: $0.option.stance ?? $0.option.title,
+              stance: $0.option.title,  // QA: 배지에는 입장 제목만 보인다(시안). option.stance는 입장 설명 문장이다.
               likeCount: $0.likeCount,
               replyCount: $0.commentCount,
               authorName: $0.author.nickname

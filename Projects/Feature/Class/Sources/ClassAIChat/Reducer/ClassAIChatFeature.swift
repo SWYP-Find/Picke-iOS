@@ -66,7 +66,9 @@ public struct ClassAIChatFeature {
 
     public var opponentAvatarURL: URL? {
       // 이름과 얼굴이 어긋나지 않게 서버가 준 토론 철학자 이미지를 먼저 쓴다.
-      if let url = debate?.philosopherImageURL { return url }
+      if let url = debate?.philosopherImageURL {
+        return url
+      }
       return selectedOptionID == 1 ? room.battle.philosopherBImageURL : room.battle.philosopherAImageURL
     }
 
@@ -97,6 +99,23 @@ public struct ClassAIChatFeature {
       ]
     }
 
+    public var messageRows: [ClassAIChatMessageRow] {
+      let previousSpeakers = [nil] + messages.map(\.speaker)
+      return zip(messages, previousSpeakers).map { message, previousSpeaker in
+        let beginsTurn = previousSpeaker != message.speaker
+        return ClassAIChatMessageRow(
+          message: message,
+          beginsTurn: beginsTurn,
+          hasTurnSpacing: beginsTurn && previousSpeaker != nil
+        )
+      }
+    }
+
+    /// QA: 입력 안내문은 최소 글자 수를 알려준다.
+    public var inputPlaceholder: String {
+      "\(debate?.replyMinLength ?? 50)자 이상 입력해주세요"
+    }
+
     public var canSend: Bool {
       let trimmedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
       let minimum = debate?.replyMinLength ?? 50
@@ -115,13 +134,18 @@ public struct ClassAIChatFeature {
         replyRequestKey = nil
       }
       round = debate.round
-      messages = debate.messages.map { message in
-        let id = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012llx", message.id)) ?? UUID()
-        return ClassAIChatMessage(
-          id: id,
-          speaker: message.speaker == .ai ? .opponent : .user,
-          text: message.content
-        )
+      // AI 답변은 한 덩어리로 오므로 문장 단위로 나눠 최대 3개의 말풍선으로 보여준다.
+      messages = debate.messages.flatMap { message in
+        let isAI = message.speaker == .ai
+        let texts = isAI ? ClassAIChatMessageUseCase.bubbles(from: message.content) : [message.content]
+        return texts.enumerated().map { index, text in
+          let id = UUID(uuidString: String(format: "00000000-0000-0000-%04x-%012llx", index, message.id)) ?? UUID()
+          return ClassAIChatMessage(
+            id: id,
+            speaker: isAI ? .opponent : .user,
+            text: text
+          )
+        }
       }
       hasStarted = true
       isCompleted = debate.status == .completed
