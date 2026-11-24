@@ -1,3 +1,10 @@
+//
+//  AdsAPI.swift
+//  API
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 public enum AdsAPI: String, CaseIterable {

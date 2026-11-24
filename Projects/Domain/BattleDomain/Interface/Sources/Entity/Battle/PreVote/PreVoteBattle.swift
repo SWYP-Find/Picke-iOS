@@ -1,8 +1,8 @@
 //
 //  PreVoteBattle.swift
-//  Entity
+//  BattleDomainInterface
 //
-//  Created by Wonji Suh on 5/17/26.
+//  Created by Picke on 5/17/26.
 //
 
 import Foundation
@@ -20,6 +20,14 @@ public struct PreVoteBattle: Equatable, Identifiable {
   public let rightOption: PreVoteOption
 
   public var id: Int { battleId }
+
+  /// Android `title.replace(", ", ",\n")` — 쉼표 뒤에서 줄을 바꾼다.
+  public var displayTitle: String {
+    [titleLine1, titleLine2]
+      .filter { !$0.isEmpty }
+      .joined(separator: "\n")
+      .replacingOccurrences(of: ", ", with: ",\n")
+  }
 
   public init(
     battleId: Int,

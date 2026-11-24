@@ -2,6 +2,8 @@
 //  RecapPhilosopherCard.swift
 //  Profile
 //
+//  Created by Picke on 10/11/26.
+//
 
 import SwiftUI
 

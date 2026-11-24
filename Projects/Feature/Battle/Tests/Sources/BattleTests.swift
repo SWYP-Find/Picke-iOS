@@ -1,8 +1,8 @@
 //
 //  BattleTests.swift
-//  Feature.BattleTests
+//  BattleTests
 //
-//  Created by Roy on 2026-06-05.
+//  Created by Picke on 2026-06-05.
 //
 
 import Testing

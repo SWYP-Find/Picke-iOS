@@ -1,28 +1,37 @@
 //
 //  PickeNavigationBar.swift
-//  DesignSystem
+//  PickeDesignKit
+//
+//  Created by Picke on 10/11/26.
 //
 
 import SwiftUI
 
 /// 화면 상단에 공통으로 올라가는 네비게이션 바.
-/// 타이틀은 좌우 콘텐츠 폭과 무관하게 바 전체 기준 절대 중앙에 놓인다(안드로이드 `CustomTopAppBar` 동일).
+/// 기본 타이틀은 바 전체 기준 중앙에 놓이고, `leadingTitle`은 뒤로가기 버튼 옆에 놓인다.
+/// 두 타이틀을 함께 전달하면 `leadingTitle`이 우선한다.
 /// 색상은 호출처에서 `.foregroundStyle(.beige50)` 같은 modifier 로 위임.
 public struct PickeNavigationBar<Trailing: View>: View {
   private let onBack: (() -> Void)?
   private let centerIcon: Image?
   private let centerTitle: String?
+  private let leadingTitle: String?
+  private let leadingSpacing: CGFloat
   private let trailing: () -> Trailing
 
   public init(
     onBack: (() -> Void)? = nil,
     centerIcon: Image? = nil,
     centerTitle: String? = nil,
+    leadingTitle: String? = nil,
+    leadingSpacing: CGFloat = 4,
     @ViewBuilder trailing: @escaping () -> Trailing
   ) {
     self.onBack = onBack
     self.centerIcon = centerIcon
     self.centerTitle = centerTitle
+    self.leadingTitle = leadingTitle
+    self.leadingSpacing = leadingSpacing
     self.trailing = trailing
   }
 
@@ -31,7 +40,15 @@ public struct PickeNavigationBar<Trailing: View>: View {
       centerArea
 
       HStack(spacing: 4) {
-        leadingArea
+        HStack(spacing: leadingSpacing) {
+          leadingArea
+          if let leadingTitle {
+            Text(leadingTitle)
+              .pretendardFont(.headingMedium)
+              .kerning(-0.4)
+              .lineLimit(1)
+          }
+        }
         Spacer()
         trailing()
       }
@@ -45,11 +62,18 @@ public struct PickeNavigationBar<Trailing: View>: View {
   private var leadingArea: some View {
     if let onBack {
       Button { onBack() } label: {
-        Image(systemName: "chevron.left")
-          .font(.system(size: 18, weight: .semibold))
+        Path { path in
+          path.move(to: CGPoint(x: 17, y: 2))
+          path.addLine(to: CGPoint(x: 7, y: 12))
+          path.addLine(to: CGPoint(x: 17, y: 22))
+        }
+          .stroke(style: StrokeStyle(lineWidth: 1.5, lineCap: .butt, lineJoin: .miter))
           .frame(width: 24, height: 24)
+          .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("뒤로")
+      .accessibilityIdentifier("chevron.left")
     } else {
       Color.clear.frame(width: 24, height: 24)
     }
@@ -57,10 +81,14 @@ public struct PickeNavigationBar<Trailing: View>: View {
 
   @ViewBuilder
   private var centerArea: some View {
-    if let centerTitle {
+    if leadingTitle == nil, let centerTitle {
+      // Android `PickeTopAppBarTitle` — 한 줄 말줄임, 양옆 버튼(24 + 간격) 자리를 비운다.
       Text(centerTitle)
         .pretendardFont(.headingMedium)
         .kerning(-0.4)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .padding(.horizontal, 32)
     } else if let centerIcon {
       centerIcon
         .font(.system(size: 16, weight: .semibold))
@@ -75,8 +103,16 @@ public extension PickeNavigationBar where Trailing == EmptyView {
   init(
     onBack: (() -> Void)? = nil,
     centerIcon: Image? = nil,
-    centerTitle: String? = nil
+    centerTitle: String? = nil,
+    leadingTitle: String? = nil,
+    leadingSpacing: CGFloat = 4
   ) {
-    self.init(onBack: onBack, centerIcon: centerIcon, centerTitle: centerTitle) { EmptyView() }
+    self.init(
+      onBack: onBack,
+      centerIcon: centerIcon,
+      centerTitle: centerTitle,
+      leadingTitle: leadingTitle,
+      leadingSpacing: leadingSpacing
+    ) { EmptyView() }
   }
 }

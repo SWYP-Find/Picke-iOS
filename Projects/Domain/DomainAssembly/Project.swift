@@ -1,3 +1,10 @@
+//
+//  Project.swift
+//  DomainAssembly
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 import DependencyPackagePlugin
@@ -16,6 +23,7 @@ let project = Project.makeModule(
     .domain(.attendance, .implementation),
     .domain(.auth, .implementation),
     .domain(.battle, .implementation),
+    .domain(.classroom, .implementation),
     .domain(.ad, .implementation),
     .domain(.search, .implementation),
     .domain(.comment, .implementation),

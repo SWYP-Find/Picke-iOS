@@ -439,7 +439,6 @@ platform :ios do
     begin
       # picke/PICKE 그룹에 배포한다.
       upload_to_testflight_with_retry(
-        api_key_path: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
         ipa: ipa_path,
         changelog: testflight_changelog(new_build_number),
         groups: ["picke", "PICKE"],
@@ -613,7 +612,6 @@ platform :ios do
       # skip_waiting_for_build_processing: false 로 App Store Connect 처리 완료까지 기다려야
       # 심사 제출 단계에서 해당 빌드를 선택할 수 있다.
       upload_to_testflight_with_retry(
-        api_key_path: ENV.fetch("APP_STORE_CONNECT_API_KEY_PATH"),
         ipa: ipa_path,
         app_identifier: BUNDLE_ID,
         skip_submission: true,

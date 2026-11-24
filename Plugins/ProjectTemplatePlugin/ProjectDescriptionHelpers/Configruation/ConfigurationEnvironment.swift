@@ -1,8 +1,8 @@
 //
 //  ConfigurationEnvironment.swift
-//  DependencyPackagePlugin
+//  ProjectTemplatePlugin
 //
-//  Created by Wonji Suh  on 7/31/25.
+//  Created by Picke on 7/31/25.
 //
 
 import Foundation

@@ -1,8 +1,8 @@
 //
 //  MockKakaoOAuthRepository.swift
-//  Domain
+//  AuthDomainInterface
 //
-//  Created by Assistant on 12/4/25.
+//  Created by Picke on 12/4/25.
 //
 
 import Foundation

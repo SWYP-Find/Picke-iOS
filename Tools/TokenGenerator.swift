@@ -1,3 +1,10 @@
+//
+//  TokenGenerator.swift
+//  Picke
+//
+//  Created by Picke on 10/11/26.
+//
+
 #!/usr/bin/env swift
 //
 //  TokenGenerator.swift

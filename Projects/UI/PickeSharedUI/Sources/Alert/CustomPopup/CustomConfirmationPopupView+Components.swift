@@ -1,8 +1,10 @@
 //
 //  CustomConfirmationPopupView+Components.swift
-//  DesignSystem
+//  PickeSharedUI
 //
+//  Created by Picke on 10/11/26.
 //  팝업 공통 헬퍼 뷰
+//
 
 import SwiftUI
 
@@ -61,6 +63,16 @@ extension CustomConfirmationPopup {
       .padding(.horizontal, 16)
       .padding(.bottom, 16)
     }
+  }
+
+  /// primary 버튼 1개 행.
+  func pickeSingleButtonRow(
+    title: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    pickePrimaryButton(title: title, action: action)
+      .padding(.horizontal, 16)
+      .padding(.bottom, 16)
   }
 
   @ViewBuilder

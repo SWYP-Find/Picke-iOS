@@ -1,8 +1,8 @@
 //
 //  MockAppleAuthRequest.swift
-//  DomainInterface
+//  AuthDomainInterface
 //
-//  Created by Wonji Suh  on 12/26/25.
+//  Created by Picke on 12/26/25.
 //
 
 import Foundation

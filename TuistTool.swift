@@ -2,7 +2,7 @@
 //  TuistTool.swift
 //  Picke
 //
-//  Created by Wonji Suh on 9/7/26.
+//  Created by Picke on 9/7/26.
 //
 
 import Foundation

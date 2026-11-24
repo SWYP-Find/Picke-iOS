@@ -1,8 +1,10 @@
 //
 //  ReportReason.swift
-//  DesignSystem
+//  PickeSharedUI
 //
+//  Created by Picke on 10/11/26.
 //  신고 사유 enum
+//
 
 import Foundation
 

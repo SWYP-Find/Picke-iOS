@@ -1,3 +1,10 @@
+//
+//  Project.swift
+//  Home
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 import DependencyPackagePlugin
@@ -13,6 +20,7 @@ let project = Project.makeModule(
   settings: .settings(),
   dependencies: [
     .core(.logger),
+    .core(.coreUtility),
     .SPM.composableArchitecture,
     .domain(.auth, .interface),
     .ui(.designKit),

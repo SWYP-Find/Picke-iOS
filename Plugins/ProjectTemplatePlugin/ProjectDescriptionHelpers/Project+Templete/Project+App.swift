@@ -2,6 +2,7 @@
 //  Project+App.swift
 //  ProjectTemplatePlugin
 //
+//  Created by Picke on 10/11/26.
 //  app 모듈 타입의 Project 구성.
 //
 
@@ -20,6 +21,7 @@ public extension Scheme {
       name: name,
       shared: true,
       buildAction: .buildAction(targets: ["\(appName)"]),
+      testAction: .targets(["\(appName)Tests"], configuration: .stage),
       runAction: .runAction(configuration: configuration, executable: "\(appName)"),
       archiveAction: .archiveAction(configuration: configuration),
       profileAction: .profileAction(configuration: configuration, executable: "\(appName)"),
@@ -48,11 +50,13 @@ extension Project {
     settings: ProjectDescription.Settings,
     scripts: [ProjectDescription.TargetScript] = [],
     dependencies: [ProjectDescription.TargetDependency] = [],
+    testDependencies: [ProjectDescription.TargetDependency] = [],
     resources: ProjectDescription.ResourceFileElements? = nil,
     infoPlist: ProjectDescription.InfoPlist = .default,
     entitlements: ProjectDescription.Entitlements? = nil,
     schemes: [ProjectDescription.Scheme] = [],
-    hasTests: Bool = false
+    hasTests: Bool = false,
+    additionalTargets: [Target] = []
   ) -> Project {
     let appTarget: Target = .target(
       name: name,
@@ -79,7 +83,7 @@ extension Project {
           bundleId: bundleId,
           destinations: destinations,
           deploymentTarget: deploymentTarget,
-          dependencies: [.target(name: name)]
+          dependencies: [.target(name: name)] + testDependencies
         )
       )
     }
@@ -93,7 +97,7 @@ extension Project {
       ),
       packages: packages,
       settings: settings,
-      targets: targets,
+      targets: targets + additionalTargets,
       schemes: schemes,
       fileHeaderTemplate: .default
     )

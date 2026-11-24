@@ -2,17 +2,18 @@
 //  CommentFeature.swift
 //  Chat
 //
-
-import Foundation
-import PickeCoreLogger
+//  Created by Picke on 10/11/26.
+//
 
 import BattleDomainInterface
 import CommentDomainInterface
 import ComposableArchitecture
+import Foundation
 import PerspectiveDomainInterface
+import PickeAnalyticsInterface
+import PickeCoreLogger
 import PickeDesignKit
 import PickeSharedUI
-import PickeAnalyticsInterface
 
 @Reducer
 public struct CommentFeature {
@@ -27,6 +28,12 @@ public struct CommentFeature {
     public var title: String = ""
     public var voteSummary: VoteSummary = .mock
     public var isLoadingStats: Bool = false
+    /// 첫 통계 응답을 받았는지 — 받기 전에는 Android `PerspectiveHeaderSkeleton` 을 그린다.
+    public var hasLoadedHeader: Bool = false
+    /// 첫 통계 조회 실패 — Android 처럼 통계·탭·목록 대신 `PickeLoadFailedSection` 을 그린다.
+    public var headerLoadFailed: Bool = false
+    /// Android `PerspectiveUiEvent` 토스트 — 뷰가 띄운 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
     public var isLoadingComments: Bool = false
     public var isSubmitting: Bool = false
     public var nextCursor: String?
@@ -50,6 +57,25 @@ public struct CommentFeature {
 
     public var comments: [CommentItem] = []
     public var commentText: String = ""
+    public var isComposerExpanded: Bool = false
+
+    public var isEditingComment: Bool { editingPerspectiveId != nil }
+
+    public var previousFilter: CommentFilter? {
+      switch selectedFilter {
+      case .all: return nil
+      case .optionA: return .all
+      case .optionB: return .optionA
+      }
+    }
+
+    public var nextFilter: CommentFilter? {
+      switch selectedFilter {
+      case .all: return .optionA
+      case .optionA: return .optionB
+      case .optionB: return nil
+      }
+    }
 
     public var filteredComments: [CommentItem] {
       switch selectedFilter {
@@ -71,9 +97,28 @@ public struct CommentFeature {
     /// 사후투표 후엔 칩을 항상 노출하되, 이 값에 따라 문구만 분기한다.
     public var isMindChanged: Bool = false
 
-    /// 생각 변화 칩 문구 — 바뀜/안 바뀜 양쪽 모두 노출.
+    /// 생각 변화 칩 문구 — Android `comment_opinion_changed` / `comment_opinion_same`.
     public var changeBadgeTitle: String {
-      isMindChanged ? "생각이 바뀌었어요" : "생각이 바뀌지 않았어요"
+      isMindChanged ? "생각이 바뀌었어요" : "생각이 동일해요"
+    }
+
+    /// Android 앱바 제목 — 배틀 제목, 비면 "관점 남기기".
+    public var navigationTitle: String {
+      title.isEmpty ? "관점 남기기" : title
+    }
+
+    /// Android `comment_empty_all` / `comment_empty_option`.
+    public var emptyMessage: String {
+      switch selectedFilter {
+      case .all: return "아직 작성된 관점이 없습니다"
+      case .optionA: return "아직 작성된 \"\(voteSummary.optionA.title)\" 관점이 없습니다"
+      case .optionB: return "아직 작성된 \"\(voteSummary.optionB.title)\" 관점이 없습니다"
+      }
+    }
+
+    /// Android `comment_input_hint_perspective` / `comment_input_hint_edit`.
+    public var inputPlaceholder: String {
+      isEditingComment ? "수정할 내용을 입력해주세요..." : "의견을 남겨보세요..."
     }
 
     public init(battleId: Int = 0, isMindChanged: Bool = false) {
@@ -104,6 +149,10 @@ public struct CommentFeature {
     case commentMenu(id: UUID, action: CommentMenuAction)
     case commentRow(id: UUID, action: CommentRowAction)
     case sendTapped
+    case composeTapped
+    case composeDismissed
+    case lastCommentAppeared
+    case toastShown
   }
 
   public enum CommentMenuAction: Equatable {
@@ -139,7 +188,8 @@ public struct CommentFeature {
     case perspectivesResponse(Result<BattlePerspectivePage, BattleError>, reset: Bool)
     case likeResponse(Result<CommentLikeResult, CommentError>)
     case createCommentResponse(Result<BattlePerspective?, BattleError>)
-    case mutationFinished
+    case mutationResponse(Result<Bool, PerspectiveError>)
+    case reportResponse(Result<Bool, PerspectiveError>)
     case perspectiveLikesResponse(Result<CommentLikeResult, CommentError>)
   }
 
@@ -239,10 +289,12 @@ extension CommentFeature {
         guard let index = state.comments.firstIndex(where: { $0.id == id }),
               let commentId = state.comments[index].perspectiveId
         else { return .none }
-        let wasLiked = state.comments[index].isLiked
-        state.comments[index].isLiked.toggle()
-        state.comments[index].likeCount += state.comments[index].isLiked ? 1 : -1
-        return .send(.async(.toggleLike(commentId: commentId, currentlyLiked: wasLiked)))
+        // Android: 본인 관점은 좋아요 대신 안내 토스트, 좋아요 수·상태는 응답을 받은 뒤 반영한다.
+        if state.comments[index].isMine {
+          state.toastMessage = "본인이 쓴 관점에는 좋아요를 누를 수 없습니다."
+          return .none
+        }
+        return .send(.async(.toggleLike(commentId: commentId, currentlyLiked: state.comments[index].isLiked)))
       }
 
     case .menuDismissed:
@@ -261,6 +313,7 @@ extension CommentFeature {
         else { return .none }
         state.editingPerspectiveId = pid
         state.commentText = comment.content
+        state.isComposerExpanded = true
       case .delete:
         state.menuTargetCommentID = nil
         guard let comment = state.comments.first(where: { $0.id == id }),
@@ -302,6 +355,26 @@ extension CommentFeature {
         return .send(.async(.updatePerspective(perspectiveId: editId, content: text)))
       }
       return .send(.async(.createComment(content: text)))
+
+    case .composeTapped:
+      state.isComposerExpanded = true
+      return .none
+
+    case .lastCommentAppeared:
+      // Android PerspectiveListSection: 마지막 항목 + 로딩 중 아님 + hasNext → 다음 페이지.
+      guard state.hasNext, !state.isLoadingComments, state.nextCursor != nil else { return .none }
+      return .send(.async(.fetchPerspectives(reset: false)))
+
+    case .toastShown:
+      state.toastMessage = nil
+      return .none
+
+    case .composeDismissed:
+      guard !state.isSubmitting else { return .none }
+      state.isComposerExpanded = false
+      state.editingPerspectiveId = nil
+      state.commentText = ""
+      return .none
     }
   }
 
@@ -383,7 +456,9 @@ extension CommentFeature {
     case let .fetchPerspectives(reset):
       state.isLoadingComments = true
       // 초기/정렬/필터/등록 후 reset 시 리스트를 비워 스켈레톤이 노출되도록 한다.
-      if reset { state.comments = [] }
+      if reset {
+        state.comments = []
+      }
       let battleId = state.battleId
       let cursor = reset ? nil : state.nextCursor
       let optionId: Int? = {
@@ -453,19 +528,32 @@ extension CommentFeature {
 
     case let .updatePerspective(perspectiveId, content):
       return .run { [repository = perspectiveUseCase] send in
-        try? await repository.updatePerspective(perspectiveId: perspectiveId, content: content)
-        await send(.inner(.mutationFinished))
+        let result = await Result {
+          try await repository.updatePerspective(perspectiveId: perspectiveId, content: content)
+          return true
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.mutationResponse(result)))
       }
 
     case let .deletePerspective(perspectiveId):
       return .run { [repository = perspectiveUseCase] send in
-        try? await repository.deletePerspective(perspectiveId: perspectiveId)
-        await send(.inner(.mutationFinished))
+        let result = await Result {
+          try await repository.deletePerspective(perspectiveId: perspectiveId)
+          return true
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.mutationResponse(result)))
       }
 
     case let .reportPerspective(perspectiveId):
-      return .run { [repository = perspectiveUseCase] _ in
-        try? await repository.reportPerspective(perspectiveId: perspectiveId)
+      return .run { [repository = perspectiveUseCase] send in
+        let result = await Result {
+          try await repository.reportPerspective(perspectiveId: perspectiveId)
+          return true
+        }
+        .mapError(PerspectiveError.from)
+        await send(.inner(.reportResponse(result)))
       }
 
     case let .fetchPerspectiveLikes(perspectiveId):
@@ -518,7 +606,9 @@ extension CommentFeature {
       switch result {
       case let .success(perspective):
         state.perspectiveId = perspective?.perspectiveId
-        if let optionId = perspective?.option.optionId { state.myOptionId = optionId }
+        if let optionId = perspective?.option.optionId {
+          state.myOptionId = optionId
+        }
         // 내 perspectiveId 가 늦게 로드돼도 기존 목록에서 내 글을 표시.
         if let myPid = perspective?.perspectiveId {
           for index in state.comments.indices where state.comments[index].perspectiveId == myPid {
@@ -527,6 +617,7 @@ extension CommentFeature {
         }
       case let .failure(error):
         PickeLogger.error("[CommentFeature] fetchMyPerspective failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.loadFailedMessage
       }
       return .none
 
@@ -535,8 +626,15 @@ extension CommentFeature {
       switch result {
       case let .success(stats):
         state.voteSummary = makeSummary(from: stats, fallback: state.voteSummary)
+        state.hasLoadedHeader = true
+        state.headerLoadFailed = false
       case let .failure(error):
         PickeLogger.error("[CommentFeature] fetchVoteStats failed: \(error.localizedDescription)", category: .ui)
+        if !state.hasLoadedHeader {
+          state.headerLoadFailed = true
+        }
+        state.hasLoadedHeader = true
+        state.toastMessage = Self.loadFailedMessage
       }
       return .none
 
@@ -558,14 +656,21 @@ extension CommentFeature {
           }
           return comment
         }
-        state.comments = reset ? mapped : state.comments + mapped
+        if reset {
+          state.comments = mapped
+        } else {
+          let existing = Set(state.comments.compactMap(\.perspectiveId))
+          state.comments += mapped.filter { $0.perspectiveId.map { !existing.contains($0) } ?? true }
+        }
         state.nextCursor = page.nextCursor
-        state.hasNext = page.hasNext
+        // Android: hasNext && nextCursor != nil && 이번 페이지가 비어 있지 않을 때만 다음 페이지.
+        state.hasNext = page.hasNext && page.nextCursor != nil && !page.items.isEmpty
         // 좋아요 수/상태(likeCount·isLiked)는 목록 응답 값을 그대로 신뢰한다.
         // (이전엔 댓글마다 GET /perspectives/{id}/likes 로 덮어써 수치가 로드 후 바뀌는 문제가 있었음)
         return .none
       case let .failure(error):
         PickeLogger.error("[CommentFeature] fetchPerspectives failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.loadFailedMessage
       }
       return .none
 
@@ -578,6 +683,7 @@ extension CommentFeature {
         }
       case let .failure(error):
         PickeLogger.error("[CommentFeature] toggleLike failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
       }
       return .none
 
@@ -585,6 +691,7 @@ extension CommentFeature {
       state.isSubmitting = false
       switch result {
       case let .success(perspective):
+        state.isComposerExpanded = false
         // 서버는 댓글을 "유저가 투표한 진영"에 저장한다(요청 optionId 무시). 재조회로 실제 진영을
         // 알아낸 경우에만 필터를 전환하고, 못 알아냈으면 현재 탭 그대로 목록만 갱신한다.
         if let votedOptionId = perspective?.option.optionId {
@@ -598,13 +705,31 @@ extension CommentFeature {
         return .send(.async(.fetchPerspectives(reset: true)))
       case let .failure(error):
         PickeLogger.error("[CommentFeature] createComment failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
         return .none
       }
 
-    case .mutationFinished:
-      // 관점 수정/삭제 완료 → 입력 상태 복구 + 목록 갱신
+    case let .mutationResponse(result):
+      // 관점 수정/삭제 완료 → 입력 상태 복구 + 목록 갱신. 실패는 Android 처럼 안내 토스트.
       state.isSubmitting = false
+      state.isComposerExpanded = false
+      if case let .failure(error) = result {
+        PickeLogger.error("[CommentFeature] mutation failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
+      }
       return .send(.async(.fetchPerspectives(reset: true)))
+
+    case let .reportResponse(result):
+      switch result {
+      case .success:
+        state.toastMessage = "신고가 정상 접수되었습니다."
+      case .failure(.alreadyReported):
+        state.toastMessage = "이미 신고한 사용자입니다."
+      case let .failure(error):
+        PickeLogger.error("[CommentFeature] report failed: \(error.localizedDescription)", category: .ui)
+        state.toastMessage = Self.actionFailedMessage
+      }
+      return .none
 
     case let .perspectiveLikesResponse(result):
       if case let .success(payload) = result,
@@ -616,6 +741,9 @@ extension CommentFeature {
       return .none
     }
   }
+
+  static let loadFailedMessage = "정보를 불러오지 못했어요"
+  static let actionFailedMessage = "요청을 처리하지 못했어요"
 
   /// API 응답(BattleVoteStats) 을 화면 모델 VoteSummary 로 매핑.
   /// 옵션이 2개 이상이라 가정 — 부족하거나 매핑 실패 시 fallback 유지.

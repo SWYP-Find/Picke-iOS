@@ -1,17 +1,16 @@
 //
 //  PreVoteFeature.swift
-//  Home
+//  Chat
 //
-//  Created by Wonji Suh on 5/16/26.
+//  Created by Picke on 5/16/26.
 //
-
-import Foundation
-import PickeCoreLogger
 
 import BattleDomainInterface
 import ComposableArchitecture
+import Foundation
 import PerspectiveDomainInterface
 import PickeAnalyticsInterface
+import PickeCoreLogger
 import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
@@ -37,7 +36,7 @@ public struct PreVoteFeature {
     }
 
     public var viewState: ViewState = .loaded
-    /// 기참여(관점 직행) 여부 확인 중 — 완료 전까지 사전투표 UI 대신 스켈레톤을 유지한다.
+    /// 참여 확인 중에는 일반 배틀의 자동 직행이나 클래스 기존 콘텐츠의 결과 요약이 결정될 때까지 스켈레톤을 유지한다.
     public var isCheckingParticipation: Bool = false
     /// 배틀 상세(사전투표) 로드(디코딩/네트워크) 실패 여부. true 면 무한 스켈레톤 대신 오류+재시도 UI 를 노출한다.
     public var detailLoadFailed: Bool = false
@@ -47,16 +46,36 @@ public struct PreVoteFeature {
     public var battleId: Int = 0
     public var voteMode: VoteMode = .pre
     public var myPerspective: BattlePerspective?
+    /// 클래스의 기존 콘텐츠에서 기참여 결과 화면을 보여줄 때만 설정한다.
+    public var showsResultsForExistingParticipation: Bool = false
     @Presents public var customAlert: CustomAlertState<CustomAlertAction>?
+    /// Android `VoteUiEvent` 토스트 문구. 보여준 뒤 `toastShown` 으로 비운다.
+    public var toastMessage: String?
+
+    /// Android `VoteBattleNotFound` — 상세를 못 불러오면 빈 상태 화면을 보인다.
+    public var isBattleNotFound: Bool {
+      detailLoadFailed && battle == nil
+    }
+
+    public var isShowingParticipationResult: Bool {
+      showsResultsForExistingParticipation && voteMode == .pre && (
+        myPerspective != nil ||
+          battleDetail?.currentStep == .completed ||
+          battleDetail?.currentStep == .finished
+      )
+    }
 
     public var isPrimaryButtonEnabled: Bool {
-      selectedOptionId != nil && !isSubmitting
+      (isShowingParticipationResult || selectedOptionId != nil) && !isSubmitting
     }
 
     public var primaryButtonTitle: String {
+      if isShowingParticipationResult {
+        return "결과 보기"
+      }
       switch voteMode {
-      case .pre: "사전 투표하기"
-      case .post: "최종 투표하기"
+      case .pre: return "사전 투표하기"
+      case .post: return "최종 투표하기"
       }
     }
 
@@ -83,6 +102,7 @@ public struct PreVoteFeature {
     case onAppear
     case backButtonTapped
     case retryTapped
+    case toastShown
     case shareTapped
     case shareSnapshotRendered(Data?)
     case optionTapped(optionId: Int)
@@ -123,6 +143,8 @@ public struct PreVoteFeature {
     case voteSubmitted(battleId: Int, voteMode: VoteMode, result: PreVoteResult, isMindChanged: Bool)
     /// 이미 최종 투표(POST_VOTE)까지 마친 상태 — 댓글 화면으로 바로 이동.
     case alreadyFinalVoted(battleId: Int)
+    /// 포인트 부족 안내의 "배틀 주제 구경하러 가기" — 탐색 탭으로 이동.
+    case openExplore
   }
 
   nonisolated enum CancelID: Hashable {
@@ -180,12 +202,10 @@ extension PreVoteFeature {
       if state.battleDetail == nil, state.battle == nil, state.viewState != .loading {
         effects.append(.send(.async(.fetchBattleDetail)))
       }
-      // 사전(pre) 진입 시에만 내 참여(perspective) 여부를 조회한다.
-      // 이미 참여했으면 "다시 투표" 알럿 → 삭제 후 재투표.
-      // 최종(post) 진입은 사전 참여가 이미 전제이므로 이 알럿이 뜨면 안 되고,
-      // 알럿 presentation 이 공유 시트(.sheet) presentation 을 막는 문제도 생긴다.
-      if state.voteMode == .pre, state.myPerspective == nil {
-        // 기참여면 관점 화면으로 직행하므로, 확인이 끝날 때까지 사전투표 UI 노출을 막는다.
+      // 클래스 기존 콘텐츠만 내 참여(perspective) 여부를 조회해 결과 화면을 유지한다.
+      // 일반 배틀은 Android `BattleRouting` 처럼 상세의 단계(currentStep)로 진입을 판정한다.
+      if state.voteMode == .pre, state.showsResultsForExistingParticipation, state.myPerspective == nil {
+        // 일반 배틀은 기참여 시 관점으로 직행하고 클래스 기존 콘텐츠는 결과 요약을 보여주므로, 확인 전에는 투표 UI를 숨긴다.
         state.isCheckingParticipation = true
         effects.append(.send(.async(.fetchMyPerspective)))
       }
@@ -205,10 +225,19 @@ extension PreVoteFeature {
       return .send(.async(.prepareShare(shareContent(state: state, snapshot: snapshot))))
 
     case let .optionTapped(optionId):
-      state.selectedOptionId = (state.selectedOptionId == optionId) ? nil : optionId
+      // Android `selectedOptionId = optionId` — 같은 카드를 다시 눌러도 선택을 유지한다.
+      guard !state.isShowingParticipationResult else { return .none }
+      state.selectedOptionId = optionId
+      return .none
+
+    case .toastShown:
+      state.toastMessage = nil
       return .none
 
     case .primaryButtonTapped:
+      if state.isShowingParticipationResult {
+        return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
+      }
       guard let optionId = state.selectedOptionId else { return .none }
       switch state.voteMode {
       case .pre:
@@ -229,8 +258,12 @@ extension PreVoteFeature {
     let url = PickeShareURL.battle(id: state.battleId, serverShareUrl: detail?.shareUrl)
     let thumbnailURL = detail?.battleInfo.thumbnailUrl ?? battle?.backgroundImageURL
     let summary = {
-      if let description = detail?.description, !description.isEmpty { return description }
-      if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty { return infoSummary }
+      if let description = detail?.description, !description.isEmpty {
+        return description
+      }
+      if let infoSummary = detail?.battleInfo.summary, !infoSummary.isEmpty {
+        return infoSummary
+      }
       return battle?.summary ?? ""
     }()
     let hashtags: [String] = {
@@ -352,8 +385,13 @@ extension PreVoteFeature {
         state.battleDetail = detail
         state.battle = makeBattle(from: detail)
         state.detailLoadFailed = false
+        // Android: 일반 배틀은 단계가 COMPLETED 이면 관점 화면으로 바로 간다.
+        if state.voteMode == .pre, !state.showsResultsForExistingParticipation, detail.currentStep == .completed {
+          return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
+        }
       case let .failure(error):
         state.detailLoadFailed = true
+        state.toastMessage = "정보를 불러오지 못했어요"
         PickeLogger.error(
           "[PreVoteFeature] fetchBattle failed: \(error) — \(error.localizedDescription)",
           category: .ui
@@ -367,8 +405,11 @@ extension PreVoteFeature {
       case let .success(perspective):
         state.myPerspective = perspective
         if perspective != nil {
-          // 이미 참여한 배틀 — 팝업 없이 관점(댓글) 화면으로 바로 직행.
-          return .send(.delegate(.alreadyFinalVoted(battleId: state.battleId)))
+          if state.showsResultsForExistingParticipation, state.voteMode == .pre {
+            state.selectedOptionId = nil
+            return .none
+          }
+          // 일반 배틀의 진입 판정은 상세 단계(currentStep)로 한다(위 battleDetailResponse).
         }
       case let .failure(error):
         PickeLogger.error("[PreVoteFeature] fetchMyPerspective failed: \(error.localizedDescription)", category: .ui)
@@ -399,6 +440,11 @@ extension PreVoteFeature {
         )))
       case let .failure(error):
         PickeLogger.error("[PreVoteFeature] submitPreVote failed: \(error.localizedDescription)", category: .ui)
+        if error == .insufficientPoints {
+          state.customAlert = .pointShortage()
+        } else {
+          state.toastMessage = "요청을 처리하지 못했어요"
+        }
         return .none
       }
 
@@ -424,6 +470,9 @@ extension PreVoteFeature {
           result: voteResult,
           isMindChanged: mindChanged
         )))
+      case let .failure(error) where error == .insufficientPoints:
+        state.customAlert = .pointShortage()
+        return .none
       case let .failure(error):
         // 최종투표는 1회만 가능 — 이미 투표한 경우 서버가 500.
         // 재투표가 불가하므로 결과(댓글) 화면으로 이동한다.
@@ -487,7 +536,7 @@ extension PreVoteFeature {
     action: DelegateAction
   ) -> Effect<Action> {
     switch action {
-    case .dismiss, .voteSubmitted, .alreadyFinalVoted:
+    case .dismiss, .voteSubmitted, .alreadyFinalVoted, .openExplore:
       return .none
     }
   }
@@ -501,11 +550,19 @@ extension PreVoteFeature {
       switch alertAction {
       case let .presented(customAlertAction):
         switch customAlertAction {
+        case .confirmTapped where state.customAlert == .pointShortage():
+          state.customAlert = nil
+          return .send(.delegate(.openExplore))
+
         case .confirmTapped:
           let perspectiveId = state.myPerspective?.perspectiveId
           state.customAlert = nil
           guard let perspectiveId else { return .none }
           return .send(.async(.deleteMyPerspective(perspectiveId: perspectiveId)))
+
+        case .cancelTapped where state.customAlert == .pointShortage():
+          state.customAlert = nil
+          return .none
 
         case .cancelTapped:
           state.customAlert = nil

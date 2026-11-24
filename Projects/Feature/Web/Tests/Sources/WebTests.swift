@@ -1,8 +1,8 @@
 //
 //  WebTests.swift
-//  Feature.WebTests
+//  WebTests
 //
-//  Created by Roy on 2026-06-04.
+//  Created by Picke on 2026-06-04.
 //
 
 import Testing

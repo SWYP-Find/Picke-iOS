@@ -1,0 +1,1616 @@
+//
+//  ClassCoordinator.swift
+//  Picke
+//
+//  Created by Picke on 10/11/26.
+//
+
+import AudioPlayerServiceInterface
+import ComposableArchitecture
+import DomainAssembly
+import FeatureAssembly
+import Foundation
+import PickeCoreUtility
+import TCAFlow
+
+@FlowCoordinator(screen: "ClassScreen", navigation: true)
+public struct ClassCoordinator {
+  @Dependency(\.classUseCase) private var classUseCase
+  @Dependency(\.uuid) private var uuid
+  @Dependency(\.date) private var date
+  @Dependency(\.audioPlayer) private var audioPlayer
+
+  public init() {}
+
+  @ObservableState
+  public struct State: Equatable {
+    public var routes: [Route<ClassScreen.State>]
+    public var usesAIQuestions = false
+    public var completedAIBattles: [Int: Bool] = [:]
+    public var chatRoomsByBattleID: [Int: ClassRoom] = [:]
+    @Presents public var deadlineEdit: ClassDeadlineEditFeature.State?
+    @Presents public var deadlineSelection: ClassDeadlineSelectionFeature.State?
+
+    public var isDeadlinePanelPresented: Bool {
+      deadlineEdit != nil || deadlineSelection != nil
+    }
+
+    var pendingJoinID: UUID?
+    var completingJoinCodeInstanceID: UUID?
+    var completingJoinNicknameInstanceID: UUID?
+    var reportInstanceIDs: Set<UUID> = []
+    var dashboardInstanceIDs: Set<UUID> = []
+    var chatRoomInstanceIDs: Set<UUID> = []
+    var ownerNameInstanceIDs: Set<UUID> = []
+    var participantJoinInstanceIDs: Set<UUID> = []
+    var memberInstanceIDs: Set<UUID> = []
+    var detailInstanceIDs: Set<UUID> = []
+    var aiVoteInstanceIDs: Set<UUID> = []
+    var ticketInstanceIDs: Set<UUID> = []
+    var battleFlowInstanceIDs: Set<UUID> = []
+
+    public init() {
+      routes = [.root(.intro(.init()), embedInNavigationView: true)]
+    }
+
+    /// 클래스 목록·상세·멤버·이용권 화면에서 모달이 닫힌 동안 탭바를 보여준다.
+    public var showsTabBar: Bool {
+      guard !isDeadlinePanelPresented else { return false }
+      switch routes.last?.screen {
+      case let .detail(detail)?:
+        return detail.modal == nil && detail.customAlert == nil
+      case let .myClasses(myClasses)?:
+        return myClasses.modal == nil && myClasses.customAlert == nil && !myClasses.isLeaving
+      case let .members(members)?:
+        return members.filter == nil && members.editName == nil
+          && members.customAlert == nil && !members.isSaving
+      case let .ticket(ticket)?:
+        return ticket.customAlert == nil
+      default:
+        return false
+      }
+    }
+  }
+
+  @CasePathable
+  public enum Action {
+    case router(IndexedRouterActionOf<ClassScreen>)
+    case view(View)
+    case async(AsyncAction)
+    case inner(InnerAction)
+    case navigation(NavigationAction)
+    case deadlineEdit(PresentationAction<ClassDeadlineEditFeature.Action>)
+    case deadlineSelection(PresentationAction<ClassDeadlineSelectionFeature.Action>)
+  }
+
+  @CasePathable
+  public enum View {
+    case backAction
+    case backToRootAction
+    case chatReportTapped(battleID: Int)
+  }
+
+  public enum AsyncAction: Equatable {}
+  public enum InnerAction: Equatable {
+    case deadlineDetailResponse(routeID: Int, roomID: Int, Result<ClassRoom, ClassError>)
+    case detailLoaded(routeID: Int, roomID: Int, instanceID: UUID, requestID: UUID, room: ClassRoom)
+    case detailFailed(routeID: Int, roomID: Int, instanceID: UUID, requestID: UUID, message: String)
+    case ticketRegistrationCompleted(routeID: Int, instanceID: UUID, startDate: Date, endDate: Date)
+    case membersLoaded(
+      routeID: Int,
+      roomID: Int,
+      instanceID: UUID,
+      requestID: UUID,
+      room: ClassRoom,
+      members: [ClassMember],
+      currentMemberID: Int?
+    )
+    case membersFailed(
+      routeID: Int,
+      roomID: Int,
+      instanceID: UUID,
+      requestID: UUID,
+      message: String
+    )
+    case memberMutationCompleted(ClassRoom, [ClassMember])
+    case memberMutationFailed(Int, String)
+    case membershipLeaveReady(routeID: Int, roomID: Int)
+    case joinedNavigationReady(UUID, ClassRoom)
+  }
+
+  public enum NavigationAction: Equatable {}
+
+  public var body: some Reducer<State, Action> {
+    Reduce { state, action in
+      if case .deadlineEdit(.dismiss) = action, state.deadlineEdit?.isSaving == true {
+        return .none
+      }
+      if state.pendingJoinID != nil,
+         isCompletingJoinPrefix(state),
+         case let .router(.routeAction(routeID, action: .join(joinAction))) = action,
+         routeID == state.routes.count - 1,
+         case let .join(code)? = state.routes.last?.screen,
+         code.mode == .code,
+         code.instanceID == state.completingJoinCodeInstanceID
+      {
+        switch joinAction {
+        case .view(.findTapped), .async(.find(_)):
+          return .none
+        default:
+          break
+        }
+      }
+      let effect = routedBody.reduce(into: &state, action: action)
+      if let selection = state.deadlineSelection {
+        if case let .setting(setting)? = state.routes.last?.screen,
+           setting.instanceID == selection.settingInstanceID, setting.canEditDeadline
+        {
+          return effect
+        }
+        if case let .classEdit(edit)? = state.routes.last?.screen,
+           edit.instanceID == selection.settingInstanceID, edit.hasDeadline
+        {
+          return effect
+        }
+        state.deadlineSelection = nil
+      }
+      return effect
+    }
+  }
+
+  private var routedBody: some Reducer<State, Action> {
+    Reduce { state, action in
+      handleRoute(state: &state, action: action)
+    }
+    .forEachRoute(\.routes, action: \.router)
+    .ifLet(\.$deadlineEdit, action: \.deadlineEdit) {
+      ClassDeadlineEditFeature()
+    }
+    .ifLet(\.$deadlineSelection, action: \.deadlineSelection) {
+      ClassDeadlineSelectionFeature()
+    }
+  }
+
+  func handleRoute(
+    state: inout State,
+    action: Action
+  ) -> Effect<Action> {
+    let effect: Effect<Action> = switch action {
+    case let .router(routeAction):
+      routerAction(state: &state, action: routeAction)
+    case let .view(viewAction):
+      handleViewAction(state: &state, action: viewAction)
+    case let .inner(innerAction):
+      handleInnerAction(state: &state, action: innerAction)
+    case let .deadlineEdit(deadlineAction):
+      handleDeadlineEditAction(state: &state, action: deadlineAction)
+    case let .deadlineSelection(selectionAction):
+      handleDeadlineSelectionAction(state: &state, action: selectionAction)
+    case .async, .navigation:
+      .none
+    }
+    if state.pendingJoinID != nil, !isCompletingJoinPrefix(state) {
+      invalidateCompletingJoin(state: &state)
+    }
+    if state.routes.count == 1 {
+      state.chatRoomsByBattleID.removeAll()
+    }
+    return .merge(
+      effect,
+      cancelRemovedReportLoads(state: &state),
+      cancelRemovedChatObservers(state: &state),
+      cancelRemovedClassEffects(state: &state),
+      cancelRemovedMyOpinionsLoads(state: state)
+    )
+  }
+}
+
+private extension ClassCoordinator {
+  enum DetailLoadCancelID: Hashable {
+    case load(UUID)
+  }
+
+  func fetchDetail(state: inout State, routeID: Int) -> Effect<Action> {
+    guard state.routes.indices.contains(routeID),
+          case var .detail(detail) = state.routes[routeID].screen
+    else { return .none }
+    let requestID = uuid()
+    let roomID = detail.room.id
+    let instanceID = detail.instanceID
+    detail.viewState = .loading
+    detail.loadErrorMessage = nil
+    detail.activeLoadRequestID = requestID
+    state.routes[screenAt: routeID] = .detail(detail)
+    return .run { [classUseCase] send in
+      do {
+        // Android ClassDetailViewModel.fetchClassDetail: 상세와 배틀을 함께 받아 카드에 카테고리·입장을 채운다.
+        async let detailRoom = classUseCase.fetchClass(id: roomID)
+        async let session = classUseCase.fetchBattle(classID: roomID)
+        let room = try await detailRoom.applyingBattle(session.battle)
+        await send(.inner(.detailLoaded(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          room: room
+        )))
+      } catch {
+        await send(.inner(.detailFailed(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          message: error.localizedDescription
+        )))
+      }
+    }
+    .cancellable(id: DetailLoadCancelID.load(instanceID), cancelInFlight: true)
+  }
+
+  func handleDeadlineSelectionAction(
+    state: inout State,
+    action: PresentationAction<ClassDeadlineSelectionFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss, .presented(.delegate(.dismiss)):
+      state.deadlineSelection = nil
+    case let .presented(.delegate(.confirmed(deadline, settingInstanceID: instanceID))):
+      if case var .classEdit(edit)? = state.routes.last?.screen {
+        guard state.deadlineSelection?.settingInstanceID == instanceID,
+              edit.instanceID == instanceID
+        else { return .none }
+        edit.deadline = deadline
+        edit.deadlineValidationMessage = nil
+        state.routes[screenAt: state.routes.count - 1] = .classEdit(edit)
+        state.deadlineSelection = nil
+        return .none
+      }
+      guard state.deadlineSelection?.settingInstanceID == instanceID,
+            case var .setting(setting)? = state.routes.last?.screen,
+            setting.instanceID == instanceID, setting.canEditDeadline
+      else { return .none }
+      let now = date.now
+      guard deadline >= now else {
+        state.deadlineSelection?.minimumDate = now
+        return .none
+      }
+      setting.deadline = deadline
+      setting.deadlineValidationMessage = nil
+      state.routes[screenAt: state.routes.count - 1] = .setting(setting)
+      state.deadlineSelection = nil
+    case .presented:
+      break
+    }
+    return .none
+  }
+
+  func openDeadlineEditor(
+    state: inout State,
+    room: ClassRoom
+  ) -> Effect<Action> {
+    guard room.role == .owner, state.deadlineEdit?.isSaving != true else { return .none }
+    let previousID = state.deadlineEdit?.instanceID
+    state.deadlineEdit = .init(room: room, instanceID: uuid(), referenceNow: date.now)
+    return previousID.map { .cancel(id: ClassDeadlineEditFeature.CancelID.save($0)) } ?? .none
+  }
+
+  func handleDeadlineEditAction(
+    state: inout State,
+    action: PresentationAction<ClassDeadlineEditFeature.Action>
+  ) -> Effect<Action> {
+    switch action {
+    case .dismiss, .presented(.delegate(.dismiss)):
+      guard let editor = state.deadlineEdit, !editor.isSaving else { return .none }
+      state.deadlineEdit = nil
+      return .cancel(id: ClassDeadlineEditFeature.CancelID.save(editor.instanceID))
+
+    case let .presented(.delegate(.saved(room, instanceID: instanceID, requestID: requestID))):
+      guard let editor = state.deadlineEdit,
+            editor.instanceID == instanceID,
+            editor.activeRequestID == requestID,
+            editor.room.id == room.id,
+            editor.isSaving
+      else { return .none }
+      applyUpdatedRoom(state: &state, room: room)
+      state.deadlineEdit = nil
+      return .none
+
+    case .presented:
+      return .none
+    }
+  }
+
+  /// 마감일·이름 변경 결과를 스택의 모든 화면과 채팅방 캐시에 반영한다.
+  func applyUpdatedRoom(
+    state: inout State,
+    room: ClassRoom
+  ) {
+    for (index, route) in state.routes.enumerated() {
+      switch route.screen {
+      case var .myClasses(list):
+        for roomIndex in list.rooms.indices where list.rooms[roomIndex].id == room.id {
+          list.rooms[roomIndex] = room
+        }
+        if list.viewState == .loaded || list.viewState == .empty {
+          list.viewState = list.visibleRooms.isEmpty ? .empty : .loaded
+        }
+        state.routes[screenAt: index] = .myClasses(list)
+      case var .detail(detail) where detail.room.id == room.id:
+        detail.room = room
+        state.routes[screenAt: index] = .detail(detail)
+      case var .ownerDashboard(dashboard) where dashboard.room.id == room.id:
+        dashboard.room = room
+        state.routes[screenAt: index] = .ownerDashboard(dashboard)
+      case var .closedBattle(closed) where closed.room.id == room.id:
+        closed.room = room
+        state.routes[screenAt: index] = .closedBattle(closed)
+      case var .members(member) where member.room.id == room.id:
+        member.room = room
+        state.routes[screenAt: index] = .members(member)
+      case var .report(report) where report.room.id == room.id:
+        report.room = room
+        state.routes[screenAt: index] = .report(report)
+      default:
+        break
+      }
+    }
+    for (battleID, cachedRoom) in state.chatRoomsByBattleID where cachedRoom.id == room.id {
+      state.chatRoomsByBattleID[battleID] = room
+    }
+  }
+
+  func invalidateCompletingJoin(state: inout State) {
+    state.pendingJoinID = nil
+    state.completingJoinCodeInstanceID = nil
+    state.completingJoinNicknameInstanceID = nil
+  }
+
+  func isCompletingJoinPrefix(_ state: State) -> Bool {
+    guard state.pendingJoinID != nil,
+          let codeID = state.completingJoinCodeInstanceID,
+          let nicknameID = state.completingJoinNicknameInstanceID,
+          (1 ... 3).contains(state.routes.count),
+          case .intro = state.routes[0].screen
+    else { return false }
+    if state.routes.count >= 2 {
+      guard case let .join(code) = state.routes[1].screen,
+            code.mode == .code, code.instanceID == codeID
+      else { return false }
+    }
+    if state.routes.count == 3 {
+      guard case let .join(nickname) = state.routes[2].screen,
+            nickname.mode == .nickname, nickname.instanceID == nicknameID
+      else { return false }
+    }
+    return true
+  }
+
+  func fetchMembers(
+    room: ClassRoom,
+    routeID: Int,
+    roomID: Int,
+    instanceID: UUID,
+    requestID: UUID
+  ) -> Effect<Action> {
+    let started: Effect<Action> = .send(.router(.routeAction(
+      id: routeID,
+      action: .members(.loadingStarted(requestID))
+    )))
+    let fetch: Effect<Action> = .run { [classUseCase] send in
+      do {
+        let memberList = try await classUseCase.fetchMembers(classID: roomID)
+        await send(.inner(.membersLoaded(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          room: room,
+          members: memberList.members,
+          currentMemberID: memberList.currentMemberID
+        )))
+      } catch {
+        await send(.inner(.membersFailed(
+          routeID: routeID,
+          roomID: roomID,
+          instanceID: instanceID,
+          requestID: requestID,
+          message: error.localizedDescription
+        )))
+      }
+    }
+    .cancellable(id: ClassMemberFeature.CancelID.load(instanceID), cancelInFlight: true)
+    return .concatenate(started, fetch)
+  }
+
+  func cancelRemovedClassEffects(state: inout State) -> Effect<Action> {
+    let joinIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .join(join) = route.screen else { return nil }
+      return join.instanceID
+    })
+    let ownerIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ownerName(owner) = route.screen else { return nil }
+      return owner.instanceID
+    })
+    let memberIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .members(member) = route.screen else { return nil }
+      return member.instanceID
+    })
+    let detailIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .detail(detail) = route.screen else { return nil }
+      return detail.instanceID
+    })
+    let voteIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .aiVote(vote) = route.screen else { return nil }
+      return vote.instanceID
+    })
+    let ticketIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ticket(ticket) = route.screen else { return nil }
+      return ticket.instanceID
+    })
+    let battleFlowIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .battleFlow(flow) = route.screen else { return nil }
+      return flow.instanceID
+    })
+    let removedOwners = state.ownerNameInstanceIDs.subtracting(ownerIDs)
+    let removedJoins = state.participantJoinInstanceIDs.subtracting(joinIDs)
+    let removedMembers = state.memberInstanceIDs.subtracting(memberIDs)
+    let removedDetails = state.detailInstanceIDs.subtracting(detailIDs)
+    let removedVotes = state.aiVoteInstanceIDs.subtracting(voteIDs)
+    let removedTickets = state.ticketInstanceIDs.subtracting(ticketIDs)
+    let removedBattleFlows = state.battleFlowInstanceIDs.subtracting(battleFlowIDs)
+    state.ownerNameInstanceIDs = ownerIDs
+    state.participantJoinInstanceIDs = joinIDs
+    state.memberInstanceIDs = memberIDs
+    state.detailInstanceIDs = detailIDs
+    state.aiVoteInstanceIDs = voteIDs
+    state.ticketInstanceIDs = ticketIDs
+    state.battleFlowInstanceIDs = battleFlowIDs
+    let effects: [Effect<Action>] =
+      removedOwners.map { .cancel(id: ClassJoinFeature.CancelID.nameOwner($0)) }
+        + removedJoins.flatMap { id in
+          [
+            .cancel(id: ClassJoinFeature.CancelID.find(id)),
+            .cancel(id: ClassJoinFeature.CancelID.join(id)),
+          ]
+        }
+        + removedMembers.map { .cancel(id: ClassMemberFeature.CancelID.load($0)) }
+        + removedDetails.map { .cancel(id: DetailLoadCancelID.load($0)) }
+        + removedVotes.flatMap { id in
+          [
+            .cancel(id: ClassAIVoteFeature.CancelID.load(id)),
+            .cancel(id: ClassAIVoteFeature.CancelID.submit(id)),
+          ]
+        }
+        + removedTickets.flatMap { id in
+          [
+            .cancel(id: ClassTicketFeature.CancelID.check(id)),
+            .cancel(id: ClassTicketFeature.CancelID.existingTicket(id)),
+          ]
+        }
+        + removedBattleFlows.flatMap { id in
+          [
+            .cancel(id: ClassBattleFlowFeature.CancelID.load(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.submit(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.audio(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.playback(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.time(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectives(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.voteStats(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveLike(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.myPerspective(id)),
+            .cancel(id: ClassBattleFlowFeature.CancelID.perspectiveMutation(id)),
+          ]
+        }
+    guard !removedBattleFlows.isEmpty else { return .merge(effects) }
+    return .concatenate(
+      .merge(effects),
+      .run { [player = audioPlayer] _ in await player.pause() }
+    )
+  }
+
+  func cancelRemovedChatObservers(state: inout State) -> Effect<Action> {
+    let currentIDs = Set(state.routes.flatMap { route -> Set<UUID> in
+      guard case let .chat(chat) = route.screen else { return [] }
+      return chat.activeChatRoomInstanceIDs
+    })
+    let removedIDs = state.chatRoomInstanceIDs.subtracting(currentIDs)
+    state.chatRoomInstanceIDs = currentIDs
+    return .merge(removedIDs.map { .cancel(id: ChatRoomFeature.CancelID.audioObserver($0)) })
+  }
+
+  /// 내 의견 화면은 항상 최상단 하나뿐이고 CancelID가 전역이므로, 라우트에 없으면 남은 조회를 모두 취소한다.
+  func cancelRemovedMyOpinionsLoads(state: State) -> Effect<Action> {
+    let hasMyOpinions = state.routes.contains { route in
+      guard case .myOpinions = route.screen else { return false }
+      return true
+    }
+    guard !hasMyOpinions else { return .none }
+    return .merge(
+      .cancel(id: ClassMyOpinionsFeature.CancelID.fetch),
+      .cancel(id: ClassMyOpinionsFeature.CancelID.replies),
+      .cancel(id: ClassMyOpinionsFeature.CancelID.moreReplies)
+    )
+  }
+
+  func cancelRemovedReportLoads(state: inout State) -> Effect<Action> {
+    let reportIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .report(report) = route.screen else { return nil }
+      return report.instanceID
+    })
+    let dashboardIDs = Set(state.routes.compactMap { route -> UUID? in
+      guard case let .ownerDashboard(dashboard) = route.screen else { return nil }
+      return dashboard.instanceID
+    })
+    // TCAFlow applies interactive route updates before handleRoute is called.
+    // Keep instance IDs across actions so a removed route's work can be cancelled.
+    let cancelledReports = state.reportInstanceIDs.subtracting(reportIDs)
+    let cancelledDashboards = state.dashboardInstanceIDs.subtracting(dashboardIDs)
+    state.reportInstanceIDs = reportIDs
+    state.dashboardInstanceIDs = dashboardIDs
+    return .merge(
+      cancelledReports.flatMap { id in
+        [
+          .cancel(id: ClassReportFeature.CancelID.load(id)),
+          .cancel(id: ClassReportFeature.CancelID.voteHistory(id)),
+          .cancel(id: ClassReportFeature.CancelID.generate(id)),
+          .cancel(id: ClassReportFeature.CancelID.insight(id)),
+          .cancel(id: ClassReportFeature.CancelID.myActivity(id)),
+        ]
+      }
+        + cancelledDashboards.flatMap { id in
+          [
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.load(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.generate(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.generatePersonal(id)),
+            .cancel(id: ClassOwnerDashboardFeature.CancelID.myActivity(id)),
+          ]
+        }
+    )
+  }
+
+  func routerAction(
+    state: inout State,
+    action: IndexedRouterActionOf<ClassScreen>
+  ) -> Effect<Action> {
+    switch action {
+    case .routeAction(_, action: .intro(.delegate(.backToHome))):
+      invalidateCompletingJoin(state: &state)
+      return .none
+
+    case let .routeAction(routeID, action: .intro(.delegate(.join))):
+      guard routeID == 0, state.routes.count == 1,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.join(.init(mode: .code, instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .intro(.delegate(.ticket))):
+      guard routeID == 0, state.routes.count == 1,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.ticket(.init(instanceID: uuid())))
+      return .none
+
+    case let .routeAction(
+      routeID,
+      action: .ticket(.delegate(.registrationConfirmed(startDate: startDate, endDate: endDate)))
+    ):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(completed)? = state.routes.last?.screen,
+            completed.phase == .registered,
+            completed.registrationStartDate == startDate,
+            completed.expirationDate == endDate
+      else { return .none }
+      return .send(.inner(.ticketRegistrationCompleted(
+        routeID: routeID,
+        instanceID: completed.instanceID,
+        startDate: startDate,
+        endDate: endDate
+      )))
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.registered(startDate, endDate)))):
+      guard routeID == state.routes.count - 1,
+            routeID >= 2,
+            case let .ticket(registered)? = state.routes.last?.screen,
+            registered.phase == .registered,
+            registered.registrationStartDate == startDate,
+            registered.expirationDate == endDate,
+            case var .ticket(overview) = state.routes[routeID - 1].screen,
+            overview.phase == .overview
+      else { return .none }
+      overview.registrationStartDate = startDate
+      overview.expirationDate = endDate
+      overview.ticket = registered.ticket
+      state.routes[screenAt: routeID - 1] = .ticket(overview)
+      if routeID >= 3,
+         case var .ticket(original) = state.routes[routeID - 2].screen,
+         original.phase == .registered
+      {
+        original.registrationStartDate = startDate
+        original.expirationDate = endDate
+        original.ticket = registered.ticket
+        state.routes[screenAt: routeID - 2] = .ticket(original)
+      }
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.addRegistrationRequested))):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(overview)? = state.routes.last?.screen,
+            overview.phase == .overview
+      else { return .none }
+      var registration = ClassTicketFeature.State(instanceID: uuid())
+      registration.shouldCheckExistingTicket = false
+      state.routes.push(.ticket(registration))
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.existingTicketFound(ticket)))):
+      // 내가 등록한 사용 중 이용권을 다시 입력함: 바로 아래가 개요면 그리로 돌아가고, 아니면 이 화면을 개요로 바꾼다.
+      guard routeID == state.routes.count - 1,
+            case var .ticket(current)? = state.routes.last?.screen
+      else { return .none }
+      if routeID >= 1,
+         case var .ticket(previous) = state.routes[routeID - 1].screen,
+         previous.phase == .overview
+      {
+        state.routes.goBack()
+        previous.ticket = ticket
+        previous.registrationStartDate = ticket.activatedAt
+        previous.expirationDate = ticket.expiresAt
+        state.routes[screenAt: routeID - 1] = .ticket(previous)
+        return .none
+      }
+      current.preview = nil
+      current.ticket = ticket
+      current.registrationStartDate = ticket.activatedAt
+      current.expirationDate = ticket.expiresAt
+      current.phase = .overview
+      state.routes[screenAt: routeID] = .ticket(current)
+      return .none
+
+    case let .routeAction(routeID, action: .ticket(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .ticket = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .join(.delegate(.found(room, instanceID: instanceID)))):
+      guard routeID == state.routes.count - 1,
+            let instanceID,
+            case let .join(code)? = state.routes.last?.screen,
+            code.mode == .code, code.instanceID == instanceID,
+            case .intro? = state.routes.first?.screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.join(.init(mode: .nickname, preview: room, instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .join(.delegate(.createClassRequested))):
+      guard routeID == state.routes.count - 1,
+            case let .join(join)? = state.routes.last?.screen,
+            join.mode == .code,
+            state.routes.count == 2,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.startMethod(.init()))
+      return .none
+
+    case let .routeAction(routeID, action: .join(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case let .join(join)? = state.routes.last?.screen
+      else { return .none }
+      if state.pendingJoinID != nil,
+         join.instanceID == state.completingJoinNicknameInstanceID
+      {
+        return .none
+      }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .join(.delegate(.joined(room, nickname: _, instanceID: instanceID)))):
+      guard routeID == 2, state.routes.count == 3,
+            let instanceID,
+            case .intro = state.routes[0].screen,
+            case let .join(code) = state.routes[1].screen,
+            code.mode == .code, let codeID = code.instanceID,
+            case let .join(nickname) = state.routes[2].screen,
+            nickname.mode == .nickname,
+            nickname.instanceID == instanceID,
+            nickname.preview == nil,
+            state.pendingJoinID == nil
+      else { return .none }
+      let requestID = uuid()
+      state.pendingJoinID = requestID
+      state.completingJoinCodeInstanceID = codeID
+      state.completingJoinNicknameInstanceID = instanceID
+      state.completedAIBattles[-1_000_000 - room.id] = nil
+      state.chatRoomsByBattleID[-1_000_000 - room.id] = nil
+      return .send(.inner(.joinedNavigationReady(requestID, room)))
+
+    case let .routeAction(routeID, action: .join(.async(.find(_)))):
+      if routeID == state.routes.count - 1,
+         case let .join(code)? = state.routes.last?.screen,
+         code.mode == .code, code.activeFindRequestID != nil
+      {
+        invalidateCompletingJoin(state: &state)
+      }
+      return .none
+
+    case let .routeAction(routeID, action: .join(.async(.join(joinCode: _, nickname: _)))):
+      if routeID == state.routes.count - 1,
+         case let .join(nickname)? = state.routes.last?.screen,
+         nickname.mode == .nickname, nickname.activeJoinRequestID != nil
+      {
+        invalidateCompletingJoin(state: &state)
+      }
+      return .none
+
+    case .routeAction(_, action: .intro(.delegate(.myClasses))):
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.myClasses(.init()))
+      return .none
+
+    case let .routeAction(routeID, action: .intro(.delegate(.create))):
+      // 이용권 확인 응답이 늦게 와도 소개 화면이 맨 위일 때만 만들기 흐름을 연다.
+      guard routeID == 0, state.routes.count == 1,
+            case .intro = state.routes[0].screen
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.push(.startMethod(.init()))
+      return .none
+
+    case .routeAction(_, action: .startMethod(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .startMethod(.delegate(.existingContentSelected))):
+      state.usesAIQuestions = false
+      state.routes.push(.topic(.init()))
+      return .none
+
+    case .routeAction(_, action: .startMethod(.delegate(.ownTopicSelected))):
+      state.usesAIQuestions = true
+      state.routes.push(.topic(.init()))
+      return .none
+
+    case .routeAction(_, action: .topic(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .topic(.delegate(.search(filter)))):
+      state.routes.push(.recommend(.init(
+        filter: filter,
+        mode: state.usesAIQuestions ? .aiQuestions : .existingContent
+      )))
+      return .none
+
+    case .routeAction(_, action: .recommend(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .recommend(.delegate(.select(battle)))):
+      state.routes.push(.setting(.init(battle: battle, instanceID: uuid())))
+      return .none
+
+    case let .routeAction(routeID, action: .recommend(.delegate(.previewRequested(battle)))):
+      guard routeID == state.routes.count - 1,
+            case .recommend? = state.routes.last?.screen
+      else { return .none }
+      state.routes.push(.battlePreview(.init(battle: battle)))
+      return .none
+
+    case .routeAction(_, action: .battlePreview(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .recommend(.delegate(.selectAIQuestion(version, filter)))):
+      var setting = ClassSettingFeature.State()
+      setting.aiQuestion = ClassAIQuestion(version: version)
+      setting.topicVersionID = version.id
+      setting.filter = filter
+      setting.instanceID = uuid()
+      state.routes.push(.setting(setting))
+      return .none
+
+    case let .routeAction(routeID, action: .setting(.delegate(.editDeadline(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            state.deadlineEdit == nil,
+            case let .setting(setting)? = state.routes.last?.screen,
+            setting.instanceID == instanceID, setting.canEditDeadline
+      else { return .none }
+      var selection = ClassDeadlineSelectionFeature.State()
+      selection.settingInstanceID = instanceID
+      let now = date.now
+      selection.minimumDate = now
+      let nextMinute = AppDateFormat.calendar.dateInterval(of: .minute, for: now)?.end
+        ?? now.addingTimeInterval(60)
+      selection.draftDeadline = setting.deadline > now ? setting.deadline : nextMinute
+      state.deadlineSelection = selection
+      return .none
+
+    case .routeAction(_, action: .setting(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .setting(.delegate(.created(room)))):
+      state.routes.push(.share(.init(room: room)))
+      return .none
+
+    case let .routeAction(routeID, action: .share(.delegate(.dismiss))):
+      // Android ClassShare onBackClick: 기존 클래스에서 열었으면 이전 화면으로 돌아간다.
+      if state.routes.indices.contains(routeID),
+         case let .share(share) = state.routes[routeID].screen,
+         share.isExistingClass
+      {
+        return .send(.view(.backAction))
+      }
+      return .send(.view(.backToRootAction))
+
+    case .routeAction(_, action: .share(.delegate(.openMyClasses))):
+      // Android ClassShare onGoToClassClick: 내 클래스 목록으로 이동한다.
+      return returnToMyClasses(state: &state)
+
+    case let .routeAction(_, action: .detail(.delegate(.openShare(room)))),
+         let .routeAction(_, action: .myClasses(.delegate(.openShare(room)))):
+      state.routes.push(.share(.init(room: room, isExistingClass: true)))
+      return .none
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.openShare))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.share(.init(room: dashboard.room, isExistingClass: true)))
+      return .none
+
+    case let .routeAction(routeID, action: .share(.delegate(.nameOwner(room)))):
+      guard routeID == state.routes.count - 1,
+            case let .share(share)? = state.routes.last?.screen,
+            share.room.id == room.id
+      else { return .none }
+      state.routes.push(.ownerName(.init(
+        mode: .ownerName,
+        preview: room,
+        instanceID: uuid()
+      )))
+      return .none
+
+    case .routeAction(_, action: .ownerName(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .ownerName(.delegate(.ownerNamed(room, instanceID: instanceID)))):
+      guard routeID == state.routes.count - 1,
+            state.routes.count >= 2,
+            case let .ownerName(owner)? = state.routes.last?.screen,
+            owner.instanceID == instanceID,
+            owner.mode == .ownerName,
+            owner.preview == nil,
+            case let .share(share) = state.routes[state.routes.count - 2].screen,
+            share.room.id == room.id
+      else { return .none }
+      state.routes.goBackToRoot()
+      state.chatRoomsByBattleID.removeAll()
+      state.routes.push(.detail(.init(room: room)))
+      return .none
+
+    case let .routeAction(_, action: .share(.delegate(.enterClass(room)))):
+      state.routes.goBackToRoot()
+      state.chatRoomsByBattleID.removeAll()
+      state.routes.push(.detail(.init(room: room)))
+      return .none
+
+    case .routeAction(_, action: .myClasses(.delegate(.dismiss))),
+         .routeAction(_, action: .detail(.delegate(.dismiss))),
+         .routeAction(_, action: .members(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .myClasses(.delegate(.openRoom(room)))):
+      state.routes.push(.detail(.init(room: room)))
+      let detailRouteID = state.routes.count - 1
+      return fetchDetail(state: &state, routeID: detailRouteID)
+
+    case let .routeAction(routeID, action: .detail(.delegate(.retryRequested(roomID, instanceID)))):
+      guard routeID == state.routes.count - 1,
+            case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == roomID,
+            detail.instanceID == instanceID,
+            detail.viewState == .error
+      else { return .none }
+      return fetchDetail(state: &state, routeID: routeID)
+
+    case let .routeAction(routeID, action: .myClasses(.delegate(.left(roomID)))):
+      state.completedAIBattles[-1_000_000 - roomID] = nil
+      state.chatRoomsByBattleID[-1_000_000 - roomID] = nil
+      return .send(.inner(.membershipLeaveReady(routeID: routeID, roomID: roomID)))
+
+    case let .routeAction(routeID, action: .myClasses(.delegate(.openInformation(room)))):
+      guard routeID == state.routes.count - 1,
+            case let .myClasses(list)? = state.routes.last?.screen,
+            list.rooms.contains(where: { $0.id == room.id })
+      else { return .none }
+      return .run { [classUseCase] send in
+        // Android ClassEditViewModel: 상세와 배틀을 함께 받아 선택한 배틀 카드를 채운다.
+        let result = await Result {
+          async let detailRoom = classUseCase.fetchClass(id: room.id)
+          async let session = classUseCase.fetchBattle(classID: room.id)
+          return try await detailRoom.applyingBattle(session.battle)
+        }
+        .mapError(ClassError.from)
+        await send(.inner(.deadlineDetailResponse(routeID: routeID, roomID: room.id, result)))
+      }
+
+    case let .routeAction(routeID, action: .detail(.delegate(.openEdit(room)))):
+      // Android ClassDetail DeadlineEditClick·ManageEditClick → ClassEdit.
+      guard routeID == state.routes.count - 1,
+            case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == room.id,
+            room.role == .owner
+      else { return .none }
+      state.routes.push(.classEdit(.init(room: detail.room)))
+      return .none
+
+    case let .routeAction(_, action: .detail(.delegate(.openMembers(room)))):
+      let member = ClassMemberFeature.State(room: room, instanceID: uuid())
+      state.routes.push(.members(member))
+      return fetchMembers(
+        room: room,
+        routeID: state.routes.count - 1,
+        roomID: room.id,
+        instanceID: member.instanceID,
+        requestID: uuid()
+      )
+
+    case let .routeAction(routeID, action: .members(.delegate(.retryMembers(roomID)))):
+      guard routeID == state.routes.count - 1,
+            case let .members(member)? = state.routes.last?.screen,
+            member.room.id == roomID
+      else { return .none }
+      return fetchMembers(
+        room: member.room,
+        routeID: routeID,
+        roomID: roomID,
+        instanceID: member.instanceID,
+        requestID: uuid()
+      )
+
+    case let .routeAction(
+      _,
+      action: .members(.delegate(.removeMember(roomID: roomID, memberID: memberID, currentMemberID: currentMemberID)))
+    ):
+      guard memberID != currentMemberID else {
+        return .send(.inner(.memberMutationFailed(roomID, "본인은 내보낼 수 없어요.")))
+      }
+      return .run { [classUseCase] send in
+        do {
+          try await classUseCase.removeMember(classID: roomID, memberID: memberID)
+          let memberList = try await classUseCase.fetchMembers(classID: roomID)
+          let room = try await classUseCase.fetchClass(id: roomID)
+          await send(.inner(.memberMutationCompleted(room, memberList.members)))
+        } catch {
+          await send(.inner(.memberMutationFailed(roomID, error.localizedDescription)))
+        }
+      }
+
+    case let .routeAction(
+      _,
+      action: .members(.delegate(.updateDisplayName(
+        roomID: roomID,
+        memberID: memberID,
+        currentMemberID: currentMemberID,
+        name: name
+      )))
+    ):
+      guard memberID == currentMemberID else {
+        return .send(.inner(.memberMutationFailed(roomID, "본인 이름만 바꿀 수 있어요.")))
+      }
+      return .run { [classUseCase] send in
+        do {
+          _ = try await classUseCase.updateMyDisplayName(classID: roomID, name: name)
+          let memberList = try await classUseCase.fetchMembers(classID: roomID)
+          let room = try await classUseCase.fetchClass(id: roomID)
+          await send(.inner(.memberMutationCompleted(room, memberList.members)))
+        } catch {
+          await send(.inner(.memberMutationFailed(roomID, error.localizedDescription)))
+        }
+      }
+
+    case let .routeAction(_, action: .detail(.delegate(.openBattle(room)))):
+      if room.battleType == .custom {
+        state.routes.push(.aiVote(.init(
+          room: room,
+          battleID: room.battle.id,
+          isLiveClassBattle: true
+        )))
+      } else {
+        var battleFlowState = ClassBattleFlowFeature.State()
+        battleFlowState.room = room
+        state.routes.push(.battleFlow(battleFlowState))
+      }
+      return .none
+
+    case let .routeAction(_, action: .detail(.delegate(.openClosedBattle(room)))):
+      state.routes.push(.closedBattle(.init(room: room)))
+      return .none
+
+    case .routeAction(_, action: .closedBattle(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .detail(.delegate(.openReport(room)))),
+         let .routeAction(_, action: .closedBattle(.delegate(.openReport(room)))):
+      // Android onResultClick → ClassResult: 운영자·멤버가 같은 결과 화면을 쓴다.
+      state.routes.push(.result(.init(room: room)))
+      return .none
+
+    case let .routeAction(routeID, action: .result(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .result? = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .result(.delegate(.openMyOpinions(classID)))):
+      // Android ClassResult NavigateToMyOpinion.
+      guard routeID == state.routes.count - 1,
+            case .result? = state.routes.last?.screen
+      else { return .none }
+      var opinions = ClassMyOpinionsFeature.State()
+      opinions.classID = classID
+      state.routes.push(.myOpinions(opinions))
+      return .none
+
+    case let .routeAction(routeID, action: .report(.delegate(.openMyOpinions(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            case let .report(report)? = state.routes.last?.screen,
+            report.instanceID == instanceID,
+            report.sourceViewState == .ready,
+            (report.report != nil || report.classResult?.myReportState != nil)
+      else { return .none }
+      var opinions = ClassMyOpinionsFeature.State()
+      if let result = report.classResult {
+        opinions.classID = result.classID
+      } else {
+        opinions.opinions = report.report?.resolvedOpinions ?? []
+      }
+      state.routes.push(.myOpinions(opinions))
+      return .none
+
+    case let .routeAction(routeID, action: .ownerDashboard(.delegate(.openMyOpinions(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            case let .ownerDashboard(dashboard)? = state.routes.last?.screen,
+            dashboard.instanceID == instanceID,
+            dashboard.selectedTab == .report,
+            dashboard.sourceViewState == .ready,
+            dashboard.management == nil,
+            (dashboard.report != nil || dashboard.classResult?.myReportState != nil)
+      else { return .none }
+      var opinions = ClassMyOpinionsFeature.State()
+      if let result = dashboard.classResult {
+        opinions.classID = result.classID
+      } else {
+        opinions.opinions = dashboard.report?.resolvedOpinions ?? []
+      }
+      state.routes.push(.myOpinions(opinions))
+      return .none
+
+    case let .routeAction(routeID, action: .report(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .report? = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .myOpinions(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .myOpinions? = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .ownerDashboard(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case .ownerDashboard? = state.routes.last?.screen
+      else { return .none }
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .ownerMemberDetail(.delegate(.dismiss))),
+         .routeAction(_, action: .ownerReplyDetail(.delegate(.dismiss))),
+         .routeAction(_, action: .ownerFeedback(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .ownerDashboard(.delegate(.editClass))):
+      guard routeID == state.routes.count - 1,
+            case let .ownerDashboard(dashboard)? = state.routes.last?.screen,
+            dashboard.room.role == .owner
+      else { return .none }
+      state.routes.push(.classEdit(.init(room: dashboard.room)))
+      return .none
+
+    case let .routeAction(routeID, action: .classEdit(.delegate(.editDeadline(instanceID)))):
+      guard routeID == state.routes.count - 1,
+            state.deadlineEdit == nil,
+            case let .classEdit(edit)? = state.routes.last?.screen,
+            edit.instanceID == instanceID, edit.hasDeadline
+      else { return .none }
+      var selection = ClassDeadlineSelectionFeature.State()
+      selection.settingInstanceID = instanceID
+      // Android ClassEdit: 기존 마감일 이후로만 연장할 수 있다.
+      selection.minimumDate = max(edit.room.deadline, date.now)
+      selection.draftDeadline = edit.deadline
+      state.deadlineSelection = selection
+      return .none
+
+    case .routeAction(_, action: .classEdit(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(routeID, action: .classEdit(.delegate(.saved(room)))):
+      guard routeID == state.routes.count - 1,
+            case .classEdit? = state.routes.last?.screen
+      else { return .none }
+      applyUpdatedRoom(state: &state, room: room)
+      state.routes.pop()
+      // Android RESULT_CLASS_CHANGED: 상세로 돌아오면 상세·배틀을 다시 받는다.
+      if case .detail? = state.routes.last?.screen {
+        return fetchDetail(state: &state, routeID: state.routes.count - 1)
+      }
+      return .none
+
+    case .routeAction(_, action: .ownerDashboard(.delegate(.deleteClass))):
+      return returnToClassDetail(state: &state, action: .deleteTapped)
+
+    case let .routeAction(_, action: .ownerDashboard(.delegate(.openMemberDetail(member)))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerMemberDetail(.init(room: dashboard.room, member: member)))
+      return .none
+
+    case let .routeAction(_, action: .ownerDashboard(.delegate(.openReplyDetail(opinion)))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerReplyDetail(.init(room: dashboard.room, opinion: opinion)))
+      return .none
+
+    case let .routeAction(_, action: .ownerDashboard(.delegate(.openFeedback(member)))):
+      guard case let .ownerDashboard(dashboard)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerFeedback(.init(room: dashboard.room, memberName: member.name)))
+      return .none
+
+    case let .routeAction(_, action: .ownerMemberDetail(.delegate(.commentSelected(opinion)))):
+      guard case let .ownerMemberDetail(member)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerReplyDetail(.init(room: member.room, opinion: opinion)))
+      return .none
+
+    case .routeAction(_, action: .ownerMemberDetail(.delegate(.feedbackSelected))):
+      guard case let .ownerMemberDetail(member)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.ownerFeedback(.init(room: member.room, memberName: member.member.name)))
+      return .none
+
+    case .routeAction(_, action: .ownerFeedback(.delegate(.submitted))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case .routeAction(_, action: .chat(.delegate(.popToRoot))):
+      return .send(.view(.backToRootAction))
+
+    case let .routeAction(_, action: .chat(.router(.routeAction(_, action: .preVote(.delegate(.voteSubmitted(
+      battleID, .post, _, isMindChanged
+    ))))))):
+      guard case .aiChat? = state.routes.dropLast().last?.screen else { return .none }
+      state.completedAIBattles[battleID] = isMindChanged
+      return .none
+
+    case .routeAction(_, action: .chat(.router(.routeAction(_, action: .comment(.delegate(.dismiss)))))):
+      guard case .aiChat? = state.routes.dropLast().last?.screen else { return .none }
+      state.routes.goBack()
+      return .none
+
+    case .routeAction(_, action: .aiVote(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .aiVote(.delegate(.showResults(room)))):
+      var flow = ClassBattleFlowFeature.State()
+      flow.room = room
+      flow.opensResultsDirectly = true
+      state.routes.push(.battleFlow(flow))
+      return .none
+
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.dismiss))):
+      guard routeID == state.routes.count - 1,
+            case let .battleFlow(flow)? = state.routes.last?.screen else { return .none }
+      state.routes.goBack()
+      // 운영자 본인 참여처럼 배틀을 마치면 서버 인원 수가 바뀐다. 상세로 돌아오면 다시 받아 숫자를 맞춘다.
+      guard let roomID = flow.room?.id,
+            case let .detail(detail)? = state.routes.last?.screen,
+            detail.room.id == roomID
+      else { return .none }
+      return fetchDetail(state: &state, routeID: state.routes.count - 1)
+
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.openReport(classID: classID)))):
+      guard routeID == state.routes.count - 1,
+            case let .battleFlow(flow)? = state.routes.last?.screen,
+            let room = flow.room,
+            room.id == classID else { return .none }
+      // Android onResultClick → ClassResult: 운영자·멤버가 같은 결과 화면을 쓴다.
+      state.routes.push(.result(.init(room: room)))
+      return .none
+
+    case let .routeAction(routeID, action: .battleFlow(.delegate(.openPerspective(id)))):
+      guard routeID == state.routes.count - 1,
+            case .battleFlow? = state.routes.last?.screen else { return .none }
+      state.routes.push(.perspectiveDetail(.init(perspectiveId: id)))
+      return .none
+
+    case .routeAction(_, action: .perspectiveDetail(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .aiVote(.delegate(.voteSubmitted(
+      battleID: battleID,
+      selectedOptionID: selectedOptionID,
+      hasCompletedPostVote: hasCompletedPostVote
+    )))):
+      guard case let .aiVote(vote)? = state.routes.last?.screen else { return .none }
+      if hasCompletedPostVote {
+        if let detailIndex = state.routes.lastIndex(where: {
+          guard case let .detail(detail) = $0.screen else { return false }
+          return detail.room.id == vote.room.id
+        }) {
+          for _ in (detailIndex + 1) ..< state.routes.count {
+            state.routes.goBack()
+          }
+        } else {
+          while state.routes.count > 1, let screen = state.routes.last?.screen {
+            let isCompletedFlowRoute: Bool = switch screen {
+            case let .aiVote(previous):
+              previous.room.id == vote.room.id
+            case let .aiChat(previous):
+              previous.room.id == vote.room.id
+            default:
+              false
+            }
+            guard isCompletedFlowRoute else { break }
+            state.routes.goBack()
+          }
+        }
+        var battleFlowState = ClassBattleFlowFeature.State()
+        battleFlowState.room = vote.room
+        battleFlowState.opensResultsDirectly = true
+        state.routes.push(.battleFlow(battleFlowState))
+        return .none
+      }
+      state.routes.push(.aiChat(.init(
+        room: vote.room,
+        battleID: battleID,
+        selectedOptionID: selectedOptionID
+      )))
+      return .none
+
+    case .routeAction(_, action: .aiChat(.delegate(.dismiss))):
+      return .send(.view(.backAction))
+
+    case let .routeAction(_, action: .aiChat(.delegate(.finalVote(battleID: battleID)))):
+      guard case let .aiChat(aiChat)? = state.routes.last?.screen else { return .none }
+      state.routes.push(.aiVote(.init(
+        room: aiChat.room,
+        battleID: battleID,
+        isLiveClassBattle: true,
+        isPostVote: true
+      )))
+      return .none
+
+    case .routeAction(_, action: .detail(.delegate(.deleted))):
+      // Android onClassRemoved: 이전 화면(내 클래스)으로 돌아가 목록을 갱신한다.
+      return returnToMyClasses(state: &state)
+
+    case let .routeAction(_, action: .detail(.delegate(.left(roomID)))):
+      state.completedAIBattles[-1_000_000 - roomID] = nil
+      state.chatRoomsByBattleID[-1_000_000 - roomID] = nil
+      return returnToMyClasses(state: &state)
+
+    default:
+      return .none
+    }
+  }
+
+  /// 스택의 내 클래스 목록으로 돌아가 다시 불러온다. 목록이 없으면 소개 화면 위에 연다.
+  func returnToMyClasses(state: inout State) -> Effect<Action> {
+    if let listIndex = state.routes.lastIndex(where: {
+      if case .myClasses = $0.screen { return true }
+      return false
+    }) {
+      while state.routes.count > listIndex + 1 {
+        state.routes.goBack()
+      }
+      return .send(.router(.routeAction(id: listIndex, action: .myClasses(.async(.fetchRooms)))))
+    }
+    invalidateCompletingJoin(state: &state)
+    state.routes.goBackToRoot()
+    state.chatRoomsByBattleID.removeAll()
+    state.routes.push(.myClasses(.init()))
+    return .none
+  }
+
+  func returnToClassDetail(
+    state: inout State,
+    action: ClassDetailFeature.View
+  ) -> Effect<Action> {
+    let room: ClassRoom
+    switch state.routes.last?.screen {
+    case let .ownerDashboard(dashboard):
+      room = dashboard.room
+    default:
+      return .none
+    }
+    guard let detailIndex = state.routes.lastIndex(where: {
+      if case let .detail(detail) = $0.screen {
+        return detail.room.id == room.id
+      }
+      return false
+    })
+    else { return .none }
+
+    for _ in (detailIndex + 1) ..< state.routes.count {
+      state.routes.goBack()
+    }
+    return .send(.router(.routeAction(id: detailIndex, action: .detail(.view(action)))))
+  }
+
+  func handleViewAction(
+    state: inout State,
+    action: View
+  ) -> Effect<Action> {
+    switch action {
+    case .backAction:
+      if state.deadlineSelection != nil {
+        state.deadlineSelection = nil
+        return .none
+      }
+      if let editor = state.deadlineEdit {
+        guard !editor.isSaving else { return .none }
+        state.deadlineEdit = nil
+        return .cancel(id: ClassDeadlineEditFeature.CancelID.save(editor.instanceID))
+      }
+      if state.pendingJoinID != nil,
+         state.routes.count == 3,
+         case let .join(join)? = state.routes.last?.screen,
+         join.instanceID == state.completingJoinNicknameInstanceID
+      {
+        return .none
+      }
+      state.routes.goBack()
+      return .none
+
+    case .backToRootAction:
+      state.deadlineSelection = nil
+      if let editor = state.deadlineEdit {
+        guard !editor.isSaving else { return .none }
+        state.deadlineEdit = nil
+        invalidateCompletingJoin(state: &state)
+        state.routes.goBackToRoot()
+        state.chatRoomsByBattleID.removeAll()
+        return .cancel(id: ClassDeadlineEditFeature.CancelID.save(editor.instanceID))
+      }
+      invalidateCompletingJoin(state: &state)
+      state.routes.goBackToRoot()
+      state.chatRoomsByBattleID.removeAll()
+      return .none
+
+    case let .chatReportTapped(battleID):
+      guard case let .chat(chat)? = state.routes.last?.screen,
+            case let .comment(comment)? = chat.routes.last?.screen,
+            comment.battleId == battleID,
+            let room = state.chatRoomsByBattleID[battleID],
+            let detailIndex = state.routes.dropLast().lastIndex(where: {
+              if case let .detail(detail) = $0.screen {
+                return detail.room.id == room.id
+              }
+              return false
+            })
+      else { return .none }
+
+      while state.routes.count > detailIndex + 2 {
+        state.routes.goBack()
+      }
+      state.routes[screenAt: detailIndex + 1] = .result(.init(room: room))
+      return .none
+    }
+  }
+
+  func handleInnerAction(
+    state: inout State,
+    action: InnerAction
+  ) -> Effect<Action> {
+    switch action {
+    case let .deadlineDetailResponse(routeID, roomID, result):
+      guard routeID == state.routes.count - 1,
+            case var .myClasses(list)? = state.routes.last?.screen,
+            list.rooms.contains(where: { $0.id == roomID })
+      else { return .none }
+      switch result {
+      case let .success(room):
+        guard room.id == roomID, room.role == .owner else { return .none }
+        state.routes.push(.classEdit(.init(room: room)))
+        return .none
+      case let .failure(error):
+        list.customAlert = .alert(
+          title: "클래스 정보를 불러오지 못했어요",
+          message: error.localizedDescription
+        )
+        state.routes[screenAt: routeID] = .myClasses(list)
+        return .none
+      }
+
+    case let .detailLoaded(routeID, roomID, instanceID, requestID, room):
+      guard room.id == roomID,
+            state.routes.indices.contains(routeID),
+            case var .detail(detail) = state.routes[routeID].screen,
+            detail.room.id == roomID,
+            detail.instanceID == instanceID,
+            detail.activeLoadRequestID == requestID
+      else { return .none }
+      detail.room = room
+      detail.viewState = .loaded
+      detail.loadErrorMessage = nil
+      detail.activeLoadRequestID = nil
+      state.routes[screenAt: routeID] = .detail(detail)
+      return .none
+
+    case let .detailFailed(routeID, roomID, instanceID, requestID, message):
+      guard state.routes.indices.contains(routeID),
+            case var .detail(detail) = state.routes[routeID].screen,
+            detail.room.id == roomID,
+            detail.instanceID == instanceID,
+            detail.activeLoadRequestID == requestID
+      else { return .none }
+      detail.viewState = .error
+      detail.loadErrorMessage = message
+      detail.activeLoadRequestID = nil
+      state.routes[screenAt: routeID] = .detail(detail)
+      return .none
+
+    case let .ticketRegistrationCompleted(routeID, instanceID, startDate, endDate):
+      guard routeID == state.routes.count - 1,
+            case let .ticket(completed)? = state.routes.last?.screen,
+            completed.instanceID == instanceID,
+            completed.phase == .registered,
+            completed.registrationStartDate == startDate,
+            completed.expirationDate == endDate
+      else { return .none }
+
+      if routeID >= 2,
+         case let .ticket(previous) = state.routes[routeID - 1].screen,
+         previous.phase == .overview
+      {
+        state.routes.goBack()
+        var overview = previous
+        overview.registrationStartDate = startDate
+        overview.expirationDate = endDate
+        overview.ticket = completed.ticket
+        state.routes[screenAt: routeID - 1] = .ticket(overview)
+        if routeID >= 3,
+           case var .ticket(original) = state.routes[routeID - 2].screen,
+           original.phase == .registered
+        {
+          original.registrationStartDate = startDate
+          original.expirationDate = endDate
+          original.ticket = completed.ticket
+          state.routes[screenAt: routeID - 2] = .ticket(original)
+        }
+        return .none
+      }
+
+      var overview = ClassTicketFeature.State(instanceID: uuid())
+      overview.phase = .overview
+      overview.ticket = completed.ticket
+      overview.registrationStartDate = startDate
+      overview.expirationDate = endDate
+      state.routes.push(.ticket(overview))
+      return .none
+
+    case let .joinedNavigationReady(requestID, room):
+      guard state.pendingJoinID == requestID,
+            isCompletingJoinPrefix(state)
+      else { return .none }
+      invalidateCompletingJoin(state: &state)
+      state.routes.goBackToRoot()
+      state.routes.push(.detail(.init(room: room)))
+      return .none
+
+    case let .membershipLeaveReady(routeID, roomID):
+      guard state.routes.indices.contains(routeID),
+            case let .myClasses(list) = state.routes[routeID].screen,
+            list.isLeaving, list.leavingRoomID == roomID
+      else { return .none }
+      return .send(.router(.routeAction(
+        id: routeID,
+        action: .myClasses(.inner(.leaveCleanupCompleted(roomID)))
+      )))
+
+    case let .membersLoaded(routeID, roomID, instanceID, requestID, _, members, currentMemberID):
+      guard state.routes.indices.contains(routeID),
+            case let .members(member) = state.routes[routeID].screen,
+            member.room.id == roomID,
+            member.instanceID == instanceID,
+            member.activeLoadRequestID == requestID
+      else { return .none }
+      return .send(.router(.routeAction(
+        id: routeID,
+        action: .members(.membersLoaded(
+          room: member.room,
+          members: members,
+          currentMemberID: currentMemberID,
+          requestID: requestID
+        ))
+      )))
+
+    case let .membersFailed(routeID, roomID, instanceID, requestID, message):
+      guard state.routes.indices.contains(routeID),
+            case let .members(member) = state.routes[routeID].screen,
+            member.room.id == roomID,
+            member.instanceID == instanceID,
+            member.activeLoadRequestID == requestID
+      else { return .none }
+      return .send(.router(.routeAction(
+        id: routeID,
+        action: .members(.loadFailed(requestID: requestID, message: message))
+      )))
+
+    case let .memberMutationFailed(roomID, message):
+      guard let index = state.routes.lastIndex(where: {
+        if case let .members(memberState) = $0.screen {
+          return memberState.room.id == roomID
+        }
+        return false
+      }) else { return .none }
+      return .send(.router(.routeAction(id: index, action: .members(.dataFailed(message)))))
+
+    case let .memberMutationCompleted(room, members):
+      for (battleID, context) in state.chatRoomsByBattleID where context.id == room.id {
+        state.chatRoomsByBattleID[battleID] = room
+      }
+      var updates: [Effect<Action>] = []
+      for (index, route) in state.routes.enumerated() {
+        switch route.screen {
+        case let .members(memberState) where memberState.room.id == room.id:
+          updates.append(.send(.router(.routeAction(
+            id: index,
+            action: .members(.dataUpdated(room: room, members: members))
+          ))))
+        case let .detail(detailState) where detailState.room.id == room.id:
+          updates.append(.send(.router(.routeAction(id: index, action: .detail(.dataUpdated(room))))))
+        case .myClasses:
+          updates.append(.send(.router(.routeAction(id: index, action: .myClasses(.view(.onAppear))))))
+        default:
+          break
+        }
+      }
+      return .merge(updates)
+    }
+  }
+}
+
+// swiftformat:disable extensionAccessControl
+extension ClassCoordinator {
+  @Reducer
+  public enum ClassScreen {
+    case intro(ClassIntroFeature)
+    case ticket(ClassTicketFeature)
+    case join(ClassJoinFeature)
+    case startMethod(ClassStartMethodFeature)
+    case topic(ClassTopicFeature)
+    case recommend(ClassRecommendFeature)
+    case battlePreview(ClassBattlePreviewFeature)
+    case setting(ClassSettingFeature)
+    case classEdit(ClassEditFeature)
+    case share(ClassShareFeature)
+    case ownerName(ClassJoinFeature)
+    case myClasses(MyClassFeature)
+    case detail(ClassDetailFeature)
+    case members(ClassMemberFeature)
+    case report(ClassReportFeature)
+    case result(ClassResultFeature)
+    case myOpinions(ClassMyOpinionsFeature)
+    case closedBattle(ClassClosedBattleFeature)
+    case ownerDashboard(ClassOwnerDashboardFeature)
+    case ownerMemberDetail(ClassMemberDetailFeature)
+    case ownerReplyDetail(ClassReplyDetailFeature)
+    case ownerFeedback(ClassFeedbackComposeFeature)
+    case aiVote(ClassAIVoteFeature)
+    case aiChat(ClassAIChatFeature)
+    case battleFlow(ClassBattleFlowFeature)
+    case perspectiveDetail(CommentReplyFeature)
+    case chat(ChatCoordinator)
+  }
+}
+
+// swiftformat:enable extensionAccessControl
+
+extension ClassCoordinator.ClassScreen.State: Equatable {}

@@ -2,8 +2,8 @@
 //  AuthServiceDependency.swift
 //  PickeAuthInterface
 //
+//  Created by Picke on 10/11/26.
 //  인증 서비스의 DependencyKey.
-//
 //  liveValue 는 Keychain·네트워크 세션을 함께 다루므로 상위 조립 레이어가 등록한다.
 //  여기서는 계약과 테스트값만 둔다.
 //

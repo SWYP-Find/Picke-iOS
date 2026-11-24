@@ -1,0 +1,1981 @@
+import AudioPlayerServiceInterface
+@testable import Class
+import BattleDomainInterface
+import ClassDomainInterface
+import CommentDomainInterface
+import ComposableArchitecture
+import Foundation
+import HomeDomainInterface
+import PerspectiveDomainInterface
+import Testing
+
+@MainActor
+struct ClassBattleFlowTests {
+  private let requestID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
+
+  @Test
+  func 중간투표_선택_전에는_청취완료를_제출할_수_없다() {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false)
+    state.viewState = .loaded
+    state.hasListened = true
+    state.pendingCheckpointID = 801
+    #expect(!state.canSubmit)
+    state.pendingCheckpointID = nil
+    #expect(state.canSubmit)
+  }
+
+  @Test
+  func 중간투표_후에는_사전투표를_변경할_수_없다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .preVote, commentRequired: false, midVoteEnabled: true)
+    state.viewState = .loaded
+    state.selectedOptionID = 31
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .preVote,
+      opinionChanged: nil
+    )
+    state.selectedPaths = [801: 802]
+    #expect(state.isPreVoteLocked)
+    #expect(!state.canSubmit)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    await store.send(.view(.optionTapped(32)))
+    #expect(store.state.selectedOptionID == 31)
+  }
+
+  @Test
+  func 사후투표_중간투표_누락_복구는_오디오_시간_관찰을_재개한다() async {
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .postVote, commentRequired: false)
+    state.viewState = .loaded
+    state.needsMidVoteRecovery = true
+    state.isAudioReady = true
+    state.submitRequestID = requestID
+    state.currentTime = 15
+    state.hasListened = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+    await store.send(.inner(.submissionResponse(requestID, .postVote, .failure(.midVoteRequired)))) {
+      $0.submitRequestID = nil
+      $0.errorMessage = ClassBattleError.midVoteRequired.message
+      $0.hasListened = false
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+    }
+    await store.finish()
+    #expect(await spy.timeSubscriptions == 1)
+  }
+
+  @Test
+  func 중간투표_선택_경로의_대본만_노출한다() {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801,
+          nodeName: "선택",
+          audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "선택하세요.")],
+          interactiveOptions: [
+            ScenarioInteractiveOption(label: "첫째", nextNodeId: 802, optionID: 9001),
+            ScenarioInteractiveOption(label: "둘째", nextNodeId: 803, optionID: 9002)
+          ]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "첫째 경로", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .a, speakerName: "A", text: "첫째.")],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 803, nodeName: "둘째 경로", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 2_000, speakerType: .b, speakerName: "B", text: "둘째.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    #expect(ClassBattleTranscriptLine.from(scenario: scenario).count == 1)
+    #expect(ClassBattleTranscriptLine.from(scenario: scenario, selectedPaths: [801: 803])
+      .map(\.text) == ["선택하세요.", "둘째."])
+  }
+
+  @Test
+  func 이미_기록된_중간투표는_재생할_때_다시_제출하지_않는다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "선택", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "선택")],
+          interactiveOptions: [ScenarioInteractiveOption(label: "첫째", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "첫째 경로", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .a, speakerName: "A", text: "첫째")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false)
+    state.viewState = .loaded
+    state.isAudioReady = true
+    state.isPlaying = true
+    state.audioDuration = 4
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.selectedPaths = [801: 802]
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.inner(.playerTimeUpdated(requestID, 2))) {
+      $0.currentTime = 2
+      $0.currentNodeID = 802
+      $0.transcript = ClassBattleTranscriptLine.from(scenario: scenario, selectedPaths: [801: 802])
+      $0.pendingSeekTime = 2
+    }
+    #expect(store.state.pendingCheckpointID == nil)
+    await store.finish()
+  }
+
+  @Test
+  func 다른_분기를_선택하면_해당_경로의_오디오를_불러온다() async throws {
+    let commonURL = try #require(URL(string: "https://example.com/common.mp3"))
+    let branchURL = try #require(URL(string: "https://example.com/path-b.mp3"))
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: ["COMMON": commonURL.absoluteString, "PATH_B": branchURL.absoluteString],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "선택")],
+          interactiveOptions: [ScenarioInteractiveOption(label: "둘째", nextNodeId: 803, optionID: 9002)]
+        ),
+        ScenarioNode(
+          nodeId: 803, nodeName: "NODE_B", audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .b, speakerName: "B", text: "둘째")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false)
+    state.viewState = .loaded
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 803
+    state.isAudioReady = true
+    state.loadedAudioURL = commonURL
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+
+    await store.send(.view(.confirmMidVoteTapped)) {
+      $0.selectedPaths = [801: 803]
+      $0.transcript = ClassBattleTranscriptLine.from(scenario: scenario, selectedPaths: [801: 803])
+      $0.currentNodeID = 803
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 2
+      $0.pendingSeekTime = 2
+      $0.audioRequestID = requestID
+      $0.loadedAudioURL = branchURL
+      $0.isAudioReady = false
+    }
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
+    await store.finish()
+    #expect(await spy.loadedURLs == [branchURL])
+  }
+
+  @Test
+  func 서버에서_중간투표가_비활성화되면_로컬_선택으로_재생을_계속한다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [],
+          interactiveOptions: [ScenarioInteractiveOption(label: "다음", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "NEXT", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [], interactiveOptions: []
+        )
+      ]
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false, midVoteEnabled: true)
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 802
+    state.midVoteRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+    await store.send(.inner(.midVoteResponse(requestID, 801, 9001, .failure(.midVoteUnavailable)))) {
+      $0.midVoteRequestID = nil
+      $0.selectedPaths = [801: 802]
+      $0.currentNodeID = 802
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+      $0.midVoteDisabledLocally = true
+      $0.errorMessage = ClassBattleError.midVoteUnavailable.message
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 사후투표_복구_후에도_사용자가_고른_최종_선택을_제출한다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [],
+          interactiveOptions: [ScenarioInteractiveOption(label: "다음", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "NEXT", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [], interactiveOptions: []
+        )
+      ]
+    )
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .postVote, commentRequired: false, midVoteEnabled: true)
+    state.viewState = .loaded
+    state.scenario = scenario
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .postVote,
+      opinionChanged: nil
+    )
+    state.selectedOptionID = 32
+    state.needsMidVoteRecovery = true
+    state.hasListened = true
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 802
+    state.midVoteRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+    await store.send(.inner(.midVoteResponse(requestID, 801, 9001, .success(true)))) {
+      $0.midVoteRequestID = nil
+      $0.selectedPaths = [801: 802]
+      $0.currentNodeID = 802
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+    }
+    #expect(store.state.selectedOptionID == 32)
+    await store.send(.view(.submitTapped)) { $0.submitRequestID = requestID }
+    await store.receive(\.inner, .submissionResponse(requestID, .postVote, .failure(.invalidResponse))) {
+      $0.submitRequestID = nil
+      $0.errorMessage = ClassBattleError.invalidResponse.message
+    }
+    await store.finish()
+    #expect(await spy.postVoteOptionIDs == [32])
+  }
+
+  @Test
+  func 중간투표_확인은_체크포인트와_서버_선택지_ID를_제출한다() async {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "선택형 배틀",
+      philosophers: [],
+      isInteractive: true,
+      startNodeId: 801,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 801, nodeName: "COMMON", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [],
+          interactiveOptions: [ScenarioInteractiveOption(label: "다음", nextNodeId: 802, optionID: 9001)]
+        ),
+        ScenarioNode(
+          nodeId: 802, nodeName: "NEXT", audioDuration: 2,
+          autoNextNodeId: nil, scripts: [], interactiveOptions: []
+        )
+      ]
+    )
+    let spy = ClassBattleFlowSpy()
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .ttsListening, commentRequired: false, midVoteEnabled: true)
+    state.scenario = scenario
+    state.currentNodeID = 801
+    state.pendingCheckpointID = 801
+    state.selectedMidOptionID = 802
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+    await store.send(.view(.confirmMidVoteTapped)) { $0.midVoteRequestID = requestID }
+    await store.receive(\.inner, .midVoteResponse(requestID, 801, 9001, .success(true))) {
+      $0.midVoteRequestID = nil
+      $0.selectedPaths = [801: 802]
+      $0.currentNodeID = 802
+      $0.pendingCheckpointID = nil
+      $0.selectedMidOptionID = nil
+      $0.currentTime = 0
+      $0.pendingSeekTime = 0
+      $0.isPlaying = true
+    }
+    await store.finish()
+    #expect(await spy.midVoteArguments.map { "\($0.0):\($0.1):\($0.2)" } == ["\(ClassRoom.mocks[0].id):801:9001"])
+  }
+
+  @Test
+  func TTS_대본은_다음_노드_시작을_넘기지_않는다() {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "토론",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "첫 노드",
+          audioDuration: 90,
+          autoNextNodeId: 3,
+          scripts: [
+            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "A", text: "A. B."),
+            ScenarioScript(scriptId: 2, startTimeMs: 0, speakerType: .b, speakerName: "B", text: "C. D.")
+          ],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 3,
+          nodeName: "대사 없는 노드",
+          audioDuration: 90,
+          autoNextNodeId: 2,
+          scripts: [],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 2,
+          nodeName: "다음 노드",
+          audioDuration: 5,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 85_000, speakerType: .a, speakerName: "A", text: "끝.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+
+    let lines = ClassBattleTranscriptLine.from(scenario: scenario)
+    #expect(lines.map(\.startTime) == [0, 21.25, 42.5, 63.75, 85])
+    #expect(lines.dropLast().allSatisfy { $0.startTime < 85 })
+    #expect(lines.map(\.id) == Array(0..<lines.count))
+  }
+
+  @Test
+  func TTS_대본은_역전된_서버_시각과_빈_노드를_안전하게_처리한다() {
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "토론",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: [:],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "늦은 노드",
+          audioDuration: 90,
+          autoNextNodeId: 2,
+          scripts: [ScenarioScript(scriptId: 1, startTimeMs: 10_000, speakerType: .a, speakerName: "A", text: "늦은 문장.")],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 2,
+          nodeName: "이른 노드",
+          audioDuration: 5,
+          autoNextNodeId: 3,
+          scripts: [ScenarioScript(scriptId: 2, startTimeMs: 5_000, speakerType: .b, speakerName: "B", text: "이른 문장.")],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 3,
+          nodeName: "빈 노드",
+          audioDuration: 3,
+          autoNextNodeId: 4,
+          scripts: [],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 4,
+          nodeName: "마지막 노드",
+          audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 12_000, speakerType: .a, speakerName: "A", text: "마지막 문장.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+
+    let lines = ClassBattleTranscriptLine.from(scenario: scenario)
+    #expect(lines.map(\.startTime) == [5, 10, 12])
+    #expect(lines.map(\.id) == [0, 1, 2])
+  }
+
+  @Test
+  func 대본과_투표_아바타_표시값은_상태에서_행별로_제공한다() {
+    var state = ClassBattleFlowFeature.State()
+    state.currentTime = 3
+    state.transcript = [
+      .init(id: 7, startTime: 0, speakerName: "  한글", speakerImageURL: nil, text: "하나", side: "A"),
+      .init(id: 8, startTime: 1, speakerName: "  한글", speakerImageURL: nil, text: "둘", side: "A"),
+      .init(id: 9, startTime: 2, speakerName: "👨‍👩‍👧‍👦 가족", speakerImageURL: nil, text: "셋", side: "B"),
+      .init(id: 10, startTime: 3, speakerName: " \n", speakerImageURL: nil, text: "넷", side: "B")
+    ]
+    state.voteStats = ClassVoteStats(
+      options: [
+        .init(id: 4, title: " \n", imageURL: nil, voteCount: 1, ratio: 25),
+        .init(id: 4, title: "  찬성", imageURL: nil, voteCount: 3, ratio: 75)
+      ],
+      totalCount: 4,
+      updatedAt: .now
+    )
+
+    #expect(state.visibleTranscriptRows.map(\.id) == [7, 8, 9, 10])
+    #expect(state.visibleTranscriptRows.map(\.avatarFallback) == ["한", "한", "👨‍👩‍👧‍👦", "?"])
+    #expect(state.visibleTranscriptRows.map(\.showsHeader) == [true, false, true, true])
+    #expect(state.visibleTranscriptRows.map(\.isActive) == [false, false, false, true])
+    #expect(state.voteStatsOptionRows.map(\.id) == [0, 1])
+    #expect(state.voteStatsOptionRows.map(\.avatarFallback) == ["?", "찬"])
+    #expect(state.voteStatsOptionRows.map(\.percentageLabel) == ["25.0%", "75.0%"])
+  }
+
+  @Test
+  func 의견_수_표시는_중복_ID에도_각_카드의_순서를_따른다() {
+    let first = ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "첫 의견",
+      likeCount: 1_200,
+      commentCount: 3,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )
+    let second = ClassPerspectiveItem(
+      id: 77,
+      author: first.author,
+      option: first.option,
+      content: "두 번째 의견",
+      likeCount: 5,
+      commentCount: 2_300,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )
+    var state = ClassBattleFlowFeature.State()
+    state.perspectives = [first, second]
+
+    #expect(state.perspectiveRows.map(\.likeCountLabel) == ["1,200", "5"])
+    #expect(state.perspectiveRows.map(\.commentCountLabel) == ["3", "2,300"])
+  }
+
+  @Test
+  func 의견_작성_시각은_N분_전_형식으로_표시한다() {
+    let item = ClassPerspectiveItem(
+      id: 1,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "의견",
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: Date().addingTimeInterval(-150)
+    )
+    let row = ClassPerspectiveRow(id: 1, perspective: item, likeCountLabel: "0", commentCountLabel: "0")
+
+    #expect(row.createdAtLabel == "2분 전")
+  }
+
+  @Test
+  func 이미_제출한_의견이_있어도_빈_재조회_응답_뒤_입력창은_남는다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.hasSubmittedInCurrentSession = true
+    state.hasPublishedPerspective = true
+    state.myPerspectiveRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+
+    await store.send(.inner(.myPerspectiveResponse(requestID, .success([])))) {
+      $0.myPerspectiveRequestID = nil
+    }
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 제출_중_화면을_이탈하면_재진입_시_서버_진행상태를_확인한다() async {
+    let spy = ClassBattleFlowSpy()
+    let serverSession = session(step: .postVote, commentRequired: false)
+    let history = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .postVote,
+      opinionChanged: nil
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .postVote, commentRequired: false)
+    state.viewState = .loaded
+    state.selectedOptionID = 31
+    state.hasPublishedPerspective = false
+    state.submitRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: spy,
+        session: serverSession,
+        history: history
+      )
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+
+    #expect(!store.state.canSubmit)
+    await store.send(.view(.onDisappear)) {
+      $0.submitRequestID = nil
+      $0.viewState = .loading
+      $0.hasPublishedPerspective = nil
+    }
+    await store.send(.inner(.submissionResponse(requestID, .postVote, .success(true))))
+    #expect(!store.state.canSubmit)
+    await store.send(.view(.onAppear)) { $0.loadRequestID = requestID }
+    #expect(!store.state.canSubmit)
+    await store.receive(\.inner, .progressResponse(
+      requestID,
+      .success(.init(session: serverSession, voteHistory: history))
+    )) {
+      $0.loadRequestID = nil
+      $0.viewState = .loaded
+      $0.voteHistory = history
+      $0.selectedOptionID = nil
+    }
+    await store.finish()
+    #expect(await spy.classIDs == [ClassRoom.mocks[0].id])
+    #expect(await spy.voteHistoryClassIDs == [ClassRoom.mocks[0].id])
+  }
+
+  @Test
+  func TTS_대본은_화자와_문장_시각을_노드_순서대로_변환한다() async throws {
+    let spy = ClassBattleFlowSpy()
+    let scenario = BattleScenario(
+      battleId: 22,
+      title: "토론",
+      philosophers: [ScenarioPhilosopher(label: "B", name: "소크라테스", stance: "반대", imageUrl: "https://example.com/b.png")],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: ["COMMON": "https://example.com/class-battle.mp3"],
+      nodes: [
+        ScenarioNode(
+          nodeId: 1,
+          nodeName: "첫 노드",
+          audioDuration: 4,
+          autoNextNodeId: 2,
+          scripts: [
+            ScenarioScript(scriptId: 1, startTimeMs: 0, speakerType: .a, speakerName: "찬성자", text: "A. B."),
+            ScenarioScript(scriptId: 2, startTimeMs: 2_000, speakerType: .philosopher, speakerName: "소크라테스", text: "생각해요.")
+          ],
+          interactiveOptions: []
+        ),
+        ScenarioNode(
+          nodeId: 2,
+          nodeName: "다음 노드",
+          audioDuration: 2,
+          autoNextNodeId: nil,
+          scripts: [ScenarioScript(scriptId: 3, startTimeMs: 4_000, speakerType: .b, speakerName: "반대자", text: "반대해요.")],
+          interactiveOptions: []
+        )
+      ]
+    )
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .preVote, commentRequired: true)
+    state.viewState = .loaded
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.battleUseCase = ClassBattleFlowScenarioStub(spy: spy, scenario: scenario)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: spy)
+    }
+
+    await store.send(.view(.onAppear)) { $0.audioRequestID = requestID }
+    let expected = [
+      ClassBattleTranscriptLine(id: 0, startTime: 0, speakerName: "찬성자", speakerImageURL: nil, text: "A.", side: "A"),
+      ClassBattleTranscriptLine(id: 1, startTime: 1, speakerName: "찬성자", speakerImageURL: nil, text: "B.", side: "A"),
+      ClassBattleTranscriptLine(id: 2, startTime: 2, speakerName: "소크라테스", speakerImageURL: "https://example.com/b.png", text: "생각해요.", side: "B"),
+      ClassBattleTranscriptLine(id: 3, startTime: 4, speakerName: "소크라테스", speakerImageURL: "https://example.com/b.png", text: "반대해요.", side: "B")
+    ]
+    await store.receive(\.inner, .scenarioLoaded(requestID, scenario)) {
+      $0.scenario = scenario
+      $0.currentNodeID = scenario.startNodeId
+      $0.transcript = expected
+    }
+    let audioURL = try #require(URL(string: "https://example.com/class-battle.mp3"))
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL))) {
+      $0.loadedAudioURL = audioURL
+    }
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 클래스_배틀_로드는_서버_세션과_시나리오의_HTTP_오디오를_사용한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let session = session(step: .preVote, commentRequired: true)
+    let history = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .preVote,
+      opinionChanged: nil
+    )
+    let spy = ClassBattleFlowSpy()
+    let player = ClassBattleFlowAudioPlayer(spy: spy)
+    let store = TestStore(initialState: battleState(room: room)) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy, session: session, history: history)
+      $0.battleUseCase = ClassBattleFlowScenarioStub(spy: spy)
+      $0.audioPlayer = player
+    }
+
+    await store.send(.view(.onAppear)) { $0.loadRequestID = requestID }
+    await store.receive(\.inner, .progressResponse(
+      requestID,
+      .success(.init(session: session, voteHistory: history))
+    )) {
+      $0.loadRequestID = nil
+      $0.viewState = .loaded
+      $0.session = session
+      $0.voteHistory = history
+      $0.selectedOptionID = 31
+      $0.audioRequestID = requestID
+    }
+    let audioURL = try #require(URL(string: "https://example.com/class-battle.mp3"))
+    let scenario = try await ClassBattleFlowScenarioStub(spy: ClassBattleFlowSpy())
+      .fetchScenario(battleId: session.battle.id)
+    await store.receive(\.inner, .scenarioLoaded(requestID, scenario)) {
+      $0.scenario = scenario
+      $0.currentNodeID = scenario.startNodeId
+      $0.transcript = ClassBattleTranscriptLine.from(scenario: scenario)
+    }
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL))) {
+      $0.loadedAudioURL = audioURL
+    }
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
+    await store.send(.view(.retryAudioTapped)) {
+      $0.audioRequestID = requestID
+      $0.errorMessage = nil
+    }
+    await store.receive(\.inner, .scenarioLoaded(requestID, scenario))
+    await store.receive(\.inner, .audioURLResponse(requestID, .success(audioURL)))
+    await store.receive(\.inner, .audioLoaded(requestID, false, 0)) {
+      $0.audioRequestID = nil
+      $0.errorMessage = "오디오를 재생할 수 없어요. 다시 시도해 주세요."
+    }
+    await store.finish()
+    #expect(await spy.classIDs == [room.id])
+    #expect(await spy.voteHistoryClassIDs == [room.id])
+    #expect(await spy.scenarioBattleIDs == [session.battle.id, session.battle.id])
+    #expect(await spy.loadedURLs == [audioURL, audioURL])
+  }
+
+  @Test
+  func 재진입하면_중단된_진행조회와_오디오_시간_관찰을_재개한다() async {
+    let spy = ClassBattleFlowSpy()
+    let player = ClassBattleFlowAudioPlayer(spy: spy)
+    let loadedSession = session(step: .none, commentRequired: true)
+    var state = battleState(room: .mocks[0])
+    state.session = loadedSession
+    state.viewState = .loading
+    let store = TestStore(initialState: state) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy, session: loadedSession)
+      $0.audioPlayer = player
+    }
+
+    await store.send(.view(.onAppear)) { $0.loadRequestID = requestID }
+    await store.receive(\.inner, .progressResponse(
+      requestID,
+      .success(.init(session: loadedSession, voteHistory: nil))
+    )) {
+      $0.loadRequestID = nil
+      $0.viewState = .loaded
+    }
+    await store.finish()
+    #expect(await spy.classIDs == [ClassRoom.mocks[0].id])
+
+    var audioState = battleState(room: .mocks[0])
+    audioState.session = session(step: .preVote, commentRequired: true)
+    audioState.viewState = .loaded
+    audioState.isAudioReady = true
+    audioState.isPlaying = true
+    audioState.isLoadingPerspectives = true
+    let audioStore = TestStore(initialState: audioState) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await audioStore.send(.view(.onDisappear)) {
+      $0.isPlaying = false
+      $0.isLoadingPerspectives = false
+    }
+    await audioStore.send(.view(.onAppear))
+    await audioStore.finish()
+    #expect(await spy.timeSubscriptions == 1)
+  }
+
+  @Test
+  func 다시듣기_중에도_진행률과_종료상태를_갱신한다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .preVote, commentRequired: true)
+    state.viewState = .loaded
+    state.isAudioReady = true
+    state.audioDuration = 30
+    state.hasListened = true
+    state.isPlaying = true
+    let store = TestStore(initialState: state) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.inner(.playerTimeUpdated(requestID, 15))) {
+      $0.currentTime = 15
+    }
+    await store.send(.inner(.playerTimeUpdated(requestID, 30))) {
+      $0.currentTime = 30
+      $0.isPlaying = false
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 의견_페이지_요청_취소_후_더보기를_다시_시도할_수_있다() async {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.hasMorePerspectives = true
+    state.nextPerspectiveCursor = "next-page"
+    state.isLoadingPerspectives = true
+    state.perspectiveRequestID = requestID
+    let store = TestStore(initialState: state) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+    }
+
+    await store.send(.view(.onDisappear)) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+    }
+    await store.send(.view(.loadMorePerspectivesTapped)) {
+      $0.perspectiveRequestID = requestID
+      $0.isLoadingPerspectives = true
+    }
+    await store.receive(\.inner, .perspectivePageResponse(requestID, .failure(.invalidResponse))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectiveErrorMessage = ClassBattleError.invalidResponse.message
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 화면_이탈로_좋아요_요청이_취소되어도_다시_좋아요를_누를_수_있다() async {
+    let nextRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000043")!
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.perspectiveLikeRequestID = requestID
+    state.voteStats = .init(options: [], totalCount: 0, updatedAt: .now)
+    state.hasPublishedPerspective = false
+    state.perspectives = [ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "내 생각",
+      likeCount: 4,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )]
+    let serverItem = ClassPerspectiveItem(
+      id: 77,
+      author: state.perspectives[0].author,
+      option: state.perspectives[0].option,
+      content: state.perspectives[0].content,
+      likeCount: 5,
+      commentCount: 0,
+      isLiked: true,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: state.perspectives[0].createdAt
+    )
+    let page = ClassPerspectivePage(items: [serverItem], nextCursor: nil, hasNext: false)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(nextRequestID)
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.perspectiveUseCase = MockPerspectiveRepository()
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy(), perspectivesPage: page)
+    }
+
+    await store.send(.view(.onDisappear)) {
+      $0.perspectiveLikeRequestID = nil
+      $0.perspectives = []
+    }
+    await store.send(.inner(.perspectiveLikeResponse(
+      requestID,
+      77,
+      .success(.init(perspectiveId: 77, likeCount: 5, isLiked: true))
+    )))
+    await store.send(.view(.perspectiveLikeTapped(77)))
+    await store.send(.view(.onAppear)) {
+      $0.perspectiveRequestID = nextRequestID
+      $0.isLoadingPerspectives = true
+    }
+    await store.receive(\.inner, .perspectivePageResponse(nextRequestID, .success(page))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectives = [serverItem]
+    }
+    await store.send(.view(.perspectiveLikeTapped(77))) {
+      $0.perspectiveLikeRequestID = nextRequestID
+    }
+    await store.receive(\.inner, .perspectiveLikeResponse(
+      nextRequestID,
+      77,
+      .success(.init(perspectiveId: 77, likeCount: 0, isLiked: false))
+    )) {
+      $0.perspectiveLikeRequestID = nil
+      let item = $0.perspectives[0]
+      $0.perspectives[0] = ClassPerspectiveItem(
+        id: item.id,
+        author: item.author,
+        option: item.option,
+        content: item.content,
+        likeCount: 0,
+        commentCount: item.commentCount,
+        isLiked: false,
+        isMyPerspective: item.isMyPerspective,
+        status: item.status,
+        createdAt: item.createdAt
+      )
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 목록_재조회와_좋아요_응답의_순서가_달라도_서버_좋아요_수를_유지한다() async {
+    let likeRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000043")!
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.perspectiveRequestID = requestID
+    state.isLoadingPerspectives = true
+    state.perspectiveLikeRequestID = likeRequestID
+    let original = ClassPerspectiveItem(
+      id: 77,
+      author: .init(userTag: "member", nickname: "참가자", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "내 생각",
+      likeCount: 4,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: false,
+      status: nil,
+      createdAt: .now
+    )
+    state.perspectives = [original]
+    let refreshed = ClassPerspectiveItem(
+      id: original.id,
+      author: original.author,
+      option: original.option,
+      content: original.content,
+      likeCount: 5,
+      commentCount: original.commentCount,
+      isLiked: true,
+      isMyPerspective: original.isMyPerspective,
+      status: original.status,
+      createdAt: original.createdAt
+    )
+    let page = ClassPerspectivePage(items: [refreshed], nextCursor: nil, hasNext: false)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+
+    await store.send(.inner(.perspectivePageResponse(requestID, .success(page)))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectives = [refreshed]
+    }
+    await store.send(.inner(.perspectiveLikeResponse(
+      likeRequestID,
+      77,
+      .success(.init(perspectiveId: 77, likeCount: 5, isLiked: true))
+    ))) {
+      $0.perspectiveLikeRequestID = nil
+    }
+    #expect(store.state.perspectives[0].likeCount == 5)
+    #expect(store.state.perspectives[0].isLiked)
+    await store.finish()
+
+    let stalePage = ClassPerspectivePage(items: [original], nextCursor: nil, hasNext: false)
+    let reverseStore = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    let likeResult = CommentLikeResult(perspectiveId: 77, likeCount: 5, isLiked: true)
+    await reverseStore.send(.inner(.perspectiveLikeResponse(
+      likeRequestID,
+      77,
+      .success(likeResult)
+    ))) {
+      $0.perspectiveLikeRequestID = nil
+      $0.pendingPerspectiveLikeResults[77] = likeResult
+      $0.perspectives = [refreshed]
+    }
+    await reverseStore.send(.inner(.perspectivePageResponse(requestID, .success(stalePage)))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.pendingPerspectiveLikeResults = [:]
+      $0.perspectives = [refreshed]
+    }
+    #expect(reverseStore.state.perspectives[0].likeCount == 5)
+    #expect(reverseStore.state.perspectives[0].isLiked)
+    await reverseStore.finish()
+
+    let newRequestID = UUID(uuidString: "00000000-0000-0000-0000-000000000044")!
+    let newer = ClassPerspectiveItem(
+      id: original.id,
+      author: original.author,
+      option: original.option,
+      content: original.content,
+      likeCount: 7,
+      commentCount: original.commentCount,
+      isLiked: true,
+      isMyPerspective: original.isMyPerspective,
+      status: original.status,
+      createdAt: original.createdAt
+    )
+    var newState = state
+    newState.perspectiveLikeRequestID = nil
+    newState.pendingPerspectiveLikeResults[77] = likeResult
+    let newPage = ClassPerspectivePage(items: [newer], nextCursor: nil, hasNext: false)
+    let newStore = TestStore(initialState: newState) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .constant(newRequestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy(), perspectivesPage: newPage)
+    }
+    await newStore.send(.view(.perspectiveSortTapped("latest"))) {
+      $0.perspectiveSort = "latest"
+      $0.perspectiveRequestID = newRequestID
+      $0.pendingPerspectiveLikeResults = [:]
+      $0.perspectives = []
+    }
+    await newStore.receive(\.inner, .perspectivePageResponse(newRequestID, .success(newPage))) {
+      $0.perspectiveRequestID = nil
+      $0.isLoadingPerspectives = false
+      $0.perspectives = [newer]
+    }
+    #expect(newStore.state.perspectives[0].likeCount == 7)
+    await newStore.finish()
+  }
+
+  @Test
+  func 좋아요_응답의_의견_ID가_다르면_오류를_표시한다() async {
+    var state = ClassBattleFlowFeature.State()
+    state.perspectiveLikeRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+
+    await store.send(.inner(.perspectiveLikeResponse(
+      requestID,
+      77,
+      .success(.init(perspectiveId: 78, likeCount: 5, isLiked: true))
+    ))) {
+      $0.perspectiveLikeRequestID = nil
+      $0.perspectiveErrorMessage = ClassBattleError.invalidResponse.message
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 클래스_API_실패는_오류_화면에_표시한다() async {
+    let spy = ClassBattleFlowSpy()
+    let store = TestStore(initialState: battleState(room: .mocks[0])) {
+      ClassBattleFlowFeature()
+    } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: spy, failsLoad: true)
+    }
+
+    await store.send(.view(.onAppear)) { $0.loadRequestID = requestID }
+    await store.receive(\.inner, .progressResponse(requestID, .failure(.network("API 연결 실패")))) {
+      $0.loadRequestID = nil
+      $0.viewState = .error
+      $0.errorMessage = "API 연결 실패"
+    }
+    await store.finish()
+    #expect(await spy.classIDs == [ClassRoom.mocks[0].id])
+    #expect(await spy.scenarioBattleIDs.isEmpty)
+  }
+
+  @Test
+  func 사전투표_후에는_오디오를_듣고_완료할_수_있다() {
+    var state = battleState(room: .mocks[0])
+    state.viewState = .loaded
+    state.session = session(step: .preVote, commentRequired: true)
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: ClassVoteChoice(optionID: 31, label: "A", title: "찬성"),
+      postVote: nil,
+      status: .preVote,
+      opinionChanged: nil
+    )
+    state.selectedOptionID = 31
+
+    #expect(state.isAudioStep)
+    #expect(state.buttonTitle == "청취 완료")
+    #expect(!state.canSubmit)
+
+    state.hasListened = true
+    #expect(state.canSubmit)
+
+    state.selectedOptionID = 32
+    state.hasListened = false
+    #expect(state.buttonTitle == "사전투표 변경하기")
+    #expect(state.canSubmit)
+  }
+
+  @Test
+  func 의견이_필수가_아니어도_최종투표_후_의견을_쓸_수_있다() {
+    var state = battleState(room: .mocks[0])
+    state.viewState = .loaded
+    state.session = session(step: .completed, commentRequired: false)
+    state.hasPublishedPerspective = false
+
+    #expect(state.shouldShowComposer)
+    #expect(!state.canSubmit)
+    state.draft = "제 생각은 달라요."
+    #expect(state.canSubmit)
+    #expect(state.buttonTitle == "의견 등록하기")
+  }
+
+  @Test
+  func 투표_화면의_표시값은_State에서_계산한다() {
+    var state = ClassBattleFlowFeature.State()
+    #expect(state.voteFooterButtonTitle == "불러오는 중")
+    #expect(state.voteCategoryLabel == nil)
+    #expect(state.voteCommentCountLabel == nil)
+    #expect(state.voteDeadlineLabel == nil)
+
+    state.room = .mocks[0]
+    state.session = session(step: .none, commentRequired: true)
+    #expect(state.voteFooterButtonTitle == "사전 투표하기")
+    #expect(state.voteCategoryLabel == "#사회")
+    #expect(state.voteCommentCountLabel == "23")
+    #expect(state.voteDeadlineLabel == "2027. 01. 15. 금요일 17:00까지")
+
+    state.session = session(step: .completed, commentRequired: true)
+    state.showsPreVoteLanding = true
+    #expect(state.voteFooterButtonTitle == "결과 보기")
+  }
+
+  @Test
+  func 결과_화면의_투표_비율_문구는_State에서_계산한다() {
+    var state = ClassBattleFlowFeature.State()
+    #expect(state.voteStatsPercentageLabels.isEmpty)
+
+    state.voteStats = ClassVoteStats(
+      options: [
+        .init(id: 31, title: "찬성", imageURL: nil, voteCount: 8, ratio: 53.4),
+        .init(id: 32, title: "반대", imageURL: nil, voteCount: 7, ratio: 46.6),
+      ],
+      totalCount: 15,
+      updatedAt: .now
+    )
+    #expect(state.voteStatsPercentageLabels == ["53.4%", "46.6%"])
+
+    state.voteStats = ClassVoteStats(
+      options: [
+        .init(id: 31, title: "찬성", imageURL: nil, voteCount: 8, ratio: 53.4),
+        .init(id: 31, title: "중복", imageURL: nil, voteCount: 7, ratio: 46.6),
+      ],
+      totalCount: 15,
+      updatedAt: .now
+    )
+    #expect(state.voteStatsPercentageLabels == ["53.4%", "46.6%"])
+  }
+
+  @Test
+  func 투표_변경_라벨은_투표_이력의_판정에_따른다() {
+    var state = battleState(room: .mocks[0])
+    #expect(state.opinionChangeLabel == nil)
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 32, label: "B", title: "반대"),
+      status: .completed,
+      opinionChanged: true
+    )
+    #expect(state.opinionChangeLabel == "생각이 바뀌었어요")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 31, label: "A", title: "찬성"),
+      status: .completed,
+      opinionChanged: false
+    )
+    #expect(state.opinionChangeLabel == "생각이 동일해요")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 32, label: "B", title: "반대"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.opinionChangeLabel == "생각이 바뀌었어요")
+
+    state.voteHistory = ClassVoteHistory(
+      battleTitle: "토론",
+      preVote: .init(optionID: 31, label: "A", title: "찬성"),
+      postVote: .init(optionID: 31, label: "A", title: "찬성"),
+      status: .completed,
+      opinionChanged: nil
+    )
+    #expect(state.opinionChangeLabel == "생각이 동일해요")
+  }
+
+  @Test
+  func 의견_제출_실패는_입력창을_유지하고_수정하면_오류를_지운다() async {
+    var state = battleState(room: .mocks[0])
+    state.viewState = .loaded
+    state.session = session(step: .completed, commentRequired: false)
+    state.hasPublishedPerspective = false
+    state.draft = "제 생각"
+    state.submitRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    let error = ClassBattleError.network("등록 실패")
+
+    await store.send(.inner(.submissionResponse(requestID, .completed, .failure(error)))) {
+      $0.submitRequestID = nil
+      $0.errorMessage = error.message
+    }
+    #expect(store.state.shouldShowComposer)
+    #expect(store.state.draft == "제 생각")
+
+    await store.send(.view(.draftChanged("수정한 생각"))) {
+      $0.draft = "수정한 생각"
+      $0.errorMessage = nil
+    }
+    await store.finish()
+  }
+
+  @Test
+  func 의견_더보기_메뉴는_Android와_같이_작성자와_상태로_정한다() {
+    #expect(ClassPerspectiveMenuKind(listItem: perspectiveItem(id: 1, isMine: false)) == .report)
+    #expect(ClassPerspectiveMenuKind(listItem: perspectiveItem(id: 1, isMine: true)) == .editAndDelete)
+    #expect(ClassPerspectiveMenuKind(listItem: perspectiveItem(id: 1, isMine: true, status: "REJECTED")) == .editOnly)
+    #expect(ClassPerspectiveMenuKind(listItem: perspectiveItem(id: 1, isMine: true, status: "pending")) == .hidden)
+    #expect(ClassPerspectiveMenuKind(listItem: perspectiveItem(id: 1, isMine: nil)) == .hidden)
+    #expect(!ClassPerspectiveMenuKind.hidden.hasMenu)
+    #expect(ClassPerspectiveMenuKind(myStatus: nil) == .editAndDelete)
+  }
+
+  @Test
+  func 내_의견_수정은_입력창에_내용을_채우고_보내면_수정_후_다시_불러온다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    #expect(state.shouldShowComposer)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.perspectiveUseCase = MockPerspectiveRepository()
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [perspectiveItem(id: 5, isMine: true)], nextCursor: nil, hasNext: false)
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveMoreTapped(5)))
+    #expect(store.state.menuTargetPerspectiveID == 5)
+    await store.send(.view(.perspectiveEditTapped(5)))
+    #expect(store.state.menuTargetPerspectiveID == nil)
+    #expect(store.state.editingPerspectiveID == 5)
+    #expect(store.state.draft == "의견 5")
+    #expect(store.state.shouldShowComposer)
+    #expect(store.state.canSubmit)
+
+    await store.send(.view(.draftChanged("고친 의견")))
+    await store.send(.view(.submitTapped))
+    #expect(store.state.mutationRequestID != nil)
+    #expect(store.state.submitRequestID == nil)
+    await store.receive(\.inner) // updatePerspectiveResponse
+
+    #expect(store.state.editingPerspectiveID == nil)
+    #expect(store.state.draft.isEmpty)
+    #expect(store.state.mutationRequestID == nil)
+    #expect(store.state.perspectiveRequestID != nil || store.state.perspectives.map(\.id) == [5])
+  }
+
+  @Test
+  func 의견_수정을_취소하면_수정_상태와_입력이_비워진다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveEditTapped(5)))
+    await store.send(.view(.cancelEditTapped))
+
+    #expect(store.state.editingPerspectiveID == nil)
+    #expect(store.state.draft.isEmpty)
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 내_의견을_삭제하면_목록에서_빼고_다시_쓸_수_있다() async {
+    var state = completedState(perspectives: [
+      perspectiveItem(id: 5, isMine: true),
+      perspectiveItem(id: 9, isMine: false),
+    ])
+    state.hasPublishedPerspective = true
+    state.hasSubmittedInCurrentSession = true
+    state.myPerspective = perspectiveItem(id: 5, isMine: true)
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.perspectiveUseCase = MockPerspectiveRepository()
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveDeleteTapped(9)))
+    #expect(store.state.customAlert == nil)
+    await store.send(.view(.perspectiveDeleteTapped(5)))
+    #expect(store.state.customAlert == .deletePerspective())
+    await store.send(.scope(.customAlert(.presented(.confirmTapped))))
+    await store.receive(\.inner) // deletePerspectiveResponse
+
+    #expect(store.state.perspectives.map(\.id) == [9])
+    #expect(store.state.myPerspective == nil)
+    #expect(store.state.hasPublishedPerspective == false)
+    #expect(!store.state.hasSubmittedInCurrentSession)
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 남의_의견_신고는_확인_후_결과를_토스트로_알린다() async {
+    let state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.perspectiveUseCase = MockPerspectiveRepository()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveReportTapped(9)))
+    #expect(store.state.customAlert == .report())
+    await store.send(.scope(.customAlert(.presented(.confirmTapped))))
+    await store.receive(\.inner) // reportPerspectiveResponse
+    #expect(store.state.toastMessage == "신고가 정상 접수되었습니다.")
+    await store.send(.view(.toastShown))
+    #expect(store.state.toastMessage == nil)
+
+    await store.send(.view(.perspectiveReportTapped(9)))
+    await store.send(.scope(.customAlert(.presented(.cancelTapped))))
+    #expect(store.state.reportTargetPerspectiveID == nil)
+    #expect(store.state.mutationRequestID == nil)
+
+    var duplicate = state
+    duplicate.mutationRequestID = requestID
+    let duplicateStore = TestStore(initialState: duplicate) { ClassBattleFlowFeature() }
+    duplicateStore.exhaustivity = .off
+    await duplicateStore.send(.inner(.reportPerspectiveResponse(requestID, .failure(.alreadyReported))))
+    #expect(duplicateStore.state.toastMessage == "이미 신고한 사용자입니다.")
+
+    var failed = state
+    failed.mutationRequestID = requestID
+    let failedStore = TestStore(initialState: failed) { ClassBattleFlowFeature() }
+    failedStore.exhaustivity = .off
+    await failedStore.send(.inner(.reportPerspectiveResponse(requestID, .failure(.unknown("x")))))
+    #expect(failedStore.state.toastMessage == "신고하지 못했어요")
+  }
+
+  @Test
+  func 검수_중인_내_의견은_목록_위_상태_카드로_보이고_메뉴가_없다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
+    state.myPerspective = perspectiveItem(id: 5, isMine: true, status: "PENDING")
+    #expect(state.hiddenMyPerspectiveRow?.perspective.id == 5)
+    #expect(state.hiddenMyPerspectiveRow?.statusBadgeTitle == "검수중")
+    #expect(state.hiddenMyPerspectiveRow?.menuKind == .hidden)
+
+    state.myPerspective = perspectiveItem(id: 5, isMine: nil, status: "REJECTED")
+    #expect(state.hiddenMyPerspectiveRow?.statusBadgeTitle == "거절됨")
+    #expect(state.hiddenMyPerspectiveRow?.menuKind == .editOnly)
+
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+    state.myPerspective = perspectiveItem(id: 5, isMine: true, status: "PENDING")
+    let pendingStore = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    pendingStore.exhaustivity = .off
+    await pendingStore.send(.view(.perspectiveMoreTapped(5)))
+    #expect(pendingStore.state.menuTargetPerspectiveID == nil)
+    await store.send(.view(.perspectiveEditTapped(5)))
+    #expect(store.state.editingPerspectiveID == 5)
+  }
+
+  @Test
+  func 상세_이동으로_화면이_가려져도_진행_중인_신고는_취소되지_않는다() async {
+    let gate = ReportGate()
+    let state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.perspectiveUseCase = SuspendedReportPerspective(gate: gate)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveReportTapped(9)))
+    await store.send(.scope(.customAlert(.presented(.confirmTapped))))
+    await gate.waitForStart()
+    await store.send(.view(.onDisappear))
+    #expect(store.state.mutationRequestID != nil)
+    await gate.release()
+    await store.receive(\.inner) // reportPerspectiveResponse
+    #expect(store.state.mutationRequestID == nil)
+    #expect(store.state.toastMessage == "신고가 정상 접수되었습니다.")
+  }
+
+  @Test
+  func 의견_변경_요청이_진행_중이면_다른_메뉴_동작을_막는다() async {
+    var state = completedState(perspectives: [
+      perspectiveItem(id: 5, isMine: true),
+      perspectiveItem(id: 9, isMine: false),
+    ])
+    state.mutationRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveMoreTapped(9)))
+    #expect(store.state.menuTargetPerspectiveID == nil)
+    await store.send(.view(.perspectiveReportTapped(9)))
+    await store.send(.view(.perspectiveDeleteTapped(5)))
+    #expect(store.state.customAlert == nil)
+    await store.send(.view(.perspectiveEditTapped(5)))
+    #expect(store.state.editingPerspectiveID == nil)
+    #expect(store.state.mutationRequestID == requestID)
+  }
+
+  @Test
+  func 수정_중_같은_의견의_수정을_다시_눌러도_고치던_내용을_유지한다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveEditTapped(5)))
+    await store.send(.view(.draftChanged("고치는 중")))
+    await store.send(.view(.perspectiveEditTapped(5)))
+    #expect(store.state.draft == "고치는 중")
+  }
+
+  @Test
+  func 의견을_제출한_뒤_완료_단계로_오면_내_의견을_다시_받아_검수_중_카드를_보여_준다() async throws {
+    var state = battleState(room: .mocks[0])
+    state.loadRequestID = requestID
+    state.hasSubmittedInCurrentSession = true
+    let pending = perspectiveItem(id: 5, isMine: true, status: "PENDING")
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.audioPlayer = ClassBattleFlowAudioPlayer(spy: ClassBattleFlowSpy())
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: [pending]
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.progressResponse(
+      requestID,
+      .success(.init(session: session(step: .completed, commentRequired: false), voteHistory: nil))
+    )))
+    #expect(store.state.hasPublishedPerspective == true)
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([pending])))
+
+    #expect(store.state.myPerspective?.id == 5)
+    #expect(store.state.hiddenMyPerspectiveRow?.statusBadgeTitle == "검수중")
+    #expect(store.state.hasPublishedPerspective == true)
+  }
+
+  @Test
+  func 의견_필수_참여_완료면_내_의견이_비어도_입력창을_다시_열지_않는다() async throws {
+    var state = battleState(room: .mocks[0])
+    state.loadRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: []
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.progressResponse(
+      requestID,
+      .success(.init(
+        session: session(step: .completed, commentRequired: true, participationCompleted: true),
+        voteHistory: nil
+      ))
+    )))
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
+
+    #expect(store.state.hasPublishedPerspective == true)
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 판정이_끝난_뒤_내_의견_조회가_실패하면_목록_오류_문구를_덮지_않는다() async {
+    var state = completedState(perspectives: [])
+    state.hasPublishedPerspective = true
+    state.perspectiveErrorMessage = "목록 오류"
+    state.myPerspectiveRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myPerspectiveResponse(requestID, .failure(.invalidResponse))))
+
+    #expect(store.state.perspectiveErrorMessage == "목록 오류")
+    #expect(store.state.hasPublishedPerspective == true)
+  }
+
+  @Test
+  func 판정_전에_내_의견_조회가_실패하면_재시도_문구를_보여_준다() async {
+    var state = completedState(perspectives: [])
+    state.hasPublishedPerspective = nil
+    state.myPerspectiveRequestID = requestID
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myPerspectiveResponse(requestID, .failure(.invalidResponse))))
+
+    #expect(store.state.perspectiveErrorMessage == ClassBattleError.invalidResponse.message)
+    #expect(store.state.hasPublishedPerspective == nil)
+  }
+
+  @Test
+  func 내_의견_상세에서_돌아와_내_의견이_비면_입력창을_다시_연다() async throws {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: []
+      )
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.perspectiveTapped(5)))
+    await store.send(.view(.onAppear))
+    #expect(store.state.hasPublishedPerspective == nil)
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
+
+    #expect(store.state.hasPublishedPerspective == false)
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 남의_의견_상세에서_돌아오면_내_의견이_비어도_참여_완료를_유지한다() async throws {
+    var state = completedState(perspectives: [
+      perspectiveItem(id: 5, isMine: true),
+      perspectiveItem(id: 9, isMine: false),
+    ])
+    state.hasPublishedPerspective = true
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(
+        spy: ClassBattleFlowSpy(),
+        perspectivesPage: .init(items: [], nextCursor: nil, hasNext: false),
+        myPerspectives: []
+      )
+    }
+    store.exhaustivity = .off
+
+    // 내 의견을 누른 뒤 복귀 처리 없이 남의 의견을 누르면 앞의 표시가 남지 않아야 한다.
+    await store.send(.view(.perspectiveTapped(5)))
+    await store.send(.view(.perspectiveTapped(9)))
+    await store.send(.view(.onAppear))
+    #expect(store.state.hasPublishedPerspective == true)
+    let myPerspectiveRequestID = try #require(store.state.myPerspectiveRequestID)
+    await store.receive(\.inner, .myPerspectiveResponse(myPerspectiveRequestID, .success([])))
+
+    #expect(store.state.hasPublishedPerspective == true)
+    #expect(store.state.shouldShowComposer)
+  }
+
+  @Test
+  func 변경_요청_중에_알림을_확인하면_요청을_보내지_않고_대상을_비운다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 5, isMine: true)])
+    state.hasPublishedPerspective = true
+    state.mutationRequestID = requestID
+    state.deleteTargetPerspectiveID = 5
+    state.customAlert = .deletePerspective()
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() }
+    store.exhaustivity = .off
+
+    await store.send(.scope(.customAlert(.presented(.confirmTapped))))
+
+    #expect(store.state.customAlert == nil)
+    #expect(store.state.deleteTargetPerspectiveID == nil)
+    #expect(store.state.mutationRequestID == requestID)
+    #expect(store.state.perspectives.map(\.id) == [5])
+  }
+
+  @Test
+  func 목록과_내_의견이_모두_실패한_뒤_다시_시도하면_목록도_다시_불러온다() async {
+    var state = completedState(perspectives: [])
+    state.hasPublishedPerspective = nil
+    state.perspectiveErrorMessage = "목록 오류"
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.retryMyPerspectiveTapped))
+
+    #expect(store.state.perspectiveRequestID != nil)
+    #expect(store.state.isLoadingPerspectives)
+    #expect(store.state.myPerspectiveRequestID != nil)
+    #expect(store.state.perspectiveErrorMessage == nil)
+  }
+
+  @Test
+  func 목록이_있으면_다시_시도해도_내_의견만_다시_불러오고_목록은_유지한다() async {
+    var state = completedState(perspectives: [perspectiveItem(id: 9, isMine: false)])
+    state.hasPublishedPerspective = nil
+    let store = TestStore(initialState: state) { ClassBattleFlowFeature() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.classBattleUseCase = ClassBattleFlowUseCaseStub(spy: ClassBattleFlowSpy())
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.retryMyPerspectiveTapped))
+
+    #expect(store.state.perspectiveRequestID == nil)
+    #expect(store.state.perspectives.map(\.id) == [9])
+    #expect(store.state.myPerspectiveRequestID != nil)
+  }
+
+  private func completedState(perspectives: [ClassPerspectiveItem]) -> ClassBattleFlowFeature.State {
+    var state = battleState(room: .mocks[0])
+    state.session = session(step: .completed, commentRequired: false)
+    state.viewState = .loaded
+    state.voteStats = .init(options: [], totalCount: 0, updatedAt: .now)
+    state.hasPublishedPerspective = false
+    state.perspectives = perspectives
+    return state
+  }
+
+  private func perspectiveItem(
+    id: Int,
+    isMine: Bool?,
+    status: String? = nil
+  ) -> ClassPerspectiveItem {
+    ClassPerspectiveItem(
+      id: id,
+      author: .init(userTag: "u\(id)", nickname: "작성자 \(id)", characterType: nil, characterImageURL: nil),
+      option: .init(id: 1, label: "A", title: "찬성", stance: "찬성"),
+      content: "의견 \(id)",
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isMyPerspective: isMine,
+      status: status,
+      createdAt: .now
+    )
+  }
+
+  private func session(
+    step: ClassBattleStep,
+    commentRequired: Bool,
+    midVoteEnabled: Bool = false,
+    participationCompleted: Bool = false
+  ) -> ClassBattleSession {
+    ClassBattleSession(
+      classID: 1,
+      myRole: .member,
+      closeAt: Date(timeIntervalSince1970: 1_800_000_000),
+      closed: false,
+      commentRequired: commentRequired,
+      canParticipate: true,
+      participationCompleted: participationCompleted,
+      battle: ClassBattleDetail(
+        id: 10,
+        title: "토론",
+        summary: "요약",
+        thumbnailURL: nil,
+        description: "설명",
+        shareURL: nil,
+        userVoteStatus: nil,
+        currentStep: step,
+        participantsCount: 1,
+        audioDuration: 30,
+        options: []
+      ),
+      midVoteEnabled: midVoteEnabled
+    )
+  }
+
+  private func battleState(room: ClassRoom) -> ClassBattleFlowFeature.State {
+    var state = ClassBattleFlowFeature.State()
+    state.instanceID = requestID
+    state.room = room
+    return state
+  }
+}
+
+private actor ClassBattleFlowSpy {
+  private(set) var classIDs: [Int] = []
+  private(set) var voteHistoryClassIDs: [Int] = []
+  private(set) var scenarioBattleIDs: [Int] = []
+  private(set) var loadedURLs: [URL] = []
+  private(set) var timeSubscriptions = 0
+  private(set) var midVoteArguments: [(Int, Int, Int)] = []
+  private(set) var postVoteOptionIDs: [Int] = []
+
+  func recordClass(_ id: Int) { classIDs.append(id) }
+  func recordVoteHistory(_ id: Int) { voteHistoryClassIDs.append(id) }
+  func recordScenario(_ id: Int) { scenarioBattleIDs.append(id) }
+  func recordAudio(_ url: URL) { loadedURLs.append(url) }
+  func recordTimeSubscription() { timeSubscriptions += 1 }
+  func recordMidVote(classID: Int, checkpointID: Int, optionID: Int) {
+    midVoteArguments.append((classID, checkpointID, optionID))
+  }
+  func recordPostVote(optionID: Int) { postVoteOptionIDs.append(optionID) }
+}
+
+private struct ClassBattleFlowUseCaseStub: ClassBattleInterface {
+  let spy: ClassBattleFlowSpy
+  var session: ClassBattleSession?
+  var history: ClassVoteHistory?
+  var perspectivesPage: ClassPerspectivePage?
+  var failsLoad = false
+  var myPerspectives: [ClassPerspectiveItem]?
+
+  func fetchBattle(classID: Int) async throws -> ClassBattleSession {
+    await spy.recordClass(classID)
+    if failsLoad { throw ClassBattleError.network("API 연결 실패") }
+    guard let session else { throw ClassBattleError.invalidResponse }
+    return session
+  }
+
+  func fetchMyVotes(classID: Int) async throws -> ClassVoteHistory {
+    await spy.recordVoteHistory(classID)
+    guard let history else { throw ClassBattleError.voteNotFound }
+    return history
+  }
+
+  func submitPreVote(classID _: Int, optionID _: Int) async throws -> ClassVoteReceipt { throw ClassBattleError.invalidResponse }
+  func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    await spy.recordMidVote(classID: classID, checkpointID: checkpointID, optionID: optionID)
+    return ClassVoteReceipt(voteID: 1, status: .ttsListening)
+  }
+  func completeTTS(classID _: Int) async throws { throw ClassBattleError.invalidResponse }
+  func submitPostVote(classID _: Int, optionID: Int) async throws -> ClassVoteReceipt {
+    await spy.recordPostVote(optionID: optionID)
+    throw ClassBattleError.invalidResponse
+  }
+  func fetchVoteStats(classID _: Int) async throws -> ClassVoteStats { throw ClassBattleError.invalidResponse }
+  func publishPerspective(classID _: Int, content _: String) async throws -> ClassPerspectiveReceipt { throw ClassBattleError.invalidResponse }
+  func fetchPerspectives(
+    classID _: Int,
+    cursor _: String?,
+    size _: Int?,
+    optionID _: Int?,
+    sort _: String?
+  ) async throws -> ClassPerspectivePage {
+    guard let perspectivesPage else { throw ClassBattleError.invalidResponse }
+    return perspectivesPage
+  }
+  func fetchMyPerspectives(classID _: Int) async throws -> [ClassPerspectiveItem] {
+    guard let myPerspectives else { throw ClassBattleError.invalidResponse }
+    return myPerspectives
+  }
+}
+
+/// 신고 요청을 멈춰 두었다가 풀어 주는 관문.
+private actor ReportGate {
+  private var started = false
+  private var startWaiters: [CheckedContinuation<Void, Never>] = []
+  private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+  func wait() async {
+    started = true
+    startWaiters.forEach { $0.resume() }
+    startWaiters = []
+    await withCheckedContinuation { releaseContinuation = $0 }
+  }
+
+  func waitForStart() async {
+    if started { return }
+    await withCheckedContinuation { startWaiters.append($0) }
+  }
+
+  func release() {
+    releaseContinuation?.resume()
+    releaseContinuation = nil
+  }
+}
+
+/// 신고만 관문에서 멈추고 나머지는 Mock에 맡기는 의견 유스케이스.
+private struct SuspendedReportPerspective: PerspectiveInterface {
+  let gate: ReportGate
+  private let base = MockPerspectiveRepository()
+
+  init(gate: ReportGate) {
+    self.gate = gate
+  }
+
+  func fetchPerspective(perspectiveId: Int) async throws -> BattlePerspective {
+    try await base.fetchPerspective(perspectiveId: perspectiveId)
+  }
+
+  func fetchLabeledComments(
+    perspectiveId: Int,
+    cursor: String?,
+    size: Int?
+  ) async throws -> PerspectiveCommentPage {
+    try await base.fetchLabeledComments(perspectiveId: perspectiveId, cursor: cursor, size: size)
+  }
+
+  func createComment(
+    perspectiveId: Int,
+    content: String
+  ) async throws -> PerspectiveCommentMutationResult {
+    try await base.createComment(perspectiveId: perspectiveId, content: content)
+  }
+
+  func updateComment(
+    perspectiveId: Int,
+    commentId: Int,
+    content: String
+  ) async throws -> PerspectiveCommentMutationResult {
+    try await base.updateComment(perspectiveId: perspectiveId, commentId: commentId, content: content)
+  }
+
+  func deleteComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws {
+    try await base.deleteComment(perspectiveId: perspectiveId, commentId: commentId)
+  }
+
+  func updatePerspective(
+    perspectiveId: Int,
+    content: String
+  ) async throws {
+    try await base.updatePerspective(perspectiveId: perspectiveId, content: content)
+  }
+
+  func deletePerspective(perspectiveId: Int) async throws {
+    try await base.deletePerspective(perspectiveId: perspectiveId)
+  }
+
+  func likePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    try await base.likePerspective(perspectiveId: perspectiveId)
+  }
+
+  func unlikePerspective(perspectiveId: Int) async throws -> CommentLikeResult {
+    try await base.unlikePerspective(perspectiveId: perspectiveId)
+  }
+
+  func fetchPerspectiveLikes(perspectiveId: Int) async throws -> CommentLikeResult {
+    try await base.fetchPerspectiveLikes(perspectiveId: perspectiveId)
+  }
+
+  func reportPerspective(perspectiveId _: Int) async throws {
+    await gate.wait()
+  }
+
+  func reportComment(
+    perspectiveId: Int,
+    commentId: Int
+  ) async throws {
+    try await base.reportComment(perspectiveId: perspectiveId, commentId: commentId)
+  }
+}
+
+private struct ClassBattleFlowScenarioStub: BattleInterface {
+  let spy: ClassBattleFlowSpy
+  var scenario: BattleScenario?
+  private let fallback = MockBattleRepository()
+
+  func fetchScenario(battleId: Int) async throws -> BattleScenario {
+    await spy.recordScenario(battleId)
+    if let scenario { return scenario }
+    return BattleScenario(
+      battleId: battleId,
+      title: "서버 시나리오",
+      philosophers: [],
+      isInteractive: false,
+      startNodeId: 1,
+      recommendedPathKey: .common,
+      audios: ["COMMON": "https://example.com/class-battle.mp3"],
+      nodes: []
+    )
+  }
+
+  func fetchTodayBattles() async throws -> TodayBattlePage { try await fallback.fetchTodayBattles() }
+  func fetchBattle(battleId: Int) async throws -> BattleDetail { try await fallback.fetchBattle(battleId: battleId) }
+  func submitPreVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult { try await fallback.submitPreVote(battleId: battleId, optionId: optionId) }
+  func submitPostVote(
+    battleId: Int,
+    optionId: Int
+  ) async throws -> PreVoteResult { try await fallback.submitPostVote(battleId: battleId, optionId: optionId) }
+  func fetchVoteStats(battleId: Int) async throws -> BattleVoteStats { try await fallback.fetchVoteStats(battleId: battleId) }
+  func fetchPerspectives(
+    battleId: Int,
+    cursor: String?,
+    size: Int?,
+    optionId: Int?,
+    sort: BattlePerspectiveSort?
+  ) async throws -> BattlePerspectivePage {
+    try await fallback.fetchPerspectives(battleId: battleId, cursor: cursor, size: size, optionId: optionId, sort: sort)
+  }
+  func createPerspective(
+    battleId: Int,
+    content: String,
+    optionId: Int?
+  ) async throws -> BattlePerspective? {
+    try await fallback.createPerspective(battleId: battleId, content: content, optionId: optionId)
+  }
+  func fetchMyPerspective(battleId: Int) async throws -> BattlePerspective? {
+    try await fallback.fetchMyPerspective(battleId: battleId)
+  }
+  func fetchRecommendedBattles(battleId: Int) async throws -> RecommendedBattlePage {
+    try await fallback.fetchRecommendedBattles(battleId: battleId)
+  }
+  func proposeBattle(_ draft: BattleProposalDraft) async throws -> BattleProposal {
+    try await fallback.proposeBattle(draft)
+  }
+}
+
+private struct ClassBattleFlowAudioPlayer: AudioPlayerInterface {
+  let spy: ClassBattleFlowSpy
+
+  func load(url: URL) async -> Bool {
+    await spy.recordAudio(url)
+    return false
+  }
+  func play() async {}
+  func pause() async {}
+  func setPlaybackRate(_: Float) async {}
+  func seek(to _: TimeInterval) async {}
+  func duration() async -> TimeInterval { 0 }
+  func currentTimes() -> AsyncStream<TimeInterval> {
+    AsyncStream { continuation in
+      Task {
+        await spy.recordTimeSubscription()
+        continuation.finish()
+      }
+    }
+  }
+}

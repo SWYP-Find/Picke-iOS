@@ -1,3 +1,10 @@
+//
+//  Project.swift
+//  PickeAnalytics
+//
+//  Created by Picke on 10/11/26.
+//
+
 import Foundation
 
 import DependencyPackagePlugin
@@ -17,7 +24,6 @@ let project = Project.makeModule(
     .SPM.mixpanel,
     .SPM.mixpanelSessionReplay,
     .SPM.sentry,
-    .SPM.sentrySwiftUI,
   ],
   hasTests: true,
   hasInterface: true,

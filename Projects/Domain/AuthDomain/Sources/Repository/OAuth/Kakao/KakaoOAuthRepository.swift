@@ -1,8 +1,8 @@
 //
 //  KakaoOAuthRepository.swift
-//  Data
+//  AuthDomain
 //
-//  Created by Wonji Suh  on 12/05/25.
+//  Created by Picke on 12/05/25.
 //
 
 import AuthDomainInterface

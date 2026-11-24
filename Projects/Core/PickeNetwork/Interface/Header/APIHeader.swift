@@ -2,7 +2,7 @@
 //  APIHeader.swift
 //  PickeNetworkInterface
 //
-//  Created by Wonji Suh  on 5/7/25.
+//  Created by Picke on 5/7/25.
 //
 
 import Foundation

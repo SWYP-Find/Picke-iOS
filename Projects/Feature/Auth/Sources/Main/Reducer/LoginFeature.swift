@@ -2,7 +2,7 @@
 //  LoginFeature.swift
 //  Auth
 //
-//  Created by Wonji Suh  on 5/11/26.
+//  Created by Picke on 5/11/26.
 //
 
 import AuthenticationServices

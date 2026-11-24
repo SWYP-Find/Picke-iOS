@@ -1,5 +1,14 @@
 # Picke iOS Architecture Guide
 
+## 🧰 에이전트 하네스 (먼저 읽기)
+
+- 색인과 Hard 규칙은 `CLAUDE.md`, 리뷰 기준은 `REVIEW.md`, 훅 · 검증 게이트는 `docs/agent/harness.md`에 있다. 이 파일은 SwiftUI · TCA 상세 규칙의 원본이다.
+- 수정 경로에 맞는 경로별 규칙을 직접 읽는다: `Projects/**` → `.claude/rules/ios.md`, Tuist · Plugins → `.claude/rules/tuist.md`, `fastlane/**` → `.claude/rules/fastlane.md`.
+- Codex에는 Claude 훅이 걸리지 않는다. 커밋 전에 직접 실행한다:
+  - `.claude/scripts/verify` — 바뀐 경로에 맞는 빌드 · 테스트. 통과 기록이 없으면 git `pre-commit`이 커밋을 막는다.
+  - `bash .claude/hooks/check-git-rules.sh --check-message "제목"` · `--check-branch "브랜치"`
+- `main` · `develop` · `release`에 직접 커밋 · 푸시하지 않는다. verify의 같은 단계가 2번 연속 실패하면 멈추고 사용자에게 보고한다.
+
 ## 📱 프로젝트 개요
 
 - **프로젝트명**: Picke
@@ -148,56 +157,38 @@ public var body: some View {
 - 한 메서드 안에서 다시 큰 블록이 생기면 더 작게 쪼개기 (재귀 적용)
 - 공통 컴포넌트는 별도 파일 (`Components/*.swift`) 로 추출
 
-#### 🧱 `@ViewBuilder` + `private func` — 모든 sub-view 는 함수 형태 (필수)
+#### 🧱 sub-view 형태 — 자식 2개 이상 stack 은 `@ViewBuilder func`, 단일 뷰는 `var` (필수)
 
-분리한 sub-view 는 **자식 개수 / 분기 유무와 상관없이 무조건 `@ViewBuilder` + `private func` 형태** 로 통일한다.
+분리한 sub-view 는 **자식 개수로 형태를 정한다**.
 
-`private var ...: some View` 형태는 **금지** — 모든 sub-view 는 호출부에서 일관되게 `()` 호출이 보이도록 함수 형태로만 작성한다.
+- stack / grid 안에 자식이 **2개 이상** (`ForEach` 반복, `if` 분기 포함) → `@ViewBuilder private func name() -> some View`
+- **단일 뷰** (Button 하나, Text 하나, 이미 만든 컴포넌트 하나) → `private var name: some View`
+- 파라미터가 필요하면 자식 수와 상관없이 func (`func thumbnail(url:)`)
 
 ```swift
-// ✅ 다중 자식 / 분기 / 반복
+// ✅ 자식 2개 이상 — @ViewBuilder func
 @ViewBuilder
-private func hotBattlesSection() -> some View {
-  VStack(alignment: .leading, spacing: 12) {
-    HomeSectionHeader(title: "지금 뜨는 배틀") { send(.seeMoreTapped(.hotBattles)) }
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 16) {
-        ForEach(store.hotBattles) { HotBattleCardView(battle: $0) }
-      }
-    }
+private func titleSection() -> some View {
+  VStack(alignment: .leading, spacing: 6) {
+    Text("어떤 주제로\n이야기 나눌까요?")
+    Text("관심 있는 주제나 수업 조건을 선택해 주세요.")
   }
 }
 
-@ViewBuilder
-private func thumbnail(url: URL?) -> some View {
-  if let url {
-    KFImage(url).resizable().scaledToFill()
-  } else {
-    Color.neutral200
+// ✅ 단일 뷰 — var
+private var searchButton: some View {
+  Button {
+    send(.searchTapped)
+  } label: {
+    Text("조건에 맞는 콘텐츠 보기")
   }
+  .ctaButtonStyle(.primary, size: .large, height: 52)
 }
 
-// ✅ 단일 뷰여도 함수 형태로
-@ViewBuilder
-private func primaryButton() -> some View {
-  CustomButton(
-    action: { send(.primaryButtonTapped) },
-    title: "사전 투표하기",
-    config: CustomButtonConfig.primary(.large, height: 52),
-    isEnable: store.isPrimaryButtonEnabled
-  )
-}
-
-// ❌ 금지 — sub-view 를 var 로 선언
-private var primaryButton: some View { ... }
-private var section: some View { VStack { ... } }
+// ❌ 금지 — 단일 뷰를 func 로, 다중 자식을 var 로
+private func searchButton() -> some View { Button { ... } }
+private var titleSection: some View { VStack { Text(...); Text(...) } }
 ```
-
-규칙:
-- **모든 sub-view = `@ViewBuilder private func name() -> some View`** (단일 뷰 / 다중 자식 / 분기 무관)
-- `private var ...: some View` 패턴 금지 — 호출부에서 `name` vs `name()` 형태 혼재되는 것을 방지
-- `body` 만 `var body: some View` 유지 (View 프로토콜 요구사항)
-- body 안에서 호출은 항상 `()` 가 붙은 함수 형태로 — 가독성 통일
 
 #### 📏 함수 시그니처 — 파라미터 2개 이상이면 멀티 라인 (필수)
 

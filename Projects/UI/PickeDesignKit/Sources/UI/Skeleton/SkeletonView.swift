@@ -2,6 +2,8 @@
 //  SkeletonView.swift
 //  PickeDesignKit
 //
+//  Created by Picke on 10/11/26.
+//
 
 import SwiftUI
 
@@ -72,5 +74,26 @@ private extension SkeletonView {
 
   static func phase(at date: Date) -> Double {
     date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: period) / period
+  }
+}
+
+public extension SkeletonView {
+  /// Android `Modifier.shimmer()` 기본 색(surfaceBeigeStrong → surfaceBeigeDefault).
+  static func beige(_ shape: SkeletonShape) -> SkeletonView {
+    SkeletonView(
+      shape,
+      base: .surfaceBeigeStrong,
+      highlight: .surfaceBeigeDefault
+    )
+  }
+
+  /// Android `PickeSkeletonLine` — radius 4, 폭은 최대값(좁은 자리에서는 줄어든다).
+  static func line(
+    width: CGFloat,
+    height: CGFloat
+  ) -> some View {
+    beige(.round(cornerRadius: 4))
+      .frame(maxWidth: width)
+      .frame(height: height)
   }
 }

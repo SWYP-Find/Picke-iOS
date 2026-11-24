@@ -2,23 +2,29 @@
 //  AppDelegate+Configure.swift
 //  Picke
 //
+//  Created by Picke on 10/11/26.
+//
 
 import AppTrackingTransparency
+import DomainAssembly
 import GoogleMobileAds
+import PickeConfig
 import PickeCoreLogger
+import PickeDesignKit
+import ServiceAssembly
 import UIKit
 import UserNotifications
 
-import DomainAssembly
-import PickeConfig
-import PickeDesignKit
-import ServiceAssembly
-
 extension AppDelegate {
+  static var isRunningHostedUnitTests: Bool {
+    NSClassFromString("XCTestCase") != nil
+  }
+
   /// 기동 초기화 진입점. 순서에 의미가 있다.
   /// 외부 SDK 부팅은 Firebase 를 PickeConfig 가, Sentry·Mixpanel 을 PickeAnalytics 가 맡는다.
   func configure() {
     configureFonts()
+    guard !Self.isRunningHostedUnitTests else { return }
     FirebaseConfiguration.configure()
     PickeAnalyticsConfiguration.configure()
     configureAdMob()

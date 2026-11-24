@@ -1,8 +1,8 @@
 //
 //  MockHomeRepository.swift
-//  DomainInterface
+//  HomeDomainInterface
 //
-//  Created by Wonji Suh on 5/16/26.
+//  Created by Picke on 5/16/26.
 //
 
 import Foundation

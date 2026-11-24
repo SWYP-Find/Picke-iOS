@@ -2,14 +2,15 @@
 //  CommentView.swift
 //  Chat
 //
-
-import SwiftUI
+//  Created by Picke on 10/11/26.
+//
 
 import CommentDomainInterface
 import ComposableArchitecture
+import PickeCoreUtility
 import PickeDesignKit
 import PickeSharedUI
-import PickeCoreUtility
+import SwiftUI
 
 @ViewAction(for: CommentFeature.self)
 public struct CommentView: View {
@@ -23,35 +24,18 @@ public struct CommentView: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      // Figma 8661-8291: 네비바·투표요약·필터탭은 고정, 아래 List 영역만 스크롤한다.
-      VStack(spacing: 4) {
-        navigationBar()
-        summarySection()
-        filterTabs()
+      headerSection()
+      if store.headerLoadFailed {
+        // Android: 첫 조회 실패 시 통계·탭·목록 대신 실패 표시만 남는다.
+        PickeLoadFailedSection()
+          .padding(16)
+          .frame(maxHeight: .infinity, alignment: .top)
+      } else {
+        commentScroll
       }
-      .background(.beige200)
-
-      ScrollView(showsIndicators: false) {
-        commentList()
-      }
-      .background(.surfaceBeigeDefault)
-      .scrollDismissesKeyboard(.interactively)
-      .simultaneousGesture(
-        DragGesture(minimumDistance: 24)
-          .onEnded { value in
-            // 좌우 스와이프로 필터 탭(전체/옵션A/옵션B) 전환
-            guard abs(value.translation.width) > abs(value.translation.height),
-                  abs(value.translation.width) > 50,
-                  let next = adjacentFilter(forward: value.translation.width < 0)
-            else { return }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-              send(.filterTapped(next))
-            }
-          }
-      )
       inputBar()
     }
-    .screenBackground()
+    .background(.bgBeige)
     .contentShape(Rectangle())
     .onTapGesture {
       isCommentFocused = false
@@ -64,78 +48,96 @@ public struct CommentView: View {
         hasAnimatedVoteProgress = true
       }
     }
+    .onChange(of: store.editingPerspectiveId) { _, editingID in
+      isCommentFocused = editingID != nil
+    }
     .customAlert($store.scope(state: \.customAlert, action: \.scope.customAlert))
+    .onChange(of: store.toastMessage, initial: true) { _, message in
+      guard let message else { return }
+      ToastManager.shared.showError(message)
+      send(.toastShown)
+    }
   }
+}
 
-  /// 댓글 카드 바로 아래에 뜨는 인라인 메뉴 (pill 형태).
+private extension CommentView {
   @ViewBuilder
-  private func inlineMenu(for comment: CommentItem) -> some View {
-    VStack(alignment: .trailing, spacing: 8) {
-      ForEach(menuItems(for: comment)) { item in
-        Button { item.action() } label: {
-          HStack(spacing: 4) {
-            Image(systemName: item.systemImage)
-              .font(.system(size: 13, weight: .medium))
-            Text(item.title)
-              .pretendardFont(.medium13)
-          }
-          .foregroundStyle(.beige50)
-          .padding(.horizontal, 14)
-          .padding(.vertical, 7)
-          .background(.primary500, in: Capsule())
-        }
-        .buttonStyle(.plain)
+  func headerSection() -> some View {
+    // Android PerspectiveScreen: 상단 바·통계·탭은 고정, 아래 목록만 스크롤한다. 배경 backgroundBeige.
+    VStack(spacing: 0) {
+      navigationBar
+      if !store.headerLoadFailed {
+        summarySection()
+        filterTabs()
       }
     }
-    .padding(.trailing, 4)
+    .background(.bgBeige)
   }
 
-  /// "…" 메뉴 항목 — 내 글: 수정/삭제, 남 글: 신고.
-  private func menuItems(for comment: CommentItem) -> [BottomActionItem] {
+  var commentScroll: some View {
+    ScrollView(showsIndicators: false) {
+      commentList()
+    }
+    .background(.bgBeige)
+    .scrollDismissesKeyboard(.interactively)
+    .simultaneousGesture(
+      DragGesture(minimumDistance: 24)
+        .onEnded { value in
+          // 좌우 스와이프로 필터 탭(전체/옵션A/옵션B) 전환
+          guard abs(value.translation.width) > abs(value.translation.height),
+                abs(value.translation.width) > 50,
+                let next = (value.translation.width < 0 ? store.nextFilter : store.previousFilter)
+          else { return }
+          withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            send(.filterTapped(next))
+          }
+        }
+    )
+  }
+
+  func opensMenuUpward(_ comment: CommentItem) -> Bool {
+    comment.id == store.comments.last?.id && store.comments.count > 1
+  }
+
+  /// "…" 버튼에서 펼치는 댓글 메뉴 — Android PickeMoreMenu.
+  func inlineMenu(for comment: CommentItem) -> some View {
+    PickeMoreMenuView(items: menuItems(for: comment))
+  }
+
+  /// "…" 메뉴 항목 — Android 순서: 내 글 삭제·수정, 남 글 신고.
+  func menuItems(for comment: CommentItem) -> [PickeMoreMenuItem] {
     if comment.isMine {
       return [
-        BottomActionItem(title: "수정", systemImage: "pencil") { send(.commentMenu(id: comment.id, action: .edit)) },
-        BottomActionItem(title: "삭제", systemImage: "trash", isDestructive: true) { send(.commentMenu(
-          id: comment.id,
-          action: .delete
-        )) },
-      ]
-    } else {
-      return [
-        BottomActionItem(title: "신고", systemImage: "light.beacon.max.fill", isDestructive: true) {
-          send(.commentMenu(id: comment.id, action: .report))
-        },
+        .delete { send(.commentMenu(id: comment.id, action: .delete)) },
+        .edit { send(.commentMenu(id: comment.id, action: .edit)) },
       ]
     }
-  }
-
-  /// 현재 선택된 필터 기준 인접 필터(스와이프 방향). 범위를 벗어나면 nil.
-  private func adjacentFilter(forward: Bool) -> CommentFilter? {
-    let all = CommentFilter.allCases
-    guard let idx = all.firstIndex(of: store.selectedFilter) else { return nil }
-    let nextIdx = forward ? idx + 1 : idx - 1
-    guard all.indices.contains(nextIdx) else { return nil }
-    return all[nextIdx]
+    return [.report { send(.commentMenu(id: comment.id, action: .report)) }]
   }
 }
 
 // MARK: - Navigation
 
 private extension CommentView {
-  @ViewBuilder
-  func navigationBar() -> some View {
+  var navigationBar: some View {
+    // Android PickeTopAppBar — 제목(비면 "관점 남기기") 16 SemiBold textDefault, 오른쪽 다음(ic_arrow_right 16).
+    // Android 는 시스템 뒤로 가기만 있어 앱바에 뒤로 버튼이 없지만, iOS 는 시스템 버튼이 없어 남긴다.
     PickeNavigationBar(
       onBack: { send(.backButtonTapped) },
-      centerTitle: store.title
+      centerTitle: store.navigationTitle
     ) {
       Button { send(.forwardTapped) } label: {
-        Image(systemName: "chevron.right")
-          .font(.system(size: 18, weight: .semibold))
+        Image(asset: .arrowRight)
+          .renderingMode(.template)
+          .resizable()
+          .scaledToFit()
+          .frame(width: 16, height: 16)
           .frame(width: 24, height: 24)
       }
       .buttonStyle(.plain)
+      .accessibilityLabel("다음")
     }
-    .foregroundStyle(.cardBaseTextTitle)
+    .foregroundStyle(.textDefault)
   }
 }
 
@@ -150,15 +152,16 @@ private extension CommentView {
         imageUrl: store.voteSummary.optionA.imageUrl,
         representative: store.voteSummary.optionA.representative,
         title: store.voteSummary.optionA.title,
-        percentage: store.voteSummary.optionA.percentage
+        rate: store.voteSummary.optionA.rateLabel
       )
 
       // Spacer 를 쓰면 컬럼이 남은 화면 높이를 전부 차지해 뱃지와 비율바가 벌어진다.
       // 고정 간격으로 묶어 양옆 옵션 컬럼 높이에 맞춘다.
-      VStack(spacing: 24) {
+      VStack(spacing: 0) {
         changeBadge()
         voteProgress()
           .padding(.horizontal, 8)
+          .frame(height: 35)
       }
       .padding(.top, 10)
       .frame(maxWidth: .infinity)
@@ -167,7 +170,7 @@ private extension CommentView {
         imageUrl: store.voteSummary.optionB.imageUrl,
         representative: store.voteSummary.optionB.representative,
         title: store.voteSummary.optionB.title,
-        percentage: store.voteSummary.optionB.percentage
+        rate: store.voteSummary.optionB.rateLabel
       )
     }
     .padding(.horizontal, 16)
@@ -179,7 +182,7 @@ private extension CommentView {
     imageUrl: String?,
     representative: String,
     title: String,
-    percentage: Double
+    rate: String
   ) -> some View {
     VStack(spacing: 4) {
       avatarCircle(imageUrl: imageUrl, name: representative)
@@ -187,11 +190,11 @@ private extension CommentView {
       VStack(spacing: 0) {
         Text(title)
           .pretendardFont(.medium11)
-          .foregroundStyle(.gray500)
+          .foregroundStyle(.textSubtler)
           .lineLimit(1)
-        Text(percentText(percentage))
+        Text(rate)
           .pretendardFont(.semiBold12)
-          .foregroundStyle(.gray500)
+          .foregroundStyle(.textSubtler)
       }
       .frame(maxWidth: .infinity)
     }
@@ -200,16 +203,19 @@ private extension CommentView {
 
   @ViewBuilder
   func changeBadge() -> some View {
-    HStack(spacing: 4) {
-      Image(systemName: "lightbulb")
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundStyle(.primary500)
+    // Android PerspectiveOpinionBadge — ic_think 16 + 12 SemiBold textPrimary, primary50 radius 2, 가로 4, 최소 높이 20.
+    HStack(spacing: 2) {
+      Image(asset: .think)
+        .renderingMode(.template)
+        .resizable()
+        .scaledToFit()
+        .frame(width: 16, height: 16)
       Text(store.changeBadgeTitle)
-        .pretendardFont(.semiBold11)
-        .foregroundStyle(.primary500)
+        .pretendardFont(.semiBold12)
     }
+    .foregroundStyle(.textPrimary)
     .padding(.horizontal, 4)
-    .padding(.vertical, 2)
+    .frame(minHeight: 20)
     .roundedBackground(.primary50)
   }
 
@@ -218,10 +224,10 @@ private extension CommentView {
     GeometryReader { proxy in
       let leftWidth = proxy.size.width * store.voteSummary.optionA.percentage
       ZStack(alignment: .leading) {
-        Capsule()
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .fill(.beige600)
           .frame(height: 6)
-        Capsule()
+        RoundedRectangle(cornerRadius: .radiusDefault)
           .fill(.primary500)
           .frame(width: hasAnimatedVoteProgress ? max(0, leftWidth) : 0, height: 6)
       }
@@ -261,7 +267,6 @@ private extension CommentView {
       sortButton(.latest)
       Spacer()
     }
-    .padding(.vertical, 4) // Figma 8661-8320: sort 행 py4
   }
 
   @ViewBuilder
@@ -297,42 +302,50 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func commentList() -> some View {
-    // Figma 8661-8318: List 컨테이너 p16 / 댓글모음 gap6 pb24.
-    VStack(spacing: 6) {
+    LazyVStack(spacing: 0) {
       sortRow()
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+        .padding(.bottom, 6)
 
       if store.isLoadingComments, store.comments.isEmpty {
         CommentSkeletonView()
+          .padding(.horizontal, 16)
       } else if store.comments.isEmpty {
         emptyState()
       } else {
         ForEach(store.comments) { comment in
           commentCard(comment)
-            .overlay(alignment: .bottomTrailing) {
-              if store.menuTargetCommentID == comment.id {
-                inlineMenu(for: comment)
-                  .offset(y: 34)
-                  .zIndex(1)
+            .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
+            .onAppear {
+              // Android: 마지막 항목이 보이면 다음 페이지(hasNext)를 부른다.
+              if comment.id == store.comments.last?.id {
+                send(.lastCommentAppeared)
               }
             }
-            .zIndex(store.menuTargetCommentID == comment.id ? 1 : 0)
         }
         .animation(.easeInOut(duration: 0.18), value: store.menuTargetCommentID)
+
+        if store.isLoadingComments {
+          ProgressView()
+            .tint(.primary900)
+            .frame(maxWidth: .infinity)
+            .padding(16)
+        }
       }
     }
-    .padding(16)
-    .padding(.bottom, 24)
   }
 
   @ViewBuilder
   func emptyState() -> some View {
-    PickeEmptyStateView(message: "아직 작성된 관점이 없습니다")
-      .padding(.vertical, 60)
+    // Android PickeEmptyState(fillParentMaxSize) — 정렬 줄 아래 남은 높이 가운데.
+    PickeEmptyStateView(message: store.emptyMessage)
+      .containerRelativeFrame(.vertical) { height, _ in max(0, height - 60) }
   }
 
   @ViewBuilder
   func commentCard(_ comment: CommentItem) -> some View {
-    // Figma 8661-8331: 흰 배경 + 하단 구분선만, py12 / 내부 gap8.
+    // Android PickeCommentCard — surfaceBeigeDefault, 안쪽 가로 16·세로 12, 간격 8, 아래 1 구분선 borderBeigeDefault.
     VStack(alignment: .leading, spacing: 8) {
       commentHeader(comment)
 
@@ -343,18 +356,27 @@ private extension CommentView {
 
       commentActions(comment)
     }
-    .pickeListRowCard()
+    .padding(.horizontal, 16)
+    .padding(.vertical, 12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    // 구분선은 내용 아래에 그려 펼친 메뉴를 가리지 않게 한다.
+    .background(alignment: .bottom) {
+      ZStack(alignment: .bottom) {
+        Color.surfaceBeigeDefault
+        PickeDivider(.borderBeigeDefault)
+      }
+    }
   }
 
   @ViewBuilder
   func commentBody(_ comment: CommentItem) -> some View {
     Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       Text(comment.content)
-        .pretendardFont(.regular13)
-        .foregroundStyle(.cardBaseTextBody)
-        .lineSpacing(13 * 0.4)
-        // 3줄 초과 시 … 줄임 — 전체 내용은 답글 화면에서 확인.
+        .pretendardFont(.regular13, lineSpacingMultiple: 1.4)
+        .foregroundStyle(.textMuted)
+        // Android CONTENT_MAX_LINES = 3. 전체 내용은 답글 화면에서 확인한다.
         .lineLimit(3)
+        .truncationMode(.tail)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.horizontal, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -382,12 +404,13 @@ private extension CommentView {
       VStack(alignment: .leading, spacing: 0) {
         Text(comment.isMine ? "나" : comment.author)
           .pretendardFont(.semiBold12)
-          .foregroundStyle(.cardBaseTextTitle)
+          .foregroundStyle(.textDefault)
           .lineLimit(1)
+          .truncationMode(.tail)
 
         Text(comment.timeAgo)
           .pretendardFont(.labelXSmall)
-          .foregroundStyle(.cardBaseTextDecription)
+          .foregroundStyle(.textMuted)
           .lineLimit(1)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -405,24 +428,32 @@ private extension CommentView {
 
   @ViewBuilder
   func commentActions(_ comment: CommentItem) -> some View {
-    // Figma 8661-8352: 좋아요·답글수는 좌측 gap11, "…" 메뉴는 우측.
-    HStack(spacing: 0) {
-      HStack(spacing: 11) {
-        likeButton(comment)
-        replyCountButton(comment)
-      }
-      Spacer()
+    // Android: 좋아요·답글 수는 왼쪽 간격 8, "…"(ic_more 24)는 오른쪽.
+    HStack(spacing: 8) {
+      likeButton(comment)
+      replyCountButton(comment)
+      Spacer(minLength: 0)
       moreButton(commentId: comment.id)
+        .overlay(alignment: opensMenuUpward(comment) ? .bottomTrailing : .topTrailing) {
+          // Android DropdownMenu — "…" 버튼 바로 밑에서 펼치고, 아래 자리가 없으면(마지막 항목) 위로 펼친다.
+          if store.menuTargetCommentID == comment.id {
+            inlineMenu(for: comment)
+              .fixedSize()
+              .offset(y: opensMenuUpward(comment) ? -24 : 24)
+              .transition(.opacity)
+          }
+        }
     }
   }
 
   @ViewBuilder
   func moreButton(commentId: UUID) -> some View {
     Button { send(.commentMenu(id: commentId, action: .more)) } label: {
-      Image(systemName: "ellipsis")
-        .font(.system(size: 18, weight: .regular))
-        .foregroundStyle(.cardBaseTextDecription)
+      Image(asset: .more)
+        .renderingMode(.template)
+        .resizable()
         .frame(width: 24, height: 24)
+        .foregroundStyle(.textMuted)
     }
     .buttonStyle(.plain)
   }
@@ -431,15 +462,15 @@ private extension CommentView {
   func replyCountButton(_ comment: CommentItem) -> some View {
     Button { send(.commentRow(id: comment.id, action: .openReply)) } label: {
       HStack(spacing: 2) {
-        Image(systemName: "message")
-          .font(.system(size: 14, weight: .medium))
+        Image(asset: .commentMessage)
+          .renderingMode(.template)
+          .resizable()
+          .scaledToFit()
           .frame(width: 16, height: 16)
-        Text("\(comment.replyCount)")
+        Text(comment.replyCount.decimalFormatted)
           .pretendardFont(.labelSmall)
       }
-      .foregroundStyle(.cardBaseTextDecription)
-      .padding(.horizontal, 6)
-      .padding(.vertical, 4)
+      .foregroundStyle(.textMuted)
     }
     .buttonStyle(.plain)
   }
@@ -455,7 +486,7 @@ private extension CommentView {
         Text(comment.likeCount.decimalFormatted)
           .pretendardFont(.labelSmall)
       }
-      .foregroundStyle(comment.isLiked ? .primary500 : .cardBaseTextDecription)
+      .foregroundStyle(comment.isLiked ? .primary500 : .textMuted)
     }
     .buttonStyle(.plain)
   }
@@ -478,21 +509,30 @@ private extension CommentView {
 private extension CommentView {
   @ViewBuilder
   func inputBar() -> some View {
-    PickeCommentInputBar(
-      text: $store.commentText,
-      focus: $isCommentFocused,
-      placeholder: "댓글을 입력해주세요",
-      isSendEnabled: store.isSendEnabled,
-      onSend: { send(.sendTapped) }
-    )
-  }
-}
-
-// MARK: - Format
-
-private extension CommentView {
-  func percentText(_ percentage: Double) -> String {
-    "\(String(format: "%.1f", percentage * 100))%"
+    VStack(spacing: 0) {
+      if store.isEditingComment {
+        HStack {
+          Spacer()
+          Button("수정 취소") { send(.composeDismissed) }
+            .pretendardFont(.labelSmall)
+            .foregroundStyle(.gray500)
+            .padding(12)
+        }
+        .background(.surfaceBeigeStrong)
+      }
+      PickeCommentInputBar(
+        text: $store.commentText,
+        focus: $isCommentFocused,
+        placeholder: store.inputPlaceholder,
+        isSendEnabled: store.isSendEnabled,
+        isSubmitting: store.isSubmitting,
+        isCompact: true,
+        onSend: {
+          isCommentFocused = false
+          send(.sendTapped)
+        }
+      )
+    }
   }
 }
 

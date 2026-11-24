@@ -2,7 +2,7 @@
 //  HomeDataDTO+.swift
 //  HomeDomain
 //
-//  Created by Wonji Suh on 5/16/26.
+//  Created by Picke on 5/16/26.
 //
 
 import Foundation
@@ -63,6 +63,17 @@ public extension BestBattleDTO {
   }
 }
 
+public extension WeeklyBestPerspectiveItemDTO {
+  func toDomain() -> HomeBestComment {
+    HomeBestComment(
+      perspectiveId: perspectiveId,
+      battleId: battleId,
+      battleTitle: battleTitle,
+      content: content
+    )
+  }
+}
+
 public extension TodayQuizDTO {
   func toDomain() -> QuizQuestion {
     QuizQuestion(
@@ -117,7 +128,7 @@ public extension NewBattleDTO {
 
 public extension HomeDataDTO {
   /// 전체 DTO 를 화면용 도메인 객체 6 묶음으로 변환.
-  func toDomain() -> HomeBundle {
+  func toDomain(bestComments: [HomeBestComment] = []) -> HomeBundle {
     HomeBundle(
       newNotice: newNotice,
       heroes: editorPicks.enumerated().map { idx, dto in
@@ -127,6 +138,7 @@ public extension HomeDataDTO {
       bestBattles: bestBattles.enumerated().map { idx, dto in
         dto.toDomain(rank: idx + 1)
       },
+      bestComments: bestComments,
       quizzes: todayQuizzes.map { $0.toDomain() },
       votes: todayVotes.map { $0.toDomain() },
       newBattles: newBattles.map { $0.toDomain() }

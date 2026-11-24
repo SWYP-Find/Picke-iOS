@@ -1,0 +1,3345 @@
+//
+//  ClassCoordinatorTests.swift
+//  PickeTests
+//
+//  Created by Picke on 10/11/26.
+//
+
+import AudioPlayerServiceInterface
+import ComposableArchitecture
+import DomainAssembly
+import FeatureAssembly
+import Foundation
+@testable import Picke
+import TCAFlow
+import Testing
+
+@MainActor
+private func testDetailState(room: ClassRoom) -> ClassDetailFeature.State {
+  withDependencies {
+    $0.uuid = .incrementing
+  } operation: {
+    ClassDetailFeature.State(room: room)
+  }
+}
+
+@MainActor
+private func testDetailState(
+  room: ClassRoom,
+  instanceID: UUID
+) -> ClassDetailFeature.State {
+  withDependencies {
+    $0.uuid = .constant(instanceID)
+  } operation: {
+    ClassDetailFeature.State(room: room)
+  }
+}
+
+@MainActor
+struct ClassCoordinatorTests {
+  @Test
+  func 추천_배틀_미리듣기는_push로_열고_뒤로가면_추천_목록으로_돌아온다() async {
+    let battle = ClassBattleSummary.mocks[0]
+    var state = ClassCoordinator.State()
+    state.routes.push(.recommend(.init(filter: .init())))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .recommend(.delegate(.previewRequested(battle)))
+    )))
+    #expect(store.state.routes.count == 3)
+    guard case let .battlePreview(preview)? = store.state.routes.last?.screen else {
+      Issue.record("미리듣기 화면이 push되지 않았습니다.")
+      return
+    }
+    #expect(preview.battle.id == battle.id)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .battlePreview(.delegate(.dismiss))
+    )))
+    await store.receive(\.view.backAction)
+    #expect(store.state.routes.count == 2)
+    guard case .recommend? = store.state.routes.last?.screen else {
+      Issue.record("뒤로 가기 후 추천 목록이 복원되지 않았습니다.")
+      return
+    }
+  }
+
+  @Test
+  func AI_투표_등장_이벤트는_현재_화면_인스턴스에만_전달한다() {
+    let room = ClassRoom.mockClosedSociety
+    let instanceID = UUID()
+    let vote = ClassAIVoteFeature.State(
+      room: room,
+      battleID: -1_000_000 - room.id,
+      instanceID: instanceID
+    )
+    var state = ClassCoordinator.State()
+    state.routes.push(.aiVote(vote))
+    #expect(ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+
+    state.routes.goBack()
+    #expect(!ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+
+    withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      state.routes.push(.report(.init(room: room)))
+    }
+    #expect(!ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+
+    state.routes[screenAt: 1] = .aiVote(.init(
+      room: room,
+      battleID: vote.battleID,
+      instanceID: UUID()
+    ))
+    #expect(!ClassCoordinatorView.isActiveAIVote(instanceID, in: state.routes))
+  }
+
+  @Test
+  func 클래스_목_오디오_속도_변경은_재생시간을_이어가고_로드해도_속도를_유지한다() async {
+    let now = LockIsolated(Date(timeIntervalSince1970: 1_760_000_000))
+    let player = ClassMockAudioPlayer(now: { now.value })
+    let url = URL(string: "picke-class-mock://audio")!
+
+    #expect(await player.load(url: url))
+    await player.play()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 1)
+
+    await player.setPlaybackRate(2)
+    #expect(await player.currentTime() == 1)
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 3)
+
+    await player.pause()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 3)
+    await player.play()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 5)
+
+    #expect(await player.load(url: url))
+    await player.play()
+    now.withValue { $0 = $0.addingTimeInterval(1) }
+    #expect(await player.currentTime() == 2)
+  }
+
+  @Test
+  func 스와이프로_루트에_돌아오면_클래스_표시정보도_초기화한다() async {
+    let room = ClassRoom.mockJoinable
+    var state = ClassCoordinator.State()
+    state.chatRoomsByBattleID[-1_000_000 - room.id] = room
+    state.routes.push(.detail(testDetailState(room: room)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.updateRoutes([state.routes[0]])))
+    #expect(store.state.chatRoomsByBattleID.isEmpty)
+  }
+
+  @Test
+  func 클래스_기참여자는_사전투표_화면에_남아_선택없이_결과를_보고_재투표하지_않는다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let perspective = try #require(try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "기참여 의견",
+      optionId: 1
+    ))
+    let beforeStats = try await battleAPI.fetchVoteStats(battleId: battleID)
+    var state = PreVoteFeature.State(battleId: battleID)
+    state.showsResultsForExistingParticipation = true
+    state.selectedOptionId = 2
+    let store = TestStore(initialState: state) { PreVoteFeature() } withDependencies: {
+      $0.battleUseCase = session
+    }
+
+    await store.send(.inner(.myPerspectiveResponse(.success(perspective)))) {
+      $0.myPerspective = perspective
+      $0.selectedOptionId = nil
+    }
+    #expect(store.state.selectedOptionId == nil)
+    #expect(store.state.isShowingParticipationResult)
+    #expect(store.state.primaryButtonTitle == "결과 보기")
+    #expect(store.state.isPrimaryButtonEnabled)
+    await store.send(.view(.optionTapped(optionId: 2)))
+    #expect(store.state.selectedOptionId == nil)
+    await store.send(.view(.primaryButtonTapped))
+    await store.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
+    let afterStats = try await battleAPI.fetchVoteStats(battleId: battleID)
+    #expect(afterStats.options == beforeStats.options)
+    #expect(afterStats.totalCount == beforeStats.totalCount)
+    #expect(try await battleAPI.fetchBattle(battleId: battleID).userVoteStatus == .pro)
+  }
+
+  @Test
+  func 완료_상세는_의견이_없어도_결과_버튼을_표시한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    let fetched = try await battleAPI.fetchBattle(battleId: battleID)
+    for step in [BattleStep.completed, .finished] {
+      let detail = BattleDetail(
+        battleInfo: fetched.battleInfo,
+        description: fetched.description,
+        shareUrl: fetched.shareUrl,
+        userVoteStatus: fetched.userVoteStatus,
+        currentStep: step,
+        categoryTags: fetched.categoryTags,
+        philosopherTags: fetched.philosopherTags,
+        valueTags: fetched.valueTags
+      )
+      for detailFirst in [false, true] {
+        var state = PreVoteFeature.State(battleId: battleID)
+        state.showsResultsForExistingParticipation = true
+        let store = TestStore(initialState: state) { PreVoteFeature() }
+        store.exhaustivity = .off
+
+        if detailFirst {
+          await store.send(.inner(.battleDetailResponse(.success(detail))))
+          #expect(store.state.isShowingParticipationResult)
+          await store.send(.inner(.myPerspectiveResponse(.success(nil))))
+        } else {
+          await store.send(.inner(.myPerspectiveResponse(.success(nil))))
+          #expect(!store.state.isShowingParticipationResult)
+          await store.send(.inner(.battleDetailResponse(.success(detail))))
+        }
+        #expect(store.state.isShowingParticipationResult)
+        #expect(store.state.isPrimaryButtonEnabled)
+        await store.send(.view(.optionTapped(optionId: 1)))
+        #expect(store.state.selectedOptionId == nil)
+        await store.send(.view(.primaryButtonTapped))
+        await store.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
+        #expect(try await battleAPI.fetchBattle(battleId: battleID).userVoteStatus == .pro)
+      }
+    }
+  }
+
+  @Test
+  func 클래스_미참여_사전과_청취_단계는_결과_버튼으로_전환하지_않는다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    let preVoteDetail = try await battleAPI.fetchBattle(battleId: battleID)
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let listeningDetail = try await battleAPI.fetchBattle(battleId: battleID)
+    #expect(preVoteDetail.currentStep == .preVote)
+    #expect(listeningDetail.currentStep == .listening)
+
+    for detail in [preVoteDetail, listeningDetail] {
+      var state = PreVoteFeature.State(battleId: battleID)
+      state.showsResultsForExistingParticipation = true
+      let store = TestStore(initialState: state) { PreVoteFeature() }
+      store.exhaustivity = .off
+      await store.send(.inner(.battleDetailResponse(.success(detail))))
+      await store.send(.inner(.myPerspectiveResponse(.success(nil))))
+      #expect(!store.state.isShowingParticipationResult)
+      #expect(store.state.primaryButtonTitle == "사전 투표하기")
+      #expect(!store.state.isPrimaryButtonEnabled)
+      await store.send(.view(.optionTapped(optionId: 2)))
+      #expect(store.state.selectedOptionId == 2)
+      #expect(store.state.isPrimaryButtonEnabled)
+    }
+  }
+
+  @Test
+  func 관점이_먼저_도착하고_상세가_실패해도_재시도로_결과_화면을_복구한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let perspective = try #require(try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "재시도 의견",
+      optionId: 1
+    ))
+    let detail = try await battleAPI.fetchBattle(battleId: battleID)
+    var state = PreVoteFeature.State(battleId: battleID)
+    state.showsResultsForExistingParticipation = true
+    let store = TestStore(initialState: state) { PreVoteFeature() } withDependencies: {
+      $0.battleUseCase = session
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.myPerspectiveResponse(.success(perspective))))
+    await store.send(.inner(.battleDetailResponse(.failure(.noData))))
+    #expect(store.state.detailLoadFailed)
+    #expect(store.state.battle == nil)
+    await store.send(.view(.retryTapped))
+    await store.receive(\.async, .fetchBattleDetail)
+    await store.receive(\.inner, .battleDetailResponse(.success(detail)))
+    #expect(!store.state.detailLoadFailed)
+    #expect(store.state.battle != nil)
+    #expect(store.state.isShowingParticipationResult)
+  }
+
+  @Test
+  func 일반_사전투표는_완료_단계면_자동직행하고_사후투표는_기존_선택을_요구한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let perspective = try #require(try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "의견",
+      optionId: 1
+    ))
+    let fetched = try await battleAPI.fetchBattle(battleId: battleID)
+    func detail(_ step: BattleStep) -> BattleDetail {
+      BattleDetail(
+        battleInfo: fetched.battleInfo,
+        description: fetched.description,
+        shareUrl: fetched.shareUrl,
+        userVoteStatus: fetched.userVoteStatus,
+        currentStep: step,
+        categoryTags: fetched.categoryTags,
+        philosopherTags: fetched.philosopherTags,
+        valueTags: fetched.valueTags
+      )
+    }
+    // Android BattleRouting: 관점이 있어도 단계가 COMPLETED 가 아니면 사전투표에 머문다.
+    let listeningStore = TestStore(initialState: PreVoteFeature.State(battleId: battleID)) { PreVoteFeature() }
+    listeningStore.exhaustivity = .off
+    await listeningStore.send(.inner(.myPerspectiveResponse(.success(perspective))))
+    await listeningStore.send(.inner(.battleDetailResponse(.success(detail(.postVote)))))
+    #expect(listeningStore.state.battle != nil)
+
+    let preStore = TestStore(initialState: PreVoteFeature.State(battleId: battleID)) { PreVoteFeature() }
+    preStore.exhaustivity = .off
+    await preStore.send(.inner(.battleDetailResponse(.success(detail(.completed)))))
+    await preStore.receive(\.delegate, .alreadyFinalVoted(battleId: battleID))
+    #expect(!preStore.state.isShowingParticipationResult)
+
+    var postState = PreVoteFeature.State(battleId: battleID, voteMode: .post)
+    postState.showsResultsForExistingParticipation = true
+    postState.myPerspective = perspective
+    let postStore = TestStore(initialState: postState) { PreVoteFeature() }
+    postStore.exhaustivity = .off
+    #expect(postStore.state.primaryButtonTitle == "최종 투표하기")
+    #expect(!postStore.state.isPrimaryButtonEnabled)
+    await postStore.send(.view(.optionTapped(optionId: 2)))
+    #expect(postStore.state.selectedOptionId == 2)
+    #expect(postStore.state.isPrimaryButtonEnabled)
+  }
+
+  @Test
+  func 기참여_결과_버튼은_댓글_루트로_교체하고_뒤로가기는_클래스_상세로_돌아간다() async {
+    let room = ClassRoom.mocks[0]
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    var chat = ChatCoordinator.State(route: .preVote(battleId: battleID))
+    var vote = PreVoteFeature.State(battleId: battleID)
+    vote.showsResultsForExistingParticipation = true
+    chat.routes[screenAt: 0] = .preVote(vote)
+    state.routes.push(.chat(chat))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .chat(.router(.routeAction(
+        id: 0,
+        action: .preVote(.delegate(.alreadyFinalVoted(battleId: battleID)))
+      )))
+    )))
+    guard case let .chat(resultChat)? = store.state.routes.last?.screen,
+          resultChat.routes.count == 1,
+          case let .comment(comment)? = resultChat.routes.first?.screen
+    else {
+      Issue.record("기참여 결과 버튼이 댓글 루트로 교체되지 않음")
+      return
+    }
+    #expect(comment.battleId == battleID)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .chat(.router(.routeAction(id: 0, action: .comment(.delegate(.dismiss)))))
+    )))
+    await store.receive {
+      if case .router(.routeAction(id: 2, action: .chat(.delegate(.dismiss)))) = $0 {
+        return true
+      }
+      return false
+    }
+    await store.receive {
+      if case .view(.backAction) = $0 {
+        return true
+      }
+      return false
+    }
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("댓글 뒤로가기가 클래스 상세로 돌아가지 않음")
+      return
+    }
+    #expect(detail.room.id == room.id)
+  }
+
+  @Test
+  func AI_단일_투표는_클래스_목_DI에_결과를_저장한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: room)
+    let initialBattle = try await battleAPI.fetchBattle(battleId: battleID)
+    let instanceID = UUID()
+    let requestID = UUID()
+    let store = TestStore(initialState: ClassCoordinator.ClassScreen.State.aiVote(
+      .init(room: room, battleID: battleID, instanceID: instanceID)
+    )) {
+      ClassCoordinator.ClassScreen.body
+    } withDependencies: {
+      $0.classMockChatSession = session
+      $0.battleUseCase = session
+      $0.uuid = .constant(requestID)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.aiVote(.view(.onAppear)))
+    await store.receive {
+      guard case let .aiVote(.inner(.voteLoaded(
+        receivedInstanceID,
+        receivedRequestID,
+        receivedBattleID,
+        .success(progress)
+      ))) = $0
+      else { return false }
+      return receivedInstanceID == instanceID && receivedRequestID == requestID
+        && receivedBattleID == battleID && progress.status == initialBattle.userVoteStatus
+        && progress.step == initialBattle.currentStep
+    }
+    await store.finish()
+    guard case let .aiVote(vote) = store.state else {
+      Issue.record("AI 투표 화면이 유지되어야 함")
+      return
+    }
+    #expect(vote.viewState == .loaded)
+
+    await store.send(.aiVote(.view(.optionTapped(1))))
+    await store.send(.aiVote(.view(.submitTapped)))
+    await store.finish()
+
+    let battle = try await battleAPI.fetchBattle(battleId: battleID)
+    #expect(battle.userVoteStatus == .pro)
+  }
+
+  @Test
+  func 사전_A에서_사후_B로_바꾸면_B_통계를_유지하고_중복_사후_투표를_거절한다() async throws {
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let battleID = await session.register(room: ClassRoom.mocks[0])
+    let initial = try await battleAPI.fetchVoteStats(battleId: battleID)
+
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 1)
+    let afterPreVote = try await battleAPI.fetchVoteStats(battleId: battleID)
+    #expect(afterPreVote.options[0].voteCount == initial.options[0].voteCount + 1)
+    #expect(afterPreVote.options[1].voteCount == initial.options[1].voteCount)
+
+    _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 2)
+    let afterPostVote = try await battleAPI.fetchVoteStats(battleId: battleID)
+    #expect(afterPostVote.options[0].voteCount == initial.options[0].voteCount)
+    #expect(afterPostVote.options[1].voteCount == initial.options[1].voteCount + 1)
+    #expect(afterPostVote.totalCount == initial.totalCount + 1)
+    #expect(await session.hasChangedMind(battleID: battleID))
+
+    var duplicateWasRejected = false
+    do {
+      _ = try await battleAPI.submitPostVote(battleId: battleID, optionId: 1)
+    } catch {
+      duplicateWasRejected = true
+    }
+    #expect(duplicateWasRejected)
+
+    let afterRejectedVote = try await battleAPI.fetchVoteStats(battleId: battleID)
+    let battle = try await battleAPI.fetchBattle(battleId: battleID)
+    #expect(afterRejectedVote.options == afterPostVote.options)
+    #expect(afterRejectedVote.totalCount == afterPostVote.totalCount)
+    #expect(battle.userVoteStatus == .con)
+    #expect(await session.hasChangedMind(battleID: battleID))
+  }
+
+  @Test
+  func AI_B_투표_후_남긴_댓글은_B_진영으로_표시된다() async throws {
+    let room = ClassRoom.mocks[0]
+    let session = ClassMockChatSession()
+    let battleAPI: any BattleInterface = session
+    let perspectiveAPI: any PerspectiveInterface = session
+    let battleID = await session.register(room: room)
+    _ = try await battleAPI.submitPreVote(battleId: battleID, optionId: 2)
+    let created = try await battleAPI.createPerspective(
+      battleId: battleID,
+      content: "B를 선택한 의견",
+      optionId: 1
+    )
+    let perspective = try #require(created)
+    #expect(perspective.option.optionId == 2)
+    _ = try await perspectiveAPI.createComment(perspectiveId: perspective.perspectiveId, content: "동의해요")
+
+    let comments = try await perspectiveAPI.fetchLabeledComments(
+      perspectiveId: perspective.perspectiveId,
+      cursor: nil,
+      size: nil
+    )
+    #expect(comments.items.first?.stance == room.battle.optionBTitle)
+  }
+
+  @Test
+  func 상세_관리_모달을_닫으면_탭바가_다시_보인다() {
+    var state = ClassCoordinator.State()
+    var detail = testDetailState(room: .mocks[0])
+    state.routes.push(.detail(detail))
+    #expect(state.showsTabBar)
+
+    detail.modal = .init(kind: .management)
+    state.routes[screenAt: 1] = .detail(detail)
+    #expect(!state.showsTabBar)
+
+    detail.modal = nil
+    state.routes[screenAt: 1] = .detail(detail)
+    #expect(state.showsTabBar)
+
+    detail.customAlert = .alert(title: "확인", message: "안내")
+    state.routes[screenAt: 1] = .detail(detail)
+    #expect(!state.showsTabBar)
+  }
+
+  @Test
+  func 운영자_요약의_관리_메뉴에서_현재_화면_위로_마감일_편집을_연다() async {
+    let room = ClassRoom.mocks[0]
+    var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    dashboard.management = .init(kind: .management)
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(dashboard))
+    #expect(!state.showsTabBar)
+
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+    }
+    store.exhaustivity = .off
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ownerDashboard(.delegate(.editClass))
+    )))
+    await store.finish()
+
+    // Android ClassEdit 처럼 관리 메뉴 '수정'은 이름·마감일 수정 화면을 연다.
+    guard case let .classEdit(edit)? = store.state.routes.last?.screen else {
+      Issue.record("클래스 수정 화면이 열리지 않았습니다.")
+      return
+    }
+    #expect(edit.room == room)
+    #expect(store.state.deadlineEdit == nil)
+  }
+
+  @Test
+  func 운영자_마감일_수정_후_다시_연_보고서는_갱신된_방과_주입된_데이터를_표시한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let updatedRoom = try await repository.updateDeadline(
+      id: room.id,
+      deadline: room.deadline.addingTimeInterval(86400)
+    )
+    let result = ClassResult(
+      classID: updatedRoom.id,
+      closed: true,
+      closeAt: updatedRoom.deadline,
+      stats: .init(
+        activeMemberCount: 12,
+        completedCount: 10,
+        participationRate: 83.3,
+        commentWriterCount: 9,
+        commentRate: 75,
+        postVoteCount: 11,
+        options: []
+      ),
+      myReportState: nil,
+      insightState: nil
+    )
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    var editor = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    editor.isSaving = true
+    editor.activeRequestID = UUID()
+    state.deadlineEdit = editor
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.classUseCase = repository
+      $0.classResultUseCase = FixedClassResultUseCase(result: result)
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+    let requestID = try #require(editor.activeRequestID)
+
+    await store.send(.deadlineEdit(.presented(.delegate(.saved(
+      updatedRoom,
+      instanceID: editor.instanceID,
+      requestID: requestID
+    )))))
+    await store.send(.view(.backAction))
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openReport(updatedRoom)))
+    )))
+    await store.finish()
+
+    // Android ClassResult: 운영자도 공용 결과 화면을 열고, 갱신된 방으로 결과를 다시 받는다.
+    guard case let .result(resultState)? = store.state.routes.last?.screen else {
+      Issue.record("마감일 변경 후 결과 화면이 열리지 않음")
+      return
+    }
+    #expect(resultState.room.deadline == updatedRoom.deadline)
+    #expect(resultState.isLoading)
+    _ = result
+  }
+
+  @Test
+  func 마감_배틀에서_연_운영자_요약의_삭제는_상세_확인창으로_돌아간다() async {
+    let room = ClassRoom.mocks[2]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.closedBattle(.init(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ownerDashboard(.delegate(.deleteClass))
+    )))
+    await store.receive {
+      guard case .router(.routeAction(id: 1, action: .detail(.view(.deleteTapped)))) = $0 else { return false }
+      return true
+    }
+    await store.finish()
+
+    #expect(store.state.routes.count == 2)
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("운영자 삭제 확인 화면이 클래스 상세로 돌아가지 않음")
+      return
+    }
+    #expect(detail.customAlert != nil)
+  }
+
+  @Test
+  func 운영자_멤버_목록은_필터와_저장중에만_탭바를_숨긴다() {
+    var state = ClassCoordinator.State()
+    #expect(!state.showsTabBar)
+    state.routes.push(.detail(testDetailState(room: .mocks[0])))
+    var members = ClassMemberFeature.State(room: .mocks[0], instanceID: UUID())
+    state.routes.push(.members(members))
+    #expect(state.showsTabBar)
+
+    members.filter = .init()
+    state.routes[screenAt: 2] = .members(members)
+    #expect(!state.showsTabBar)
+
+    members.filter = nil
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
+    members.editName = .init()
+    state.routes[screenAt: 2] = .members(members)
+    #expect(!state.showsTabBar)
+
+    members.editName = nil
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
+    members.customAlert = .alert(title: "확인", message: "안내")
+    state.routes[screenAt: 2] = .members(members)
+    #expect(!state.showsTabBar)
+
+    members.customAlert = nil
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
+    members.isSaving = true
+    state.routes[screenAt: 2] = .members(members)
+    #expect(!state.showsTabBar)
+
+    members.isSaving = false
+    state.routes[screenAt: 2] = .members(members)
+    #expect(state.showsTabBar)
+
+    state.routes.goBack()
+    #expect(state.showsTabBar)
+  }
+
+  @Test
+  func 참가자_멤버_목록도_확정_시안처럼_탭바를_보여준다() {
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: .mockJoinable)))
+    #expect(state.showsTabBar)
+    state.routes.push(.members(.init(room: .mockJoinable, instanceID: UUID())))
+    #expect(state.showsTabBar)
+
+    state.routes.goBack()
+    #expect(state.showsTabBar)
+  }
+
+  @Test
+  func 내_클래스_관리_모달도_탭바를_숨긴다() {
+    var state = ClassCoordinator.State()
+    var myClasses = MyClassFeature.State()
+    state.routes.push(.myClasses(myClasses))
+    #expect(state.showsTabBar)
+
+    myClasses.modal = .init(kind: .management)
+    state.routes[screenAt: 1] = .myClasses(myClasses)
+    #expect(!state.showsTabBar)
+
+    myClasses.modal = nil
+    state.routes[screenAt: 1] = .myClasses(myClasses)
+    #expect(state.showsTabBar)
+  }
+
+  @Test
+  func 마감일_패널을_열면_탭바를_숨기고_닫으면_복구한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassCoordinator.State()
+    var list = MyClassFeature.State()
+    list.rooms = [room]
+    list.viewState = .loaded
+    state.routes.push(.myClasses(list))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+        .dependency(\.uuid, .incrementing)
+        .dependency(\.date.now, Date(timeIntervalSince1970: 1_760_000_000))
+    }
+    store.exhaustivity = .off
+    #expect(store.state.showsTabBar)
+    await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    await store.receive(\.inner, .deadlineDetailResponse(
+      routeID: 1,
+      roomID: room.id,
+      .success(room)
+    ))
+    #expect(!store.state.showsTabBar)
+    await store.send(.router(.routeAction(id: 2, action: .classEdit(.view(.backTapped)))))
+    await store.receive(\.router.routeAction)
+    await store.receive(\.view.backAction)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 마감_배틀_결과_화면에서는_탭바를_숨긴다() {
+    var state = ClassCoordinator.State()
+    state.routes.push(.closedBattle(.init(room: .mockClosedSociety)))
+    #expect(!state.showsTabBar)
+  }
+
+  @Test
+  func 내_의견은_push로_열고_뒤로가면_리포트_상태를_보존한다() async throws {
+    var report = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    report.report = MockClassReport.figmaMyOpinions
+    report.sourceViewState = .ready
+    report.selectedTab = .feedback
+    report.feedback = ClassAIPersonalFeedback(
+      summaryTitle: "보존할 피드백",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "질문",
+      nextHint: "힌트"
+    )
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.opinions = MockClassReport.figmaMyOpinions.resolvedOpinions
+    let detail = testDetailState(room: .mockClosedSociety)
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(detail))
+    state.routes.push(.report(report))
+    state.detailInstanceIDs = [detail.instanceID]
+    state.reportInstanceIDs = [report.instanceID]
+    let originalRoutes = state.routes
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.view(.myOpinionsTapped)))))
+    await store.receive(\.router.routeAction) {
+      $0.routes.push(.myOpinions(opinions))
+    }
+    #expect(store.state.routes.last == .push(.myOpinions(opinions)))
+    #expect(!store.state.showsTabBar)
+    #expect(store.state.routes[2].screen == .report(report))
+
+    // Repeated navigation and an underlying report's late dismiss must not pop or push.
+    await store.send(.router(.routeAction(id: 2, action: .report(.delegate(.openMyOpinions(report.instanceID))))))
+    await store.send(.router(.routeAction(id: 2, action: .report(.delegate(.dismiss)))))
+    await store.send(.router(.routeAction(id: 3, action: .myOpinions(.view(.backTapped)))))
+    await store.receive(\.router.routeAction)
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+    }
+    #expect(store.state.routes == originalRoutes)
+    #expect(!store.state.showsTabBar)
+    await store.finish()
+  }
+
+  @Test
+  func 서버_개인_리포트에서_내_의견_화면을_열면_클래스_ID를_전달한다() async {
+    let room = ClassRoom.mockClosedSociety
+    var report = ClassReportFeature.State(room: room, instanceID: UUID())
+    report.classResult = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 1,
+        completedCount: 1,
+        participationRate: 100,
+        commentWriterCount: 1,
+        commentRate: 100,
+        postVoteCount: 1,
+        options: []
+      ),
+      myReportState: "SUCCEEDED",
+      insightState: nil
+    )
+    report.sourceViewState = .ready
+    var state = ClassCoordinator.State()
+    state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(report.instanceID)))))) {
+      var opinions = ClassMyOpinionsFeature.State()
+      opinions.classID = room.id
+      $0.routes.push(.myOpinions(opinions))
+    }
+  }
+
+  @Test
+  func 내_의견은_다른_리포트_인스턴스나_로딩_중에는_열리지_않는다() async {
+    var report = ClassReportFeature.State(room: .mockClosedSociety, instanceID: UUID())
+    report.report = MockClassReport.figma
+    report.sourceViewState = .loading
+    var state = ClassCoordinator.State()
+    state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(report.instanceID))))))
+    await store.finish()
+
+    report.sourceViewState = .ready
+    state.routes[screenAt: 1] = .report(report)
+    let readyStore = TestStore(initialState: state) { ClassCoordinator() }
+    await readyStore.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(UUID()))))))
+    await readyStore.finish()
+  }
+
+  @Test
+  func 서버_리포트의_내_의견은_클래스_ID로_열린다() async {
+    let room = ClassRoom.mockClosedSociety
+    var report = ClassReportFeature.State(room: room, instanceID: UUID())
+    report.classResult = ClassResult(
+      classID: room.id,
+      closed: true,
+      closeAt: room.deadline,
+      stats: .init(
+        activeMemberCount: 1,
+        completedCount: 1,
+        participationRate: 100,
+        commentWriterCount: 1,
+        commentRate: 100,
+        postVoteCount: 1,
+        options: []
+      ),
+      myReportState: "SUCCEEDED",
+      insightState: nil
+    )
+    report.sourceViewState = .ready
+    var state = ClassCoordinator.State()
+    state.routes.push(.report(report))
+    state.reportInstanceIDs = [report.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.classID = room.id
+
+    await store.send(.router(.routeAction(id: 1, action: .report(.delegate(.openMyOpinions(report.instanceID)))))) {
+      $0.routes.push(.myOpinions(opinions))
+    }
+  }
+
+  @Test
+  func 내_의견의_비활성_닫기는_무시하고_마감일_패널은_탭바를_숨긴다() async {
+    var state = ClassCoordinator.State()
+    state.routes.push(.myOpinions(.init()))
+    state.routes.push(.myOpinions(.init()))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .myOpinions(.delegate(.dismiss)))))
+    #expect(!store.state.showsTabBar)
+    await store.finish()
+
+    state.deadlineEdit = .init(
+      room: .mockClosedSociety,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    #expect(!state.showsTabBar)
+  }
+
+  @Test
+  func 운영자_내_의견은_push하고_돌아오면_리포트와_AI_상태를_보존한다() async {
+    let room = ClassRoom.mocks[0]
+    var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    dashboard.report = MockClassReport.figmaMyOpinions
+    dashboard.sourceViewState = .ready
+    dashboard.selectedTab = .report
+    dashboard.generatedFeedback = ClassAIPersonalFeedback(
+      summaryTitle: "보존할 피드백",
+      summaryDetail: "상세",
+      points: [],
+      nextQuestion: "질문",
+      nextHint: "힌트"
+    )
+    dashboard.generatedInsight = "보존할 인사이트"
+    var expectedOpinions = ClassMyOpinionsFeature.State()
+    expectedOpinions.opinions = MockClassReport.figmaMyOpinions.resolvedOpinions
+    let detail = testDetailState(room: room)
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(detail))
+    state.routes.push(.ownerDashboard(dashboard))
+    state.detailInstanceIDs = [detail.instanceID]
+    state.dashboardInstanceIDs = [dashboard.instanceID]
+    let originalRoutes = state.routes
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.view(.myOpinionsTapped)))))
+    await store.receive(\.router.routeAction) {
+      $0.routes.push(.myOpinions(expectedOpinions))
+    }
+    #expect(store.state.routes.last == .push(.myOpinions(expectedOpinions)))
+    #expect(store.state.routes[2].screen == .ownerDashboard(dashboard))
+    #expect(!store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.delegate(.dismiss)))))
+    await store.send(.router(.routeAction(id: 3, action: .myOpinions(.view(.backTapped)))))
+    await store.receive(\.router.routeAction)
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+    }
+    #expect(store.state.routes == originalRoutes)
+    #expect(!store.state.showsTabBar)
+    await store.finish()
+  }
+
+  @Test
+  func 운영자_내_의견은_비활성_인스턴스와_준비되지_않은_리포트에서_열리지_않는다() async {
+    let room = ClassRoom.mocks[0]
+    var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    dashboard.report = MockClassReport.figmaMyOpinions
+    dashboard.sourceViewState = .ready
+    dashboard.selectedTab = .report
+    var state = ClassCoordinator.State()
+    state.routes.push(.ownerDashboard(dashboard))
+    state.dashboardInstanceIDs = [dashboard.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    await store.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(UUID()))))))
+    await store.finish()
+
+    var inactiveState = state
+    inactiveState.routes.push(.myOpinions(.init()))
+    let inactiveStore = TestStore(initialState: inactiveState) { ClassCoordinator() }
+    await inactiveStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await inactiveStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.dismiss)))))
+    await inactiveStore.finish()
+
+    dashboard.selectedTab = .home
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let homeStore = TestStore(initialState: state) { ClassCoordinator() }
+    await homeStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await homeStore.finish()
+
+    dashboard.selectedTab = .report
+    dashboard.sourceViewState = .loading
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let loadingStore = TestStore(initialState: state) { ClassCoordinator() }
+    await loadingStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await loadingStore.finish()
+
+    dashboard.sourceViewState = .ready
+    dashboard.management = .init(kind: .management)
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let managementStore = TestStore(initialState: state) { ClassCoordinator() }
+    await managementStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await managementStore.finish()
+
+    dashboard.management = nil
+    dashboard.report = nil
+    state.routes[screenAt: 1] = .ownerDashboard(dashboard)
+    let missingStore = TestStore(initialState: state) { ClassCoordinator() }
+    await missingStore.send(.router(.routeAction(id: 1, action: .ownerDashboard(.delegate(.openMyOpinions(dashboard.instanceID))))))
+    await missingStore.finish()
+  }
+
+  @Test
+  func 클래스_댓글의_리포트는_상세를_보존하고_뒤로가면_탭바를_보인다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var detail = testDetailState(room: room)
+    detail.errorMessage = "보존할 상세 상태"
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(detail))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case let .detail(preservedDetail) = store.state.routes[1].screen,
+          case let .result(report)? = store.state.routes.last?.screen
+    else {
+      Issue.record("댓글 리포트가 기존 상세 위에 열리지 않음")
+      return
+    }
+    #expect(preservedDetail == detail)
+    #expect(report.room == room)
+    #expect(!store.state.showsTabBar)
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    await store.send(.router(.routeAction(id: 2, action: .result(.delegate(.dismiss)))))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    #expect(store.state.routes.count == 2)
+    guard case let .detail(returnedDetail)? = store.state.routes.last?.screen else {
+      Issue.record("리포트 뒤로가기 후 상세로 돌아오지 않음")
+      return
+    }
+    #expect(returnedDetail == detail)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func AI_댓글의_리포트는_투표와_AI_채팅_경로를_걷어내고_상세로_돌아온다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.aiVote(.init(room: room, battleID: battleID, instanceID: UUID())))
+    state.routes.push(.aiChat(.init(room: room, battleID: battleID, selectedOptionID: 1)))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case .detail = store.state.routes[1].screen,
+          case let .result(report)? = store.state.routes.last?.screen
+    else {
+      Issue.record("AI 경로를 정리한 뒤 리포트가 상세 위에 열리지 않음")
+      return
+    }
+    #expect(report.room == room)
+    await store.send(.view(.backAction))
+    #expect(store.state.routes.count == 2)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 완료된_AI_투표의_댓글_리포트도_상세로_돌아온다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.aiVote(.init(room: room, battleID: battleID, instanceID: UUID())))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case .result? = store.state.routes.last?.screen else {
+      Issue.record("완료된 AI 투표의 댓글 리포트가 열리지 않음")
+      return
+    }
+    await store.send(.view(.backAction))
+    #expect(store.state.routes.count == 2)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 운영자_댓글의_리포트도_Android_공용_결과_화면으로_열린다() async {
+    let room = ClassRoom.mocks[0]
+    let battleID = -1_000_000 - room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    state.chatRoomsByBattleID[battleID] = room
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes.count == 3)
+    guard case let .result(dashboard)? = store.state.routes.last?.screen else {
+      Issue.record("운영자 댓글이 결과 화면으로 연결되지 않음")
+      return
+    }
+    #expect(dashboard.room == room)
+    await store.send(.view(.backAction))
+    #expect(store.state.routes.count == 2)
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 댓글_리포트는_다른_배틀이나_유효하지_않은_경로에서_열리지_않는다() async {
+    let room = ClassRoom.mockClosedSociety
+    let battleID = -1_000_000 - room.id
+    var valid = ClassCoordinator.State()
+    valid.routes.push(.detail(testDetailState(room: room)))
+    valid.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    valid.chatRoomsByBattleID[battleID] = room
+
+    await assertChatReportNoOp(valid, battleID: battleID + 1)
+
+    var missingRoom = valid
+    missingRoom.chatRoomsByBattleID.removeAll()
+    await assertChatReportNoOp(missingRoom, battleID: battleID)
+
+    var mismatchedComment = valid
+    mismatchedComment.routes[screenAt: 2] = .chat(.init(route: .comment(battleId: battleID + 1)))
+    await assertChatReportNoOp(mismatchedComment, battleID: battleID)
+
+    var missingDetail = ClassCoordinator.State()
+    missingDetail.routes.push(.chat(.init(route: .comment(battleId: battleID))))
+    missingDetail.chatRoomsByBattleID[battleID] = room
+    await assertChatReportNoOp(missingDetail, battleID: battleID)
+
+    var nonComment = valid
+    nonComment.routes[screenAt: 2] = .aiVote(.init(room: room, battleID: battleID, instanceID: UUID()))
+    await assertChatReportNoOp(nonComment, battleID: battleID)
+
+    var nestedReply = valid
+    var chat = ChatCoordinator.State(route: .comment(battleId: battleID))
+    chat.routes.push(.commentReply(.init(perspectiveId: 1)))
+    nestedReply.routes[screenAt: 2] = .chat(chat)
+    await assertChatReportNoOp(nestedReply, battleID: battleID)
+  }
+
+  private func assertChatReportNoOp(
+    _ state: ClassCoordinator.State,
+    battleID: Int
+  ) async {
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+    await store.send(.view(.chatReportTapped(battleID: battleID)))
+    #expect(store.state.routes == state.routes)
+    #expect(store.state.chatRoomsByBattleID == state.chatRoomsByBattleID)
+  }
+
+  @Test
+  func 마감된_멤버_배틀은_결과_진입과_리포트로_연결된다() async {
+    let room = ClassRoom.mockClosedSociety
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openClosedBattle(room)))
+    )))
+    guard case .closedBattle? = store.state.routes.last?.screen else {
+      Issue.record("마감 배틀 결과 진입 화면이 열리지 않음")
+      return
+    }
+    #expect(!store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .closedBattle(.delegate(.openReport(room)))
+    )))
+    guard case .result? = store.state.routes.last?.screen else {
+      Issue.record("멤버 결과 화면으로 이동하지 않음")
+      return
+    }
+    #expect(!store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(id: 3, action: .result(.delegate(.dismiss)))))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    await store.send(.router(.routeAction(id: 2, action: .closedBattle(.delegate(.dismiss)))))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 결과_화면에서는_탭바를_숨기고_닫으면_복구한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openReport(room)))
+    )))
+    #expect(!store.state.showsTabBar)
+    guard case let .result(result)? = store.state.routes.last?.screen else {
+      Issue.record("결과 화면이 열리지 않음")
+      return
+    }
+    #expect(result.room == room)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .result(.delegate(.dismiss))
+    )))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    #expect(store.state.showsTabBar)
+  }
+
+  @Test
+  func 마감_배틀_화면의_뒤로가기는_클래스_상세로_돌아온다() async {
+    let room = ClassRoom.mockClosedSociety
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.closedBattle(.init(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .closedBattle(.delegate(.dismiss))
+    )))
+    await store.receive {
+      guard case .view(.backAction) = $0 else { return false }
+      return true
+    }
+    guard case .detail? = store.state.routes.last?.screen else {
+      Issue.record("클래스 상세로 돌아오지 않음")
+      return
+    }
+  }
+
+  @Test
+  func 마감된_운영자_결과도_공용_결과_화면으로_이동한다() async {
+    let room = ClassRoom.mocks[2]
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .detail(.delegate(.openReport(room)))
+    )))
+    guard case .result? = store.state.routes.last?.screen else {
+      Issue.record("운영자 결과 화면으로 이동하지 않음")
+      return
+    }
+  }
+
+  @Test
+  func 공유_목_저장소의_멤버_제거를_목록과_상세와_멤버에_전달한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let originalMembers = try await repository.fetchMembers(roomID: room.id)
+    let updatedRoom = try await repository.removeMember(roomID: room.id, memberID: 2, currentMemberID: 1)
+    let updatedMembers = try await repository.fetchMembers(roomID: room.id)
+
+    var myClasses = MyClassFeature.State()
+    myClasses.rooms = [room]
+    myClasses.viewState = .loaded
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(myClasses))
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.members(.init(
+      room: room,
+      members: originalMembers,
+      instanceID: UUID(),
+      preloadedViewState: .loaded
+    )))
+
+    let store = TestStore(initialState: state) {
+      ClassCoordinator()
+    } withDependencies: {
+      $0.classRepository = repository
+      $0.classUseCase = ClassUseCaseImpl()
+      $0.classRoomUseCase = repository
+      $0.classMockRepository = repository
+    }
+    store.exhaustivity = .off
+
+    await store.send(.inner(.memberMutationCompleted(updatedRoom, updatedMembers)))
+    await store.finish()
+    await store.skipReceivedActions()
+
+    guard case let .myClasses(list) = store.state.routes[1].screen,
+          case let .detail(detail) = store.state.routes[2].screen,
+          case let .members(members) = store.state.routes[3].screen
+    else {
+      Issue.record("클래스 화면 경로가 유지되지 않음")
+      return
+    }
+    #expect(list.rooms[0].memberCount == updatedMembers.count)
+    #expect(detail.room.memberCount == updatedMembers.count)
+    #expect(members.room.memberCount == updatedMembers.count)
+    #expect(members.members.count == updatedMembers.count)
+  }
+
+  @Test
+  func 멤버_보고서가_뒤로가기로_제거되면_진행중인_로드를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(1)
+    await store.send(.view(.backAction))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 소개_화면이_맨_위가_아니면_늦게_온_만들기_요청을_무시한다() async {
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(withDependencies {
+      $0.uuid = .incrementing
+    } operation: {
+      MyClassFeature.State()
+    }))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.create)))))
+
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_멤버_보고서_경로를_제거하면_진행중인_로드를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_내가_남긴_의견_경로를_제거하면_진행중인_조회를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var opinions = ClassMyOpinionsFeature.State()
+    opinions.classID = room.id
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.myOpinions(opinions))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .myOpinions(.async(.fetchReplyPage(cursor: nil))))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_멤버_보고서_경로를_제거하면_진행중인_인사이트_조회를_취소한다() async {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetchInsight)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 스와이프로_운영자_보고서_경로를_제거하면_진행중인_내_활동_조회를_취소한다() async {
+    let room = ClassRoom.mocks[0]
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.async(.fetchMyActivity)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast()))))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 운영자_보고서가_루트로_제거되면_진행중인_로드를_취소한다() async {
+    let room = ClassRoom.mocks[0]
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.async(.fetchDashboard)))))
+    await useCase.waitForStarts(1)
+    await store.send(.view(.backToRootAction))
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    #expect(store.state.routes.count == 1)
+  }
+
+  @Test(arguments: [true, false])
+  func 운영자_보고서_편집은_로드를_유지하고_삭제나_종료는_취소한다(edit: Bool) async {
+    let room = ClassRoom.mocks[0]
+    let useCase = SuspendedClassUseCase()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(.init(room: room, instanceID: UUID())))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+      $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(.async(.fetchDashboard)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.routeAction(id: 2, action: .ownerDashboard(
+      .delegate(edit ? .editClass : .deleteClass)
+    ))))
+    if edit {
+      #expect(await useCase.cancelledRequestIDs.isEmpty)
+      // 수정은 보고서 위에 클래스 수정 화면을 쌓으므로 보고서 로드는 그대로 둔다.
+      guard case .classEdit? = store.state.routes.last?.screen,
+            case .ownerDashboard? = store.state.routes.dropLast().last?.screen else {
+        Issue.record("클래스 수정 시 운영자 보고서가 유지되지 않음")
+        return
+      }
+      await store.send(.view(.backToRootAction))
+    }
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    if edit {
+      #expect(store.state.routes.count == 1)
+      #expect(store.state.deadlineEdit == nil)
+      return
+    }
+    guard case .detail? = store.state.routes.last?.screen else {
+      Issue.record("운영자 보고서에서 클래스 상세로 돌아가지 않음")
+      return
+    }
+  }
+
+  @Test
+  func 같은_방의_보고서_두_개중_제거된_인스턴스의_로드만_취소한다() async throws {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000001"))
+    let secondID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000002"))
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: firstID)))
+    state.routes.push(.report(.init(room: room, instanceID: secondID)))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(1)
+    await store.send(.router(.routeAction(id: 3, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(2)
+    await store.send(.view(.backAction))
+    await useCase.completeReport(requestID: 1)
+    await store.receive {
+      guard case let .router(.routeAction(id: 2, action: .report(action))) = $0,
+            case .inner(.resultResponse) = action else { return false }
+      return true
+    }
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [2])
+    guard case let .report(report)? = store.state.routes.last?.screen else {
+      Issue.record("앞선 보고서가 유지되지 않음")
+      return
+    }
+    #expect(report.classResult?.classID == room.id)
+  }
+
+  @Test
+  func 같은_인덱스의_보고서가_교체되면_이전_인스턴스만_취소한다() async throws {
+    let room = ClassRoom.mockClosedSociety
+    let useCase = SuspendedClassUseCase()
+    let firstID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000003"))
+    let replacementID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000004"))
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.report(.init(room: room, instanceID: firstID)))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classResultUseCase = useCase
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(1)
+    var replacementRoutes = store.state.routes
+    replacementRoutes[screenAt: 2] = .report(.init(
+      room: room,
+      instanceID: replacementID
+    ))
+    await store.send(.router(.updateRoutes(replacementRoutes)))
+    await store.send(.router(.routeAction(id: 2, action: .report(.async(.fetch)))))
+    await useCase.waitForStarts(2)
+    await useCase.completeReport(requestID: 2)
+    await store.receive {
+      guard case let .router(.routeAction(id: 2, action: .report(action))) = $0,
+            case .inner(.resultResponse) = action else { return false }
+      return true
+    }
+    await store.finish(timeout: .seconds(1))
+
+    #expect(await useCase.cancelledRequestIDs == [1])
+    guard case let .report(report)? = store.state.routes.last?.screen else {
+      Issue.record("교체된 보고서가 유지되지 않음")
+      return
+    }
+    #expect(report.classResult?.classID == room.id)
+  }
+}
+
+@MainActor
+struct ClassNavigationLoadingTests {
+  @Test
+  func 공유에서_운영자_이름을_push하고_뒤로가면_공유가_남는다() async {
+    let room = ClassRoom.mocks[0]
+    let instanceID = UUID()
+    var state = ClassCoordinator.State()
+    state.routes.push(.share(.init(room: room)))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classMockRepository = MockClassRepository(rooms: [room])
+      $0.uuid = .constant(instanceID)
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .share(.delegate(.nameOwner(room)))))) {
+      $0.routes.push(.ownerName(.init(mode: .ownerName, preview: room, instanceID: instanceID)))
+      $0.ownerNameInstanceIDs = [instanceID]
+    }
+    await store.send(.router(.routeAction(id: 1, action: .share(.delegate(.nameOwner(room))))))
+    #expect(store.state.routes.count == 3)
+    await store.send(.router(.routeAction(id: 2, action: .ownerName(.delegate(.dismiss)))))
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+      $0.ownerNameInstanceIDs = []
+    }
+    guard case let .share(share)? = store.state.routes.last?.screen else {
+      Issue.record("뒤로가기 후 공유 화면이 남아야 합니다")
+      return
+    }
+    #expect(share.room == room)
+  }
+
+  @Test
+  func 운영자_이름_저장은_현재_인스턴스만_상세로_보낸다() async {
+    let room = ClassRoom.mocks[0]
+    let oldID = UUID()
+    let newID = UUID()
+    var owner = ClassJoinFeature.State(mode: .ownerName, preview: room, instanceID: newID)
+    owner.preview = nil
+    var state = ClassCoordinator.State()
+    state.routes.push(.share(.init(room: room)))
+    state.routes.push(.ownerName(owner))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ownerName(.delegate(.ownerNamed(room, instanceID: oldID)))
+    ))) {
+      $0.ownerNameInstanceIDs = [newID]
+    }
+    #expect(store.state.routes.count == 3)
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ownerName(.delegate(.ownerNamed(room, instanceID: newID)))
+    ))) {
+      $0.routes.goBackToRoot()
+      $0.routes.push(.detail(testDetailState(room: room)))
+      $0.ownerNameInstanceIDs = []
+    }
+    guard case let .detail(detail)? = store.state.routes.last?.screen else {
+      Issue.record("운영자 이름 저장 후 클래스 상세가 열려야 합니다")
+      return
+    }
+    #expect(detail.room == room)
+  }
+
+  @Test
+  func 이전_멤버_요청은_같은_방과_경로_번호로_재진입해도_새_화면에_전달되지_않는다() async {
+    let room = ClassRoom.mocks[0]
+    let oldID = UUID()
+    let newID = UUID()
+    let oldRequestID = UUID()
+    let newRequestID = UUID()
+    var member = ClassMemberFeature.State(room: room, instanceID: newID)
+    member.activeLoadRequestID = newRequestID
+    member.isLoading = true
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.members(member))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.inner(.membersLoaded(
+      routeID: 2,
+      roomID: room.id,
+      instanceID: oldID,
+      requestID: oldRequestID,
+      room: room,
+      members: MockClassRepository.figmaOwnerMembers,
+      currentMemberID: 1
+    ))) {
+      $0.memberInstanceIDs = [newID]
+    }
+    await store.send(.inner(.membersFailed(
+      routeID: 2,
+      roomID: room.id,
+      instanceID: oldID,
+      requestID: oldRequestID,
+      message: "이전 실패"
+    )))
+    #expect(store.state.routes.count == 3)
+    guard case let .members(current)? = store.state.routes.last?.screen else {
+      Issue.record("새 멤버 화면이 유지되어야 합니다")
+      return
+    }
+    #expect(current.activeLoadRequestID == newRequestID)
+    #expect(current.members.isEmpty)
+  }
+}
+
+@MainActor
+struct ClassParticipantPushTests {
+  @Test
+  func 인트로_이용권은_한번만_push하고_닫으면_돌아간다() async {
+    let ticketID = UUID(301)
+    let store = TestStore(initialState: ClassCoordinator.State()) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(ticketID)
+    }
+
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.ticket))))) {
+      $0.routes.push(.ticket(.init(instanceID: ticketID)))
+      $0.ticketInstanceIDs = [ticketID]
+    }
+    #expect(store.state.showsTabBar)
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.ticket)))))
+    #expect(store.state.routes.count == 2)
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.delegate(.dismiss)))))
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+      $0.ticketInstanceIDs = []
+    }
+  }
+
+  @Test
+  func 이용권_확인은_push하고_재등록은_기존_확인_경로를_갱신한다() async throws {
+    let firstStart = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let firstEnd = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    let secondStart = try #require("2026.11.01".date(as: .yearMonthDayDotted))
+    let secondEnd = try #require("2027.04.30".date(as: .yearMonthDayDotted))
+    let clock = TestClock()
+    let originalID = UUID(400)
+    let preview = ClassTicketPreview(capacity: 30, registerBy: secondEnd, usageMonths: 6, registeredByMe: false)
+    let secondTicket = ClassTicket(
+      id: 5,
+      capacity: 30,
+      status: .active,
+      activatedAt: secondStart,
+      expiresAt: secondEnd,
+      remainingDays: 180,
+      readGraceEndsAt: secondEnd
+    )
+    var registration = ClassTicketFeature.State(instanceID: originalID)
+    registration.phase = .registered
+    registration.registrationStartDate = firstStart
+    registration.expirationDate = firstEnd
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [originalID]
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.continuousClock = clock
+      $0.date = .constant(secondStart)
+      $0.classTicketUseCase = ClockTicketUseCase(clock: clock, preview: preview, ticket: secondTicket)
+    }
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .ticket(.delegate(.registrationConfirmed(startDate: firstStart, endDate: firstEnd)))
+    )))
+    await store.receive(\.inner) {
+      var overview = ClassTicketFeature.State(instanceID: UUID(0))
+      overview.phase = .overview
+      overview.registrationStartDate = firstStart
+      overview.expirationDate = firstEnd
+      $0.routes.push(.ticket(overview))
+      $0.ticketInstanceIDs = [originalID, UUID(0)]
+    }
+    #expect(store.state.showsTabBar)
+
+    await store.send(.router(.routeAction(
+      id: 2,
+      action: .ticket(.delegate(.addRegistrationRequested))
+    ))) {
+      var registration = ClassTicketFeature.State(instanceID: UUID(1))
+      registration.shouldCheckExistingTicket = false
+      $0.routes.push(.ticket(registration))
+      $0.ticketInstanceIDs = [originalID, UUID(0), UUID(1)]
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.binding(.set(\.code, "PICKE30")))
+    ))) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.code = "PICKE30"
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.view(.checkTapped))
+    ))) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = true
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    // 현재 계약: 코드 확인은 미리보기만 보여 주고, 등록하기에서 등록한다.
+    await clock.advance(by: .milliseconds(350))
+    await store.receive(\.router.routeAction) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = false
+      ticket.preview = preview
+      ticket.phase = .preview
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.view(.confirmTapped))
+    ))) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = true
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.receive(\.router.routeAction) {
+      guard case var .ticket(ticket) = $0.routes[3].screen else { return }
+      ticket.isChecking = false
+      ticket.ticket = secondTicket
+      ticket.phase = .registered
+      ticket.registrationStartDate = secondStart
+      ticket.expirationDate = secondEnd
+      $0.routes[screenAt: 3] = .ticket(ticket)
+    }
+    await store.receive(\.router.routeAction) {
+      guard case var .ticket(overview) = $0.routes[2].screen,
+            case var .ticket(original) = $0.routes[1].screen
+      else { return }
+      overview.registrationStartDate = secondStart
+      overview.expirationDate = secondEnd
+      overview.ticket = secondTicket
+      original.registrationStartDate = secondStart
+      original.expirationDate = secondEnd
+      original.ticket = secondTicket
+      $0.routes[screenAt: 2] = .ticket(overview)
+      $0.routes[screenAt: 1] = .ticket(original)
+    }
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.delegate(.registrationConfirmed(startDate: secondStart, endDate: secondEnd)))
+    )))
+    #expect(store.state.routes.count == 4)
+    await store.receive(\.inner) {
+      $0.routes.goBack()
+      guard case var .ticket(overview) = $0.routes[2].screen,
+            case var .ticket(original) = $0.routes[1].screen
+      else { return }
+      overview.registrationStartDate = secondStart
+      overview.expirationDate = secondEnd
+      original.registrationStartDate = secondStart
+      original.expirationDate = secondEnd
+      $0.routes[screenAt: 2] = .ticket(overview)
+      $0.routes[screenAt: 1] = .ticket(original)
+      $0.ticketInstanceIDs = [originalID, UUID(0)]
+    }
+    #expect(store.state.routes.count == 3)
+    await store.send(.view(.backAction)) {
+      $0.routes.goBack()
+      $0.ticketInstanceIDs = [originalID]
+    }
+    guard case let .ticket(original) = store.state.routes.last?.screen else {
+      Issue.record("뒤로 이동 후 등록 화면이 사라졌습니다")
+      return
+    }
+    #expect(original.periodText == "2026.11.01 – 2027.04.30")
+  }
+
+  @Test
+  func 개요_위_등록_화면에서_사용_중인_내_이용권을_다시_입력하면_개요로_돌아간다() async {
+    let ticket = ClassTicket(
+      id: 9,
+      capacity: 30,
+      status: .active,
+      activatedAt: Date(timeIntervalSince1970: 1_800_000_000),
+      expiresAt: Date(timeIntervalSince1970: 1_815_000_000),
+      remainingDays: 170,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_817_592_000)
+    )
+    var overview = ClassTicketFeature.State(instanceID: UUID(310))
+    overview.phase = .overview
+    var registration = ClassTicketFeature.State(instanceID: UUID(311))
+    registration.shouldCheckExistingTicket = false
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [UUID(310), UUID(311)]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 2, action: .ticket(.delegate(.existingTicketFound(ticket))))))
+
+    #expect(store.state.routes.count == 2)
+    guard case let .ticket(current)? = store.state.routes.last?.screen else {
+      Issue.record("기존 이용권 개요로 돌아가지 않았습니다")
+      return
+    }
+    #expect(current.instanceID == UUID(310))
+    #expect(current.ticket == ticket)
+  }
+
+  @Test
+  func 바로_연_이용권_화면에서_사용_중인_내_이용권을_다시_입력하면_개요로_바꾸고_안내_중에는_탭바를_숨긴다() async {
+    let ticket = ClassTicket(
+      id: 9,
+      capacity: 30,
+      status: .active,
+      activatedAt: Date(timeIntervalSince1970: 1_800_000_000),
+      expiresAt: Date(timeIntervalSince1970: 1_815_000_000),
+      remainingDays: 170,
+      readGraceEndsAt: Date(timeIntervalSince1970: 1_817_592_000)
+    )
+    var registration = ClassTicketFeature.State(instanceID: UUID(312))
+    registration.code = "PICKE30"
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [UUID(312)]
+    #expect(state.showsTabBar)
+    var alerted = registration
+    alerted.customAlert = .ticketInvalidCode()
+    var alertedState = state
+    alertedState.routes[screenAt: 1] = .ticket(alerted)
+    #expect(!alertedState.showsTabBar)
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.delegate(.existingTicketFound(ticket))))))
+
+    #expect(store.state.routes.count == 2)
+    guard case let .ticket(current)? = store.state.routes.last?.screen else {
+      Issue.record("이용권 화면이 사라졌습니다")
+      return
+    }
+    #expect(current.instanceID == UUID(312))
+    #expect(current.phase == .overview)
+    #expect(current.ticket == ticket)
+  }
+
+  @Test
+  func 이용권_확인_중_스와이프로_경로가_제거되면_응답도_취소된다() async {
+    let clock = TestClock()
+    let ticketID = UUID(302)
+    var ticket = ClassTicketFeature.State(instanceID: ticketID)
+    ticket.code = "PICKE30"
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(ticket))
+    state.ticketInstanceIDs = [ticketID]
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.continuousClock = clock
+      $0.date = .constant(Date(timeIntervalSince1970: 0))
+      $0.classTicketUseCase = ClockTicketUseCase(clock: clock)
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .ticket(.view(.checkTapped))))) {
+      guard case var .ticket(current) = $0.routes[1].screen else { return }
+      current.isChecking = true
+      $0.routes[screenAt: 1] = .ticket(current)
+    }
+    await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.ticketInstanceIDs = []
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 추가등록_성공_후_뒤로가도_확인_화면에_새_기간이_남는다() async throws {
+    let oldStart = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let oldEnd = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    let newStart = try #require("2026.11.01".date(as: .yearMonthDayDotted))
+    let newEnd = try #require("2027.04.30".date(as: .yearMonthDayDotted))
+    var original = ClassTicketFeature.State(instanceID: UUID(400))
+    original.phase = .registered
+    original.registrationStartDate = oldStart
+    original.expirationDate = oldEnd
+    var overview = ClassTicketFeature.State(instanceID: UUID(401))
+    overview.phase = .overview
+    overview.registrationStartDate = oldStart
+    overview.expirationDate = oldEnd
+    var registration = ClassTicketFeature.State(instanceID: UUID(402))
+    registration.phase = .registered
+    registration.registrationStartDate = newStart
+    registration.expirationDate = newEnd
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(original))
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [original.instanceID, overview.instanceID, registration.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(
+      id: 3,
+      action: .ticket(.delegate(.registered(newStart, newEnd)))
+    ))) {
+      guard case var .ticket(currentOverview) = $0.routes[2].screen,
+            case var .ticket(currentOriginal) = $0.routes[1].screen
+      else { return }
+      currentOverview.registrationStartDate = newStart
+      currentOverview.expirationDate = newEnd
+      currentOriginal.registrationStartDate = newStart
+      currentOriginal.expirationDate = newEnd
+      $0.routes[screenAt: 2] = .ticket(currentOverview)
+      $0.routes[screenAt: 1] = .ticket(currentOriginal)
+    }
+    await store.send(.view(.backAction)) {
+      $0.routes.goBack()
+      $0.ticketInstanceIDs = [original.instanceID, overview.instanceID]
+    }
+    guard case let .ticket(currentOverview) = store.state.routes.last?.screen else {
+      Issue.record("추가등록 뒤 확인 화면이 사라졌습니다")
+      return
+    }
+    #expect(currentOverview.periodText == "2026.11.01 – 2027.04.30")
+  }
+
+  @Test
+  func 추가등록_조회_중_경로가_제거되면_응답을_취소한다() async throws {
+    let start = try #require("2026.10.09".date(as: .yearMonthDayDotted))
+    let end = try #require("2027.04.08".date(as: .yearMonthDayDotted))
+    let clock = TestClock()
+    var original = ClassTicketFeature.State(instanceID: UUID(400))
+    original.phase = .registered
+    original.registrationStartDate = start
+    original.expirationDate = end
+    var overview = ClassTicketFeature.State(instanceID: UUID(401))
+    overview.phase = .overview
+    overview.registrationStartDate = start
+    overview.expirationDate = end
+    var registration = ClassTicketFeature.State(instanceID: UUID(402))
+    registration.code = "PICKE30"
+    var state = ClassCoordinator.State()
+    state.routes.push(.ticket(original))
+    state.routes.push(.ticket(overview))
+    state.routes.push(.ticket(registration))
+    state.ticketInstanceIDs = [original.instanceID, overview.instanceID, registration.instanceID]
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.continuousClock = clock
+      $0.date = .constant(start)
+      $0.classTicketUseCase = ClockTicketUseCase(clock: clock)
+    }
+
+    await store.send(.router(.routeAction(id: 3, action: .ticket(.view(.checkTapped))))) {
+      guard case var .ticket(current) = $0.routes[3].screen else { return }
+      current.isChecking = true
+      $0.routes[screenAt: 3] = .ticket(current)
+    }
+    await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.ticketInstanceIDs = [original.instanceID, overview.instanceID]
+    }
+    await clock.advance(by: .milliseconds(350))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 인트로_참여는_코드_화면을_한번만_push한다() async {
+    let codeID = UUID(201)
+    let store = TestStore(initialState: ClassCoordinator.State()) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(codeID)
+    }
+
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.join))))) {
+      $0.routes.push(.join(.init(mode: .code, instanceID: codeID)))
+      $0.participantJoinInstanceIDs = [codeID]
+    }
+    await store.send(.router(.routeAction(id: 0, action: .intro(.delegate(.join)))))
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 참여_코드_화면에서_새_클래스_만들기를_누르면_방식_선택을_push한다() async {
+    let codeID = UUID(205)
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.createClassRequested))))) {
+      $0.routes.push(.startMethod(.init()))
+      $0.participantJoinInstanceIDs = [codeID]
+    }
+    #expect(store.state.routes.count == 3)
+  }
+
+  @Test
+  func 이름_입력_화면의_생성_요청은_방식_선택을_열지_않는다() async {
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: UUID(206))))
+    state.routes.push(.join(.init(
+      mode: .nickname,
+      preview: .mockJoinable,
+      instanceID: UUID(207)
+    )))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.createClassRequested)))))
+    #expect(store.state.routes.count == 3)
+  }
+
+  @Test
+  func 코드_조회_성공은_이름_화면을_push하고_중복응답은_무시한다() async {
+    let preview = ClassJoinPreview(room: .mockJoinable)
+    let codeID = UUID(202)
+    let nicknameID = UUID(203)
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(nicknameID)
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.found(
+      preview,
+      instanceID: codeID
+    )))))) {
+      $0.routes.push(.join(.init(mode: .nickname, preview: preview, instanceID: nicknameID)))
+      $0.participantJoinInstanceIDs = [codeID, nicknameID]
+    }
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.found(
+      preview,
+      instanceID: codeID
+    ))))))
+    #expect(store.state.routes.count == 3)
+    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.dismiss)))))
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+      $0.participantJoinInstanceIDs = [codeID]
+    }
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.dismiss)))))
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+      $0.participantJoinInstanceIDs = []
+    }
+  }
+
+  @Test
+  func 잘못된_참여완료_델리게이트는_뒤로가기를_막지_않는다() async {
+    let room = ClassRoom.mockJoinable
+    let nicknameID = UUID(204)
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .nickname, instanceID: nicknameID)))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.joined(
+      room,
+      nickname: "민지",
+      instanceID: nicknameID
+    )))))) {
+      $0.participantJoinInstanceIDs = [nicknameID]
+    }
+    #expect(store.state.pendingJoinID == nil)
+    await store.send(.router(.routeAction(id: 1, action: .join(.delegate(.dismiss)))))
+    await store.receive(\.view.backAction) {
+      $0.routes.goBack()
+      $0.participantJoinInstanceIDs = []
+    }
+  }
+
+  @Test
+  func 참여확정_후_스와이프한_경로는_복원하지_않고_상세로_전환한다() async {
+    let room = ClassRoom.mockJoinable
+    let codeID = UUID(205)
+    let nicknameID = UUID(206)
+    let requestID = UUID(207)
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
+    state.routes.push(.join(.init(mode: .nickname, instanceID: nicknameID)))
+    state.pendingJoinID = requestID
+    state.completingJoinCodeInstanceID = codeID
+    state.completingJoinNicknameInstanceID = nicknameID
+    state.participantJoinInstanceIDs = [codeID, nicknameID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.routeAction(id: 2, action: .join(.view(.joinTapped)))))
+    #expect(store.state.pendingJoinID == requestID)
+    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.dismiss)))))
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.participantJoinInstanceIDs = [codeID]
+    }
+    #expect(store.state.routes.count == 2)
+    await store.send(.inner(.joinedNavigationReady(requestID, room))) {
+      $0.pendingJoinID = nil
+      $0.completingJoinCodeInstanceID = nil
+      $0.completingJoinNicknameInstanceID = nil
+      $0.routes.goBackToRoot()
+      $0.routes.push(.detail(testDetailState(room: room)))
+      $0.participantJoinInstanceIDs = []
+    }
+  }
+
+  @Test
+  func 참여확정_정리중_이름_화면을_스와이프해도_코드_재검색은_정리를_취소하지_못한다() async {
+    let room = ClassRoom.mockJoinable
+    let codeID = UUID(211)
+    let nicknameID = UUID(212)
+    let requestID = UUID(213)
+    var code = ClassJoinFeature.State(mode: .code, instanceID: codeID)
+    code.joinCode = room.joinCode
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(code))
+    state.routes.push(.join(.init(mode: .nickname, instanceID: nicknameID)))
+    state.pendingJoinID = requestID
+    state.completingJoinCodeInstanceID = codeID
+    state.completingJoinNicknameInstanceID = nicknameID
+    state.participantJoinInstanceIDs = [codeID, nicknameID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.participantJoinInstanceIDs = [codeID]
+    }
+    await store.send(.router(.routeAction(id: 1, action: .join(.view(.findTapped)))))
+    await store.send(.router(.routeAction(id: 1, action: .join(.async(.find(room.joinCode))))))
+    #expect(store.state.pendingJoinID == requestID)
+    guard case let .join(currentCode)? = store.state.routes.last?.screen else {
+      Issue.record("코드 화면이 유지되지 않았습니다.")
+      return
+    }
+    #expect(currentCode.activeFindRequestID == nil)
+
+    await store.send(.inner(.joinedNavigationReady(requestID, room))) {
+      $0.pendingJoinID = nil
+      $0.completingJoinCodeInstanceID = nil
+      $0.completingJoinNicknameInstanceID = nil
+      $0.routes.goBackToRoot()
+      $0.routes.push(.detail(testDetailState(room: room)))
+      $0.participantJoinInstanceIDs = []
+    }
+  }
+
+  @Test
+  func 명시적으로_루트에_돌아오면_늦은_참여완료는_상세를_열지_않는다() async {
+    let room = ClassRoom.mockJoinable
+    let codeID = UUID(208)
+    let nicknameID = UUID(209)
+    let requestID = UUID(210)
+    var state = ClassCoordinator.State()
+    state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
+    state.routes.push(.join(.init(mode: .nickname, instanceID: nicknameID)))
+    state.pendingJoinID = requestID
+    state.completingJoinCodeInstanceID = codeID
+    state.completingJoinNicknameInstanceID = nicknameID
+    state.participantJoinInstanceIDs = [codeID, nicknameID]
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.view(.backToRootAction)) {
+      $0.pendingJoinID = nil
+      $0.completingJoinCodeInstanceID = nil
+      $0.completingJoinNicknameInstanceID = nil
+      $0.routes.goBackToRoot()
+      $0.participantJoinInstanceIDs = []
+    }
+    await store.send(.inner(.joinedNavigationReady(requestID, room)))
+    #expect(store.state.routes.count == 1)
+  }
+}
+
+@MainActor
+struct ClassDeadlineSheetCoordinatorTests {
+  @Test
+  func 마감일_저장_후_늦은_멤버_조회는_새_마감일과_화면_인스턴스를_보존한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let updated = try await repository.updateDeadline(
+      id: room.id,
+      deadline: room.deadline.addingTimeInterval(86400)
+    )
+    let memberInstanceID = UUID()
+    let loadRequestID = UUID()
+    var member = ClassMemberFeature.State(room: room, instanceID: memberInstanceID)
+    member.activeLoadRequestID = loadRequestID
+    member.isLoading = true
+    var editor = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    let saveRequestID = UUID()
+    editor.activeRequestID = saveRequestID
+    editor.isSaving = true
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.members(member))
+    state.deadlineEdit = editor
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.deadlineEdit(.presented(.delegate(.saved(
+      updated,
+      instanceID: editor.instanceID,
+      requestID: saveRequestID
+    )))))
+    await store.send(.inner(.membersLoaded(
+      routeID: 2,
+      roomID: room.id,
+      instanceID: memberInstanceID,
+      requestID: loadRequestID,
+      room: room,
+      members: MockClassRepository.figmaOwnerMembers,
+      currentMemberID: 1
+    )))
+    await store.receive {
+      guard case .router(.routeAction(id: 2, action: .members(.membersLoaded))) = $0 else { return false }
+      return true
+    }
+    await store.finish()
+
+    guard case let .members(current)? = store.state.routes.last?.screen else {
+      Issue.record("늦은 응답 뒤에도 멤버 화면이 유지되어야 합니다.")
+      return
+    }
+    #expect(current.instanceID == memberInstanceID)
+    #expect(current.room == updated)
+    #expect(current.members == MockClassRepository.figmaOwnerMembers)
+    #expect(current.activeLoadRequestID == nil)
+    #expect(store.state.deadlineEdit == nil)
+  }
+
+  @Test
+  func 목록에서_연_상세는_서버_상세로_갱신한다() async {
+    let room = ClassRoom.mocks[0]
+    let projection = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: "",
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: false,
+      requiresComment: false
+    )
+    var list = MyClassFeature.State()
+    list.rooms = [projection]
+    list.viewState = .loaded
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(list))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.classUseCase = MockClassRepository(rooms: [room], availableRooms: [])
+      $0.uuid = .incrementing
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(
+      id: 1,
+      action: .myClasses(.delegate(.openRoom(projection)))
+    )))
+    guard case let .detail(pending)? = store.state.routes.last?.screen,
+          let requestID = pending.activeLoadRequestID
+    else {
+      Issue.record("상세 조회가 시작되지 않음")
+      return
+    }
+    #expect(pending.viewState == .loading)
+    await store.receive(\.inner, .detailLoaded(
+      routeID: 2,
+      roomID: room.id,
+      instanceID: pending.instanceID,
+      requestID: requestID,
+      room: room
+    ))
+    guard case let .detail(loaded)? = store.state.routes.last?.screen else {
+      Issue.record("상세 경로가 유지되지 않음")
+      return
+    }
+    #expect(loaded.viewState == .loaded)
+    #expect(loaded.room.joinCode == room.joinCode)
+    #expect(loaded.room.requiresComment == room.requiresComment)
+  }
+
+  @Test
+  func 교체된_상세_경로는_이전_조회_응답을_무시한다() async {
+    let room = ClassRoom.mocks[0]
+    var oldDetail = testDetailState(room: room, instanceID: UUID())
+    let requestID = UUID()
+    oldDetail.viewState = .loading
+    oldDetail.activeLoadRequestID = requestID
+    let newDetail = testDetailState(room: room, instanceID: UUID())
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(newDetail))
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+
+    await store.send(.inner(.detailLoaded(
+      routeID: 1,
+      roomID: room.id,
+      instanceID: oldDetail.instanceID,
+      requestID: requestID,
+      room: room
+    )))
+    #expect(store.state.routes[1].screen == .detail(newDetail))
+  }
+
+  @Test
+  func 목록과_상세의_수정은_현재_경로_위에_수정_화면을_연다() async {
+    let room = ClassRoom.mocks[0]
+    var list = MyClassFeature.State()
+    list.rooms = [room]
+    list.viewState = .loaded
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(list))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .incrementing
+      $0.date.now = Date(timeIntervalSince1970: 1_760_000_000)
+    }
+    store.exhaustivity = .off
+
+    await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openInformation(room))))))
+    await store.receive(\.inner, .deadlineDetailResponse(
+      routeID: 1,
+      roomID: room.id,
+      .success(room)
+    ))
+    #expect(store.state.routes.count == 3)
+    #expect(store.state.routes.last.map { if case .classEdit = $0.screen { true } else { false } } == true)
+
+    await store.send(.view(.backAction))
+    await store.send(.router(.routeAction(id: 1, action: .myClasses(.delegate(.openRoom(room))))))
+    // Android ClassDetail 마감일 "수정"도 ClassEdit 화면으로 이동한다.
+    await store.send(.router(.routeAction(id: 2, action: .detail(.delegate(.openEdit(room))))))
+    #expect(store.state.routes.count == 4)
+    #expect(store.state.deadlineEdit == nil)
+    #expect(store.state.routes.last.map { if case .classEdit = $0.screen { true } else { false } } == true)
+
+    // 수정 화면의 마감일 필드를 누르면 마감일 선택 시트가 유지되어야 한다.
+    await store.send(.router(.routeAction(id: 3, action: .classEdit(.view(.deadlineFieldTapped)))))
+    guard case let .classEdit(edit)? = store.state.routes.last?.screen else {
+      Issue.record("수정 화면이 아니다")
+      return
+    }
+    await store.receive(\.router)
+    #expect(store.state.deadlineSelection?.settingInstanceID == edit.instanceID)
+  }
+
+  @Test
+  func 저장중_닫기와_뒤로가기와_시트_교체를_차단한다() async {
+    let room = ClassRoom.mocks[0]
+    var editor = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    editor.isSaving = true
+    editor.activeRequestID = UUID()
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.deadlineEdit = editor
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.deadlineEdit(.dismiss))
+    await store.send(.view(.backAction))
+    await store.send(.view(.backToRootAction))
+    #expect(store.state.deadlineEdit?.instanceID == editor.instanceID)
+    #expect(store.state.routes.count == 2)
+  }
+
+  @Test
+  func 유효한_저장만_시트를_닫고_같은_방_사본을_갱신한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let other = ClassRoom.mocks[1]
+    let repository = MockClassRepository(rooms: [room, other], availableRooms: [])
+    let updated = try await repository.updateDeadline(id: room.id, deadline: room.deadline.addingTimeInterval(86400))
+    var list = MyClassFeature.State()
+    list.rooms = [room, other]
+    list.viewState = .loaded
+    var dashboard = ClassOwnerDashboardFeature.State(room: room, instanceID: UUID())
+    dashboard.selectedTab = .report
+    var editor = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    editor.isSaving = true
+    editor.activeRequestID = UUID()
+    let requestID = try #require(editor.activeRequestID)
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(list))
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.ownerDashboard(dashboard))
+    state.chatRoomsByBattleID[99] = room
+    state.chatRoomsByBattleID[100] = other
+    state.deadlineEdit = editor
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.deadlineEdit(.presented(.delegate(.saved(
+      updated,
+      instanceID: UUID(),
+      requestID: requestID
+    )))))
+    #expect(store.state.deadlineEdit?.instanceID == editor.instanceID)
+
+    await store.send(.deadlineEdit(.presented(.delegate(.saved(
+      updated,
+      instanceID: editor.instanceID,
+      requestID: requestID
+    )))))
+    #expect(store.state.deadlineEdit == nil)
+    guard case let .myClasses(updatedList) = store.state.routes[1].screen,
+          case let .detail(updatedDetail) = store.state.routes[2].screen,
+          case let .ownerDashboard(updatedDashboard) = store.state.routes[3].screen
+    else {
+      Issue.record("경로가 유지되지 않았습니다.")
+      return
+    }
+    #expect(updatedList.rooms == [updated, other])
+    #expect(updatedDetail.room == updated)
+    #expect(updatedDetail.room.deadline == updated.deadline)
+    #expect(updatedDashboard.room == updated)
+    #expect(updatedDashboard.instanceID == dashboard.instanceID)
+    #expect(updatedDashboard.selectedTab == .report)
+    #expect(store.state.chatRoomsByBattleID[99] == updated)
+    #expect(store.state.chatRoomsByBattleID[100] == other)
+  }
+
+  @Test
+  func 마감일_저장_결과가_마지막_표시_방을_제외하면_목록을_empty로_전환한다() async {
+    let room = ClassRoom.mocks[0]
+    let closed = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline.addingTimeInterval(86400),
+      memberCount: room.memberCount,
+      role: room.role,
+      status: .closed,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
+    )
+    var list = MyClassFeature.State()
+    list.rooms = [room]
+    list.progress = .open
+    list.viewState = .loaded
+    var editor = ClassDeadlineEditFeature.State(
+      room: room,
+      instanceID: UUID(),
+      referenceNow: Date(timeIntervalSince1970: 1_760_000_000)
+    )
+    let requestID = UUID()
+    editor.activeRequestID = requestID
+    editor.isSaving = true
+    var state = ClassCoordinator.State()
+    state.routes.push(.myClasses(list))
+    state.deadlineEdit = editor
+    let store = TestStore(initialState: state) { ClassCoordinator() }
+    store.exhaustivity = .off
+
+    await store.send(.deadlineEdit(.presented(.delegate(.saved(
+      closed,
+      instanceID: editor.instanceID,
+      requestID: requestID
+    )))))
+    guard case let .myClasses(updatedList)? = store.state.routes.last?.screen else {
+      Issue.record("목록 경로가 유지되지 않았습니다.")
+      return
+    }
+    #expect(updatedList.rooms == [closed])
+    #expect(updatedList.visibleRooms.isEmpty)
+    #expect(updatedList.viewState == .empty)
+  }
+}
+
+@MainActor
+struct ClassBattleFlowSwipeLifecycleTests {
+  @Test
+  func 대기_중인_재생은_스와이프_이탈_후_다시_시작되지_않는다() async throws {
+    let player = ControlledClassAudioPlayer(delayPlay: true)
+    let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000073"))
+    let room = ClassRoom.mocks[0]
+    var flow = ClassBattleFlowFeature.State()
+    flow.room = room
+    flow.audioRequestID = requestID
+    flow.session = testBattleFlowSession(room: room)
+    var state = ClassCoordinator.State()
+    state.routes.push(.battleFlow(flow))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .battleFlow(.inner(.audioLoaded(
+      requestID,
+      true,
+      30
+    )))))) {
+      flow.audioRequestID = nil
+      flow.isAudioReady = true
+      flow.audioDuration = 30
+      flow.isPlaying = true
+      $0.routes[screenAt: 1] = .battleFlow(flow)
+      $0.battleFlowInstanceIDs = [flow.instanceID]
+    }
+    #expect(await player.waitForPlayStarted())
+    #expect(await player.waitForSubscriptions(1))
+
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.battleFlowInstanceIDs = []
+    }
+    await player.releasePlay()
+    #expect(await player.waitForTerminations(1))
+    await store.finish(timeout: .seconds(1))
+    #expect(await player.playCalls() == 0)
+    #expect(await player.pauseCalls() == 1)
+  }
+
+  @Test
+  func TTS_재생_중_스와이프로_나가면_오디오_구독을_취소하고_일시정지한다() async throws {
+    let player = ControlledClassAudioPlayer()
+    let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000071"))
+    let room = ClassRoom.mocks[0]
+    var flow = ClassBattleFlowFeature.State()
+    flow.room = room
+    flow.audioRequestID = requestID
+    flow.session = testBattleFlowSession(room: room)
+    var state = ClassCoordinator.State()
+    state.routes.push(.battleFlow(flow))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .battleFlow(.inner(.audioLoaded(
+      requestID,
+      true,
+      30
+    )))))) {
+      flow.audioRequestID = nil
+      flow.isAudioReady = true
+      flow.audioDuration = 30
+      flow.isPlaying = true
+      $0.routes[screenAt: 1] = .battleFlow(flow)
+      $0.battleFlowInstanceIDs = [flow.instanceID]
+    }
+    #expect(await player.waitForSubscriptions(1))
+
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.battleFlowInstanceIDs = []
+    }
+    #expect(await player.waitForTerminations(1))
+    await store.finish(timeout: .seconds(1))
+    #expect(await player.pauseCalls() == 1)
+  }
+
+  @Test
+  func 제출_중_스와이프로_나가면_요청을_취소한다() async throws {
+    let room = ClassRoom.mocks[0]
+    let requestID = try #require(UUID(uuidString: "00000000-0000-0000-0000-000000000072"))
+    let tracker = SlowBattleRequestTracker()
+    var flow = ClassBattleFlowFeature.State()
+    flow.room = room
+    flow.session = testBattleFlowSession(room: room)
+    flow.viewState = .loaded
+    flow.hasListened = true
+    var state = ClassCoordinator.State()
+    state.routes.push(.battleFlow(flow))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(requestID)
+      $0.classBattleUseCase = SlowBattleUseCase(tracker: tracker)
+    }
+
+    await store.send(.router(.routeAction(id: 1, action: .battleFlow(.view(.submitTapped))))) {
+      flow.submitRequestID = requestID
+      $0.routes[screenAt: 1] = .battleFlow(flow)
+      $0.battleFlowInstanceIDs = [flow.instanceID]
+    }
+    #expect(await tracker.waitForStarted())
+
+    await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+      $0.routes = Array($0.routes.dropLast())
+      $0.battleFlowInstanceIDs = []
+    }
+    #expect(await tracker.waitForCancellation())
+    await store.finish(timeout: .seconds(1))
+  }
+}
+
+@MainActor
+private func testBattleFlowSession(room: ClassRoom) -> ClassBattleSession {
+  ClassBattleSession(
+    classID: room.id,
+    myRole: .member,
+    closeAt: .now,
+    closed: false,
+    commentRequired: false,
+    canParticipate: true,
+    participationCompleted: false,
+    battle: ClassBattleDetail(
+      id: 22,
+      title: "배틀",
+      summary: "요약",
+      thumbnailURL: nil,
+      description: "설명",
+      shareURL: nil,
+      userVoteStatus: nil,
+      currentStep: .ttsListening,
+      participantsCount: 1,
+      audioDuration: 30,
+      options: []
+    )
+  )
+}
+
+@MainActor
+struct ChatPlayerLifecycleTests {
+  private enum ClassExit: CaseIterable, Sendable {
+    case back
+    case root
+    case interactivePop
+    case replaceWithAIChat
+    case replaceWithRecommend
+  }
+
+  @Test(arguments: ClassExit.allCases)
+  private func 클래스_채팅_경로가_제거되면_재생시간_구독이_끝난다(exit: ClassExit) async {
+    let room = ClassRoom.mocks[0]
+    let player = ControlledClassAudioPlayer()
+    var chat = ChatCoordinator.State(battleId: 101)
+    chat.routes.push(.chatRoom(.init(battleId: 101)))
+    guard case let .chatRoom(chatRoom)? = chat.routes.last?.screen else {
+      Issue.record("채팅방 경로를 만들지 못했습니다")
+      return
+    }
+    let instanceID = chatRoom.instanceID
+    var state = ClassCoordinator.State()
+    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.chat(chat))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+
+    await store.send(.router(.routeAction(id: 2, action: .chat(.router(.routeAction(
+      id: 1,
+      action: .chatRoom(.async(.subscribePlayer))
+    )))))) {
+      $0.chatRoomInstanceIDs = [instanceID]
+      $0.routes[screenAt: 2] = .chat({
+        var updated = chat
+        updated.observedChatRoomInstanceIDs = [instanceID]
+        return updated
+      }())
+    }
+    #expect(await player.waitForSubscriptions(1))
+    #expect(await player.recordedPlaybackRates() == [1])
+    #expect(await player.yield(1.25, to: 0))
+    await store.receive {
+      if case .router(.routeAction(id: 2, action: .chat(.router(.routeAction(
+        id: 1,
+        action: .chatRoom(.inner(.playerTimeUpdated(1.25)))
+      ))))) = $0 {
+        return true
+      }
+      return false
+    } assert: {
+      guard case var .chat(updatedChat) = $0.routes[2].screen,
+            case var .chatRoom(updatedRoom) = updatedChat.routes[1].screen
+      else { return }
+      updatedRoom.currentTime = 1.25
+      updatedChat.routes[screenAt: 1] = .chatRoom(updatedRoom)
+      $0.routes[screenAt: 2] = .chat(updatedChat)
+    }
+
+    switch exit {
+    case .back:
+      await store.send(.view(.backAction)) {
+        $0.routes.goBack()
+        $0.chatRoomInstanceIDs = []
+      }
+    case .root:
+      await store.send(.view(.backToRootAction)) {
+        $0.routes.goBackToRoot()
+        $0.chatRoomInstanceIDs = []
+      }
+    case .interactivePop:
+      await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
+        $0.routes = Array($0.routes.dropLast())
+        $0.chatRoomInstanceIDs = []
+      }
+    case .replaceWithAIChat, .replaceWithRecommend:
+      var routes = store.state.routes
+      if exit == .replaceWithAIChat {
+        routes[screenAt: 2] = .aiChat(.init(room: room, battleID: 101, selectedOptionID: 1))
+      } else {
+        routes[screenAt: 2] = .recommend(.init(filter: .init(), mode: .aiQuestions))
+      }
+      await store.send(.router(.updateRoutes(routes))) {
+        $0.routes = routes
+        $0.chatRoomInstanceIDs = []
+      }
+    }
+    #expect(await player.waitForTerminations(1))
+    #expect(await player.isTerminated(0))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 클래스_안의_채팅방만_닫아도_구독이_끝난다() async {
+    let player = ControlledClassAudioPlayer()
+    var chat = ChatCoordinator.State(battleId: 104)
+    chat.routes.push(.chatRoom(.init(battleId: 104)))
+    guard case let .chatRoom(room)? = chat.routes.last?.screen else {
+      Issue.record("채팅방 경로를 만들지 못했습니다")
+      return
+    }
+    var state = ClassCoordinator.State()
+    state.routes.push(.chat(chat))
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await store.send(.router(.routeAction(id: 1, action: .chat(.router(.routeAction(
+      id: 1,
+      action: .chatRoom(.async(.subscribePlayer))
+    )))))) {
+      $0.chatRoomInstanceIDs = [room.instanceID]
+      var updated = chat
+      updated.observedChatRoomInstanceIDs = [room.instanceID]
+      $0.routes[screenAt: 1] = .chat(updated)
+    }
+    #expect(await player.waitForSubscriptions(1))
+    await store.send(.router(.routeAction(id: 1, action: .chat(.view(.backAction))))) {
+      $0.chatRoomInstanceIDs = []
+      guard case var .chat(updated) = $0.routes[1].screen else { return }
+      updated.routes.goBack()
+      updated.observedChatRoomInstanceIDs = []
+      $0.routes[screenAt: 1] = .chat(updated)
+    }
+    #expect(await player.waitForTerminations(1))
+    #expect(await player.isTerminated(0))
+    #expect(store.state.routes.count == 2)
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 채팅_코디네이터의_내부_뒤로가기와_스와이프도_구독을_끝낸다() async {
+    for interactive in [false, true] {
+      let player = ControlledClassAudioPlayer()
+      var state = ChatCoordinator.State(battleId: 102)
+      state.routes.push(.chatRoom(.init(battleId: 102)))
+      guard case let .chatRoom(room)? = state.routes.last?.screen else {
+        Issue.record("채팅방 경로를 만들지 못했습니다")
+        return
+      }
+      let store = TestStore(initialState: state) { ChatCoordinator() } withDependencies: {
+        $0.audioPlayer = player
+      }
+      await store.send(.router(.routeAction(id: 1, action: .chatRoom(.async(.subscribePlayer))))) {
+        $0.observedChatRoomInstanceIDs = [room.instanceID]
+      }
+      #expect(await player.waitForSubscriptions(1))
+      if interactive {
+        await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
+          $0.routes = Array($0.routes.dropLast())
+          $0.observedChatRoomInstanceIDs = []
+        }
+      } else {
+        await store.send(.view(.backAction)) {
+          $0.routes.goBack()
+          $0.observedChatRoomInstanceIDs = []
+        }
+      }
+      #expect(await player.waitForTerminations(1))
+      #expect(await player.isTerminated(0))
+      await store.finish(timeout: .seconds(1))
+    }
+  }
+
+  @Test
+  func 새_채팅방_구독은_이전_구독만_대체하고_이전_경로_정리는_새_구독을_보존한다() async {
+    let player = ControlledClassAudioPlayer()
+    var state = ChatCoordinator.State(battleId: 103)
+    state.routes.push(.chatRoom(.init(battleId: 103)))
+    state.routes.push(.chatRoom(.init(battleId: 103)))
+    guard case let .chatRoom(first) = state.routes[1].screen,
+          case let .chatRoom(second) = state.routes[2].screen
+    else {
+      Issue.record("서로 다른 채팅방 인스턴스를 만들지 못했습니다")
+      return
+    }
+    #expect(first.instanceID != second.instanceID)
+    let store = TestStore(initialState: state) { ChatCoordinator() } withDependencies: {
+      $0.audioPlayer = player
+    }
+    await store.send(.router(.routeAction(id: 1, action: .chatRoom(.async(.subscribePlayer))))) {
+      $0.observedChatRoomInstanceIDs = [first.instanceID, second.instanceID]
+    }
+    #expect(await player.waitForSubscriptions(1))
+    await store.send(.router(.routeAction(id: 2, action: .chatRoom(.async(.subscribePlayer)))))
+    #expect(await player.waitForSubscriptions(2))
+    #expect(await player.waitForTerminations(1))
+    #expect(await player.isTerminated(0))
+    var survivingRoutes = store.state.routes
+    survivingRoutes[screenAt: 1] = .preVote(.init(battleId: 103))
+    await store.send(.router(.updateRoutes(survivingRoutes))) {
+      $0.routes = survivingRoutes
+      $0.observedChatRoomInstanceIDs = [second.instanceID]
+    }
+    #expect(await player.yield(2.0, to: 1))
+    await store.receive {
+      if case .router(.routeAction(id: 2, action: .chatRoom(.inner(.playerTimeUpdated(2.0))))) = $0 {
+        return true
+      }
+      return false
+    } assert: {
+      guard case var .chatRoom(room) = $0.routes[2].screen else { return }
+      room.currentTime = 2.0
+      $0.routes[screenAt: 2] = .chatRoom(room)
+    }
+    await store.send(.view(.backToRootAction)) {
+      $0.routes.goBackToRoot()
+      $0.observedChatRoomInstanceIDs = []
+    }
+    #expect(await player.waitForTerminations(2))
+    #expect(await player.isTerminated(1))
+    await store.finish(timeout: .seconds(1))
+  }
+
+  @Test
+  func 클래스_탭_재선택은_클래스_루트_액션으로_전달된다() async {
+    var state = MainTabCoordinator.State(selectedTab: MainTabCoordinator.Tab.classroom.rawValue)
+    state.classState.routes.push(.detail(testDetailState(room: ClassRoom.mocks[0])))
+    let store = TestStore(initialState: state) { MainTabCoordinator() }
+    await store.send(.tabReselected(MainTabCoordinator.Tab.classroom.rawValue))
+    await store.receive {
+      if case .classroom(.view(.backToRootAction)) = $0 {
+        return true
+      }
+      return false
+    } assert: {
+      $0.classState.routes.goBackToRoot()
+    }
+    await store.finish(timeout: .seconds(1))
+  }
+}
+
+/// 코드 확인·등록이 테스트 시계 350ms 뒤에 끝나는 이용권 대역.
+private struct ClockTicketUseCase: ClassTicketInterface {
+  let clock: TestClock<Duration>
+  var preview = ClassTicketPreview(
+    capacity: 30,
+    registerBy: Date(timeIntervalSince1970: 1_800_000_000),
+    usageMonths: 6,
+    registeredByMe: false
+  )
+  var ticket: ClassTicket?
+
+  func previewTicket(code _: String) async throws -> ClassTicketPreview {
+    try await clock.sleep(for: .milliseconds(350))
+    return preview
+  }
+
+  func registerTicket(code _: String) async throws -> ClassTicket {
+    try await clock.sleep(for: .milliseconds(350))
+    guard let ticket else { throw ClassTicketError.invalidCode }
+    return ticket
+  }
+
+  func fetchMyTicket() async throws -> ClassTicket {
+    throw ClassTicketError.notFound
+  }
+}
+
+private struct SlowBattleUseCase: ClassBattleInterface {
+  let tracker: SlowBattleRequestTracker
+  private let fallback = MockClassRepository()
+
+  func fetchBattle(classID: Int) async throws -> ClassBattleSession {
+    try await fallback.fetchBattle(classID: classID)
+  }
+
+  func submitPreVote(
+    classID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitPreVote(classID: classID, optionID: optionID)
+  }
+
+  func submitMidVote(
+    classID: Int,
+    checkpointID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitMidVote(classID: classID, checkpointID: checkpointID, optionID: optionID)
+  }
+
+  func completeTTS(classID _: Int) async throws {
+    await tracker.markStarted()
+    do {
+      try await Task.sleep(for: .seconds(60))
+    } catch {
+      await tracker.markCancelled()
+      throw error
+    }
+  }
+
+  func submitPostVote(
+    classID: Int,
+    optionID: Int
+  ) async throws -> ClassVoteReceipt {
+    try await fallback.submitPostVote(classID: classID, optionID: optionID)
+  }
+
+  func fetchMyVotes(classID: Int) async throws -> ClassVoteHistory {
+    try await fallback.fetchMyVotes(classID: classID)
+  }
+
+  func fetchVoteStats(classID: Int) async throws -> ClassVoteStats {
+    try await fallback.fetchVoteStats(classID: classID)
+  }
+
+  func publishPerspective(
+    classID: Int,
+    content: String
+  ) async throws -> ClassPerspectiveReceipt {
+    try await fallback.publishPerspective(classID: classID, content: content)
+  }
+
+  func fetchPerspectives(
+    classID: Int,
+    cursor: String?,
+    size: Int?,
+    optionID: Int?,
+    sort: String?
+  ) async throws -> ClassPerspectivePage {
+    try await fallback.fetchPerspectives(
+      classID: classID,
+      cursor: cursor,
+      size: size,
+      optionID: optionID,
+      sort: sort
+    )
+  }
+
+  func fetchMyPerspectives(classID: Int) async throws -> [ClassPerspectiveItem] {
+    try await fallback.fetchMyPerspectives(classID: classID)
+  }
+}
+
+private actor SlowBattleRequestTracker {
+  private var started = false
+  private var cancelled = false
+
+  func markStarted() {
+    started = true
+  }
+
+  func markCancelled() {
+    cancelled = true
+  }
+
+  func waitForStarted() async -> Bool {
+    for _ in 0 ..< 100 {
+      if started { return true }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+
+  func waitForCancellation() async -> Bool {
+    for _ in 0 ..< 100 {
+      if cancelled { return true }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+}
+
+private actor ControlledClassAudioPlayer: AudioPlayerInterface {
+  private let delayPlay: Bool
+  private var playContinuation: CheckedContinuation<Void, Never>?
+  private var playStarted = false
+  private var playCount = 0
+  private var continuations: [UUID: AsyncStream<TimeInterval>.Continuation] = [:]
+  private var subscriptionIDs: [UUID] = []
+  private var terminatedIDs: Set<UUID> = []
+
+  init(delayPlay: Bool = false) {
+    self.delayPlay = delayPlay
+  }
+
+  nonisolated func currentTimes() -> AsyncStream<TimeInterval> {
+    AsyncStream { continuation in
+      let id = UUID()
+      continuation.onTermination = { @Sendable _ in Task { await self.terminate(id) } }
+      Task { await self.subscribe(id, continuation: continuation) }
+    }
+  }
+
+  func load(url _: URL) async -> Bool {
+    true
+  }
+
+  func play() async {
+    if delayPlay {
+      playStarted = true
+      await withCheckedContinuation { playContinuation = $0 }
+    }
+    guard !Task.isCancelled else { return }
+    playCount += 1
+  }
+
+  func releasePlay() {
+    playContinuation?.resume()
+    playContinuation = nil
+  }
+
+  func playCalls() -> Int { playCount }
+
+  func waitForPlayStarted() async -> Bool {
+    for _ in 0 ..< 100 {
+      if playStarted { return true }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+  private var pauseCount = 0
+  func pause() async {
+    pauseCount += 1
+  }
+
+  func pauseCalls() -> Int {
+    pauseCount
+  }
+  func setPlaybackRate(_ rate: Float) async {
+    playbackRates.append(rate)
+  }
+  func seek(to _: TimeInterval) async {}
+  func duration() async -> TimeInterval {
+    0
+  }
+
+  private var playbackRates: [Float] = []
+
+  func recordedPlaybackRates() -> [Float] {
+    playbackRates
+  }
+
+  func waitForSubscriptions(_ count: Int) async -> Bool {
+    for _ in 0 ..< 100 {
+      if subscriptionIDs.count >= count {
+        return true
+      }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+
+  func waitForTerminations(_ count: Int) async -> Bool {
+    for _ in 0 ..< 100 {
+      if terminatedIDs.count >= count {
+        return true
+      }
+      try? await Task.sleep(for: .milliseconds(10))
+    }
+    return false
+  }
+
+  func yield(_ time: TimeInterval, to index: Int) -> Bool {
+    guard subscriptionIDs.indices.contains(index),
+          let continuation = continuations[subscriptionIDs[index]]
+    else { return false }
+    if case .enqueued = continuation.yield(time) {
+      return true
+    }
+    return false
+  }
+
+  func isTerminated(_ index: Int) -> Bool {
+    guard subscriptionIDs.indices.contains(index),
+          let continuation = continuations[subscriptionIDs[index]],
+          terminatedIDs.contains(subscriptionIDs[index])
+    else { return false }
+    if case .terminated = continuation.yield(-1) {
+      return true
+    }
+    return false
+  }
+
+  private func subscribe(
+    _ id: UUID,
+    continuation: AsyncStream<TimeInterval>.Continuation
+  ) {
+    subscriptionIDs.append(id)
+    continuations[id] = continuation
+  }
+
+  private func terminate(_ id: UUID) {
+    terminatedIDs.insert(id)
+  }
+}
+
+private struct FixedClassResultUseCase: ClassResultInterface {
+  let result: ClassResult
+
+  func fetchResult(roomID _: Int) async throws -> ClassResult { result }
+
+  func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    throw ClassError.unknown("이 테스트는 개인 결과 조회를 사용하지 않습니다.")
+  }
+
+  func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+    throw ClassError.unknown("이 테스트는 인사이트 조회를 사용하지 않습니다.")
+  }
+
+  func retryInsight(roomID _: Int) async throws {
+    throw ClassError.unknown("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
+  }
+
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    throw ClassError.unknown("이 테스트는 내 활동 조회를 사용하지 않습니다.")
+  }
+}
+
+private actor SuspendedClassUseCase: ClassResultInterface {
+  private var nextRequestID = 0
+  private var requests: [Int: CheckedContinuation<ClassResult, Error>] = [:]
+  private var activityRequests: [Int: CheckedContinuation<ClassMyActivity, Error>] = [:]
+  private var insightRequests: [Int: CheckedContinuation<ClassAIInsight, Error>] = [:]
+  private var startedCount = 0
+  private var startWaiters: [(Int, CheckedContinuation<Void, Never>)] = []
+  private(set) var cancelledRequestIDs: [Int] = []
+
+  func waitForStarts(_ count: Int) async {
+    guard startedCount < count else { return }
+    await withCheckedContinuation { continuation in
+      startWaiters.append((count, continuation))
+    }
+  }
+
+  func completeReport(requestID: Int) {
+    requests.removeValue(forKey: requestID)?.resume(returning: Self.fixture)
+  }
+
+  private func nextID() -> Int {
+    nextRequestID += 1
+    return nextRequestID
+  }
+
+  private func didStart() {
+    startedCount += 1
+    let ready = startWaiters.filter { startedCount >= $0.0 }
+    startWaiters.removeAll { startedCount >= $0.0 }
+    for (_, continuation) in ready {
+      continuation.resume()
+    }
+  }
+
+  private func cancelInsight(_ id: Int) {
+    guard let continuation = insightRequests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
+  }
+
+  private func cancelActivity(_ id: Int) {
+    guard let continuation = activityRequests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
+  }
+
+  private func cancelReport(_ id: Int) {
+    guard let continuation = requests.removeValue(forKey: id) else { return }
+    cancelledRequestIDs.append(id)
+    continuation.resume(throwing: CancellationError())
+  }
+
+  func fetchResult(roomID _: Int) async throws -> ClassResult {
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        requests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelReport(id) }
+    }
+  }
+
+  func fetchPersonalResult(roomID _: Int) async throws -> ClassAIPersonalFeedback {
+    throw ClassError.network("이 테스트는 개인 결과 조회를 사용하지 않습니다.")
+  }
+
+  func fetchInsight(roomID _: Int) async throws -> ClassAIInsight {
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        insightRequests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelInsight(id) }
+    }
+  }
+
+  func retryInsight(roomID _: Int) async throws {
+    throw ClassError.network("이 테스트는 인사이트 재시도를 사용하지 않습니다.")
+  }
+
+  func fetchMyActivity(
+    roomID _: Int,
+    cursor _: String?
+  ) async throws -> ClassMyActivity {
+    let id = nextID()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        activityRequests[id] = continuation
+        didStart()
+      }
+    } onCancel: {
+      Task { await self.cancelActivity(id) }
+    }
+  }
+
+  private static var fixture: ClassResult {
+    ClassResult(
+      classID: ClassRoom.mockClosedSociety.id,
+      closed: true,
+      closeAt: ClassRoom.mockClosedSociety.deadline,
+      stats: .init(
+        activeMemberCount: 1,
+        completedCount: 1,
+        participationRate: 100,
+        commentWriterCount: 1,
+        commentRate: 100,
+        postVoteCount: 1,
+        options: []
+      ),
+      myReportState: nil,
+      insightState: nil
+    )
+  }
+}

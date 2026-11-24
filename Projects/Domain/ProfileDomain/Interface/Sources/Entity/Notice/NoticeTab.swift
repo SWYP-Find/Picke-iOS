@@ -1,6 +1,8 @@
 //
 //  NoticeTab.swift
-//  Entity
+//  ProfileDomainInterface
+//
+//  Created by Picke on 10/11/26.
 //
 
 import Foundation

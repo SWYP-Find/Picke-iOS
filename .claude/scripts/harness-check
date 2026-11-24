@@ -1,0 +1,208 @@
+#!/usr/bin/env python3
+"""하네스 자체 검사. 훅 · 스크립트를 바꾸면 verify가 이 단계를 돌린다. (docs/agent/harness.md)
+
+- 훅 · 스크립트 파이썬 문법, settings.json 형식
+- check-git-rules.sh가 막아야 할 것은 막고(exit 2) 통과시킬 것은 통과시키는지
+"""
+import glob
+import json
+import os
+import subprocess
+import sys
+
+HOOK = os.path.join(".claude", "hooks", "check-git-rules.sh")
+
+MESSAGES = [  # (제목, 통과해야 하는가)
+    ("하네스 구성 추가", True),
+    ("[FEAT]: 로그인 화면 추가", True),
+    ("feat: 로그인 화면 추가 #12", True),
+    ("add harness", False),
+    ("설명을 마침표로 끝낸다.", False),
+    ("가" * 51, False),
+]
+BRANCHES = [
+    ("feature/agent-harness-20261120", True),
+    ("fix/#81-xctest-dynamic-overlay-range", True),
+    ("chore/sentry-9.34.0-cert-revoked-20261116", True),
+    ("develop", False),
+    ("release", False),
+    ("main", False),
+    ("release/1.1.5", True),
+    ("wip/test", False),
+]
+COMMANDS = [  # (Bash 명령, 통과해야 하는가) — 보호 브랜치가 아닌 임시 저장소에서 검사한다
+    ("echo hi", True),
+    ("git status", True),
+    ("git config --get core.hooksPath", True),
+    ('git commit --no-verify -m "하네스 추가"', False),
+    ('git commit -nm "하네스 추가"', False),
+    ("git config core.hooksPath /tmp/x", False),
+    ("git -c core.hooksPath=/dev/null commit -m '하네스 추가'", False),
+    ("git push origin develop", False),
+    ("git push origin HEAD:release", False),
+    ("git push origin --delete develop", False),
+    ("git push origin HEAD:refs/heads/develop", False),
+    ("git push origin +HEAD:release", False),
+    ("git push origin :refs/heads/develop", False),
+    ("git push origin refs/heads/main", False),
+    ("git push -u origin feature/harness-check", True),
+    ('git commit -m "하네스 추가\n\nCo-Authored-By: Claude <noreply@anthropic.com>"', False),
+    ('git commit -m "add harness"', False),
+    ("git -c alias.c='commit --no-verify' c -m '하네스 추가'", False),
+    ("git config alias.c 'commit -n'", False),
+    ("git config --get alias.c", True),
+    ("git -c user.name=t -c alias.c='commit -n' c -m '하네스 추가'", False),
+    ("cd /tmp && git config --global alias.c 'commit -n'", False),
+    ("git config --file .git/config alias.c 'commit --no-verify'", False),
+    ("git config -f .git/config alias.c 'commit -n'", False),
+    ("git config set alias.c 'commit -n'", False),
+    ("git config --file .git/config --get alias.c", True),
+    ("git -c ALIAS.c='commit -n' c -m '하네스 추가'", False),          # 설정 키는 대소문자를 가리지 않는다
+    ("git" + " -C x" * 40 + " status", True),                      # 정규식 되짚기 폭증 없이 끝나야 한다
+    ("git -C" + " -C" * 40 + " commit -m '하네스 추가'", True),
+    ("git commit -m 'git config alias.foo 설정 설명 추가'", True),   # 제목 속 글자는 별칭 정의가 아니다
+    ('git commit -m "$MSG"', False),
+    ('git commit -m "$(cat msg.txt)"', False),
+    ("git commit -m '가격 $ 표시 수정'", True),          # 작은따옴표 안 $는 글자 그대로
+    ("git commit -m '$HOME 경로 표시 수정'", True),
+    ('git commit -m "가격 \\$5 표시 수정"', True),
+    ("git commit -m \"$(cat <<'EOF'\n하네스 추가\nEOF\n)\"", True),
+]
+INSTALLS = [  # (기존 pre-commit 내용 · None이면 없음, 게이트가 있다고 봐야 하는가)
+    (None, True),
+    ("#!/bin/sh\nexit 0\n", False),
+    ("#!/bin/sh\n# picke-harness pre-commit\nexit 0\n", False),   # 표식만 있고 게이트를 부르지 않음
+    ("#!/bin/sh\n# picke-harness pre-commit\n# .githooks/pre-commit\nexit 0\n", False),   # 주석 속 경로
+    ("#!/bin/sh\n# picke-harness pre-commit\nprintf '%s' .githooks/pre-commit\nexit 0\n", False),   # 경로를 적기만 함
+    ("#!/bin/sh\n# picke-harness pre-commit\n\"$(git rev-parse --show-toplevel)/.githooks/pre-commit\" \"$@\"\nexit 0\n", False),   # 실패를 버림
+    ("#!/bin/sh\nother-check\n# picke-harness pre-commit\n\"$(git rev-parse --show-toplevel)/.githooks/pre-commit\" \"$@\" || exit 1\n", True),
+]
+
+
+def run_hook(args=None, stdin=""):
+    return subprocess.run(["bash", HOOK, *(args or [])], input=stdin, capture_output=True, text=True).returncode
+
+
+def scratch_repo():
+    """feature 브랜치 · 깨끗한 작업 트리의 임시 저장소. 커밋 검사가 검증 게이트에 걸리지 않게 한다."""
+    import tempfile
+    path = tempfile.mkdtemp(prefix="harness-check-")
+    for cmd in (["init", "-q", "-b", "feature/harness-check"],   # HEAD가 없으면 게이트가 판정하지 못해 막는다
+                ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "기준"]):
+        subprocess.run(["git", "-C", path, *cmd], check=True, capture_output=True)
+    return path
+
+
+def check_install():
+    """심 설치: 빈 hooks 폴더면 설치, 게이트를 부르지 않는 pre-commit이 있으면 덮어쓰지 않고 이유를 돌려줘야 한다(fail closed)."""
+    sys.path.insert(0, os.path.join(".claude", "hooks"))
+    import harness_state as hs
+    errors = []
+    for i, (existing, ok) in enumerate(INSTALLS):
+        repo = scratch_repo()
+        try:
+            hook = os.path.join(repo, ".git", "hooks", "pre-commit")
+            if existing is not None:
+                with open(hook, "w", encoding="utf-8") as f:
+                    f.write(existing)
+            warning = hs.install_git_hooks(repo)
+            with open(hook, encoding="utf-8") as f:
+                content = f.read()
+            if ok and (warning or not hs.calls_gate(content)):
+                errors.append(f"설치 {i + 1}: 게이트를 부르는 훅이어야 함: {warning}")
+            if not ok and (not warning or content != existing):
+                errors.append(f"설치 {i + 1}: 기존 훅을 그대로 두고 이유를 돌려줘야 함")
+        finally:
+            subprocess.run(["rm", "-rf", repo])
+    return errors
+
+
+def check_gate():
+    """verify 통과 뒤 스테이징한 변경(수정 · 삭제 · 부분 스테이징)은 커밋 게이트가 막아야 한다."""
+    sys.path.insert(0, os.path.join(".claude", "hooks"))
+    import harness_state as hs
+    errors = []
+    repo = scratch_repo()
+    git = lambda *a: subprocess.run(["git", "-C", repo, *a], check=True, capture_output=True, text=True).stdout
+    try:
+        os.makedirs(os.path.join(repo, "Projects"))
+        for name in ("A.swift", "B.swift"):
+            with open(os.path.join(repo, "Projects", name), "w", encoding="utf-8") as f:
+                f.write("let a = 1\n")
+        git("add", "-A")
+        git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "기준")
+        record = lambda: hs.save(repo, {"passed": True, "fingerprint": hs.fingerprint(repo), "code": hs.code_entries(repo)})
+        cases = []
+        record()
+        git("rm", "-q", os.path.join("Projects", "B.swift"))           # 통과 뒤 삭제를 스테이징
+        cases.append(("통과 뒤 스테이징한 삭제", hs.staged_unverified(repo), True))
+        record()                                                          # 삭제까지 검증한 상태
+        cases.append(("검증한 삭제", hs.staged_unverified(repo), False))
+        with open(os.path.join(repo, "Projects", "A.swift"), "w", encoding="utf-8") as f:
+            f.write("let a = 2\n")
+        git("add", "Projects/A.swift")
+        record()
+        with open(os.path.join(repo, "Projects", "A.swift"), "w", encoding="utf-8") as f:
+            f.write("let a = 3\n")                                       # 작업 사본만 바꾸고 다시 검증
+        record()
+        cases.append(("스테이징 뒤 작업 사본만 검증", hs.staged_unverified(repo), True))
+        korean = os.path.join("Projects", "픽케 로고.svg")                # 비ASCII 경로도 코드 변경으로 잡아야 한다
+        with open(os.path.join(repo, korean), "w", encoding="utf-8") as f:
+            f.write("<svg/>\n")
+        cases.append(("한글 경로 변경 감지", [p for p in hs.changed_code_files(repo) if p == korean] or [], True))
+        os.makedirs(os.path.join(repo, "docs"))
+        git("mv", os.path.join("Projects", "A.swift"), os.path.join("docs", "A.swift"))  # 코드 밖으로 옮긴 원본도 잡아야 한다
+        moved = os.path.join("Projects", "A.swift")
+        cases.append(("코드 밖으로 이름 변경", [p for p in hs.changed_code_files(repo) if p == moved], True))
+        for name, flagged, should_block in cases:
+            if bool(flagged) != should_block:
+                errors.append(f"커밋 게이트 '{name}': {'막아야' if should_block else '통과해야'} 함 ({flagged})")
+    finally:
+        subprocess.run(["rm", "-rf", repo])
+    return errors
+
+
+def main():
+    errors = []
+    for path in sorted(glob.glob(".claude/hooks/*.py") + [p for p in glob.glob(".claude/scripts/*") if os.path.isfile(p)]):
+        try:
+            with open(path, encoding="utf-8") as f:
+                source = f.read()
+            if path.endswith(".py") or source.startswith("#!/usr/bin/env python3"):
+                compile(source, path, "exec")
+        except (OSError, SyntaxError, ValueError) as e:
+            errors.append(f"문법 오류: {path}: {e}")
+    try:
+        with open(os.path.join(".claude", "settings.json"), encoding="utf-8") as f:
+            json.load(f)
+    except (OSError, ValueError) as e:
+        errors.append(f"settings.json: {e}")
+
+    for subject, ok in MESSAGES:
+        if (run_hook(["--check-message", subject]) == 0) != ok:
+            errors.append(f"커밋 제목 '{subject[:20]}': {'통과' if ok else '차단'}해야 함")
+    for branch, ok in BRANCHES:
+        if (run_hook(["--check-branch", branch]) == 0) != ok:
+            errors.append(f"브랜치 '{branch}': {'통과' if ok else '차단'}해야 함")
+    repo = scratch_repo()
+    try:
+        for command, ok in COMMANDS:
+            payload = json.dumps({"tool_input": {"command": command}, "cwd": repo})
+            code = run_hook(stdin=payload)
+            if (code == 0) != ok:
+                errors.append(f"명령 '{command[:40]}': {'통과' if ok else '차단(exit 2)'}해야 함, 실제 exit {code}")
+    finally:
+        subprocess.run(["rm", "-rf", repo])
+    errors += check_install()
+    errors += check_gate()
+
+    if errors:
+        print("하네스 검사 실패:")
+        print("\n".join("  " + e for e in errors))
+        return 1
+    print(f"하네스 검사 통과 (제목 {len(MESSAGES)} · 브랜치 {len(BRANCHES)} · 명령 {len(COMMANDS)} · 설치 {len(INSTALLS)} · 게이트 5건)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

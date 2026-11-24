@@ -1,8 +1,10 @@
 //
 //  CustomConfirmationPopupView+Report.swift
-//  DesignSystem
+//  PickeSharedUI
 //
+//  Created by Picke on 10/11/26.
 //  신고 팝업 전용 컨텐츠
+//
 
 import SwiftUI
 

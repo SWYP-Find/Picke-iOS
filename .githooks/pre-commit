@@ -1,0 +1,14 @@
+#!/bin/sh
+# 커밋 직전 index를 verify 통과 기록과 대조한다. (docs/agent/harness.md)
+# HEAD에 커밋된 게이트로 검사한다. 이번 커밋이 게이트를 바꿔도 그 커밋은 이전 게이트가 본다.
+root=$(git rev-parse --show-toplevel) || exit 1
+cd "$root" || exit 1
+if git cat-file -e HEAD:.claude/hooks/pre_commit_gate.py 2>/dev/null; then
+  tmp=$(mktemp -d) || exit 1
+  trap 'rm -rf "$tmp"' EXIT
+  git show HEAD:.claude/hooks/pre_commit_gate.py > "$tmp/pre_commit_gate.py" &&
+    git show HEAD:.claude/hooks/harness_state.py > "$tmp/harness_state.py" || exit 1
+  python3 -I -S "$tmp/pre_commit_gate.py"
+else
+  exec python3 -I -S "$root/.claude/hooks/pre_commit_gate.py"   # 하네스를 처음 넣는 커밋
+fi

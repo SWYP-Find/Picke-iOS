@@ -1,6 +1,8 @@
 //
 //  AudioPlayerRepositoryImpl.swift
-//  Repository
+//  AudioPlayerService
+//
+//  Created by Picke on 10/11/26.
 //
 
 import AVFoundation
@@ -25,6 +27,10 @@ public final class AudioPlayerRepositoryImpl: AudioPlayerInterface, @unchecked S
 
   public func pause() async {
     await service.pause()
+  }
+
+  public func setPlaybackRate(_ rate: Float) async {
+    await service.setPlaybackRate(rate)
   }
 
   public func seek(to time: TimeInterval) async {
@@ -52,16 +58,22 @@ public final class AudioPlayerRepositoryImpl: AudioPlayerInterface, @unchecked S
 final class AudioPlayerService {
   static let shared = AudioPlayerService()
 
-  private let player = AVPlayer()
+  private let player: AVPlayer
   private var timeContinuations: [UUID: AsyncStream<TimeInterval>.Continuation] = [:]
   private var timeObserverToken: Any?
 
-  private init() {
+  init(
+    player: AVPlayer = AVPlayer(),
+    configuresSession: Bool = true
+  ) {
+    self.player = player
     // setActive 는 메인 스레드에서 호출하면 UI 가 멈출 수 있어(Hang Risk) 백그라운드에서 처리한다.
-    Task.detached(priority: .userInitiated) {
-      let session = AVAudioSession.sharedInstance()
-      try? session.setCategory(.playback, mode: .default)
-      try? session.setActive(true)
+    if configuresSession {
+      Task.detached(priority: .userInitiated) {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playback, mode: .default)
+        try? session.setActive(true)
+      }
     }
     installPeriodicObserver()
   }
@@ -91,8 +103,20 @@ final class AudioPlayerService {
     }
   }
 
-  func play() { player.play() }
+  func play() {
+    guard !Task.isCancelled else { return }
+    player.play()
+  }
   func pause() { player.pause() }
+
+  func setPlaybackRate(_ rate: Float) {
+    // Android `AudioPlayerDefaults.PLAYBACK_SPEEDS`(1·1.5·2·3)와 클래스 배틀 메뉴의 1.25.
+    guard [1, 1.25, 1.5, 2, 3].contains(rate) else { return }
+    player.defaultRate = rate
+    if player.rate != 0 {
+      player.rate = rate
+    }
+  }
 
   func seek(to time: TimeInterval) async {
     await player.seek(

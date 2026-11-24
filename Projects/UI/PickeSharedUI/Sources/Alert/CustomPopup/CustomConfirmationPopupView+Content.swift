@@ -1,12 +1,13 @@
 //
 //  CustomConfirmationPopupView+Content.swift
-//  DesignSystem
+//  PickeSharedUI
 //
+//  Created by Picke on 10/11/26.
 //  팝업 종류별 컨텐츠 뷰 구성
-
-import SwiftUI
+//
 
 import PickeDesignKit
+import SwiftUI
 
 extension CustomConfirmationPopup {
   func popupMaxWidth(for containerWidth: CGFloat) -> CGFloat {
@@ -17,7 +18,8 @@ extension CustomConfirmationPopup {
     switch style {
     case .confirmation:
       return 20
-    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic:
+    case .finalVote, .report, .alreadyWatched, .deleteConfirm, .logout, .withdraw, .suggestTopic, .notice, .noticeReversed,
+         .singleAction:
       return 0
     }
   }
@@ -39,6 +41,12 @@ extension CustomConfirmationPopup {
       logoutWithdrawContent
     case .suggestTopic:
       suggestTopicContent
+    case .notice:
+      noticeContent
+    case .noticeReversed:
+      noticeReversedContent
+    case .singleAction:
+      singleActionContent()
     }
   }
 
@@ -55,6 +63,72 @@ extension CustomConfirmationPopup {
         )
       }
     }
+  }
+
+  /// 안내 — 본문 + 취소(왼쪽 밝은)·확인(오른쪽 primary). 취소 문구가 비면 확인 버튼 1개.
+  @ViewBuilder
+  var noticeContent: some View {
+    pickeAlertCard {
+      VStack(spacing: 16) {
+        pickeBodyText(title)
+
+        if cancelTitle.isEmpty {
+          pickeSingleButtonRow(title: confirmTitle, action: onConfirm)
+        } else {
+          pickeTwoButtonRow(
+            leftTitle: cancelTitle, leftAction: onCancel,
+            rightTitle: confirmTitle, rightAction: onConfirm
+          )
+        }
+      }
+    }
+  }
+
+  /// Android `PickeConfirmDialog` — 확인(왼쪽 테두리)·취소(오른쪽 채움). 배경 탭(취소)이 "안내만 닫기"가 되게 한다.
+  var noticeReversedContent: some View {
+    pickeConfirmDialog(
+      leftTitle: confirmTitle,
+      leftAction: onConfirm,
+      rightTitle: cancelTitle,
+      rightAction: onCancel
+    )
+  }
+
+  /// Android `PickeSingleActionDialog` — 베이지 카드·primary 테두리, 16pt 본문과 가득 찬 확인 버튼.
+  @ViewBuilder
+  func singleActionContent() -> some View {
+    VStack(spacing: 0) {
+      Text(title)
+        .pretendardFont(.headingMedium, lineSpacingMultiple: 24 / 16)
+        .foregroundStyle(.primary500)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 32)
+
+      Rectangle()
+        .fill(.primary500)
+        .frame(height: 1)
+
+      Button(action: onConfirm) {
+        Text(confirmTitle)
+          .pretendardFont(.headingSmall)
+          .foregroundStyle(.textInverse)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, 16)
+          .background(.primary500)
+          .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+    }
+    .frame(maxWidth: 313)
+    .background(.borderBeigeDisabled)
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
+    .overlay {
+      RoundedRectangle(cornerRadius: .radiusDefault)
+        .strokeBorder(.primary500, lineWidth: 1)
+    }
+    .onTapGesture {}
   }
 
   /// 주제 제안 — 타이틀 + 본문 + 뒤로가기(왼쪽 밝은) / 제안하기(오른쪽 primary).
@@ -80,52 +154,14 @@ extension CustomConfirmationPopup {
     }
   }
 
+  /// Android 관점 삭제 `PickeConfirmDialog` — 왼쪽 "삭제하기"(확정), 오른쪽 채운 "뒤로가기"(취소).
   var deleteConfirmContent: some View {
-    VStack(spacing: 16) {
-      Text(title)
-        .pretendardFont(.labelMedium)
-        .foregroundStyle(.neutral900)
-        .lineSpacing(14 * 0.4)
-        .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-
-      HStack(spacing: 0) {
-        // 삭제하기 (왼쪽·밝은 버튼) = 확정(삭제)
-        Button(action: onConfirm) {
-          Text(confirmTitle)
-            .pretendardFont(.labelMedium)
-            .foregroundStyle(.primary500)
-            .lineSpacing(14 * 0.4)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(.secondary50, in: Rectangle())
-        }
-        .buttonStyle(.plain)
-
-        // 뒤로가기 (오른쪽·어두운 버튼) = 취소
-        Button(action: onCancel) {
-          Text(cancelTitle)
-            .pretendardFont(.labelMedium)
-            .foregroundStyle(.secondary50)
-            .lineSpacing(14 * 0.4)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(.primary500, in: Rectangle())
-        }
-        .buttonStyle(.plain)
-      }
-    }
-    .padding(.top, 20)
-    .frame(maxWidth: 313)
-    .pickeCard(
-      .beige500,
-      border: .primary500,
-      lineWidth: 1.5
+    pickeConfirmDialog(
+      leftTitle: confirmTitle,
+      leftAction: onConfirm,
+      rightTitle: cancelTitle,
+      rightAction: onCancel
     )
-    .opacity(0.9)
-    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
-    .onTapGesture {}
   }
 
   @ViewBuilder
@@ -232,48 +268,87 @@ extension CustomConfirmationPopup {
     .onTapGesture {}
   }
 
+  /// Android 최종투표 `PickeConfirmDialog` — 왼쪽 "다시 들어볼래요"(취소), 오른쪽 채운 "최종투표하기"(확정).
   var finalVoteContent: some View {
-    VStack(spacing: 16) {
+    pickeConfirmDialog(
+      leftTitle: cancelTitle,
+      leftAction: onCancel,
+      rightTitle: confirmTitle,
+      rightAction: onConfirm
+    )
+  }
+
+  /// Android `PickeConfirmDialog` — 면 `borderBeigeDisabled`, 테두리 1 `primary500`, radius 2,
+  /// 본문 안쪽 24·14 SemiBold `primary500`·줄높이 24, 가로·세로 구분선 `primary500`,
+  /// 왼쪽 투명 면 `primary500` 글자 / 오른쪽 `primary500` 면 `textInverse` 글자, 버튼 세로 16.
+  func pickeConfirmDialog(
+    leftTitle: String,
+    leftAction: @escaping () -> Void,
+    rightTitle: String,
+    rightAction: @escaping () -> Void
+  ) -> some View {
+    VStack(spacing: 0) {
       Text(title)
-        .pretendardFont(.labelMedium)
-        .foregroundStyle(.neutral900)
-        .lineSpacing(14 * 0.4)
+        .pretendardFont(.headingSmall, lineSpacingMultiple: 24 / 14)
+        .foregroundStyle(.primary500)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
+        .padding(24)
+
+      Rectangle()
+        .fill(.primary500)
+        .frame(height: 1)
 
       HStack(spacing: 0) {
-        Button(action: onCancel) {
-          Text(cancelTitle)
-            .pretendardFont(.labelMedium)
+        Button(action: leftAction) {
+          Text(leftTitle)
+            .pretendardFont(.headingSmall)
             .foregroundStyle(.primary500)
-            .lineSpacing(14 * 0.4)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(.secondary50, in: Rectangle())
+            .padding(.vertical, 16)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
 
-        Button(action: onConfirm) {
-          Text(confirmTitle)
-            .pretendardFont(.labelMedium)
-            .foregroundStyle(.secondary50)
-            .lineSpacing(14 * 0.4)
+        Rectangle()
+          .fill(.primary500)
+          .frame(width: 1)
+
+        Button(action: rightAction) {
+          Text(rightTitle)
+            .pretendardFont(.headingSmall)
+            .foregroundStyle(.textInverse)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(.primary500, in: Rectangle())
+            .padding(.vertical, 16)
+            .background(.primary500)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
       }
+      .fixedSize(horizontal: false, vertical: true)
     }
-    .padding(.top, 20)
     .frame(maxWidth: 313)
-    .pickeCard(
-      .beige500,
-      border: .primary500,
-      lineWidth: 1.5
-    )
-    .opacity(0.9)
+    .background(.borderBeigeDisabled)
+    .clipShape(RoundedRectangle(cornerRadius: .radiusDefault))
+    .overlay {
+      RoundedRectangle(cornerRadius: .radiusDefault)
+        .strokeBorder(.primary500, lineWidth: 1)
+    }
     .onTapGesture {}
   }
 }
+
+#if DEBUG
+  #Preview("최종 투표 확인") {
+    CustomConfirmationPopup(
+      title: "최종투표하고 투표 결과를 확인하시겠습니까?",
+      message: "",
+      confirmTitle: "최종투표하기",
+      cancelTitle: "다시 들어볼래요",
+      isDestructive: false,
+      style: .finalVote,
+      onConfirm: {},
+      onCancel: {}
+    )
+  }
+#endif

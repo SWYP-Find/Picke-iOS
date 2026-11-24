@@ -1,8 +1,8 @@
 //
 //  ImageAsset.swift
-//  DesignSystem
+//  PickeDesignKit
 //
-//  Created by 서원지 on 7/13/24.
+//  Created by Picke on 7/13/24.
 //
 
 import Foundation
@@ -35,6 +35,8 @@ public enum ImageAsset: String {
   case tabExploreActive
   case tabQuickBattle
   case tabQuickBattleActive
+  case tabClass
+  case tabClassActive
   case tabMyPage
   case tabMyPageActive
 
@@ -42,6 +44,32 @@ public enum ImageAsset: String {
 
   case appLogo
   case bell
+  case alarm
+  case clock
+  case eye
+  case replyCorner
+
+  // MARK: - 공용 아이콘
+
+  case close
+  case arrowRight
+  case arrowLeft
+  case share
+  case think
+  case more
+  case edit
+  case trash
+  case arrowUpRight
+  case logOut
+  case megaphone
+  case report
+  case warning
+  case send
+  case play
+  case playStop
+  case playBack
+  case playForward
+  case replay
 
   // MARK: - 철학자 아바타
 
@@ -59,4 +87,26 @@ public enum ImageAsset: String {
   // MARK: - 댓글(관점)
 
   case heartPlus
+  case commentMessage
+
+  // MARK: - 클래스
+
+  case classAIVoteArtwork
+  case classConditionReset
+  case classIntroBackground
+  case classClosedBattle
+  case classJoin
+  case classMine
+  case classMemberLion
+  case classMemberKoala
+  case classMemberBear
+  case classMemberPenguin
+  case classMemberDog
+  case classMemberAlpaca
+  case classMemberSloth
+  case classMemberFox
+  case classMemberHamster
+  case classMemberRaccoon
+  case classPickeBattleGuide
+  case classCustomBattleGuide
 }

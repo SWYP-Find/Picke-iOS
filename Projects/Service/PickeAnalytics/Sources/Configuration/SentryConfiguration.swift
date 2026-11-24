@@ -2,11 +2,13 @@
 //  SentryConfiguration.swift
 //  PickeAnalytics
 //
+//  Created by Picke on 10/11/26.
+//
 
 import Foundation
 
 import PickeCoreLogger
-@preconcurrency import Sentry
+@preconcurrency import SentrySwift
 
 /// Sentry 기동과 런치 메트릭 전송.
 enum SentryConfiguration {

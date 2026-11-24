@@ -1,6 +1,8 @@
 //
-//  String+Sentence.swift
+//  String+.swift
 //  PickeCoreUtility
+//
+//  Created by Picke on 10/11/26.
 //
 
 import Foundation
@@ -24,5 +26,18 @@ public extension String {
       result.append(current)
     }
     return result.isEmpty ? [self] : result
+  }
+
+  /// 마지막 글자의 받침 유무로 조사를 고른다 (예: `"플라톤".josa("과", "와")` → `"과"`).
+  /// 마지막 글자가 한글이 아니면 `"과(와)"` 처럼 함께 표기한다.
+  func josa(
+    _ withBatchim: String,
+    _ withoutBatchim: String
+  ) -> String {
+    let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let scalar = trimmed.unicodeScalars.last, (0xAC00 ... 0xD7A3).contains(scalar.value) else {
+      return "\(withBatchim)(\(withoutBatchim))"
+    }
+    return (scalar.value - 0xAC00) % 28 == 0 ? withoutBatchim : withBatchim
   }
 }

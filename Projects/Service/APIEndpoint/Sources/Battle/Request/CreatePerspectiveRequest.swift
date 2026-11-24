@@ -1,8 +1,8 @@
 //
 //  CreatePerspectiveRequest.swift
-//  Service
+//  APIEndpoint
 //
-//  Created by Wonji Suh  on 5/24/26.
+//  Created by Picke on 5/24/26.
 //
 
 import Foundation

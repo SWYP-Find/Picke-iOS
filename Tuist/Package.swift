@@ -1,4 +1,11 @@
 // swift-tools-version: 6.2
+//
+//  Package.swift
+//  ProjectDescription
+//
+//  Created by Picke on 10/11/26.
+//
+
 @preconcurrency import PackageDescription
 
 #if TUIST
@@ -31,8 +38,6 @@
       "Mixpanel": .framework,
       "MixpanelSessionReplay": .framework,
       "GoogleMobileAds": .framework,
-      "Sentry": .framework,
-      "SentrySwiftUI": .framework,
 
       // Sharing·SQLiteData 는 여러 동적 모듈이 함께 쓰므로 단일 런타임으로 공유한다.
       // 버전 마커(Sharing1/2)는 정적으로 링크해 앱이 Sharing1.framework 를 찾지 않게 한다.

@@ -1,8 +1,8 @@
 //
 //  WorkSpace.swift
-//  Manifests
+//  ProjectDescription
 //
-//  Created by 서원지 on 6/7/24.
+//  Created by Picke on 6/7/24.
 //
 
 import ProjectDescription

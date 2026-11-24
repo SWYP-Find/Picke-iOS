@@ -1,8 +1,8 @@
 //
 //  UINavigationController+gesture.swift
-//  DesignSystem
+//  PickeCoreUI
 //
-//  Created by 서원지 on 7/20/24.
+//  Created by Picke on 7/20/24.
 //
 
 import UIKit

@@ -1,8 +1,8 @@
 //
 //  ProjectConfig.swift
-//  MultiModuleTemplate
+//  ProjectTemplatePlugin
 //
-//  Created by 서원지 on 2024/10/24.
+//  Created by Picke on 2024/10/24.
 //
 
 import Foundation

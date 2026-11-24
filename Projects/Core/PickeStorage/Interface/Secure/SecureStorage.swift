@@ -2,6 +2,8 @@
 //  SecureStorage.swift
 //  PickeStorageInterface
 //
+//  Created by Picke on 10/11/26.
+//
 
 /// 민감한 문자열을 보관하는 저장소 경계.
 public protocol SecureStorage: Sendable {

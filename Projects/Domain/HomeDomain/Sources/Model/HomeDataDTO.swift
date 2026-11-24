@@ -2,7 +2,7 @@
 //  HomeDataDTO.swift
 //  HomeDomain
 //
-//  Created by Wonji Suh on 5/16/26.
+//  Created by Picke on 5/16/26.
 //
 
 import PickeNetworkInterface
@@ -18,6 +18,22 @@ public struct HomeDataDTO: Decodable {
   public let todayQuizzes: [TodayQuizDTO]
   public let todayVotes: [TodayVoteDTO]
   public let newBattles: [NewBattleDTO]
+}
+
+/// `GET /api/v1/perspectives/weekly-best` 응답 — 홈 Best 댓글 (Android `WeeklyBestPerspectiveResponseDto`).
+public struct WeeklyBestPerspectiveDataDTO: Decodable {
+  public let weekStart: String
+  public let weekEnd: String
+  public let items: [WeeklyBestPerspectiveItemDTO]
+}
+
+public struct WeeklyBestPerspectiveItemDTO: Decodable {
+  public let perspectiveId: Int
+  public let battleId: Int
+  public let battleTitle: String
+  public let content: String
+  public let likeCount: Int
+  public let participated: Bool
 }
 
 public struct TagDTO: Decodable, Equatable {

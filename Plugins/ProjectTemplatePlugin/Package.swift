@@ -1,4 +1,11 @@
 // swift-tools-version: 6.0
+//
+//  Package.swift
+//  ProjectTemplatePlugin
+//
+//  Created by Picke on 10/11/26.
+//
+
 
 import PackageDescription
 

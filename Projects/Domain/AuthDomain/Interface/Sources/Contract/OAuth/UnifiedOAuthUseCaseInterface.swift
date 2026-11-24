@@ -1,6 +1,8 @@
 //
 //  UnifiedOAuthUseCaseInterface.swift
-//  DomainInterface
+//  AuthDomainInterface
+//
+//  Created by Picke on 10/11/26.
 //
 
 @preconcurrency import AuthenticationServices

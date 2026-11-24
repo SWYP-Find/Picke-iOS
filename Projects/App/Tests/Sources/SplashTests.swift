@@ -1,8 +1,8 @@
 //
 //  SplashTests.swift
-//  Feature.SplashTests
+//  PickeTests
 //
-//  Created by Roy on 2026-05-02.
+//  Created by Picke on 2026-05-02.
 //
 
 import ComposableArchitecture

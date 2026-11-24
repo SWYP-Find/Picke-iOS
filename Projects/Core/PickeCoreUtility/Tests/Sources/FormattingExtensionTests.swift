@@ -2,11 +2,12 @@
 //  FormattingExtensionTests.swift
 //  PickeCoreUtilityTests
 //
+//  Created by Picke on 10/11/26.
+//
 
 import Foundation
-import Testing
-
 @testable import PickeCoreUtility
+import Testing
 
 struct IntFormattingTests {
   @Test
@@ -37,5 +38,26 @@ struct StringSentenceTests {
   @Test
   func 문장부호가_없으면_원본_하나를_돌려준다() {
     #expect("문장부호 없음".splitIntoSentences() == ["문장부호 없음"])
+  }
+}
+
+struct StringJosaTests {
+  @Test
+  func 받침이_있으면_첫_번째_조사를_고른다() {
+    #expect("플라톤".josa("과", "와") == "과")
+    #expect("유지해야 함".josa("을", "를") == "을")
+  }
+
+  @Test
+  func 받침이_없으면_두_번째_조사를_고른다() {
+    #expect("사르트르".josa("과", "와") == "와")
+    #expect("순자".josa("과", "와") == "와")
+    #expect("비난할 수 있다".josa("을", "를") == "를")
+  }
+
+  @Test
+  func 마지막_글자가_한글이_아니면_함께_표기한다() {
+    #expect("AI".josa("과", "와") == "과(와)")
+    #expect("".josa("을", "를") == "을(를)")
   }
 }

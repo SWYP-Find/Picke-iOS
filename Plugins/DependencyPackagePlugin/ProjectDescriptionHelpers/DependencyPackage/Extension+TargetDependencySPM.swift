@@ -2,7 +2,7 @@
 //  Extension+TargetDependencySPM.swift
 //  DependencyPackagePlugin
 //
-//  Created by 서원지 on 4/19/24.
+//  Created by Picke on 4/19/24.
 //
 
 import ProjectDescription
@@ -12,6 +12,8 @@ public extension TargetDependency.SPM {
   static let logMarco = TargetDependency.external(name: "LogMacro", condition: .none)
 
   static let composableArchitecture = TargetDependency.external(name: "ComposableArchitecture", condition: .none)
+  // Release 구성에서도 TCA 검증 실패를 기록하도록 테스트 타깃에서만 링크한다.
+  static let issueReportingTestSupport = TargetDependency.external(name: "IssueReportingTestSupport", condition: .none)
   static let dependencies = TargetDependency.external(name: "Dependencies", condition: .none)
   static let sharing = TargetDependency.external(name: "Sharing", condition: .none)
   static let sqliteData = TargetDependency.external(name: "SQLiteData", condition: .none)
@@ -31,6 +33,6 @@ public extension TargetDependency.SPM {
   static let mixpanel = TargetDependency.external(name: "Mixpanel", condition: .none)
   static let mixpanelSessionReplay = TargetDependency.external(name: "MixpanelSessionReplay", condition: .none)
   static let adFit = TargetDependency.external(name: "AdFitSDK", condition: .none)
-  static let sentry = TargetDependency.external(name: "Sentry", condition: .none)
-  static let sentrySwiftUI = TargetDependency.external(name: "SentrySwiftUI", condition: .none)
+  // Sentry 9.34.0 이하 바이너리 xcframework 는 서명 인증서가 폐기돼(sentry-cocoa #9633) 소스 빌드 제품을 쓴다.
+  static let sentry = TargetDependency.external(name: "SentrySPM", condition: .none)
 }

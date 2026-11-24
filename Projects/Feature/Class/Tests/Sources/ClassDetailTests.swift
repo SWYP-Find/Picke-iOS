@@ -1,0 +1,318 @@
+//
+//  ClassDetailTests.swift
+//  ClassTests
+//
+//  Created by Picke on 10/11/26.
+//
+
+@testable import Class
+import ClassDomainInterface
+import ComposableArchitecture
+import Foundation
+import PickeSharedUI
+import Testing
+
+@MainActor
+struct ClassDetailTests {
+  private func makeState(room: ClassRoom) -> ClassDetailFeature.State {
+    withDependencies {
+      $0.uuid = .constant(UUID())
+    } operation: {
+      ClassDetailFeature.State(room: room)
+    }
+  }
+
+  @Test
+  func 상세_조회_실패시_불완전한_목록_데이터로_진입하지_않고_재시도를_요청한다() async {
+    let room = ClassRoom.mocks[0]
+    var state = makeState(room: room)
+    state.viewState = .error
+    state.loadErrorMessage = "상세 정보를 불러올 수 없어요"
+    let store = TestStore(initialState: state) { ClassDetailFeature() }
+
+    await store.send(.view(.battleTapped))
+    await store.send(.view(.managementTapped))
+    await store.send(.view(.retryTapped))
+    await store.receive(\.delegate, .retryRequested(
+      roomID: room.id,
+      instanceID: state.instanceID
+    ))
+  }
+  @Test
+  func 열린_클래스는_목_저장소_설정_없이_배틀에_입장한다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.battleTapped))
+    await store.receive(\.delegate, .openBattle(room))
+  }
+
+  @Test
+  func 참여하지_않는_운영자는_배틀_진입만_제한되고_관리는_가능하다() async {
+    let source = ClassRoom.mocks[0]
+    let room = ClassRoom(
+      id: source.id,
+      name: source.name,
+      joinCode: source.joinCode,
+      battle: source.battle,
+      deadline: source.deadline,
+      memberCount: source.memberCount,
+      role: source.role,
+      status: source.status,
+      allowsAnonymousOpinion: source.allowsAnonymousOpinion,
+      requiresComment: source.requiresComment,
+      ownerParticipates: false,
+      memberCapacity: source.memberCapacity
+    )
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+    }
+
+    #expect(store.state.canParticipateInBattle == false)
+    // Android ClassDetail ShowNotParticipatingToast.
+    await store.send(.view(.battleTapped)) {
+      $0.toastMessage = "운영자 참여를 켜지 않은 클래스라 배틀에 참여할 수 없어요."
+    }
+    await store.send(.view(.managementTapped)) {
+      $0.modal = .init(kind: .management)
+    }
+    await store.send(.view(.reportTapped))
+    await store.receive(\.delegate, .openReport(room))
+  }
+
+  @Test
+  func 운영자의_마감일_수정과_클래스_정보_수정은_모두_수정_화면을_연다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.managementTapped)) {
+      $0.modal = .init(kind: .management)
+    }
+    await store.send(.view(.editTapped)) {
+      $0.modal = nil
+    }
+    await store.receive(\.delegate, .openEdit(room))
+
+    // Android DeadlineEditClick 도 ClassEdit 로 이동한다.
+    await store.send(.view(.deadlineTapped))
+    await store.receive(\.delegate, .openEdit(room))
+  }
+
+  @Test
+  func 멤버도_관리_시트에서_공유와_나가기를_사용한다() async {
+    let room = ClassRoom.mockJoinable
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.managementTapped)) {
+      $0.modal = .init(kind: .management)
+    }
+    await store.send(.view(.shareTapped)) {
+      $0.modal = nil
+    }
+    await store.receive(\.delegate, .openShare(room))
+
+    await store.send(.view(.leaveTapped)) {
+      $0.isLeaveConfirmation = true
+      $0.customAlert = CustomAlertState(
+        title: "클래스에서 나가면 해당 클래스의 활동과 결과를 더 이상 확인할 수 없어요.",
+        confirmTitle: "나가기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
+    }
+  }
+
+  @Test
+  func 학생은_마감일과_삭제_동작을_사용할_수_없다() async {
+    let store = TestStore(initialState: makeState(room: ClassRoom.mockJoinable)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.deadlineTapped))
+    await store.send(.view(.deleteTapped))
+  }
+
+  @Test
+  func 열린_클래스_배틀은_준비_안내_없이_코디네이터로_이동한다() async {
+    for room in ClassRoom.mocks where room.status == .open {
+      let store = TestStore(initialState: makeState(room: room)) {
+        ClassDetailFeature()
+      }
+
+      await store.send(.view(.battleTapped))
+      await store.receive(\.delegate, .openBattle(room))
+    }
+  }
+
+  @Test
+  func 마감된_클래스의_배틀_참여는_마감_토스트를_띄운다() async {
+    let room = ClassRoom.mockClosedSociety
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    // Android ClassDetail ShowDeadlinePassedToast.
+    await store.send(.view(.battleTapped)) {
+      $0.toastMessage = "참여 기간이 마감되었어요."
+    }
+    await store.send(.view(.toastShown)) {
+      $0.toastMessage = nil
+    }
+  }
+
+  @Test
+  func 마감된_운영자도_배틀은_마감_토스트_결과는_결과_화면을_연다() async {
+    let room = ClassRoom.mocks[2]
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.battleTapped)) {
+      $0.toastMessage = "참여 기간이 마감되었어요."
+    }
+
+    await store.send(.view(.reportTapped))
+    await store.receive(\.delegate, .openReport(room))
+  }
+
+  @Test
+  func AI_목_배틀도_클래스_화면으로_진입한다() async {
+    let original = ClassRoom.mocks[0]
+    let battle = ClassBattleSummary(
+      id: -1,
+      title: "AI 추천 질문",
+      summary: "목 콘텐츠",
+      philosopherA: "첫 번째 근거",
+      optionATitle: "찬성",
+      philosopherB: "두 번째 근거",
+      optionBTitle: "반대",
+      category: .philosophy,
+      level: .middle,
+      audioDuration: 0,
+      viewCount: 0
+    )
+    let room = ClassRoom(
+      id: original.id,
+      name: original.name,
+      joinCode: original.joinCode,
+      battle: battle,
+      deadline: original.deadline,
+      memberCount: original.memberCount,
+      role: original.role,
+      status: original.status,
+      allowsAnonymousOpinion: original.allowsAnonymousOpinion,
+      requiresComment: original.requiresComment,
+      memberCapacity: original.memberCapacity
+    )
+    let repository = MockClassRepository(rooms: [room], availableRooms: [])
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    } withDependencies: {
+      $0.classMockRepository = repository
+    }
+
+    await store.send(.view(.battleTapped))
+    await store.receive(\.delegate, .openBattle(room))
+  }
+
+  @Test
+  func 결과보기를_누르면_현재_클래스를_리포트로_전달한다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.reportTapped))
+    await store.receive(\.delegate, .openReport(room))
+  }
+
+  @Test
+  func 멤버_변경_뒤_상세_인원수를_동기화한다() async {
+    let room = ClassRoom.mocks[0]
+    let updated = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: room.deadline,
+      memberCount: room.memberCount - 1,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      memberCapacity: room.memberCapacity
+    )
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.dataUpdated(updated)) {
+      $0.room = updated
+    }
+  }
+
+  @Test
+  func 변경된_마감일은_상세_표시에_반영된다() async {
+    let room = ClassRoom.mocks[0]
+    let updated = ClassRoom(
+      id: room.id,
+      name: room.name,
+      joinCode: room.joinCode,
+      battle: room.battle,
+      deadline: .distantFuture,
+      memberCount: room.memberCount,
+      role: room.role,
+      status: room.status,
+      allowsAnonymousOpinion: room.allowsAnonymousOpinion,
+      requiresComment: room.requiresComment,
+      ownerParticipates: room.ownerParticipates,
+      memberCapacity: room.memberCapacity
+    )
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.dataUpdated(updated)) {
+      $0.room = updated
+    }
+    #expect(store.state.deadlineText == "마감일 없음")
+  }
+
+  @Test
+  func 삭제가_완료된_뒤에만_화면을_닫는다() async {
+    let room = ClassRoom.mocks[0]
+    let store = TestStore(initialState: makeState(room: room)) {
+      ClassDetailFeature()
+    }
+
+    await store.send(.view(.deleteTapped)) {
+      $0.customAlert = CustomAlertState(
+        title: "삭제 후에는 복구할 수 없어요.\n그럼에도 삭제하시겠습니까?",
+        confirmTitle: "삭제하기",
+        cancelTitle: "뒤로가기",
+        isDestructive: true,
+        style: .deleteConfirm
+      )
+    }
+    await store.send(.view(.deleteConfirmed)) {
+      $0.customAlert = nil
+    }
+    await store.receive(\.async, .delete(room.id)) {
+      $0.isLoading = true
+    }
+    await store.receive(\.inner, .deleted(room.id, nil)) {
+      $0.isLoading = false
+    }
+    await store.receive(\.delegate, .deleted(room.id))
+  }
+}

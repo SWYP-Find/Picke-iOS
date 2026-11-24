@@ -1,13 +1,14 @@
 //
 //  AnalyticsButton.swift
-//  UseCase
+//  PickeAnalyticsInterface
+//
+//  Created by Picke on 10/11/26.
 //
 
 import Foundation
 
 public enum AnalyticsButton: String, Sendable {
   // 홈
-  case homeMore = "home_more"
   case homeNotification = "home_notification"
   // 마이페이지
   case mypageNotification = "mypage_notification"
@@ -24,6 +25,7 @@ public enum AnalyticsButton: String, Sendable {
   case tabHome = "tab_home"
   case tabExplore = "tab_explore"
   case tabQuickBattle = "tab_quick_battle"
+  case tabClass = "tab_class"
   case tabMypage = "tab_mypage"
   // 댓글
   case commentShare = "comment_share"

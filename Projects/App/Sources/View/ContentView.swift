@@ -1,3 +1,10 @@
+//
+//  ContentView.swift
+//  Picke
+//
+//  Created by Picke on 10/11/26.
+//
+
 import FeatureAssembly
 import SwiftUI
 
@@ -15,7 +22,7 @@ public struct ContentView: View {
 }
 
 #Preview {
-  AppAuthCoordinatorView(store: .init(initialState: AppAuthCoordinator.State(), reducer: {
-    AppAuthCoordinator()
+  AuthCoordinatorView(store: .init(initialState: AuthCoordinator.State(), reducer: {
+    AuthCoordinator()
   }))
 }
