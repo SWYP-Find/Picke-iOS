@@ -1638,12 +1638,15 @@ struct ClassNavigationLoadingTests {
     let room = ClassRoom.mocks[0]
     let oldID = UUID()
     let newID = UUID()
+    let detailID = UUID()
     var owner = ClassJoinFeature.State(mode: .ownerName, preview: room, instanceID: newID)
     owner.preview = nil
     var state = ClassCoordinator.State()
     state.routes.push(.share(.init(room: room)))
     state.routes.push(.ownerName(owner))
-    let store = TestStore(initialState: state) { ClassCoordinator() }
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(detailID)
+    }
 
     await store.send(.router(.routeAction(
       id: 2,
@@ -1657,8 +1660,9 @@ struct ClassNavigationLoadingTests {
       action: .ownerName(.delegate(.ownerNamed(room, instanceID: newID)))
     ))) {
       $0.routes.goBackToRoot()
-      $0.routes.push(.detail(testDetailState(room: room)))
+      $0.routes.push(.detail(testDetailState(room: room, instanceID: detailID)))
       $0.ownerNameInstanceIDs = []
+      $0.detailInstanceIDs = [detailID]
     }
     guard case let .detail(detail)? = store.state.routes.last?.screen else {
       Issue.record("운영자 이름 저장 후 클래스 상세가 열려야 합니다")
@@ -1674,11 +1678,12 @@ struct ClassNavigationLoadingTests {
     let newID = UUID()
     let oldRequestID = UUID()
     let newRequestID = UUID()
+    let detailID = UUID()
     var member = ClassMemberFeature.State(room: room, instanceID: newID)
     member.activeLoadRequestID = newRequestID
     member.isLoading = true
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.detail(testDetailState(room: room, instanceID: detailID)))
     state.routes.push(.members(member))
     let store = TestStore(initialState: state) { ClassCoordinator() }
 
@@ -1692,6 +1697,7 @@ struct ClassNavigationLoadingTests {
       currentMemberID: 1
     ))) {
       $0.memberInstanceIDs = [newID]
+      $0.detailInstanceIDs = [detailID]
     }
     await store.send(.inner(.membersFailed(
       routeID: 2,
@@ -2102,7 +2108,9 @@ struct ClassParticipantPushTests {
     )))
     let store = TestStore(initialState: state) { ClassCoordinator() }
 
-    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.createClassRequested)))))
+    await store.send(.router(.routeAction(id: 2, action: .join(.delegate(.createClassRequested))))) {
+      $0.participantJoinInstanceIDs = [UUID(206), UUID(207)]
+    }
     #expect(store.state.routes.count == 3)
   }
 
@@ -2170,6 +2178,7 @@ struct ClassParticipantPushTests {
     let codeID = UUID(205)
     let nicknameID = UUID(206)
     let requestID = UUID(207)
+    let detailID = UUID(214)
     var state = ClassCoordinator.State()
     state.routes.push(.join(.init(mode: .code, instanceID: codeID)))
     state.routes.push(.join(.init(mode: .nickname, instanceID: nicknameID)))
@@ -2177,7 +2186,9 @@ struct ClassParticipantPushTests {
     state.completingJoinCodeInstanceID = codeID
     state.completingJoinNicknameInstanceID = nicknameID
     state.participantJoinInstanceIDs = [codeID, nicknameID]
-    let store = TestStore(initialState: state) { ClassCoordinator() }
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(detailID)
+    }
 
     await store.send(.router(.routeAction(id: 2, action: .join(.view(.joinTapped)))))
     #expect(store.state.pendingJoinID == requestID)
@@ -2192,8 +2203,9 @@ struct ClassParticipantPushTests {
       $0.completingJoinCodeInstanceID = nil
       $0.completingJoinNicknameInstanceID = nil
       $0.routes.goBackToRoot()
-      $0.routes.push(.detail(testDetailState(room: room)))
+      $0.routes.push(.detail(testDetailState(room: room, instanceID: detailID)))
       $0.participantJoinInstanceIDs = []
+      $0.detailInstanceIDs = [detailID]
     }
   }
 
@@ -2203,6 +2215,7 @@ struct ClassParticipantPushTests {
     let codeID = UUID(211)
     let nicknameID = UUID(212)
     let requestID = UUID(213)
+    let detailID = UUID(215)
     var code = ClassJoinFeature.State(mode: .code, instanceID: codeID)
     code.joinCode = room.joinCode
     var state = ClassCoordinator.State()
@@ -2212,7 +2225,9 @@ struct ClassParticipantPushTests {
     state.completingJoinCodeInstanceID = codeID
     state.completingJoinNicknameInstanceID = nicknameID
     state.participantJoinInstanceIDs = [codeID, nicknameID]
-    let store = TestStore(initialState: state) { ClassCoordinator() }
+    let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
+      $0.uuid = .constant(detailID)
+    }
 
     await store.send(.router(.updateRoutes(Array(state.routes.dropLast())))) {
       $0.routes = Array($0.routes.dropLast())
@@ -2232,8 +2247,9 @@ struct ClassParticipantPushTests {
       $0.completingJoinCodeInstanceID = nil
       $0.completingJoinNicknameInstanceID = nil
       $0.routes.goBackToRoot()
-      $0.routes.push(.detail(testDetailState(room: room)))
+      $0.routes.push(.detail(testDetailState(room: room, instanceID: detailID)))
       $0.participantJoinInstanceIDs = []
+      $0.detailInstanceIDs = [detailID]
     }
   }
 
@@ -2388,6 +2404,7 @@ struct ClassDeadlineSheetCoordinatorTests {
     let newDetail = testDetailState(room: room, instanceID: UUID())
     var state = ClassCoordinator.State()
     state.routes.push(.detail(newDetail))
+    state.detailInstanceIDs = [newDetail.instanceID]
     let store = TestStore(initialState: state) { ClassCoordinator() }
 
     await store.send(.inner(.detailLoaded(
@@ -2734,8 +2751,9 @@ struct ChatPlayerLifecycleTests {
       return
     }
     let instanceID = chatRoom.instanceID
+    let detailID = UUID()
     var state = ClassCoordinator.State()
-    state.routes.push(.detail(testDetailState(room: room)))
+    state.routes.push(.detail(testDetailState(room: room, instanceID: detailID)))
     state.routes.push(.chat(chat))
     let store = TestStore(initialState: state) { ClassCoordinator() } withDependencies: {
       $0.audioPlayer = player
@@ -2746,6 +2764,7 @@ struct ChatPlayerLifecycleTests {
       action: .chatRoom(.async(.subscribePlayer))
     )))))) {
       $0.chatRoomInstanceIDs = [instanceID]
+      $0.detailInstanceIDs = [detailID]
       $0.routes[screenAt: 2] = .chat({
         var updated = chat
         updated.observedChatRoomInstanceIDs = [instanceID]
@@ -2768,6 +2787,7 @@ struct ChatPlayerLifecycleTests {
             case var .chatRoom(updatedRoom) = updatedChat.routes[1].screen
       else { return }
       updatedRoom.currentTime = 1.25
+      updatedRoom.maxListenedTime = 1.25
       updatedChat.routes[screenAt: 1] = .chatRoom(updatedRoom)
       $0.routes[screenAt: 2] = .chat(updatedChat)
     }
@@ -2782,6 +2802,7 @@ struct ChatPlayerLifecycleTests {
       await store.send(.view(.backToRootAction)) {
         $0.routes.goBackToRoot()
         $0.chatRoomInstanceIDs = []
+        $0.detailInstanceIDs = []
       }
     case .interactivePop:
       await store.send(.router(.updateRoutes(Array(store.state.routes.dropLast())))) {
@@ -2915,6 +2936,7 @@ struct ChatPlayerLifecycleTests {
     } assert: {
       guard case var .chatRoom(room) = $0.routes[2].screen else { return }
       room.currentTime = 2.0
+      room.maxListenedTime = 2.0
       $0.routes[screenAt: 2] = .chatRoom(room)
     }
     await store.send(.view(.backToRootAction)) {

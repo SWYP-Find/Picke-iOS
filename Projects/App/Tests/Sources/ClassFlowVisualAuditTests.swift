@@ -2206,6 +2206,22 @@ final class ClassFlowVisualAuditTests: XCTestCase {
       state.questions = Array(ClassAIQuestion.examples.prefix(3))
       state.battles = ClassBattleSummary.mocks.filter { $0.level == .middle && $0.category == .philosophy }
       state.viewState = .loaded
+      if mode == .aiQuestions {
+        // AI 질문은 완료된 초안에서 온다. 초안이 없으면 진입 시 새 초안을 만들어 목록을 로딩으로 바꾼다.
+        state.draft = ClassTopicDraft(
+          id: 1,
+          topicSeed: keyword,
+          difficulty: "INTERMEDIATE",
+          categories: ["철학", "사회"],
+          suggestStatus: "SUCCEEDED",
+          clarificationMessage: nil,
+          batchNo: 1,
+          remainingSuggestions: 2,
+          remainingValidations: 3,
+          candidates: [],
+          latestVersion: nil
+        )
+      }
       let store = Store(initialState: state) { ClassRecommendFeature() }
       let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
       let window = UIWindow(windowScene: scene)
